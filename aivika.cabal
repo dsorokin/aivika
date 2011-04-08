@@ -1,0 +1,47 @@
+name:            aivika
+version:         0.1
+synopsis:        A multi-paradigm simulation library
+description:
+    Aivika is a multi-paradigm simulation library. It allows us to integrate 
+    a system of ordinary differential equations. Also it can be applied to
+    the Discrete Event Simulation. It supports the event-oriented, 
+    process-oriented and activity-oriented paradigms. Aivika also supports 
+    the Agent-based Modeling. Finally, it can be applied to System Dynamics.
+    .
+    The library widely uses monads. The dynamic system is represented as 
+    a computation in the Dynamics monad. There is also the DynamicsProc
+    monad to represent the discontinuous processes which can be suspended
+    at any time and then resumed later. Everything else is expressed through 
+    these two monads, including the events, agent handlers and even integrals.
+    .
+category:        Simulation
+license:         BSD3
+license-file:    LICENSE
+copyright:       (c) 2009-2011. David Sorokin <david.sorokin@gmail.com>
+author:          David Sorokin
+maintainer:      David Sorokin <david.sorokin@gmail.com>
+cabal-version:   >= 1.2.0
+build-type:      Simple
+tested-with:     GHC == 6.12.1
+
+extra-source-files:  examples/BassDiffusion.hs
+                     examples/ChemicalReaction.hs
+                     examples/FishBank.hs
+                     examples/MachRep1.hs
+                     examples/MachRep1EventDriven.hs
+                     examples/MachRep1TimeDriven.hs
+                     examples/MachRep2.hs
+                     examples/MachRep3.hs
+
+data-files:          doc/aivika.pdf
+
+library
+    exposed-modules: Simulation.Aivika.Dynamics
+    other-modules:   Simulation.Aivika.Queue
+                     Simulation.Aivika.PriorityQueue
+                     
+    build-depends:   base >= 3 && < 5,
+                     mtl >= 1.1.0.2,
+                     array >= 0.3.0.0
+                     
+    ghc-options:     -O2
