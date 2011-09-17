@@ -2,6 +2,8 @@
 import Data.Array
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Base
+import Simulation.Aivika.Dynamics.SystemDynamics
 
 specs = Specs { spcStartTime = 0, 
                 spcStopTime = 13, 

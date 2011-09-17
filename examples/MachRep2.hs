@@ -22,6 +22,12 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Base
+import Simulation.Aivika.Dynamics.Lift
+import Simulation.Aivika.Dynamics.EventQueue
+import Simulation.Aivika.Dynamics.Ref
+import Simulation.Aivika.Dynamics.Resource
+import Simulation.Aivika.Dynamics.Process
 
 upRate = 1.0 / 1.0       -- reciprocal of mean up time
 repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
@@ -52,33 +58,35 @@ model =
      
      repairPerson <- newResource queue 1
      
-     pid1 <- newPID queue
-     pid2 <- newPID queue
+     pid1 <- newProcessID queue
+     pid2 <- newProcessID queue
      
-     let machine :: DynamicsProc ()
+     let machine :: Process ()
          machine =
            do startUpTime <- liftD time
               upTime <- liftIO $ exprnd upRate
-              holdProc upTime
+              holdProcess upTime
               finishUpTime <- liftD time
-              liftD $ modifyRef' totalUpTime 
+              liftD $ modifyRef totalUpTime 
                 (+ (finishUpTime - startUpTime))
               
               -- check the resource availability
-              liftD $ modifyRef' nRep (+ 1)
+              liftD $ modifyRef nRep (+ 1)
               n <- resourceCount repairPerson
               when (n == 1) $
-                liftD $ modifyRef' nImmedRep (+ 1)
+                liftD $ modifyRef nImmedRep (+ 1)
                 
               requestResource repairPerson
               repairTime <- liftIO $ exprnd repairRate
-              holdProc repairTime
+              holdProcess repairTime
               releaseResource repairPerson
               
               machine
          
-     runProc machine pid1 starttime
-     runProc machine pid2 starttime
+     t0 <- starttime
+     
+     runProcess machine pid1 t0
+     runProcess machine pid2 t0
      
      let system :: Dynamics (Double, Double)
          system =

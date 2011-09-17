@@ -19,6 +19,9 @@ import Random
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Base
+import Simulation.Aivika.Dynamics.EventQueue
+import Simulation.Aivika.Dynamics.Ref
 
 upRate = 1.0 / 1.0       -- reciprocal of mean up time
 repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
@@ -42,12 +45,12 @@ model =
          machineBroken startUpTime =
            
            do finishUpTime <- time
-              modifyRef' totalUpTime (+ (finishUpTime - startUpTime))
+              modifyRef totalUpTime (+ (finishUpTime - startUpTime))
               repairTime <- liftIO $ exprnd repairRate
               
               -- enqueue a new event
-              let t = return $ finishUpTime + repairTime
-              enqueueD queue t machineRepaired
+              let t = finishUpTime + repairTime
+              enqueue queue t machineRepaired
               
          machineRepaired :: Dynamics ()
          machineRepaired =
@@ -56,11 +59,13 @@ model =
               upTime <- liftIO $ exprnd upRate
               
               -- enqueue a new event
-              let t = return $ startUpTime + upTime
-              enqueueD queue t $ machineBroken startUpTime
+              let t = startUpTime + upTime
+              enqueue queue t $ machineBroken startUpTime
      
-     enqueueD queue starttime machineRepaired    -- start the first machine
-     enqueueD queue starttime machineRepaired    -- start the second machine
+     t0 <- starttime
+     
+     enqueue queue t0 machineRepaired    -- start the first machine
+     enqueue queue t0 machineRepaired    -- start the second machine
      
      let system :: Dynamics Double
          system =

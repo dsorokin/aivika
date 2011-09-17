@@ -19,6 +19,10 @@ import Random
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Base
+import Simulation.Aivika.Dynamics.EventQueue
+import Simulation.Aivika.Dynamics.Ref
+import Simulation.Aivika.Dynamics.Memo
 
 upRate = 1.0 / 1.0       -- reciprocal of mean up time
 repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
@@ -56,34 +60,34 @@ model =
                    repairNum' <- readRef repairNum
                    
                    let untilBroken = 
-                         modifyRef' upNum $ \a -> a - 1
+                         modifyRef upNum $ \a -> a - 1
                                                   
                        untilRepaired =
-                         modifyRef' repairNum $ \a -> a - 1
+                         modifyRef repairNum $ \a -> a - 1
                                                       
                        broken =
-                         do writeRef' upNum (-1)
+                         do writeRef upNum (-1)
                             -- the machine is broken
                             startUpTime' <- readRef startUpTime
                             finishUpTime' <- time
                             dt' <- dt
-                            modifyRef' totalUpTime $ 
+                            modifyRef totalUpTime $ 
                               \a -> a +
                               (finishUpTime' - startUpTime')
                             repairTime' <- 
                               liftIO $ exprnd repairRate
-                            writeRef' repairNum $
+                            writeRef repairNum $
                               round (repairTime' / dt')
                               
                        repaired =
-                         do writeRef' repairNum (-1)
+                         do writeRef repairNum (-1)
                             -- the machine is repaired
                             t'  <- time
                             dt' <- dt
-                            writeRef' startUpTime t'
+                            writeRef startUpTime t'
                             upTime' <- 
                               liftIO $ exprnd upRate
-                            writeRef' upNum $
+                            writeRef upNum $
                               round (upTime' / dt')
                               
                        result | upNum' > 0     = untilBroken
@@ -98,8 +102,8 @@ model =
      m2 <- machine
      
      -- create strictly sequential computations
-     c1 <- memo0 discrete m1
-     c2 <- memo0 discrete m2
+     c1 <- iterateD m1
+     c2 <- iterateD m2
        
      let system :: Dynamics Double
          system =

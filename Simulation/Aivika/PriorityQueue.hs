@@ -1,40 +1,18 @@
 
--- Copyright (c) 2009, 2010, 2011 David Sorokin <david.sorokin@gmail.com>
--- 
--- All rights reserved.
--- 
--- Redistribution and use in source and binary forms, with or without
--- modification, are permitted provided that the following conditions
--- are met:
--- 
--- 1. Redistributions of source code must retain the above copyright
---    notice, this list of conditions and the following disclaimer.
--- 
--- 2. Redistributions in binary form must reproduce the above copyright
---    notice, this list of conditions and the following disclaimer in the
---    documentation and/or other materials provided with the distribution.
--- 
--- 3. Neither the name of the author nor the names of his contributors
---    may be used to endorse or promote products derived from this software
---    without specific prior written permission.
--- 
--- THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND
--- ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
--- ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
--- FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
--- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
--- OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
--- HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
--- LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
--- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
--- SUCH DAMAGE.
-
--- This is an imperative version of the heap-based priority queue in monad IO.
-
+-- |
+-- Module     : Simulation.Aivika.PriorityQueue
+-- Copyright  : Copyright (c) 2009-2011, David Sorokin <david.sorokin@gmail.com>
+-- License    : BSD3
+-- Maintainer : David Sorokin <david.sorokin@gmail.com>
+-- Stability  : experimental
+-- Tested with: GHC 7.0.3
+--
+-- An imperative heap-based priority queue.
+--
 module Simulation.Aivika.PriorityQueue 
        (PriorityQueue, 
         queueNull, 
+        queueCount,
         newQueue, 
         enqueue, 
         dequeue, 
@@ -46,12 +24,12 @@ import Data.Array.IO
 import Data.IORef
 import Control.Monad
 
+-- | The 'PriorityQueue' type represents an imperative heap-based 
+-- priority queue.
 data PriorityQueue a = 
   PriorityQueue { pqKeys  :: IORef (IOUArray Int Double),
                   pqVals  :: IORef (IOArray Int a),
-                  pqSize  :: IORef Int,
-                  pqNoVal :: a    -- to release references                 
-                }
+                  pqSize  :: IORef Int }
 
 increase :: PriorityQueue a -> Int -> IO ()
 increase pq capacity = 
@@ -120,13 +98,19 @@ siftDown keys vals size i k v =
                               writeArray vals i vn''
                               siftDown keys vals size n'' k v
 
+-- | Test whether the priority queue is empty.
 queueNull :: PriorityQueue a -> IO Bool
 queueNull pq =
   do size <- readIORef (pqSize pq)
      return $ size == 0
 
-newQueue :: a -> IO (PriorityQueue a)
-newQueue defaultValue =
+-- | Return the number of elements in the priority queue.
+queueCount :: PriorityQueue a -> IO Int
+queueCount pq = readIORef (pqSize pq)
+
+-- | Create a new priority queue.
+newQueue :: IO (PriorityQueue a)
+newQueue =
   do keys <- newArray_ (0, 10)
      vals <- newArray_ (0, 10)
      keyRef  <- newIORef keys
@@ -134,20 +118,21 @@ newQueue defaultValue =
      sizeRef <- newIORef 0
      return PriorityQueue { pqKeys = keyRef, 
                             pqVals = valRef, 
-                            pqSize = sizeRef,
-                            pqNoVal = defaultValue }
+                            pqSize = sizeRef }
 
+-- | Enqueue a new element with the specified priority.
 enqueue :: PriorityQueue a -> Double -> a -> IO ()
 enqueue pq k v =
   do i <- readIORef (pqSize pq)
      keys <- readIORef (pqKeys pq)
      (il, iu) <- getBounds keys
-     when (i >= iu - il + 1) $ increase pq (i + 1)
+     when (i >= iu - il) $ increase pq (i + 2)  -- plus one element on the end
      writeIORef (pqSize pq) (i + 1)
      keys <- readIORef (pqKeys pq)  -- it can be another! (side-effect)
      vals <- readIORef (pqVals pq)
      siftUp keys vals i k v
 
+-- | Dequeue the element with the minimal priority.
 dequeue :: PriorityQueue a -> IO ()
 dequeue pq =
   do size <- readIORef (pqSize pq)
@@ -156,12 +141,15 @@ dequeue pq =
      writeIORef (pqSize pq) i
      keys <- readIORef (pqKeys pq)
      vals <- readIORef (pqVals pq)
-     k <- readArray keys i
-     v <- readArray vals i
-     writeArray keys i 0.0
-     writeArray vals i (pqNoVal pq)    -- to release the reference!
+     k  <- readArray keys i
+     v  <- readArray vals i
+     k0 <- readArray keys size
+     v0 <- readArray vals size
+     writeArray keys i k0
+     writeArray vals i v0
      siftDown keys vals i 0 k v
 
+-- | Return the element with the minimal priority.
 queueFront :: PriorityQueue a -> IO (Double, a)
 queueFront pq =
   do size <- readIORef (pqSize pq)

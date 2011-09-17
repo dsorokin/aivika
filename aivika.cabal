@@ -1,5 +1,5 @@
 name:            aivika
-version:         0.1
+version:         0.2
 synopsis:        A multi-paradigm simulation library
 description:
     Aivika is a multi-paradigm simulation library. It allows us to integrate 
@@ -22,7 +22,7 @@ author:          David Sorokin
 maintainer:      David Sorokin <david.sorokin@gmail.com>
 cabal-version:   >= 1.2.0
 build-type:      Simple
-tested-with:     GHC == 6.12.1
+tested-with:     GHC == 7.0.3
 
 extra-source-files:  examples/BassDiffusion.hs
                      examples/ChemicalReaction.hs
@@ -36,12 +36,32 @@ extra-source-files:  examples/BassDiffusion.hs
 data-files:          doc/aivika.pdf
 
 library
+
     exposed-modules: Simulation.Aivika.Dynamics
-    other-modules:   Simulation.Aivika.Queue
+                     Simulation.Aivika.Dynamics.Agent
+                     Simulation.Aivika.Dynamics.Base
+                     Simulation.Aivika.Dynamics.Cont
+                     Simulation.Aivika.Dynamics.EventQueue
+                     Simulation.Aivika.Dynamics.Lift
+                     Simulation.Aivika.Dynamics.Memo
+                     Simulation.Aivika.Dynamics.Process
+                     Simulation.Aivika.Dynamics.Random
+                     Simulation.Aivika.Dynamics.Ref
+                     Simulation.Aivika.Dynamics.Resource
+                     Simulation.Aivika.Dynamics.SystemDynamics
+                     Simulation.Aivika.Dynamics.UVar
+                     Simulation.Aivika.Dynamics.Var
                      Simulation.Aivika.PriorityQueue
+                     Simulation.Aivika.Queue
+
+    other-modules:   Simulation.Aivika.Vector
+                     Simulation.Aivika.UVector
                      
     build-depends:   base >= 3 && < 5,
+                     haskell98,
                      mtl >= 1.1.0.2,
                      array >= 0.3.0.0
+
+    extensions:      FlexibleContexts
                      
     ghc-options:     -O2
