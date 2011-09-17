@@ -1,6 +1,4 @@
 
-{-# LANGUAGE FlexibleContexts #-}
-
 -- |
 -- Module     : Simulation.Aivika.Dynamics
 -- Copyright  : Copyright (c) 2009-2011, David Sorokin <david.sorokin@gmail.com>
@@ -16,8 +14,7 @@
 -- the Agent-based Modeling. Finally, it can be applied to System Dynamics.
 --
 module Simulation.Aivika.Dynamics 
-       (-- * Dynamics
-        Dynamics(..),
+       (Dynamics(..),
         Point(..),
         Specs(..),
         Method(..),
@@ -32,21 +29,10 @@ module Simulation.Aivika.Dynamics
         iterationLoBnd,
         phaseBnds,
         phaseHiBnd,
-        phaseLoBnd,
-        -- ** Utilities
-        once) where
+        phaseLoBnd) where
 
-import Data.Array
-import Data.Array.IO
-import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
-
-import qualified Simulation.Aivika.Queue as Q
-import qualified Simulation.Aivika.PriorityQueue as PQ
-
-import qualified Simulation.Aivika.Vector as V
-import qualified Simulation.Aivika.UVector as UV
 
 --
 -- The Dynamics Monad
@@ -65,7 +51,7 @@ data Point = Point { pointSpecs :: Specs,    -- ^ the simulation specs
                      pointTime :: Double,    -- ^ the current time
                      pointIteration :: Int,  -- ^ the current iteration
                      pointPhase :: Int       -- ^ the current phase
-                   }
+                   } deriving (Eq, Ord, Show)
 
 -- | It defines the simulation specs.
 data Specs = Specs { spcStartTime :: Double,    -- ^ the start time
@@ -274,24 +260,3 @@ instance (Floating a) => Floating (Dynamics a) where
 
 instance MonadIO Dynamics where
   liftIO m = Dynamics $ const m
-
---
--- Utilities
---
-
--- | Call the computation only once.
-once :: Dynamics a -> Dynamics (Dynamics a)
-once (Dynamics m) =
-  Dynamics $ \p ->
-  do x <- newIORef Nothing
-     let r p =
-           do a <- readIORef x
-              case a of
-                Just b -> 
-                  return b
-                Nothing ->
-                  do b <- m p
-                     writeIORef x $ Just b
-                     return $! b
-     return $ Dynamics r
-

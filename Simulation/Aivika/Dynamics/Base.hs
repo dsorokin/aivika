@@ -22,7 +22,9 @@ module Simulation.Aivika.Dynamics.Base
         -- * Fold
         foldD1,
         foldD,
-        divideD) where
+        divideD,
+        -- * Utilities
+        once) where
 
 import Data.IORef
 import Control.Monad
@@ -159,11 +161,31 @@ foldD tr f acc (Dynamics m) =
      return y
 
 -- | Divide the values in integration time points by the number of
--- the current iteration. It is useful for statistic functions in
--- combination with the fold. For example, it is used when we calculate
--- the mean value or variance.
+-- the current iteration. It can be useful for statistic functions in
+-- combination with the fold.
 divideD :: Dynamics Double -> Dynamics Double
 divideD (Dynamics m) = 
   discrete $ Dynamics $ \p ->
   do a <- m p
      return $ a / fromInteger (toInteger (pointIteration p + 1))
+
+--
+-- Utilities
+--
+
+-- | Call the computation only once.
+once :: Dynamics a -> Dynamics (Dynamics a)
+once (Dynamics m) =
+  Dynamics $ \p ->
+  do x <- newIORef Nothing
+     let r p =
+           do a <- readIORef x
+              case a of
+                Just b -> 
+                  return b
+                Nothing ->
+                  do b <- m p
+                     writeIORef x $ Just b
+                     return $! b
+     return $ Dynamics r
+
