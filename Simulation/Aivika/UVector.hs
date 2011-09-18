@@ -12,9 +12,15 @@
 -- An imperative unboxed vector.
 --
 module Simulation.Aivika.UVector
-       (UVector, newVector, vectorCount, 
-        appendVector, readVector, writeVector, 
-        vectorBinarySearch) where 
+       (UVector, 
+        newVector, 
+        copyVector, 
+        vectorCount, 
+        appendVector, 
+        readVector, 
+        writeVector, 
+        vectorBinarySearch,
+        freezeVector) where 
 
 import Data.Array
 import Data.Array.MArray
@@ -37,6 +43,22 @@ newVector =
      return UVector { vectorArrayRef = arrayRef,
                       vectorCountRef = countRef,
                       vectorCapacityRef = capacityRef }
+
+-- | Copy the vector.
+copyVector :: (MArray IOUArray a IO) => UVector a -> IO (UVector a)
+copyVector vector =
+  do array <- readIORef (vectorArrayRef vector)
+     count <- readIORef (vectorCountRef vector)
+     array' <- newArray_ (0, count - 1)
+     arrayRef' <- newIORef array'
+     countRef' <- newIORef count
+     capacityRef' <- newIORef count
+     forM_ [0 .. count - 1] $ \i ->
+       do x <- readArray array i
+          writeArray array' i x
+     return UVector { vectorArrayRef = arrayRef',
+                      vectorCountRef = countRef',
+                      vectorCapacityRef = capacityRef' }
 
 -- | Ensure that the vector has the specified capacity.
 vectorEnsureCapacity :: MArray IOUArray a IO => UVector a -> Int -> IO ()
@@ -99,3 +121,10 @@ vectorBinarySearch vector item =
   do array <- readIORef (vectorArrayRef vector)
      count <- readIORef (vectorCountRef vector)
      vectorBinarySearch' array item 0 (count - 1)
+
+freezeVector :: (MArray IOUArray a IO) => UVector a -> IO (Array Int a)
+freezeVector vector = 
+  do vector' <- copyVector vector
+     array   <- readIORef (vectorArrayRef vector')
+     freeze array
+     

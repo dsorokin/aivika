@@ -10,9 +10,15 @@
 -- An imperative vector.
 --
 module Simulation.Aivika.Vector
-       (Vector, newVector, vectorCount, 
-        appendVector, readVector, writeVector,
-        vectorBinarySearch) where 
+       (Vector, 
+        newVector, 
+        copyVector,
+        vectorCount, 
+        appendVector, 
+        readVector, 
+        writeVector,
+        vectorBinarySearch,
+        freezeVector) where 
 
 import Data.Array
 import Data.Array.MArray
@@ -35,6 +41,22 @@ newVector =
      return Vector { vectorArrayRef = arrayRef,
                      vectorCountRef = countRef,
                      vectorCapacityRef = capacityRef }
+
+-- | Copy the vector.
+copyVector :: Vector a -> IO (Vector a)
+copyVector vector =
+  do array <- readIORef (vectorArrayRef vector)
+     count <- readIORef (vectorCountRef vector)
+     array' <- newArray_ (0, count - 1)
+     arrayRef' <- newIORef array'
+     countRef' <- newIORef count
+     capacityRef' <- newIORef count
+     forM_ [0 .. count - 1] $ \i ->
+       do x <- readArray array i
+          writeArray array' i x
+     return Vector { vectorArrayRef = arrayRef',
+                     vectorCountRef = countRef',
+                     vectorCapacityRef = capacityRef' }
 
 -- | Ensure that the vector has the specified capacity.
 vectorEnsureCapacity :: Vector a -> Int -> IO ()
@@ -96,3 +118,10 @@ vectorBinarySearch vector item =
   do array <- readIORef (vectorArrayRef vector)
      count <- readIORef (vectorCountRef vector)
      vectorBinarySearch' array item 0 (count - 1)
+
+freezeVector :: Vector a -> IO (Array Int a)
+freezeVector vector = 
+  do vector' <- copyVector vector
+     array   <- readIORef (vectorArrayRef vector')
+     freeze array
+     

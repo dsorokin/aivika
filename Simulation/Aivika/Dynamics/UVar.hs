@@ -18,7 +18,8 @@ module Simulation.Aivika.Dynamics.UVar
         uvarQueue,
         readUVar,
         writeUVar,
-        modifyUVar) where
+        modifyUVar,
+        freezeUVar) where
 
 import Data.Array
 import Data.Array.IO
@@ -113,3 +114,13 @@ modifyUVar v f =
                       else do a <- UV.readVector ys $ - (i + 1) - 1
                               UV.appendVector xs t
                               UV.appendVector ys $! f a
+
+-- | Freeze the variable and return in arrays the time points and corresponded 
+-- values when the variable had changed.
+freezeUVar :: (MArray IOUArray a IO) => 
+              UVar a -> Dynamics (Array Int Double, Array Int a)
+freezeUVar v =
+  Dynamics $ \p ->
+  do xs <- UV.freezeVector (uvarXS v)
+     ys <- UV.freezeVector (uvarYS v)
+     return (xs, ys)

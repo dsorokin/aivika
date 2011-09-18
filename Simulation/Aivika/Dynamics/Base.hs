@@ -7,7 +7,7 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.0.3
 --
--- This module defines mainly the fold functions.
+-- This module defines some basic functions.
 --
 module Simulation.Aivika.Dynamics.Base
        (-- * Time parameters

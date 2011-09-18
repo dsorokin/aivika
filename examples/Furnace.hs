@@ -13,6 +13,7 @@ import Simulation.Aivika.Dynamics.UVar
 import Simulation.Aivika.Dynamics.Process
 import Simulation.Aivika.Dynamics.Memo
 import Simulation.Aivika.Dynamics.Random
+import Simulation.Aivika.Statistics
 
 import qualified Simulation.Aivika.Queue as Q
 
@@ -46,10 +47,14 @@ data Furnace =
             -- ^ The pits for ingots.
             furnacePitCount :: UVar Int,
             -- ^ The count of active pits with ingots.
+            furnacePitCountStats :: Statistics Int,
+            -- ^ The statistics about the active pits.
             furnaceAwaitingIngots :: Q.Queue Ingot,
             -- ^ The awaiting ingots in the queue.
             furnaceQueueCount :: UVar Int,
             -- ^ The queue count.
+            furnaceQueueCountStats :: Statistics Int,
+            -- ^ The statistics about the queue count.
             furnaceWaitCount :: Ref Int,
             -- ^ The count of awaiting ingots.
             furnaceWaitTime :: Ref Double,
@@ -99,8 +104,10 @@ newFurnace queue =
   do normalGen <- liftIO normalGen
      pits <- sequence [newPit queue | i <- [1..10]]
      pitCount <- newUVar queue 0
+     pitCountStats <- liftIO newStatistics
      awaitingIngots <- liftIO Q.newQueue
      queueCount <- newUVar queue 0
+     queueCountStats <- liftIO newStatistics
      waitCount <- newRef queue 0
      waitTime <- newRef queue 0.0
      heatingTime <- newRef queue 0.0
@@ -113,8 +120,10 @@ newFurnace queue =
                       furnaceNormalGen = normalGen,
                       furnacePits = pits,
                       furnacePitCount = pitCount,
+                      furnacePitCountStats = pitCountStats,
                       furnaceAwaitingIngots = awaitingIngots,
                       furnaceQueueCount = queueCount,
+                      furnaceQueueCountStats = queueCountStats,
                       furnaceWaitCount = waitCount,
                       furnaceWaitTime = waitTime,
                       furnaceHeatingTime = heatingTime,
@@ -189,6 +198,8 @@ tryLoadPit furnace pit =
           liftIO $ Q.dequeue ingots
           t' <- time
           modifyUVar (furnaceQueueCount furnace) (+ (-1))
+          c <- readUVar (furnaceQueueCount furnace)
+          liftIO $ addStatistics (furnaceQueueCountStats furnace) c
           loadIngot (ingot { ingotLoadTime = t',
                              ingotLoadTemp = 400.0 }) pit
               
@@ -203,6 +214,7 @@ unloadIngot ingot pit =
      let furnace = ingotFurnace ingot
      count <- readUVar (furnacePitCount furnace)
      writeUVar (furnacePitCount furnace) (count - 1)
+     liftIO $ addStatistics (furnacePitCountStats furnace) (count - 1)
      
      -- how long did we heat the ingot up?
      t' <- time
@@ -225,6 +237,7 @@ loadIngot ingot pit =
      let furnace = ingotFurnace ingot
      count <- readUVar (furnacePitCount furnace)
      writeUVar (furnacePitCount furnace) (count + 1)
+     liftIO $ addStatistics (furnacePitCountStats furnace) (count + 1)
      
      -- decrease the furnace temperature
      h <- readRef (furnaceTemp furnace)
@@ -280,6 +293,8 @@ acceptIngot furnace =
        then do let ingots = furnaceAwaitingIngots furnace
                liftIO $ Q.enqueue ingots ingot
                modifyUVar (furnaceQueueCount furnace) (+ 1)
+               c <- readUVar (furnaceQueueCount furnace)
+               liftIO $ addStatistics (furnaceQueueCountStats furnace) c
        else do pit:_ <- emptyPits furnace
                loadIngot ingot pit
        
@@ -322,16 +337,6 @@ stats xs = (length xs, ex, sx)
     dx = (sum . map rho) xs / (n - 1.0)
     sx = sqrt dx
     rho x = (x - ex) ^ 2
-
--- | Return an average, deviation and maximum.
-statsD :: Dynamics Int -> Dynamics (Double, Double, Int)
-statsD x =
-  return (0, 0, 0)
-  -- do ex <- join $ meanD $ fmap (fromInteger . toInteger) x
-  --    dx <- join $ varianceD $ fmap (fromInteger . toInteger) x
-  --    let sx = sqrt dx
-  --    maxx <- join $ umaxExtremum x
-  --    return (ex, sx, maxx)
 
 -- | The simulation model.
 model :: Dynamics (Dynamics ())
@@ -378,25 +383,19 @@ model =
                 putStrLn ""
                 
               -- the ingots in pits
-              (e2, d2, m2) <- 
-                statsD $ readUVar (furnacePitCount furnace)
-     
+              r2 <- liftIO $ statisticsResults (furnacePitCountStats furnace)
+              
               liftIO $ do
                 putStrLn "The ingots in pits: "
-                putStrLn $ "  average   = " ++ show e2
-                putStrLn $ "  deviation = " ++ show d2
-                putStrLn $ "  maximum   = " ++ show m2
+                putStrLn $ showResults r2 2 []
                 putStrLn ""
               
               -- the queue size
-              (e3, d3, m3) <- 
-                statsD $ readUVar (furnaceQueueCount furnace)
+              r3 <- liftIO $ statisticsResults (furnaceQueueCountStats furnace)
      
               liftIO $ do
                 putStrLn "The queue size: "
-                putStrLn $ "  average   = " ++ show e3
-                putStrLn $ "  deviation = " ++ show d3
-                putStrLn $ "  maximum   = " ++ show m3
+                putStrLn $ showResults r3 2 []
                 putStrLn ""
               
               -- the mean wait time in the queue

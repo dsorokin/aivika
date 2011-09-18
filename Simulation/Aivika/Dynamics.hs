@@ -14,7 +14,8 @@
 -- the Agent-based Modeling. Finally, it can be applied to System Dynamics.
 --
 module Simulation.Aivika.Dynamics 
-       (Dynamics(..),
+       (-- * Dynamics
+        Dynamics(..),
         Point(..),
         Specs(..),
         Method(..),
@@ -23,6 +24,7 @@ module Simulation.Aivika.Dynamics
         runDynamicsIO,
         printDynamics1,
         printDynamics,
+        -- * Utilities
         basicTime,
         iterationBnds,
         iterationHiBnd,
