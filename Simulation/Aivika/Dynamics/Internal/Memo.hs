@@ -2,19 +2,19 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 -- |
--- Module     : Simulation.Aivika.Dynamics.Memo
+-- Module     : Simulation.Aivika.Dynamics.Internal.Memo
 -- Copyright  : Copyright (c) 2009-2011, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.0.3
 --
--- This module defines memo functions. The memoization creates such processes, 
--- which values are defined and then stored in the cache for the integration 
--- points. Then these values are interpolated in other time points.
+-- This module defines memo functions. The memoization creates such dynamic processes, 
+-- which values are cached in the integration time points. Then these values are 
+-- interpolated in all other time points.
 --
 
-module Simulation.Aivika.Dynamics.Memo
+module Simulation.Aivika.Dynamics.Internal.Memo
        (memo,
         umemo,
         memo0,
@@ -26,8 +26,8 @@ import Data.Array.IO
 import Data.IORef
 import Control.Monad
 
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Base
+import Simulation.Aivika.Dynamics.Internal.Dynamics
+import Simulation.Aivika.Dynamics.Internal.Interpolate
 
 newMemoArray_ :: Ix i => (i, i) -> IO (IOArray i e)
 newMemoArray_ = newArray_
@@ -172,7 +172,7 @@ umemo0 (Dynamics m) =
 
 -- | Iterate sequentially the dynamic process with side effects in 
 -- the integration time points. It is equivalent to a call of the
--- @memo0@ function but significantly more efficient, for the array 
+-- 'memo0' function but significantly more efficient, for the array 
 -- is not created.
 iterateD :: Dynamics () -> Dynamics (Dynamics ())
 {-# INLINE iterateD #-}

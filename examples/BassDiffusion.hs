@@ -5,7 +5,6 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Base
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Agent
 import Simulation.Aivika.Dynamics.Ref

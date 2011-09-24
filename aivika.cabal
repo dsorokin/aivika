@@ -45,7 +45,6 @@ library
                      Simulation.Aivika.Dynamics.Cont
                      Simulation.Aivika.Dynamics.EventQueue
                      Simulation.Aivika.Dynamics.Lift
-                     Simulation.Aivika.Dynamics.Memo
                      Simulation.Aivika.Dynamics.Process
                      Simulation.Aivika.Dynamics.Random
                      Simulation.Aivika.Dynamics.Ref
@@ -57,7 +56,14 @@ library
                      Simulation.Aivika.Queue
                      Simulation.Aivika.Statistics
 
-    other-modules:   Simulation.Aivika.Vector
+    other-modules:   Simulation.Aivika.Dynamics.Internal.Dynamics
+                     Simulation.Aivika.Dynamics.Internal.Cont
+                     Simulation.Aivika.Dynamics.Internal.Process
+                     Simulation.Aivika.Dynamics.Internal.Time
+                     Simulation.Aivika.Dynamics.Internal.Memo
+                     Simulation.Aivika.Dynamics.Internal.Interpolate
+                     Simulation.Aivika.Dynamics.Internal.Fold
+                     Simulation.Aivika.Vector
                      Simulation.Aivika.UVector
                      
     build-depends:   base >= 3 && < 6,

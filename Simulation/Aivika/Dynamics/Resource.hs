@@ -22,10 +22,10 @@ module Simulation.Aivika.Dynamics.Resource
 import Data.IORef
 import Control.Monad
 
-import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Internal.Dynamics
+import Simulation.Aivika.Dynamics.Internal.Cont
+import Simulation.Aivika.Dynamics.Internal.Process
 import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Cont
-import Simulation.Aivika.Dynamics.Process
 import qualified Simulation.Aivika.Queue as Q
 
 -- | Represents a limited resource.

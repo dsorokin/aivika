@@ -40,8 +40,7 @@ import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Memo
+import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Base
 
 --

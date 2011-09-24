@@ -22,7 +22,7 @@ module Simulation.Aivika.Dynamics.EventQueue
 import Data.IORef
 import Control.Monad
 
-import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Internal.Dynamics
 import qualified Simulation.Aivika.PriorityQueue as PQ
 
 -- | The 'EventQueue' type represents the event queue.

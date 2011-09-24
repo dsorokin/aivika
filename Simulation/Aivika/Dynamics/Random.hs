@@ -20,7 +20,7 @@ import Data.IORef
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Memo
+import Simulation.Aivika.Dynamics.Base
 
 -- | Return the uniform random numbers between 0.0 and 1.0 in
 -- the integration time points.

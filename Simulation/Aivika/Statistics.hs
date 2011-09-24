@@ -88,26 +88,26 @@ showResults rs indent =
       tab = replicate indent ' '
   in if i1 <= i2
      then
-       (showString tab) .
-       (showString "mean      = ") . (shows $ resultsMean rs) . 
-       (showString "\n") . 
-       (showString tab) .
-       (showString "deviation = ") . (shows $ sqrt (resultsVariance rs)) . 
-       (showString "\n") .
-       (showString tab) .
-       (showString "minimum   = ") . (shows $ resultsMin rs) . 
-       (showString "\n") .
-       (showString tab) .
-       (showString "maximum   = ") . (shows $ resultsMax rs)
+       showString tab .
+       showString "mean      = " . shows (resultsMean rs) . 
+       showString "\n" . 
+       showString tab .
+       showString "deviation = " . shows (sqrt (resultsVariance rs)) . 
+       showString "\n" .
+       showString tab .
+       showString "minimum   = " . shows (resultsMin rs) . 
+       showString "\n" .
+       showString tab .
+       showString "maximum   = " . shows (resultsMax rs)
      else
-       (showString tab) .
-       (showString "mean      =  ---") .
-       (showString "\n") . 
-       (showString tab) .
-       (showString "deviation = ---") .
-       (showString "\n") . 
-       (showString tab) .
-       (showString "minimum   = ---") .
-       (showString "\n") . 
-       (showString tab) .
-       (showString "maximum   = ---")
+       showString tab .
+       showString "mean      = ---" .
+       showString "\n" . 
+       showString tab .
+       showString "deviation = ---" .
+       showString "\n" . 
+       showString tab .
+       showString "minimum   = ---" .
+       showString "\n" . 
+       showString tab .
+       showString "maximum   = ---"

@@ -20,7 +20,7 @@ module Simulation.Aivika.Dynamics.Ref
 import Data.IORef
 import Control.Monad.Trans
 
-import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.EventQueue
 
 -- | The 'Ref' type represents a mutable variable similar to the 'IORef' variable 

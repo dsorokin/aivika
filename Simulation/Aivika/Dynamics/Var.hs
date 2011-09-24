@@ -23,7 +23,7 @@ import Data.Array
 import Data.Array.IO
 import Data.IORef
 
-import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.EventQueue
 
 import qualified Simulation.Aivika.Vector as V

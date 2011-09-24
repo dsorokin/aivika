@@ -30,8 +30,7 @@ module Simulation.Aivika.Dynamics.Agent
 import Data.IORef
 import Control.Monad
 
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Base
+import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.EventQueue
 
 --
@@ -129,7 +128,7 @@ addTimeout st dt (Dynamics action) =
 -- in the specified time period and then repeated again many times,
 -- while the state remains active.
 addTimer :: AgentState -> Dynamics Double -> Dynamics () -> Dynamics ()
-addTimer st dt (Dynamics action) =
+addTimer st (Dynamics dt) (Dynamics action) =
   Dynamics $ \p ->
   do v <- readIORef (stateVersionRef st)
      let m1 = Dynamics $ \p ->
@@ -137,8 +136,10 @@ addTimer st dt (Dynamics action) =
               when (v == v') $ do { m2 p; action p }
          q = agentQueue (stateAgent st)
          Dynamics m2 = 
-           do t' <- time + dt
-              enqueue q t' m1
+           Dynamics $ \p ->
+           do dt' <- dt p
+              let Dynamics m3 = enqueue q (pointTime p + dt') m1
+              m3 p
      m2 p
 
 -- | Create a new state.
