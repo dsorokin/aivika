@@ -382,7 +382,7 @@ model =
                 putStrLn ""
                 
               -- the ingots in pits
-              r2 <- liftIO $ statisticsResults (furnacePitCountStats furnace)
+              r2 <- fmap analyzeData $ liftIO $ statisticsData (furnacePitCountStats furnace)
               
               liftIO $ do
                 putStrLn "The ingots in pits: "
@@ -390,7 +390,7 @@ model =
                 putStrLn ""
               
               -- the queue size
-              r3 <- liftIO $ statisticsResults (furnaceQueueCountStats furnace)
+              r3 <- fmap analyzeData $ liftIO $ statisticsData (furnaceQueueCountStats furnace)
      
               liftIO $ do
                 putStrLn "The queue size: "

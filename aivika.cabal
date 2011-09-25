@@ -52,6 +52,7 @@ library
                      Simulation.Aivika.Dynamics.SystemDynamics
                      Simulation.Aivika.Dynamics.UVar
                      Simulation.Aivika.Dynamics.Var
+                     Simulation.Aivika.Dynamics.Parameter
                      Simulation.Aivika.PriorityQueue
                      Simulation.Aivika.Queue
                      Simulation.Aivika.Statistics
@@ -69,7 +70,8 @@ library
     build-depends:   base >= 3 && < 6,
                      haskell98,
                      mtl >= 1.1.0.2,
-                     array >= 0.3.0.0
+                     array >= 0.3.0.0,
+                     containers >= 0.4.0.0
 
     extensions:      FlexibleContexts
                      

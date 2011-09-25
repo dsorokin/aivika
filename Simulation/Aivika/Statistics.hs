@@ -15,8 +15,9 @@ module Simulation.Aivika.Statistics
        (Statistics, 
         newStatistics,
         addStatistics,
-        statisticsResults,
-        Results(..),
+        statisticsData,
+        AnalysisResults(..),
+        analyzeData,
         showResults) where 
 
 import Data.Foldable
@@ -48,41 +49,45 @@ addStatistics s x =
   withMVar (statLock s) $ \() ->
   appendVector (statData s) x
 
--- | Represents the statistic results.
-data Results a = Results { resultsData     :: Array Int a,
-                           -- ^ Statistic data.
-                           resultsMean     :: Double,
-                           -- ^ The average value.
-                           resultsVariance :: Double,
-                           -- ^ The variance.
-                           resultsMin      :: a,
-                           -- ^ The minimum value.
-                           resultsMax      :: a 
-                           -- ^ The maximum value.
-                         } deriving (Eq, Ord, Show)
-
--- | Return the results of statistics. It is thread-safe.
-statisticsResults :: (Real a, MArray IOUArray a IO) => 
-                     Statistics a -> IO (Results a)
-statisticsResults s =
-  do xs <- withMVar (statLock s) $ \() -> freezeVector (statData s)
-     let (i1, i2) = bounds xs
-         meanx = foldl' (\y i -> y * (1 - k i) + f i * k i) 0 [i1 .. i2]
-         sqrx  = foldl' (\y i -> y * (1 - k i) + g i * k i) 0 [i1 .. i2]
-         minx  = foldl' (\y i -> if i == 0 then x i else min y (x i)) 0 [i1 .. i2]
-         maxx  = foldl' (\y i -> if i == 0 then x i else max y (x i)) 0 [i1 .. i2]
-         x i = xs ! i
-         f i = fromRational (toRational (x i))
-         g i = let y = f i in y * y
-         k i = 1 / fromInteger (toInteger (i - i1 + 1))
-     return Results { resultsData = xs,
-                      resultsMean = meanx,
-                      resultsVariance = sqrx - meanx * meanx,
-                      resultsMin = minx,
-                      resultsMax = maxx }
+-- | Return the statistics data. It is thread-safe.
+statisticsData :: (MArray IOUArray a IO) => Statistics a -> IO (Array Int a)
+statisticsData s =
+  withMVar (statLock s) $ \() -> freezeVector (statData s)
        
--- | Show the results with the specified indent.       
-showResults :: (Show a) => Results a -> Int -> ShowS
+-- | Represents the results of the statistic analysis.
+data AnalysisResults a = 
+  AnalysisResults { resultsData     :: Array Int a,
+                    -- ^ Statistic data.
+                    resultsMean     :: Double,
+                    -- ^ The average value.
+                    resultsVariance :: Double,
+                    -- ^ The variance.
+                    resultsMin      :: a,
+                    -- ^ The minimum value.
+                    resultsMax      :: a 
+                    -- ^ The maximum value.
+                  } deriving (Eq, Ord, Show)
+
+-- | Analyze data.
+analyzeData :: Real a => Array Int a -> AnalysisResults a
+analyzeData xs =
+  let (i1, i2) = bounds xs
+      meanx = foldl' (\y i -> y * (1 - k i) + f i * k i) 0 [i1 .. i2]
+      sqrx  = foldl' (\y i -> y * (1 - k i) + g i * k i) 0 [i1 .. i2]
+      minx  = foldl' (\y i -> if i == 0 then x i else min y (x i)) 0 [i1 .. i2]
+      maxx  = foldl' (\y i -> if i == 0 then x i else max y (x i)) 0 [i1 .. i2]
+      x i = xs ! i
+      f i = fromRational (toRational (x i))
+      g i = let y = f i in y * y
+      k i = 1 / fromInteger (toInteger (i - i1 + 1))
+  in AnalysisResults { resultsData = xs,
+                       resultsMean = meanx,
+                       resultsVariance = sqrx - meanx * meanx,
+                       resultsMin = minx,
+                       resultsMax = maxx }
+       
+-- | Show the results of analysis with the specified indent.       
+showResults :: (Show a) => AnalysisResults a -> Int -> ShowS
 showResults rs indent =
   let (i1, i2) = bounds (resultsData rs)
       tab = replicate indent ' '
