@@ -2,17 +2,22 @@ name:            aivika
 version:         0.2
 synopsis:        A multi-paradigm simulation library
 description:
-    Aivika is a multi-paradigm simulation library. It allows us to integrate 
-    a system of ordinary differential equations. Also it can be applied to
-    the Discrete Event Simulation. It supports the event-oriented, 
-    process-oriented and activity-oriented paradigms. Aivika also supports 
-    the Agent-based Modeling. Finally, it can be applied to System Dynamics.
+    Aivika is a small simulation library that covers many paradigms. 
+    It allows integrating a system of ordinary differential equations. 
+    Also it can be applied to the Discrete Event Simulation. It supports 
+    the event-oriented, process-oriented and activity-oriented paradigms. 
+    Aivika also supports the Agent-based Modeling. Finally, it can be applied 
+    to System Dynamics.
     .
     The library widely uses monads. The dynamic system is represented as 
-    a computation in the Dynamics monad. There is also the DynamicsProc
-    monad to represent the discontinuous processes which can be suspended
-    at any time and then resumed later. Everything else is expressed through 
-    these two monads, including the events, agent handlers and even integrals.
+    a computation in the Dynamics monad. There is also the Process
+    monad to represent the discontinuous processes which can suspend
+    at any time and then resume later. Everything else is expressed through 
+    these two monads, including the event handlers, agent handlers and even 
+    integrals.
+    .
+    The PDF documentation is available at 
+    <https://github.com/dsorokin/aivika/blob/master/doc/aivika.pdf>
     .
 category:        Simulation
 license:         BSD3
