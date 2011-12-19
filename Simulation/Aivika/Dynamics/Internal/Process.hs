@@ -26,6 +26,7 @@ module Simulation.Aivika.Dynamics.Internal.Process
         processID,
         runProcess) where
 
+import Data.Maybe
 import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
@@ -39,7 +40,7 @@ import Simulation.Aivika.Dynamics.EventQueue
 data ProcessID = 
   ProcessID { processQueue   :: EventQueue,  -- ^ Return the event queue.
               processStarted :: IORef Bool,
-              processCont    :: IORef (Maybe (Dynamics (() -> IO ()))) }
+              processCont    :: IORef (Maybe (() -> Dynamics ())) }
 
 -- | Specifies a discontinuous process that can suspend at any time
 -- and then resume later.
@@ -50,9 +51,9 @@ holdProcess :: Double -> Process ()
 holdProcess dt =
   Process $ \pid ->
   Cont $ \c ->
-  Dynamics $ \ps ->
-  do let Dynamics m = enqueueCont (processQueue pid) (pointTime ps + dt) c
-     m ps
+  Dynamics $ \p ->
+  do let Dynamics m = enqueueCont (processQueue pid) (pointTime p + dt) c
+     m p
 
 -- | Passivate the process.
 passivateProcess :: Process ()
@@ -70,38 +71,36 @@ passivateProcess =
 processPassive :: ProcessID -> Process Bool
 processPassive pid =
   Process $ \_ ->
-  Cont $ \(Dynamics c) ->
+  Cont $ \c ->
   Dynamics $ \p ->
-  do cont' <- c p
-     let x = processCont pid
+  do let x = processCont pid
      a <- readIORef x
-     case a of
-       Nothing -> cont' False
-       Just _  -> cont' True
+     let Dynamics m = c (isJust a)
+     m p
 
 -- | Reactivate a process with the specified ID.
 reactivateProcess :: ProcessID -> Process ()
 reactivateProcess pid =
   Process $ \pid' ->
-  Cont $ \c@(Dynamics cont) ->
+  Cont $ \c ->
   Dynamics $ \p ->
   do let x = processCont pid
      a <- readIORef x
      case a of
        Nothing ->
-         do cont' <- cont p
-            cont' ()
-       Just (Dynamics cont2) ->
+         do let Dynamics m' = c ()
+            m' p
+       Just c2 ->
          do writeIORef x Nothing
-            let Dynamics m = enqueueCont (processQueue pid') (pointTime p) c
-            m p
-            cont2' <- cont2 p
-            cont2' ()
+            let Dynamics m  = enqueueCont (processQueue pid') (pointTime p) c
+                Dynamics m' = c2 ()
+            m  p
+            m' p
 
 -- | Start the process with the specified ID at the desired time.
 runProcess :: Process () -> ProcessID -> Double -> Dynamics ()
 runProcess (Process p) pid t =
-  runCont m r
+  runCont m return
     where m = do y <- liftIO $ readIORef (processStarted pid)
                  if y 
                    then error $
@@ -110,7 +109,6 @@ runProcess (Process p) pid t =
                    else liftIO $ writeIORef (processStarted pid) True
                  Cont $ \c -> enqueueCont (processQueue pid) t c
                  p pid
-          r = let f () = return () in return f
 
 -- | Return the current process ID.
 processID :: Process ProcessID

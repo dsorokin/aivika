@@ -35,7 +35,7 @@ data Resource =
              resourceInitCount :: Int,
              -- ^ Return the initial count of the resource.
              resourceCountRef  :: IORef Int, 
-             resourceWaitQueue :: Q.Queue (Dynamics (() -> IO ()))}
+             resourceWaitQueue :: Q.Queue (() -> Dynamics ())}
 
 instance Eq Resource where
   x == y = resourceCountRef x == resourceCountRef y  -- unique references
@@ -55,11 +55,11 @@ newResource q initCount =
 resourceCount :: Resource -> Process Int
 resourceCount r =
   Process $ \_ ->
-  Cont $ \(Dynamics c) ->
+  Cont $ \c ->
   Dynamics $ \p ->
-  do cont' <- c p 
-     a <- readIORef (resourceCountRef r)
-     cont' a
+  do a <- readIORef (resourceCountRef r)
+     let Dynamics m = c a
+     m p
 
 -- | Request for the resource decreasing its count in case of success,
 -- otherwise suspending the discontinuous process until some other 
@@ -67,22 +67,22 @@ resourceCount r =
 requestResource :: Resource -> Process ()
 requestResource r =
   Process $ \_ ->
-  Cont $ \c@(Dynamics cont) ->
+  Cont $ \c ->
   Dynamics $ \p ->
   do a <- readIORef (resourceCountRef r)
      if a == 0 
        then Q.enqueue (resourceWaitQueue r) c
        else do let a' = a - 1
                a' `seq` writeIORef (resourceCountRef r) a'
-               cont' <- cont p
-               cont' ()
+               let Dynamics m = c ()
+               m p
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
 releaseResource :: Resource -> Process ()
 releaseResource r =
   Process $ \_ ->
-  Cont $ \(Dynamics c) ->
+  Cont $ \c ->
   Dynamics $ \p ->
   do a <- readIORef (resourceCountRef r)
      let a' = a + 1
@@ -97,5 +97,5 @@ releaseResource r =
                Q.dequeue (resourceWaitQueue r)
                let Dynamics m = enqueueCont (resourceQueue r) (pointTime p) c2
                m p
-     cont' <- c p
-     cont' ()
+     let Dynamics m' = c ()
+     m' p

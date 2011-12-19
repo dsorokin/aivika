@@ -27,7 +27,7 @@ import qualified Simulation.Aivika.PriorityQueue as PQ
 
 -- | The 'EventQueue' type represents the event queue.
 data EventQueue = EventQueue { 
-  queuePQ   :: PQ.PriorityQueue (Dynamics (() -> IO ())),
+  queuePQ   :: PQ.PriorityQueue (() -> Dynamics ()),
   queueRun  :: Dynamics (),   -- ^ Run the event queue processing its events
   queueBusy :: IORef Bool,
   queueTime :: IORef Double }
@@ -47,14 +47,13 @@ newQueue =
      return q
              
 -- | Enqueue the event which must be actuated at the specified time.
-enqueueCont :: EventQueue -> Double -> Dynamics (() -> IO ()) -> Dynamics ()
+enqueueCont :: EventQueue -> Double -> (() -> Dynamics ()) -> Dynamics ()
 enqueueCont q t c = Dynamics r where
   r p = let pq = queuePQ q in PQ.enqueue pq t c
     
 -- | Enqueue the event which must be actuated at the specified time.
 enqueue :: EventQueue -> Double -> Dynamics () -> Dynamics ()
-enqueue q t (Dynamics m) = enqueueCont q t (Dynamics c) where
-  c p = let f () = m p in return f
+enqueue q t m = enqueueCont q t (const m) 
     
 -- | Run the event queue processing its events.
 runQueue :: EventQueue -> Dynamics ()
@@ -70,7 +69,7 @@ runQueue q = Dynamics r where
     do let pq = queuePQ q
        f <- PQ.queueNull pq
        unless f $
-         do (t2, Dynamics c2) <- PQ.queueFront pq
+         do (t2, c2) <- PQ.queueFront pq
             let t = queueTime q
             t' <- readIORef t
             when (t2 < t') $ 
@@ -82,8 +81,8 @@ runQueue q = Dynamics r where
                      t0  = spcStartTime sc
                      dt  = spcDT sc
                      n2  = fromInteger $ toInteger $ floor ((t2 - t0) / dt)
-                 k <- c2 $ p { pointTime = t2,
-                               pointIteration = n2,
-                               pointPhase = -1 }
-                 k ()    -- raise the event
+                     Dynamics k = c2 ()
+                 k $ p { pointTime = t2,
+                         pointIteration = n2,
+                         pointPhase = -1 }
                  call q p

@@ -7,10 +7,8 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.0.3
 --
--- The 'Cont' monad looks somewhere like the standard ContT monad transformer 
--- parameterized by the 'Dynamics' monad, although this analogy is not strong. 
--- The main idea is to represent the continuation as a dynamic process varying 
--- in time.
+-- The 'Cont' monad is a variation of the standard Cont monad, where
+-- the result of applying the continuation is a dynamic process.
 --
 module Simulation.Aivika.Dynamics.Internal.Cont
        (Cont(..),
@@ -23,8 +21,8 @@ import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Lift
 
 -- | The 'Cont' type is similar to the standard Cont monad but only
--- the continuation is represented as a dynamic process varying in time.
-newtype Cont a = Cont (Dynamics (a -> IO ()) -> Dynamics ())
+-- the continuation uses a dynamic process as a result.
+newtype Cont a = Cont ((a -> Dynamics ()) -> Dynamics ())
 
 instance Monad Cont where
   return  = returnC
@@ -41,44 +39,34 @@ instance MonadIO Cont where
 
 returnC :: a -> Cont a
 {-# INLINE returnC #-}
-returnC a = 
-  Cont $ \(Dynamics c) -> 
-  Dynamics $ \p -> 
-  do cont' <- c p
-     cont' a
+returnC a = Cont $ \c -> c a
                           
 bindC :: Cont a -> (a -> Cont b) -> Cont b
 {-# INLINE bindC #-}
-bindC (Cont m) k =
-  Cont $ \c ->
-  m $ Dynamics $ \p -> 
-  let cont' a = let (Cont m') = k a
-                    (Dynamics u) = m' c
-                in u p
-  in return cont'
+bindC (Cont m) k = Cont $ \c -> m (\a -> let Cont m' = k a in m' c)
 
 -- | Run the 'Cont' computation.
-runCont :: Cont a -> IO (a -> IO ()) -> Dynamics ()
+runCont :: Cont a -> (a -> Dynamics ()) -> Dynamics ()
 {-# INLINE runCont #-}
-runCont (Cont m) f = m $ Dynamics $ const f
+runCont (Cont m) f = m f
 
 -- | Lift the 'Dynamics' computation.
 liftC :: Dynamics a -> Cont a
 {-# INLINE liftC #-}
 liftC (Dynamics m) =
-  Cont $ \(Dynamics c) ->
+  Cont $ \c ->
   Dynamics $ \p ->
-  do cont' <- c p
-     a <- m p
-     cont' a
+  do a <- m p
+     let Dynamics m' = c a
+     m' p
      
 -- | Lift the IO computation.
 liftIOC :: IO a -> Cont a
 {-# INLINE liftIOC #-}
 liftIOC m =
-  Cont $ \(Dynamics c) ->
+  Cont $ \c ->
   Dynamics $ \p ->
-  do cont' <- c p
-     a <- m
-     cont' a
+  do a <- m
+     let Dynamics m' = c a
+     m' p
   
