@@ -22,6 +22,7 @@ module Simulation.Aivika.Dynamics.Resource
 import Data.IORef
 import Control.Monad
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Internal.Cont
 import Simulation.Aivika.Dynamics.Internal.Process
@@ -41,9 +42,9 @@ instance Eq Resource where
   x == y = resourceCountRef x == resourceCountRef y  -- unique references
 
 -- | Create a new resource with the specified initial count.
-newResource :: EventQueue -> Int -> Dynamics Resource
+newResource :: EventQueue -> Int -> Simulation Resource
 newResource q initCount =
-  Dynamics $ \p ->
+  Simulation $ \r ->
   do countRef  <- newIORef initCount
      waitQueue <- Q.newQueue
      return Resource { resourceQueue     = q,
@@ -52,14 +53,12 @@ newResource q initCount =
                        resourceWaitQueue = waitQueue }
 
 -- | Return the current count of the resource.
-resourceCount :: Resource -> Process Int
+resourceCount :: Resource -> Dynamics Int
 resourceCount r =
-  Process $ \_ ->
-  Cont $ \c ->
   Dynamics $ \p ->
-  do a <- readIORef (resourceCountRef r)
-     let Dynamics m = c a
+  do let Dynamics m = queueRun (resourceQueue r)
      m p
+     readIORef (resourceCountRef r)
 
 -- | Request for the resource decreasing its count in case of success,
 -- otherwise suspending the discontinuous process until some other 

@@ -1,5 +1,5 @@
 name:            aivika
-version:         0.2
+version:         0.3
 synopsis:        A multi-paradigm simulation library
 description:
     Aivika is a small simulation library that covers many paradigms. 
@@ -22,7 +22,7 @@ description:
 category:        Simulation
 license:         BSD3
 license-file:    LICENSE
-copyright:       (c) 2009-2011. David Sorokin <david.sorokin@gmail.com>
+copyright:       (c) 2009-2012. David Sorokin <david.sorokin@gmail.com>
 author:          David Sorokin
 maintainer:      David Sorokin <david.sorokin@gmail.com>
 homepage:        http://github.com/dsorokin/aivika
@@ -49,20 +49,21 @@ library
                      Simulation.Aivika.Dynamics.Base
                      Simulation.Aivika.Dynamics.Cont
                      Simulation.Aivika.Dynamics.EventQueue
-                     Simulation.Aivika.Dynamics.Lift
+                     Simulation.Aivika.Dynamics.Parameter
                      Simulation.Aivika.Dynamics.Process
                      Simulation.Aivika.Dynamics.Random
                      Simulation.Aivika.Dynamics.Ref
                      Simulation.Aivika.Dynamics.Resource
+                     Simulation.Aivika.Dynamics.Simulation
                      Simulation.Aivika.Dynamics.SystemDynamics
                      Simulation.Aivika.Dynamics.UVar
                      Simulation.Aivika.Dynamics.Var
-                     Simulation.Aivika.Dynamics.Parameter
+                     Simulation.Aivika.Statistics
                      Simulation.Aivika.PriorityQueue
                      Simulation.Aivika.Queue
-                     Simulation.Aivika.Statistics
 
     other-modules:   Simulation.Aivika.Dynamics.Internal.Dynamics
+                     Simulation.Aivika.Dynamics.Internal.Simulation
                      Simulation.Aivika.Dynamics.Internal.Cont
                      Simulation.Aivika.Dynamics.Internal.Process
                      Simulation.Aivika.Dynamics.Internal.Time

@@ -2,6 +2,7 @@
 import Data.Array
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.SystemDynamics
 
 specs = Specs { spcStartTime = 0, 
@@ -10,7 +11,7 @@ specs = Specs { spcStartTime = 0,
                 -- spcDT = 0.000005,
                 spcMethod = RungeKutta4 }
 
-model :: Dynamics (Dynamics Double)
+model :: Simulation Double
 model =
   do fishInteg <- newInteg 1000
      shipsInteg <- newInteg 10
@@ -36,23 +37,22 @@ model =
                               (0.6, 5.118), (0.7, 5.247), (0.8, 5.849), 
                               (0.9, 6.151), (10.0, 6.194)]
          density = fish / area
-         fishDeathRate = maxD 0 (fish * deathFraction)
-         fishHatchRate = maxD 0 (fish * hatchFraction)
+         fishDeathRate = maxDynamics 0 (fish * deathFraction)
+         fishHatchRate = maxDynamics 0 (fish * hatchFraction)
          fishPrice = 20
          fractionInvested = 0.2
          hatchFraction = 6
          operatingCost = ships * 250
          profit = revenue - operatingCost
          revenue = totalCatchPerYear * fishPrice
-         shipBuildingRate = maxD 0 (profit * fractionInvested / shipCost)
+         shipBuildingRate = maxDynamics 0 (profit * fractionInvested / shipCost)
          shipCost = 300
-         totalCatchPerYear = maxD 0 (ships * catchPerShip)
+         totalCatchPerYear = maxDynamics 0 (ships * catchPerShip)
      -- derivatives --
      integDiff fishInteg (fishHatchRate - fishDeathRate - totalCatchPerYear)
      integDiff shipsInteg shipBuildingRate
      integDiff totalProfitInteg annualProfit
      -- results --
-     return annualProfit
+     runDynamicsInFinal annualProfit
 
-main = do a <- runDynamics1 model specs
-          print a
+main = runSimulation model specs

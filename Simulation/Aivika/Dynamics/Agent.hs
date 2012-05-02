@@ -30,6 +30,7 @@ module Simulation.Aivika.Dynamics.Agent
 import Data.IORef
 import Control.Monad
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.EventQueue
 
@@ -116,11 +117,13 @@ traversePath source target =
 addTimeout :: AgentState -> Double -> Dynamics () -> Dynamics ()
 addTimeout st dt (Dynamics action) =
   Dynamics $ \p ->
-  do v <- readIORef (stateVersionRef st)
+  do let q = agentQueue (stateAgent st)
+         Dynamics m0 = queueRun q
+     m0 p    -- ensure that the agent state is actual
+     v <- readIORef (stateVersionRef st)
      let m1 = Dynamics $ \p ->
            do v' <- readIORef (stateVersionRef st)
               when (v == v') $ action p
-         q = agentQueue (stateAgent st)
          Dynamics m2 = enqueue q (pointTime p + dt) m1
      m2 p
 
@@ -130,11 +133,13 @@ addTimeout st dt (Dynamics action) =
 addTimer :: AgentState -> Dynamics Double -> Dynamics () -> Dynamics ()
 addTimer st (Dynamics dt) (Dynamics action) =
   Dynamics $ \p ->
-  do v <- readIORef (stateVersionRef st)
+  do let q = agentQueue (stateAgent st)
+         Dynamics m0 = queueRun q
+     m0 p    -- ensure that the agent state is actual
+     v <- readIORef (stateVersionRef st)
      let m1 = Dynamics $ \p ->
            do v' <- readIORef (stateVersionRef st)
               when (v == v') $ do { m2 p; action p }
-         q = agentQueue (stateAgent st)
          Dynamics m2 = 
            Dynamics $ \p ->
            do dt' <- dt p
@@ -143,9 +148,9 @@ addTimer st (Dynamics dt) (Dynamics action) =
      m2 p
 
 -- | Create a new state.
-newState :: Agent -> Dynamics AgentState
+newState :: Agent -> Simulation AgentState
 newState agent =
-  Dynamics $ \p ->
+  Simulation $ \r ->
   do aref <- newIORef $ return ()
      dref <- newIORef $ return ()
      vref <- newIORef 0
@@ -156,9 +161,9 @@ newState agent =
                          stateVersionRef = vref }
 
 -- | Create a child state.
-newSubstate :: AgentState -> Dynamics AgentState
+newSubstate :: AgentState -> Simulation AgentState
 newSubstate parent =
-  Dynamics $ \p ->
+  Simulation $ \r ->
   do let agent = stateAgent parent 
      aref <- newIORef $ return ()
      dref <- newIORef $ return ()
@@ -170,9 +175,9 @@ newSubstate parent =
                          stateVersionRef = vref }
 
 -- | Create an agent bound with the specified event queue.
-newAgent :: EventQueue -> Dynamics Agent
+newAgent :: EventQueue -> Simulation Agent
 newAgent queue =
-  Dynamics $ \p ->
+  Simulation $ \r ->
   do modeRef    <- newIORef CreationMode
      stateRef   <- newIORef Nothing
      return Agent { agentQueue = queue,
@@ -247,14 +252,14 @@ initState st =
          "the state activation: initState."
 
 -- | Set the activation computation for the specified state.
-stateActivation :: AgentState -> Dynamics () -> Dynamics ()
+stateActivation :: AgentState -> Dynamics () -> Simulation ()
 stateActivation st action =
-  Dynamics $ \p ->
+  Simulation $ \r ->
   writeIORef (stateActivateRef st) action
   
 -- | Set the deactivation computation for the specified state.
-stateDeactivation :: AgentState -> Dynamics () -> Dynamics ()
+stateDeactivation :: AgentState -> Dynamics () -> Simulation ()
 stateDeactivation st action =
-  Dynamics $ \p ->
+  Simulation $ \r ->
   writeIORef (stateDeactivateRef st) action
   

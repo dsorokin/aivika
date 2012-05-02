@@ -20,6 +20,7 @@ import Data.IORef
 import qualified Data.Map as M
 import Control.Concurrent.MVar
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 
 -- | Create a thread-safe parameter that returns always the same value during the simulation run, 

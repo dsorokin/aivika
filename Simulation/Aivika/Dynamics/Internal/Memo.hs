@@ -19,13 +19,14 @@ module Simulation.Aivika.Dynamics.Internal.Memo
         umemo,
         memo0,
         umemo0,
-        iterateD) where
+        iterateDynamics) where
 
 import Data.Array
 import Data.Array.IO
 import Data.IORef
 import Control.Monad
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Internal.Interpolate
 
@@ -37,11 +38,11 @@ newMemoUArray_ = newArray_
 
 -- | Memoize and order the computation in the integration time points using 
 -- the interpolation that knows of the Runge-Kutta method.
-memo :: Dynamics e -> Dynamics (Dynamics e)
+memo :: Dynamics e -> Simulation (Dynamics e)
 {-# INLINE memo #-}
 memo (Dynamics m) = 
-  Dynamics $ \p ->
-  do let sc = pointSpecs p
+  Simulation $ \r ->
+  do let sc = runSpecs r
          (phl, phu) = phaseBnds sc
          (nl, nu)   = iterationBnds sc
      arr   <- newMemoArray_ ((phl, nl), (phu, nu))
@@ -74,11 +75,11 @@ memo (Dynamics m) =
 
 -- | This is a more efficient version the 'memo' function which uses 
 -- an unboxed array to store the values.
-umemo :: (MArray IOUArray e IO) => Dynamics e -> Dynamics (Dynamics e)
+umemo :: (MArray IOUArray e IO) => Dynamics e -> Simulation (Dynamics e)
 {-# INLINE umemo #-}
 umemo (Dynamics m) = 
-  Dynamics $ \p ->
-  do let sc = pointSpecs p
+  Simulation $ \r ->
+  do let sc = runSpecs r
          (phl, phu) = phaseBnds sc
          (nl, nu)   = iterationBnds sc
      arr   <- newMemoUArray_ ((phl, nl), (phu, nu))
@@ -116,11 +117,11 @@ umemo (Dynamics m) =
 -- difference when we request for values in the intermediate time points
 -- that are used by this method to integrate. In general case you should 
 -- prefer the 'memo0' function above 'memo'.
-memo0 :: Dynamics e -> Dynamics (Dynamics e)
+memo0 :: Dynamics e -> Simulation (Dynamics e)
 {-# INLINE memo0 #-}
 memo0 (Dynamics m) = 
-  Dynamics $ \p ->
-  do let sc   = pointSpecs p
+  Simulation $ \r ->
+  do let sc   = runSpecs r
          bnds = iterationBnds sc
      arr  <- newMemoArray_ bnds
      nref <- newIORef 0
@@ -144,11 +145,11 @@ memo0 (Dynamics m) =
 
 -- | This is a more efficient version the 'memo0' function which uses 
 -- an unboxed array to store the values.
-umemo0 :: (MArray IOUArray e IO) => Dynamics e -> Dynamics (Dynamics e)
+umemo0 :: (MArray IOUArray e IO) => Dynamics e -> Simulation (Dynamics e)
 {-# INLINE umemo0 #-}
 umemo0 (Dynamics m) = 
-  Dynamics $ \p ->
-  do let sc   = pointSpecs p
+  Simulation $ \r ->
+  do let sc   = runSpecs r
          bnds = iterationBnds sc
      arr  <- newMemoUArray_ bnds
      nref <- newIORef 0
@@ -174,11 +175,11 @@ umemo0 (Dynamics m) =
 -- the integration time points. It is equivalent to a call of the
 -- 'memo0' function but significantly more efficient, for the array 
 -- is not created.
-iterateD :: Dynamics () -> Dynamics (Dynamics ())
-{-# INLINE iterateD #-}
-iterateD (Dynamics m) = 
-  Dynamics $ \p ->
-  do let sc = pointSpecs p
+iterateDynamics :: Dynamics () -> Simulation (Dynamics ())
+{-# INLINE iterateDynamics #-}
+iterateDynamics (Dynamics m) = 
+  Simulation $ \r ->
+  do let sc = runSpecs r
      nref <- newIORef 0
      let r p =
            do let sc = pointSpecs p

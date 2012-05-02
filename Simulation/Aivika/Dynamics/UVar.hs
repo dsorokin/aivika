@@ -14,17 +14,19 @@
 --
 module Simulation.Aivika.Dynamics.UVar
        (UVar,
-        newUVar,
         uvarQueue,
+        newUVar,
         readUVar,
         writeUVar,
         modifyUVar,
         freezeUVar) where
 
+import Control.Monad
 import Data.Array
 import Data.Array.IO
 import Data.IORef
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.EventQueue
 
@@ -39,12 +41,12 @@ data UVar a =
          uvarYS    :: UV.UVector a}
      
 -- | Create a new variable bound to the specified event queue.
-newUVar :: (MArray IOUArray a IO) => EventQueue -> a -> Dynamics (UVar a)
+newUVar :: (MArray IOUArray a IO) => EventQueue -> a -> Simulation (UVar a)
 newUVar q a =
-  Dynamics $ \p ->
+  Simulation $ \r ->
   do xs <- UV.newVector
      ys <- UV.newVector
-     UV.appendVector xs $ spcStartTime $ pointSpecs p
+     UV.appendVector xs $ spcStartTime $ runSpecs r
      UV.appendVector ys a
      return UVar { uvarQueue = q,
                    uvarRun   = queueRun q,
@@ -121,6 +123,8 @@ freezeUVar :: (MArray IOUArray a IO) =>
               UVar a -> Dynamics (Array Int Double, Array Int a)
 freezeUVar v =
   Dynamics $ \p ->
-  do xs <- UV.freezeVector (uvarXS v)
+  do let Dynamics m = uvarRun v
+     m p
+     xs <- UV.freezeVector (uvarXS v)
      ys <- UV.freezeVector (uvarYS v)
      return (xs, ys)

@@ -1,5 +1,6 @@
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.SystemDynamics
 
 specs = Specs { spcStartTime = 0, 
@@ -7,7 +8,7 @@ specs = Specs { spcStartTime = 0,
                 spcDT = 0.01,
                 spcMethod = RungeKutta4 }
 
-model :: Dynamics (Dynamics [Double])
+model :: Simulation [Double]
 model =
   do integA <- newInteg 100
      integB <- newInteg 0
@@ -20,8 +21,6 @@ model =
      integDiff integA (- ka * a)
      integDiff integB (ka * a - kb * b)
      integDiff integC (kb * b)
-     return $ sequence [a, b, c]
+     runDynamicsInFinal $ sequence [a, b, c]
 
-main = 
-  do a <- runDynamics1 model specs
-     print a
+main = runSimulation model specs

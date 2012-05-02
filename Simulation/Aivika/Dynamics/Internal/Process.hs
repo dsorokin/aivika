@@ -31,9 +31,9 @@ import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Internal.Cont
-import Simulation.Aivika.Dynamics.Lift
 import Simulation.Aivika.Dynamics.EventQueue
 
 -- | Represents a process identificator.
@@ -68,34 +68,30 @@ passivateProcess =
        Just _  -> error "Cannot passivate the process twice: passivate"
 
 -- | Test whether the process with the specified ID is passivated.
-processPassive :: ProcessID -> Process Bool
+processPassive :: ProcessID -> Dynamics Bool
 processPassive pid =
-  Process $ \_ ->
-  Cont $ \c ->
   Dynamics $ \p ->
-  do let x = processCont pid
-     a <- readIORef x
-     let Dynamics m = c (isJust a)
+  do let Dynamics m = queueRun $ processQueue pid
      m p
+     let x = processCont pid
+     a <- readIORef x
+     return $ isJust a
 
 -- | Reactivate a process with the specified ID.
-reactivateProcess :: ProcessID -> Process ()
+reactivateProcess :: ProcessID -> Dynamics ()
 reactivateProcess pid =
-  Process $ \pid' ->
-  Cont $ \c ->
   Dynamics $ \p ->
-  do let x = processCont pid
+  do let Dynamics m = queueRun $ processQueue pid
+     m p
+     let x = processCont pid
      a <- readIORef x
      case a of
-       Nothing ->
-         do let Dynamics m' = c ()
-            m' p
-       Just c2 ->
+       Nothing -> 
+         return ()
+       Just c ->
          do writeIORef x Nothing
-            let Dynamics m  = enqueueCont (processQueue pid') (pointTime p) c
-                Dynamics m' = c2 ()
-            m  p
-            m' p
+            let Dynamics m  = enqueueCont (processQueue pid) (pointTime p) c
+            m p
 
 -- | Start the process with the specified ID at the desired time.
 runProcess :: Process () -> ProcessID -> Double -> Dynamics ()
@@ -115,7 +111,7 @@ processID :: Process ProcessID
 processID = Process $ \pid -> return pid
 
 -- | Create a new process ID.
-newProcessID :: EventQueue -> Dynamics ProcessID
+newProcessID :: EventQueue -> Simulation ProcessID
 newProcessID q =
   do x <- liftIO $ newIORef Nothing
      y <- liftIO $ newIORef False
@@ -133,8 +129,11 @@ instance Monad Process where
 instance Functor Process where
   fmap = liftM
 
-instance Lift Process where
-  liftD = liftP
+instance SimulationLift Process where
+  liftSimulation = liftSP
+  
+instance DynamicsLift Process where
+  liftDynamics = liftDP
   
 instance MonadIO Process where
   liftIO = liftIOP
@@ -151,9 +150,13 @@ bindP (Process m) k =
      let Process m' = k a
      m' pid
 
-liftP :: Dynamics a -> Process a
-{-# INLINE liftP #-}
-liftP m = Process $ \pid -> liftD m
+liftSP :: Simulation a -> Process a
+{-# INLINE liftSP #-}
+liftSP m = Process $ \pid -> liftSimulation m
+
+liftDP :: Dynamics a -> Process a
+{-# INLINE liftDP #-}
+liftDP m = Process $ \pid -> liftDynamics m
 
 liftIOP :: IO a -> Process a
 {-# INLINE liftIOP #-}

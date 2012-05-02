@@ -11,11 +11,12 @@
 --
 
 module Simulation.Aivika.Dynamics.Internal.Time
-       (starttime,
-        stoptime,
-        dt,
+       (starttime, 
+        stoptime, 
+        dt, 
         time) where
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 
 -- | Return the start simulation time.

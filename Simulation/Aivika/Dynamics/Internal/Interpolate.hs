@@ -14,16 +14,16 @@
 --
 
 module Simulation.Aivika.Dynamics.Internal.Interpolate
-       (initD,
+       (initDynamics,
         discrete,
         interpolate) where
 
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 
 -- | Return the initial value.
-initD :: Dynamics a -> Dynamics a
-{-# INLINE initD #-}
-initD (Dynamics m) =
+initDynamics :: Dynamics a -> Dynamics a
+{-# INLINE initDynamics #-}
+initDynamics (Dynamics m) =
   Dynamics $ \p ->
   if pointIteration p == 0 && pointPhase p == 0 then
     m p

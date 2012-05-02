@@ -18,18 +18,9 @@
 --
 module Simulation.Aivika.Dynamics 
        (Dynamics,
-        Specs(..),
-        Method(..),
-        runDynamics1,
-        runDynamics1_,
-        runDynamics,
-        runDynamics_,
-        runDynamicsIO,
-        runDynamicsSeries1,
-        runDynamicsSeries1_,
-        runDynamicsSeries,
-        runDynamicsSeries_,
-        printDynamics1,
-        printDynamics) where
+        DynamicsLift(..),
+        runDynamicsInStart,
+        runDynamicsInFinal,
+        runDynamics) where
 
 import Simulation.Aivika.Dynamics.Internal.Dynamics

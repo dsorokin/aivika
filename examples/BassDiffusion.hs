@@ -5,6 +5,7 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Agent
 import Simulation.Aivika.Dynamics.Ref
@@ -34,7 +35,7 @@ data Person = Person { personAgent :: Agent,
                        personPotentialAdopter :: AgentState,
                        personAdopter :: AgentState }
               
-createPerson :: EventQueue -> Dynamics Person              
+createPerson :: EventQueue -> Simulation Person              
 createPerson q =    
   do agent <- newAgent q
      potentialAdopter <- newState agent
@@ -43,14 +44,14 @@ createPerson q =
                      personPotentialAdopter = potentialAdopter,
                      personAdopter = adopter }
        
-createPersons :: EventQueue -> Dynamics (Array Int Person)
+createPersons :: EventQueue -> Simulation (Array Int Person)
 createPersons q =
   do list <- forM [1 .. n] $ \i ->
        do p <- createPerson q
           return (i, p)
      return $ array (1, n) list
      
-definePerson :: Person -> Array Int Person -> Ref Int -> Ref Int -> Dynamics ()
+definePerson :: Person -> Array Int Person -> Ref Int -> Ref Int -> Simulation ()
 definePerson p ps potentialAdopters adopters =
   do stateActivation (personPotentialAdopter p) $
        do modifyRef potentialAdopters $ \a -> a + 1
@@ -75,7 +76,7 @@ definePerson p ps potentialAdopters adopters =
      stateDeactivation (personAdopter p) $
        modifyRef adopters $ \a -> a - 1
         
-definePersons :: Array Int Person -> Ref Int -> Ref Int -> Dynamics ()
+definePersons :: Array Int Person -> Ref Int -> Ref Int -> Simulation ()
 definePersons ps potentialAdopters adopters =
   forM_ (elems ps) $ \p -> 
   definePerson p ps potentialAdopters adopters
@@ -87,17 +88,20 @@ activatePersons :: Array Int Person -> Dynamics ()
 activatePersons ps =
   forM_ (elems ps) $ \p -> activatePerson p
 
-model :: Dynamics (Dynamics [Int])
+model :: Simulation [IO [Int]]
 model =
   do q <- newQueue
      potentialAdopters <- newRef q 0
      adopters <- newRef q 0
      ps <- createPersons q
      definePersons ps potentialAdopters adopters
-     activatePersons ps
-     return $ do i1 <- readRef potentialAdopters
-                 i2 <- readRef adopters
-                 return [i1, i2]
+     runDynamicsInStart $
+       activatePersons ps
+     runDynamics $
+       do i1 <- readRef potentialAdopters
+          i2 <- readRef adopters
+          return [i1, i2]
 
-main =
-  printDynamics model specs
+main = 
+  do xs <- runSimulation model specs
+     forM_ xs $ \x -> x >>= print

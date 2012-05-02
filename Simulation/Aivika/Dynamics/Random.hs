@@ -20,17 +20,18 @@ import Data.IORef
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Base
 
 -- | Return the uniform random numbers between 0.0 and 1.0 in
 -- the integration time points.
-newRandom :: Dynamics (Dynamics Double)
+newRandom :: Simulation (Dynamics Double)
 newRandom =
   memo0 $ liftIO $ getStdRandom random
      
 -- | Return the normal random numbers with mean 0.0 and variance 1.0 in
 -- the integration time points.
-newNormal :: Dynamics (Dynamics Double)
+newNormal :: Simulation (Dynamics Double)
 newNormal =
   do g <- liftIO normalGen
      memo0 $ liftIO g

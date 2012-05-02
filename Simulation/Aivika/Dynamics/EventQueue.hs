@@ -22,6 +22,7 @@ module Simulation.Aivika.Dynamics.EventQueue
 import Data.IORef
 import Control.Monad
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import qualified Simulation.Aivika.PriorityQueue as PQ
 
@@ -33,10 +34,10 @@ data EventQueue = EventQueue {
   queueTime :: IORef Double }
 
 -- | Create a new event queue.
-newQueue :: Dynamics EventQueue
+newQueue :: Simulation EventQueue
 newQueue = 
-  Dynamics $ \p ->
-  do let sc = pointSpecs p
+  Simulation $ \r ->
+  do let sc = runSpecs r
      f <- newIORef False
      t <- newIORef $ spcStartTime sc
      pq <- PQ.newQueue

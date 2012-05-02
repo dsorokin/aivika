@@ -20,7 +20,7 @@ import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Base
-import Simulation.Aivika.Dynamics.Lift
+import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Ref
 import Simulation.Aivika.Dynamics.Process
@@ -38,7 +38,7 @@ exprnd lambda =
   do x <- getStdRandom random
      return (- log x / lambda)
      
-model :: Dynamics (Dynamics Double)
+model :: Simulation Double
 model =
   do queue <- newQueue
      totalUpTime <- newRef queue 0.0
@@ -48,20 +48,21 @@ model =
      
      let machine :: Process ()
          machine =
-           do startUpTime <- liftD time
+           do startUpTime <- liftDynamics time
               upTime <- liftIO $ exprnd upRate
               holdProcess upTime
-              finishUpTime <- liftD time
-              liftD $ modifyRef totalUpTime
+              finishUpTime <- liftDynamics time
+              liftDynamics $ 
+                modifyRef totalUpTime
                 (+ (finishUpTime - startUpTime))
               repairTime <- liftIO $ exprnd repairRate
               holdProcess repairTime
               machine
          
-     t0 <- starttime
-     
-     runProcess machine pid1 t0
-     runProcess machine pid2 t0
+     runDynamicsInStart $
+       do t0 <- starttime
+          runProcess machine pid1 t0
+          runProcess machine pid2 t0
      
      let system :: Dynamics Double
          system =
@@ -69,8 +70,6 @@ model =
               y <- stoptime
               return $ x / (2 * y)
      
-     return system
+     runDynamicsInFinal system
   
-main =         
-  do a <- runDynamics1 model specs
-     print a
+main = runSimulation model specs

@@ -12,8 +12,8 @@
 --
 module Simulation.Aivika.Dynamics.Var
        (Var,
-        newVar,
         varQueue,
+        newVar,
         readVar,
         writeVar,
         modifyVar,
@@ -23,6 +23,7 @@ import Data.Array
 import Data.Array.IO
 import Data.IORef
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.EventQueue
 
@@ -40,12 +41,12 @@ data Var a =
         varYS    :: V.Vector a}
      
 -- | Create a new variable bound to the specified event queue.
-newVar :: EventQueue -> a -> Dynamics (Var a)
+newVar :: EventQueue -> a -> Simulation (Var a)
 newVar q a =
-  Dynamics $ \p ->
+  Simulation $ \r ->
   do xs <- UV.newVector
      ys <- V.newVector
-     UV.appendVector xs $ spcStartTime $ pointSpecs p
+     UV.appendVector xs $ spcStartTime $ runSpecs r
      V.appendVector ys a
      return Var { varQueue = q,
                   varRun   = queueRun q,
@@ -121,6 +122,8 @@ modifyVar v f =
 freezeVar :: Var a -> Dynamics (Array Int Double, Array Int a)
 freezeVar v =
   Dynamics $ \p ->
-  do xs <- UV.freezeVector (varXS v)
+  do let Dynamics m = varRun v
+     m p
+     xs <- UV.freezeVector (varXS v)
      ys <- V.freezeVector (varYS v)
      return (xs, ys)

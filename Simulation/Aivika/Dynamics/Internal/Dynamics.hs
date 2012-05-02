@@ -19,21 +19,11 @@
 module Simulation.Aivika.Dynamics.Internal.Dynamics
        (-- * Dynamics
         Dynamics(..),
+        DynamicsLift(..),
         Point(..),
-        Specs(..),
-        Method(..),
-        Run(..),
-        runDynamics1,
-        runDynamics1_,
+        runDynamicsInStart,
+        runDynamicsInFinal,
         runDynamics,
-        runDynamics_,
-        runDynamicsIO,
-        runDynamicsSeries1,
-        runDynamicsSeries1_,
-        runDynamicsSeries,
-        runDynamicsSeries_,
-        printDynamics1,
-        printDynamics,
         -- * Utilities
         basicTime,
         iterationBnds,
@@ -45,6 +35,8 @@ module Simulation.Aivika.Dynamics.Internal.Dynamics
 
 import Control.Monad
 import Control.Monad.Trans
+
+import Simulation.Aivika.Dynamics.Internal.Simulation
 
 --
 -- The Dynamics Monad
@@ -65,24 +57,6 @@ data Point = Point { pointSpecs :: Specs,    -- ^ the simulation specs
                      pointIteration :: Int,  -- ^ the current iteration
                      pointPhase :: Int       -- ^ the current phase
                    } deriving (Eq, Ord, Show)
-
--- | It defines the simulation specs.
-data Specs = Specs { spcStartTime :: Double,    -- ^ the start time
-                     spcStopTime :: Double,     -- ^ the stop time
-                     spcDT :: Double,           -- ^ the integration time step
-                     spcMethod :: Method        -- ^ the integration method
-                   } deriving (Eq, Ord, Show)
-
--- | It defines the integration method.
-data Method = Euler          -- ^ Euler's method
-            | RungeKutta2    -- ^ the 2nd order Runge-Kutta method
-            | RungeKutta4    -- ^ the 4th order Runge-Kutta method
-            deriving (Eq, Ord, Show)
-
--- | It defined the simulation run as part of some experiment.
-data Run = Run { runIndex :: Int,    -- ^ the current simulation run
-                 runCount :: Int     -- ^ the total number of runs in this experiment
-               } deriving (Eq, Ord, Show)
            
 -- | Returns the iterations starting from zero.
 iterations :: Specs -> [Int]
@@ -164,174 +138,44 @@ bindD (Dynamics m) k =
      let Dynamics m' = k a
      m' p
 
-subrunDynamics1 :: Dynamics a -> Specs -> Run -> IO a
-subrunDynamics1 (Dynamics m) sc r =
-  do let n = iterationHiBnd sc
-         t = basicTime sc n 0
+-- | Run the dynamic process in the initial simulation point.
+runDynamicsInStart :: Dynamics a -> Simulation a
+runDynamicsInStart (Dynamics m) =
+  Simulation $ \r ->
+  do let sc = runSpecs r 
+         n  = 0
+         t  = spcStartTime sc
      m Point { pointSpecs = sc,
                pointRun = r,
                pointTime = t,
                pointIteration = n,
                pointPhase = 0 }
 
-subrunDynamics1_ :: Dynamics a -> Specs -> Run -> IO ()
-subrunDynamics1_ (Dynamics m) sc r =
-  do let n = iterationHiBnd sc
-         t = basicTime sc n 0
+-- | Run the dynamic process in the final simulation point.
+runDynamicsInFinal :: Dynamics a -> Simulation a
+runDynamicsInFinal (Dynamics m) =
+  Simulation $ \r ->
+  do let sc = runSpecs r 
+         n  = iterationHiBnd sc
+         t  = basicTime sc n 0
      m Point { pointSpecs = sc,
                pointRun = r,
                pointTime = t,
                pointIteration = n,
                pointPhase = 0 }
-     return ()
 
-subrunDynamics :: Dynamics a -> Specs -> Run -> [IO a]
-subrunDynamics (Dynamics m) sc r =
-  do let (nl, nu) = iterationBnds sc
+-- | Run the dynamic process in all integration time points
+runDynamics :: Dynamics a -> Simulation [IO a]
+runDynamics (Dynamics m) =
+  Simulation $ \r ->
+  do let sc = runSpecs r
+         (nl, nu) = iterationBnds sc
          point n = Point { pointSpecs = sc,
                            pointRun = r,
                            pointTime = basicTime sc n 0,
                            pointIteration = n,
                            pointPhase = 0 }
-     map (m . point) [nl .. nu]
-
-subrunDynamics_ :: Dynamics a -> Specs -> Run -> IO ()
-subrunDynamics_ (Dynamics m) sc r =
-  do let (nl, nu) = iterationBnds sc
-         point n = Point { pointSpecs = sc,
-                           pointRun = r,
-                           pointTime = basicTime sc n 0,
-                           pointIteration = n,
-                           pointPhase = 0 }
-     mapM_ (m . point) [nl .. nu]
-
--- | Run the simulation and return the result in the last 
--- time point using the specified simulation specs.
-runDynamics1 :: Dynamics (Dynamics a) -> Specs -> IO a
-runDynamics1 (Dynamics m) sc = 
-  do let r = Run { runIndex = 1, runCount = 1 }
-     d <- m Point { pointSpecs = sc,
-                    pointRun = r,
-                    pointTime = spcStartTime sc,
-                    pointIteration = 0,
-                    pointPhase = 0 }
-     subrunDynamics1 d sc r
-
--- | Run the simulation and return the result in the last 
--- time point using the specified simulation specs.
-runDynamics1_ :: Dynamics (Dynamics a) -> Specs -> IO ()
-runDynamics1_ (Dynamics m) sc = 
-  do let r = Run { runIndex = 1, runCount = 1 }
-     d <- m Point { pointSpecs = sc,
-                    pointRun = r,
-                    pointTime = spcStartTime sc,
-                    pointIteration = 0,
-                    pointPhase = 0 }
-     subrunDynamics1_ d sc r
-
--- | Run the simulation and return the results in all 
--- integration time points using the specified simulation specs.
-runDynamics :: Dynamics (Dynamics a) -> Specs -> IO [a]
-runDynamics (Dynamics m) sc = 
-  do let r = Run { runIndex = 1, runCount = 1 }
-     d <- m Point { pointSpecs = sc,
-                    pointRun = r,
-                    pointTime = spcStartTime sc,
-                    pointIteration = 0,
-                    pointPhase = 0 }
-     sequence $ subrunDynamics d sc r
-
--- | Run the simulation and return the results in all 
--- integration time points using the specified simulation specs.
-runDynamics_ :: Dynamics (Dynamics a) -> Specs -> IO ()
-runDynamics_ (Dynamics m) sc = 
-  do let r = Run { runIndex = 1, runCount = 1 }
-     d <- m Point { pointSpecs = sc,
-                    pointRun = r,
-                    pointTime = spcStartTime sc,
-                    pointIteration = 0,
-                    pointPhase = 0 }
-     sequence_ $ subrunDynamics d sc r
-
--- | Run the simulation and return the results in all 
--- integration time points using the specified simulation specs.
-runDynamicsIO :: Dynamics (Dynamics a) -> Specs -> IO [IO a]
-runDynamicsIO (Dynamics m) sc =
-  do let r = Run { runIndex = 1, runCount = 1 }
-     d <- m Point { pointSpecs = sc,
-                    pointRun = r,
-                    pointTime = spcStartTime sc,
-                    pointIteration = 0,
-                    pointPhase = 0 }
-     return $ subrunDynamics d sc r
-
--- | Run an experiment consisting of the given number of simulations, where each 
--- model is created and then requested in the last integration time point using 
--- the specified specs.
-runDynamicsSeries1_ :: Dynamics (Dynamics a) -> Specs -> Int -> [IO ()]
-runDynamicsSeries1_ (Dynamics m) sc runs = map f [1 .. runs]
-  where f i =
-          do let r = Run { runIndex = i, runCount = runs }
-             d <- m Point { pointSpecs = sc,
-                            pointRun = r,
-                            pointTime = spcStartTime sc,
-                            pointIteration = 0,
-                            pointPhase = 0 }
-             subrunDynamics1_ d sc r
-
--- | Run an experiment consisting of the given number of simulations, where each 
--- model is created and then requested sequentially in all integration time points 
--- using the specified specs.
-runDynamicsSeries_ :: Dynamics (Dynamics a) -> Specs -> Int -> [IO ()]
-runDynamicsSeries_ (Dynamics m) sc runs = map f [1 .. runs]
-  where f i =
-          do let r = Run { runIndex = i, runCount = runs }
-             d <- m Point { pointSpecs = sc,
-                            pointRun = r,
-                            pointTime = spcStartTime sc,
-                            pointIteration = 0,
-                            pointPhase = 0 }
-             subrunDynamics_ d sc r
-
--- | Run an experiment consisting of the given number of simulations, where each 
--- model is created and then requested in the last integration time point using 
--- the specified specs.
-runDynamicsSeries1 :: Dynamics (Dynamics a) -> Specs -> Int -> [IO a]
-runDynamicsSeries1 (Dynamics m) sc runs = map f [1 .. runs]
-  where f i =
-          do let r = Run { runIndex = i, runCount = runs }
-             d <- m Point { pointSpecs = sc,
-                            pointRun = r,
-                            pointTime = spcStartTime sc,
-                            pointIteration = 0,
-                            pointPhase = 0 }
-             subrunDynamics1 d sc r
-
--- | Run an experiment consisting of the given number of simulations, where each 
--- model is created and then requested sequentially in all integration time points 
--- using the specified specs.
-runDynamicsSeries :: Dynamics (Dynamics a) -> Specs -> Int -> [IO [a]]
-runDynamicsSeries (Dynamics m) sc runs = map f [1 .. runs]
-  where f i =
-          do let r = Run { runIndex = i, runCount = runs }
-             d <- m Point { pointSpecs = sc,
-                            pointRun = r,
-                            pointTime = spcStartTime sc,
-                            pointIteration = 0,
-                            pointPhase = 0 }
-             sequence $ subrunDynamics d sc r
-
--- | Run the simulation and print the result in the last 
--- time point using the specified simulation specs.
-printDynamics1 :: (Show a) => Dynamics (Dynamics a) -> Specs -> IO ()
-printDynamics1 m sc = runDynamics1 m sc >>= print
-
--- | Run the simulation and print lazily the results in all
--- integration time points using the specified simulation specs.
-printDynamics :: (Show a) => Dynamics (Dynamics a) -> Specs -> IO ()
-printDynamics m sc = runDynamicsIO m sc >>= loop
-  where loop [] = return ()
-        loop (x : xs) = do { a <- x; print a; loop xs }
+     return $ map (m . point) [nl .. nu]
 
 instance Functor Dynamics where
   fmap = liftMD
@@ -387,3 +231,17 @@ instance (Floating a) => Floating (Dynamics a) where
 
 instance MonadIO Dynamics where
   liftIO m = Dynamics $ const m
+
+instance SimulationLift Dynamics where
+  liftSimulation = liftDS
+    
+liftDS :: Simulation a -> Dynamics a
+{-# INLINE liftDS #-}
+liftDS (Simulation m) =
+  Dynamics $ \p -> m $ pointRun p
+
+-- | A type class to lift the 'Dynamics' computations in other monads.
+class Monad m => DynamicsLift m where
+  
+  -- | Lift the specified 'Dynamics' computation in another monad.
+  liftDynamics :: Dynamics a -> m a

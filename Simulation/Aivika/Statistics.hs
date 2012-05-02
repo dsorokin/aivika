@@ -3,7 +3,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Statistics
--- Copyright  : Copyright (c) 2009-2011, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2012, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -16,14 +16,15 @@ module Simulation.Aivika.Statistics
         newStatistics,
         addStatistics,
         statisticsData,
-        AnalysisResults(..),
         analyzeData,
+        AnalysisResults(..),
         showResults) where 
 
 import Data.Foldable
 import Data.Array
 import Data.Array.IO
 import Control.Monad
+import Control.Monad.Trans
 import Control.Concurrent.MVar
 
 import Simulation.Aivika.UVector

@@ -14,8 +14,8 @@
 
 module Simulation.Aivika.Dynamics.SystemDynamics
        (-- * Maximum and Minimum
-        maxD,
-        minD,
+        maxDynamics,
+        minDynamics,
         -- * Integrals
         Integ,
         newInteg,
@@ -40,6 +40,7 @@ import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Base
 
@@ -48,12 +49,12 @@ import Simulation.Aivika.Dynamics.Base
 --
 
 -- | Return the maximum.
-maxD :: (Ord a) => Dynamics a -> Dynamics a -> Dynamics a
-maxD = liftM2 max
+maxDynamics :: (Ord a) => Dynamics a -> Dynamics a -> Dynamics a
+maxDynamics = liftM2 max
 
 -- | Return the minimum.
-minD :: (Ord a) => Dynamics a -> Dynamics a -> Dynamics a
-minD = liftM2 min
+minDynamics :: (Ord a) => Dynamics a -> Dynamics a -> Dynamics a
+minDynamics = liftM2 min
 
 --
 -- Integrals
@@ -65,10 +66,10 @@ data Integ = Integ { integInit     :: Dynamics Double,   -- ^ The initial value.
                      integInternal :: IORef (Dynamics Double) }
 
 -- | Create a new integral with the specified initial value.
-newInteg :: Dynamics Double -> Dynamics Integ
+newInteg :: Dynamics Double -> Simulation Integ
 newInteg i = 
-  do r1 <- liftIO $ newIORef $ initD i 
-     r2 <- liftIO $ newIORef $ initD i 
+  do r1 <- liftIO $ newIORef $ initDynamics i 
+     r2 <- liftIO $ newIORef $ initDynamics i 
      let integ = Integ { integInit     = i, 
                          integExternal = r1,
                          integInternal = r2 }
@@ -87,7 +88,7 @@ integValue integ =
      m p
 
 -- | Set the derivative for the integral.
-integDiff :: Integ -> Dynamics Double -> Dynamics ()
+integDiff :: Integ -> Dynamics Double -> Simulation ()
 integDiff integ diff =
   do let z = Dynamics $ \p ->
            do y <- readIORef (integExternal integ)
@@ -292,7 +293,7 @@ integRK4 (Dynamics f) (Dynamics i) (Dynamics y) p =
 -- | Return an integral with the specified derivative and initial value.
 -- If you want to create a loopback then you should use the 'Integ' type 
 -- directly. The 'integ' function is just a wrapper that uses this type.
-integ :: Dynamics Double -> Dynamics Double -> Dynamics (Dynamics Double)
+integ :: Dynamics Double -> Dynamics Double -> Simulation (Dynamics Double)
 integ diff i =
   do x <- newInteg i
      integDiff x diff
@@ -308,10 +309,10 @@ data Sum a = Sum { sumInit     :: Dynamics a,   -- ^ The initial value.
                    sumInternal :: IORef (Dynamics a) }
 
 -- | Create a new sum with the specified initial value.
-newSum :: (MArray IOUArray a IO, Num a) => Dynamics a -> Dynamics (Sum a)
+newSum :: (MArray IOUArray a IO, Num a) => Dynamics a -> Simulation (Sum a)
 newSum i =   
-  do r1 <- liftIO $ newIORef $ initD i 
-     r2 <- liftIO $ newIORef $ initD i 
+  do r1 <- liftIO $ newIORef $ initDynamics i 
+     r2 <- liftIO $ newIORef $ initDynamics i 
      let sum = Sum { sumInit     = i, 
                      sumExternal = r1,
                      sumInternal = r2 }
@@ -330,7 +331,7 @@ sumValue sum =
      m p
 
 -- | Set the difference equation for the sum.
-sumDiff :: (MArray IOUArray a IO, Num a) => Sum a -> Dynamics a -> Dynamics ()
+sumDiff :: (MArray IOUArray a IO, Num a) => Sum a -> Dynamics a -> Simulation ()
 sumDiff sum (Dynamics diff) =
   do let z = Dynamics $ \p ->
            case pointIteration p of

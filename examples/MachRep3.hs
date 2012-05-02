@@ -18,8 +18,8 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Base
-import Simulation.Aivika.Dynamics.Lift
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Ref
 import Simulation.Aivika.Dynamics.Resource
@@ -38,7 +38,7 @@ exprnd lambda =
   do x <- getStdRandom random
      return (- log x / lambda)
      
-model :: Dynamics (Dynamics Double)
+model :: Simulation Double
 model =
   do queue <- newQueue
      
@@ -55,32 +55,34 @@ model =
      
      let machine :: ProcessID -> Process ()
          machine pid =
-           do startUpTime <- liftD time
+           do startUpTime <- liftDynamics time
               upTime <- liftIO $ exprnd upRate
               holdProcess upTime
-              finishUpTime <- liftD time
-              liftD $ modifyRef totalUpTime 
+              finishUpTime <- liftDynamics time
+              liftDynamics $ modifyRef totalUpTime 
                 (+ (finishUpTime - startUpTime))
                 
-              liftD $ modifyRef nUp $ \a -> a - 1
-              nUp' <- liftD $ readRef nUp
+              liftDynamics $ modifyRef nUp $ \a -> a - 1
+              nUp' <- liftDynamics $ readRef nUp
               if nUp' == 1
                 then passivateProcess
-                else do n <- resourceCount repairPerson
-                        when (n == 1) $ reactivateProcess pid
+                else do n <- liftDynamics $ 
+                             resourceCount repairPerson
+                        when (n == 1) $ 
+                          liftDynamics $ reactivateProcess pid
               
               requestResource repairPerson
               repairTime <- liftIO $ exprnd repairRate
               holdProcess repairTime
-              liftD $ modifyRef nUp $ \a -> a + 1
+              liftDynamics $ modifyRef nUp $ \a -> a + 1
               releaseResource repairPerson
               
               machine pid
 
-     t0 <- starttime
-     
-     runProcess (machine pid2) pid1 t0
-     runProcess (machine pid1) pid2 t0
+     runDynamicsInStart $
+       do t0 <- starttime
+          runProcess (machine pid2) pid1 t0
+          runProcess (machine pid1) pid2 t0
      
      let system :: Dynamics Double
          system =
@@ -88,8 +90,6 @@ model =
               y <- stoptime
               return $ x / (2 * y)
      
-     return system
+     runDynamicsInFinal system
   
-main =         
-  do a <- runDynamics1 model specs
-     print a
+main = runSimulation model specs

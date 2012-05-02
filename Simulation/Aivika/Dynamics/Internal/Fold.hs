@@ -11,14 +11,15 @@
 -- any dynamic process in the integration time points.
 --
 module Simulation.Aivika.Dynamics.Internal.Fold
-       (foldD1,
-        foldD,
-        divideD) where
+       (foldDynamics1,
+        foldDynamics,
+        divideDynamics) where
 
 import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Internal.Interpolate
 import Simulation.Aivika.Dynamics.Internal.Memo
@@ -31,11 +32,11 @@ import Simulation.Aivika.Dynamics.Internal.Memo
 -- the integration time points. The accumulator values are transformed
 -- according to the first argument, which should be either function 
 -- 'memo0' or 'umemo0'.
-foldD1 :: (Dynamics a -> Dynamics (Dynamics a))
-         -> (a -> a -> a) 
-         -> Dynamics a 
-         -> Dynamics (Dynamics a)
-foldD1 tr f (Dynamics m) =
+foldDynamics1 :: (Dynamics a -> Simulation (Dynamics a))
+                 -> (a -> a -> a) 
+                 -> Dynamics a 
+                 -> Simulation (Dynamics a)
+foldDynamics1 tr f (Dynamics m) =
   do r <- liftIO $ newIORef m
      let z = Dynamics $ \p ->
            case pointIteration p of
@@ -57,12 +58,12 @@ foldD1 tr f (Dynamics m) =
 -- the integration time points. The accumulator values are transformed
 -- according to the first argument, which should be either function
 -- 'memo0' or 'umemo0'.
-foldD :: (Dynamics a -> Dynamics (Dynamics a))
-        -> (a -> b -> a) 
-        -> a
-        -> Dynamics b 
-        -> Dynamics (Dynamics a)
-foldD tr f acc (Dynamics m) =
+foldDynamics :: (Dynamics a -> Simulation (Dynamics a))
+                -> (a -> b -> a) 
+                -> a
+                -> Dynamics b 
+                -> Simulation (Dynamics a)
+foldDynamics tr f acc (Dynamics m) =
   do r <- liftIO $ newIORef $ const $ return acc
      let z = Dynamics $ \p ->
            case pointIteration p of
@@ -84,8 +85,8 @@ foldD tr f acc (Dynamics m) =
 -- | Divide the values in integration time points by the number of
 -- the current iteration. It can be useful for statistic functions in
 -- combination with the fold.
-divideD :: Dynamics Double -> Dynamics Double
-divideD (Dynamics m) = 
+divideDynamics :: Dynamics Double -> Dynamics Double
+divideDynamics (Dynamics m) = 
   discrete $ Dynamics $ \p ->
   do a <- m p
      return $ a / fromInteger (toInteger (pointIteration p + 1))

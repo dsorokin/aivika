@@ -5,8 +5,8 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Base
-import Simulation.Aivika.Dynamics.Lift
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Ref
 import Simulation.Aivika.Dynamics.UVar
@@ -98,7 +98,7 @@ data Ingot =
           }
 
 -- | Create a furnace.
-newFurnace :: EventQueue -> Dynamics Furnace
+newFurnace :: EventQueue -> Simulation Furnace
 newFurnace queue =
   do normalGen <- liftIO normalGen
      pits <- sequence [newPit queue | i <- [1..10]]
@@ -133,7 +133,7 @@ newFurnace queue =
                       furnaceUnloadTemps = unloadTemps }
 
 -- | Create a new pit.
-newPit :: EventQueue -> Dynamics Pit
+newPit :: EventQueue -> Simulation Pit
 newPit queue =
   do ingot <- newRef queue Nothing
      h' <- newRef queue 0.0
@@ -255,10 +255,10 @@ loadIngot ingot pit =
      modifyRef (furnaceLoadCount furnace) (+ 1)
   
 -- | Iterate the furnace processing.
-iterateFurnace :: Furnace -> Dynamics (Dynamics ())
+iterateFurnace :: Furnace -> Simulation (Dynamics ())
 iterateFurnace furnace = 
   let pits = furnacePits furnace
-  in iterateD $
+  in iterateDynamics $
      do ready <- ingotsReady furnace
         when ready $ 
           do mapM_ (tryUnloadPit furnace) pits
@@ -303,7 +303,7 @@ processFurnace furnace =
   do delay <- liftIO $ exprnd (1.0 / 2.5)
      holdProcess delay
      -- we have got a new ingot
-     liftD $ acceptIngot furnace
+     liftDynamics $ acceptIngot furnace
      -- repeat it again
      processFurnace furnace
 
@@ -338,20 +338,22 @@ stats xs = (length xs, ex, sx)
     rho x = (x - ex) ^ 2
 
 -- | The simulation model.
-model :: Dynamics (Dynamics ())
+model :: Simulation ()
 model =
   do queue <- newQueue
      furnace <- newFurnace queue
      pid <- newProcessID queue
      
-     initializeFurnace furnace
+     runDynamicsInStart $
+       initializeFurnace furnace
      
      -- get the furnace iterator
      iterator <- iterateFurnace furnace
      
      -- accept input ingots
-     t0 <- starttime
-     runProcess (processFurnace furnace) pid t0
+     runDynamicsInStart $
+       do t0 <- starttime
+          runProcess (processFurnace furnace) pid t0
      
      let system :: Dynamics ()
          system = 
@@ -411,7 +413,7 @@ model =
                 putStrLn $ "The mean wait time: " ++ show t4
                 putStrLn $ "The mean heating time: " ++ show t5
          
-     return system
+     runDynamicsInFinal system
 
 -- | The main program.
-main = runDynamics1 model specs
+main = runSimulation model specs

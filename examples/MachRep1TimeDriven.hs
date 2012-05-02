@@ -19,6 +19,7 @@ import Random
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Base
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Ref
@@ -36,12 +37,12 @@ exprnd lambda =
   do x <- getStdRandom random
      return (- log x / lambda)
      
-model :: Dynamics (Dynamics Double)
+model :: Simulation Double
 model =
   do queue <- newQueue
      totalUpTime <- newRef queue 0.0
      
-     let machine :: Dynamics (Dynamics ())
+     let machine :: Simulation (Dynamics ())
          machine =
            do startUpTime <- newRef queue 0.0 
              
@@ -101,8 +102,8 @@ model =
      m2 <- machine
      
      -- create strictly sequential computations
-     c1 <- iterateD m1
-     c2 <- iterateD m2
+     c1 <- iterateDynamics m1
+     c2 <- iterateDynamics m2
        
      let system :: Dynamics Double
          system =
@@ -112,8 +113,6 @@ model =
               y <- stoptime
               return $ x / (2 * y)
      
-     return system
+     runDynamicsInFinal system
   
-main =         
-  do a <- runDynamics1 model specs
-     print a
+main = runSimulation model specs

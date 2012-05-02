@@ -11,15 +11,17 @@
 --
 module Simulation.Aivika.Dynamics.Ref
        (Ref,
-        newRef,
         refQueue,
+        newRef,
         readRef,
         writeRef,
         modifyRef) where
 
 import Data.IORef
+import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.EventQueue
 
@@ -32,7 +34,7 @@ data Ref a =
         refValue :: IORef a }
 
 -- | Create a new reference bound to the specified event queue.
-newRef :: EventQueue -> a -> Dynamics (Ref a)
+newRef :: EventQueue -> a -> Simulation (Ref a)
 newRef q a =
   do x <- liftIO $ newIORef a
      return Ref { refQueue = q,

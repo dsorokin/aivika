@@ -22,8 +22,8 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Base
-import Simulation.Aivika.Dynamics.Lift
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Ref
 import Simulation.Aivika.Dynamics.Resource
@@ -42,7 +42,7 @@ exprnd lambda =
   do x <- getStdRandom random
      return (- log x / lambda)
      
-model :: Dynamics (Dynamics (Double, Double))
+model :: Simulation (Double, Double)
 model =
   do queue <- newQueue
      
@@ -63,18 +63,18 @@ model =
      
      let machine :: Process ()
          machine =
-           do startUpTime <- liftD time
+           do startUpTime <- liftDynamics time
               upTime <- liftIO $ exprnd upRate
               holdProcess upTime
-              finishUpTime <- liftD time
-              liftD $ modifyRef totalUpTime 
+              finishUpTime <- liftDynamics time
+              liftDynamics $ modifyRef totalUpTime 
                 (+ (finishUpTime - startUpTime))
               
               -- check the resource availability
-              liftD $ modifyRef nRep (+ 1)
-              n <- resourceCount repairPerson
+              liftDynamics $ modifyRef nRep (+ 1)
+              n <- liftDynamics $ resourceCount repairPerson
               when (n == 1) $
-                liftD $ modifyRef nImmedRep (+ 1)
+                liftDynamics $ modifyRef nImmedRep (+ 1)
                 
               requestResource repairPerson
               repairTime <- liftIO $ exprnd repairRate
@@ -83,10 +83,10 @@ model =
               
               machine
          
-     t0 <- starttime
-     
-     runProcess machine pid1 t0
-     runProcess machine pid2 t0
+     runDynamicsInStart $
+       do t0 <- starttime
+          runProcess machine pid1 t0
+          runProcess machine pid2 t0
      
      let system :: Dynamics (Double, Double)
          system =
@@ -97,8 +97,6 @@ model =
               return (x / (2 * y), 
                       fromIntegral nImmed / fromIntegral n)
      
-     return system
+     runDynamicsInFinal system
   
-main =         
-  do a <- runDynamics1 model specs
-     print a
+main = runSimulation model specs

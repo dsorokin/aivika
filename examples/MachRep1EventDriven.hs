@@ -19,6 +19,7 @@ import Random
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Base
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Ref
@@ -36,7 +37,7 @@ exprnd lambda =
   do x <- getStdRandom random
      return (- log x / lambda)
      
-model :: Dynamics (Dynamics Double)
+model :: Simulation Double
 model =
   do queue <- newQueue
      totalUpTime <- newRef queue 0.0
@@ -62,10 +63,12 @@ model =
               let t = startUpTime + upTime
               enqueue queue t $ machineBroken startUpTime
      
-     t0 <- starttime
-     
-     enqueue queue t0 machineRepaired    -- start the first machine
-     enqueue queue t0 machineRepaired    -- start the second machine
+     runDynamicsInStart $
+       do t0 <- starttime
+          -- start the first machine
+          enqueue queue t0 machineRepaired
+          -- start the second machine
+          enqueue queue t0 machineRepaired
      
      let system :: Dynamics Double
          system =
@@ -73,8 +76,6 @@ model =
               y <- stoptime
               return $ x / (2 * y)
               
-     return system
+     runDynamicsInFinal system
   
-main =         
-  do a <- runDynamics1 model specs
-     print a
+main = runSimulation model specs

@@ -12,12 +12,12 @@
 
 module Simulation.Aivika.Dynamics.Base
        (-- * Time Parameters
-        starttime,
+        starttime, 
         stoptime,
         dt,
         time,
         -- * Interpolation and Initial Value
-        initD,
+        initDynamics,
         discrete,
         interpolate,
         -- * Memoization
@@ -26,12 +26,12 @@ module Simulation.Aivika.Dynamics.Base
         memo0,
         umemo0,
         -- * Iterating
-        iterateD,
+        iterateDynamics,
         -- * Fold
-        foldD1,
-        foldD,
+        foldDynamics1,
+        foldDynamics,
         -- * Norming
-        divideD) where
+        divideDynamics) where
 
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Internal.Time

@@ -17,8 +17,8 @@ module Simulation.Aivika.Dynamics.Internal.Cont
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
-import Simulation.Aivika.Dynamics.Lift
 
 -- | The 'Cont' type is similar to the standard Cont monad but only
 -- the continuation uses a dynamic process as a result.
@@ -28,8 +28,11 @@ instance Monad Cont where
   return  = returnC
   m >>= k = bindC m k
 
-instance Lift Cont where
-  liftD = liftC
+instance SimulationLift Cont where
+  liftSimulation = liftSC
+
+instance DynamicsLift Cont where
+  liftDynamics = liftDC
 
 instance Functor Cont where
   fmap = liftM
@@ -48,12 +51,22 @@ bindC (Cont m) k = Cont $ \c -> m (\a -> let Cont m' = k a in m' c)
 -- | Run the 'Cont' computation.
 runCont :: Cont a -> (a -> Dynamics ()) -> Dynamics ()
 {-# INLINE runCont #-}
-runCont (Cont m) f = m f
+runCont (Cont m) = m
 
+-- | Lift the 'Simulation' computation.
+liftSC :: Simulation a -> Cont a
+{-# INLINE liftSC #-}
+liftSC (Simulation m) = 
+  Cont $ \c ->
+  Dynamics $ \p ->
+  do a <- m $ pointRun p
+     let Dynamics m' = c a
+     m' p
+     
 -- | Lift the 'Dynamics' computation.
-liftC :: Dynamics a -> Cont a
-{-# INLINE liftC #-}
-liftC (Dynamics m) =
+liftDC :: Dynamics a -> Cont a
+{-# INLINE liftDC #-}
+liftDC (Dynamics m) =
   Cont $ \c ->
   Dynamics $ \p ->
   do a <- m p
