@@ -104,15 +104,12 @@ model =
      -- create strictly sequential computations
      c1 <- iterateDynamics m1
      c2 <- iterateDynamics m2
-       
-     let system :: Dynamics Double
-         system =
-           do c1    -- involve in the simulation
-              c2    -- involve in the simulation
-              x <- readRef totalUpTime
-              y <- stoptime
-              return $ x / (2 * y)
      
-     runDynamicsInFinal system
+     runDynamicsInFinal $
+       do c1    -- involve in the simulation
+          c2    -- involve in the simulation
+          x <- readRef totalUpTime
+          y <- stoptime
+          return $ x / (2 * y)
   
 main = runSimulation model specs

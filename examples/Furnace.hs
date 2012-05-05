@@ -355,65 +355,63 @@ model =
        do t0 <- starttime
           runProcess (processFurnace furnace) pid t0
      
-     let system :: Dynamics ()
-         system = 
-           do iterator   --  iterate in each time point
+     -- run the model in the final time point
+     runDynamicsInFinal $
+       do iterator   --  iterate in each time point
          
-              -- the ingots
-              c0 <- readRef (furnaceTotalCount furnace)
-              c1 <- readRef (furnaceLoadCount furnace)
-              c2 <- readRef (furnaceUnloadCount furnace)
-              c3 <- readRef (furnaceWaitCount furnace)
+          -- the ingots
+          c0 <- readRef (furnaceTotalCount furnace)
+          c1 <- readRef (furnaceLoadCount furnace)
+          c2 <- readRef (furnaceUnloadCount furnace)
+          c3 <- readRef (furnaceWaitCount furnace)
               
-              liftIO $ do
-                putStrLn "The count of ingots:"
-                putStrLn $ "  total  = " ++ show c0
-                putStrLn $ "  loaded = " ++ show c1
-                putStrLn $ "  ready  = " ++ show c2
-                putStrLn $ "  awaited in the queue = " ++ show c3
-                putStrLn ""
+          liftIO $ do
+            putStrLn "The count of ingots:"
+            putStrLn $ "  total  = " ++ show c0
+            putStrLn $ "  loaded = " ++ show c1
+            putStrLn $ "  ready  = " ++ show c2
+            putStrLn $ "  awaited in the queue = " ++ show c3
+            putStrLn ""
          
-              -- the temperature of the ready ingots
-              (n1, e1, d1) <- 
-                fmap stats $ readRef (furnaceUnloadTemps furnace)
+          -- the temperature of the ready ingots
+          (n1, e1, d1) <- 
+            fmap stats $ readRef (furnaceUnloadTemps furnace)
                 
-              liftIO $ do 
-                putStrLn "The temperature of the ready ingots:"
-                putStrLn $ "  average   = " ++ show e1
-                putStrLn $ "  deviation = " ++ show d1
-                putStrLn ""
+          liftIO $ do 
+            putStrLn "The temperature of the ready ingots:"
+            putStrLn $ "  average   = " ++ show e1
+            putStrLn $ "  deviation = " ++ show d1
+            putStrLn ""
                 
-              -- the ingots in pits
-              r2 <- fmap analyzeData $ liftIO $ statisticsData (furnacePitCountStats furnace)
+          -- the ingots in pits
+          r2 <- fmap analyzeData $ liftIO $ statisticsData (furnacePitCountStats furnace)
               
-              liftIO $ do
-                putStrLn "The ingots in pits: "
-                putStrLn $ showResults r2 2 []
-                putStrLn ""
+          liftIO $ do
+            putStrLn "The ingots in pits: "
+            putStrLn $ showResults r2 2 []
+            putStrLn ""
               
-              -- the queue size
-              r3 <- fmap analyzeData $ liftIO $ statisticsData (furnaceQueueCountStats furnace)
+          -- the queue size
+          r3 <- fmap analyzeData $ liftIO $ statisticsData (furnaceQueueCountStats furnace)
      
-              liftIO $ do
-                putStrLn "The queue size: "
-                putStrLn $ showResults r3 2 []
-                putStrLn ""
+          liftIO $ do
+            putStrLn "The queue size: "
+            putStrLn $ showResults r3 2 []
+            putStrLn ""
               
-              -- the mean wait time in the queue
-              t4 <- readRef (furnaceWaitTime furnace) /
-                   fmap (fromInteger . toInteger)
-                   (readRef (furnaceWaitCount furnace))
+          -- the mean wait time in the queue
+          t4 <- readRef (furnaceWaitTime furnace) /
+                fmap (fromInteger . toInteger)
+                (readRef (furnaceWaitCount furnace))
               
-              -- the mean heating time
-              t5 <- readRef (furnaceHeatingTime furnace) /
-                   fmap (fromInteger . toInteger)
-                   (readRef (furnaceUnloadCount furnace))
+          -- the mean heating time
+          t5 <- readRef (furnaceHeatingTime furnace) /
+                fmap (fromInteger . toInteger)
+                (readRef (furnaceUnloadCount furnace))
                     
-              liftIO $ do
-                putStrLn $ "The mean wait time: " ++ show t4
-                putStrLn $ "The mean heating time: " ++ show t5
-         
-     runDynamicsInFinal system
+          liftIO $ do
+            putStrLn $ "The mean wait time: " ++ show t4
+            putStrLn $ "The mean heating time: " ++ show t5
 
 -- | The main program.
 main = runSimulation model specs

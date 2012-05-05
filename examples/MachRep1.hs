@@ -64,12 +64,9 @@ model =
           runProcess machine pid1 t0
           runProcess machine pid2 t0
      
-     let system :: Dynamics Double
-         system =
-           do x <- readRef totalUpTime
-              y <- stoptime
-              return $ x / (2 * y)
-     
-     runDynamicsInFinal system
+     runDynamicsInFinal $
+       do x <- readRef totalUpTime
+          y <- stoptime
+          return $ x / (2 * y)
   
 main = runSimulation model specs

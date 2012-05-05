@@ -69,13 +69,10 @@ model =
           enqueue queue t0 machineRepaired
           -- start the second machine
           enqueue queue t0 machineRepaired
-     
-     let system :: Dynamics Double
-         system =
-           do x <- readRef totalUpTime
-              y <- stoptime
-              return $ x / (2 * y)
-              
-     runDynamicsInFinal system
+          
+     runDynamicsInFinal $
+       do x <- readRef totalUpTime
+          y <- stoptime
+          return $ x / (2 * y)
   
 main = runSimulation model specs

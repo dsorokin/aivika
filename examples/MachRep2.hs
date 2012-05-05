@@ -87,16 +87,13 @@ model =
        do t0 <- starttime
           runProcess machine pid1 t0
           runProcess machine pid2 t0
-     
-     let system :: Dynamics (Double, Double)
-         system =
-           do x <- readRef totalUpTime
-              y <- stoptime
-              n <- readRef nRep
-              nImmed <- readRef nImmedRep
-              return (x / (2 * y), 
-                      fromIntegral nImmed / fromIntegral n)
-     
-     runDynamicsInFinal system
+          
+     runDynamicsInFinal $
+       do x <- readRef totalUpTime
+          y <- stoptime
+          n <- readRef nRep
+          nImmed <- readRef nImmedRep
+          return (x / (2 * y), 
+                  fromIntegral nImmed / fromIntegral n)
   
 main = runSimulation model specs
