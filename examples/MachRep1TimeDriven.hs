@@ -112,4 +112,4 @@ model =
           y <- stoptime
           return $ x / (2 * y)
   
-main = runSimulation model specs
+main = runSimulation model specs >>= print

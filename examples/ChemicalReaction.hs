@@ -23,4 +23,4 @@ model =
      integDiff integC (kb * b)
      runDynamicsInFinal $ sequence [a, b, c]
 
-main = runSimulation model specs
+main = runSimulation model specs >>= print
