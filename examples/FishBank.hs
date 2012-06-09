@@ -55,4 +55,4 @@ model =
      -- results --
      runDynamicsInFinal annualProfit
 
-main = runSimulation model specs
+main = runSimulation model specs >>= print

@@ -96,4 +96,4 @@ model =
           return (x / (2 * y), 
                   fromIntegral nImmed / fromIntegral n)
   
-main = runSimulation model specs
+main = runSimulation model specs >>= print
