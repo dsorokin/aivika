@@ -17,7 +17,7 @@
 -- that a given machine does not have immediate access to the repairperson 
 -- when the machine breaks down. Output values should be about 0.6 and 0.67. 
 
-import Random
+import System.Random
 import Control.Monad
 import Control.Monad.Trans
 

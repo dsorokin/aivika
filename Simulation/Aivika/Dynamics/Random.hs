@@ -15,7 +15,7 @@
 module Simulation.Aivika.Dynamics.Random 
        (newRandom, newNormal, normalGen) where
 
-import Random
+import System.Random
 import Data.IORef
 import Control.Monad.Trans
 

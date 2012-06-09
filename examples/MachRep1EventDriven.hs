@@ -15,7 +15,7 @@
 -- Output is long-run proportion of up time. Should get value of about
 -- 0.66.
 
-import Random
+import System.Random
 import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics

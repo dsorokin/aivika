@@ -28,7 +28,7 @@ maintainer:      David Sorokin <david.sorokin@gmail.com>
 homepage:        http://github.com/dsorokin/aivika
 cabal-version:   >= 1.2.0
 build-type:      Simple
-tested-with:     GHC == 7.0.3
+tested-with:     GHC == 7.0.4
 
 extra-source-files:  examples/BassDiffusion.hs
                      examples/ChemicalReaction.hs
@@ -74,11 +74,12 @@ library
                      Simulation.Aivika.UVector
                      
     build-depends:   base >= 3 && < 6,
-                     haskell98,
                      mtl >= 1.1.0.2,
                      array >= 0.3.0.0,
-                     containers >= 0.4.0.0
+                     containers >= 0.4.0.0,
+                     random >= 1.0.0.3
 
-    extensions:      FlexibleContexts
+    extensions:      FlexibleContexts,
+                     BangPatterns
                      
     ghc-options:     -O2

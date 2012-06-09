@@ -13,7 +13,7 @@
 -- until both machines are down. We find the proportion of up time. It
 -- should come out to about 0.45.
 
-import Random
+import System.Random
 import Control.Monad
 import Control.Monad.Trans
 

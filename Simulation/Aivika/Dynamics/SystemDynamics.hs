@@ -1,5 +1,5 @@
 
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, BangPatterns #-}
 
 -- |
 -- Module     : Simulation.Aivika.Dynamics.SystemDynamics

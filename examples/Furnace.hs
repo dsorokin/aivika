@@ -1,6 +1,6 @@
 
 import Data.Maybe
-import Random
+import System.Random
 import Control.Monad
 import Control.Monad.Trans
 

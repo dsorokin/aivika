@@ -1,5 +1,5 @@
 
-import Random
+import System.Random
 import Data.Array
 import Control.Monad
 import Control.Monad.Trans
