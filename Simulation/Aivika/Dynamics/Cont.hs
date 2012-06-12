@@ -7,10 +7,8 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.0.3
 --
--- The 'Cont' monad looks somewhere like the standard ContT monad transformer 
--- parameterized by the 'Dynamics' monad, although this analogy is not strong. 
--- The main idea is to represent the continuation as a dynamic process varying 
--- in time.
+-- The 'Cont' monad is a variation of the standard Cont monad, where
+-- the result of applying the continuation is a dynamic process.
 --
 module Simulation.Aivika.Dynamics.Cont
        (Cont,
