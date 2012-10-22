@@ -13,6 +13,7 @@
 module Simulation.Aivika.Dynamics.Resource
        (Resource,
         newResource,
+        newResourceWithCount,
         resourceQueue,
         resourceInitCount,
         resourceCount,
@@ -51,6 +52,28 @@ newResource q initCount =
                        resourceInitCount = initCount,
                        resourceCountRef  = countRef,
                        resourceWaitQueue = waitQueue }
+
+-- | Create a new resource with the specified initial count.
+-- The third argument specifies how much the resource is consumed 
+-- at the beginning, i.e. it defines the current count, which must be 
+-- non-negative and less or equal to the initial count.
+newResourceWithCount :: EventQueue -> Int -> Int -> Simulation Resource
+newResourceWithCount q initCount count = do
+  when (count < 0) $
+    error $
+    "The resource count cannot be negative: " ++
+    "newResourceWithCount."
+  when (count > initCount) $
+    error $
+    "The resource count cannot be greater than " ++
+    "its initial value: newResourceWithCount."
+  Simulation $ \r ->
+    do countRef  <- newIORef count
+       waitQueue <- Q.newQueue
+       return Resource { resourceQueue     = q,
+                         resourceInitCount = initCount,
+                         resourceCountRef  = countRef,
+                         resourceWaitQueue = waitQueue }
 
 -- | Return the current count of the resource.
 resourceCount :: Resource -> Dynamics Int
