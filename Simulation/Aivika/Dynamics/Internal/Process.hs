@@ -59,15 +59,6 @@ data ProcessID =
 -- and then resume later.
 newtype Process a = Process (ProcessID -> Cont a)
 
--- -- | Hold the process for the specified time period.
--- holdProcess :: Double -> Process ()
--- holdProcess dt =
---   Process $ \pid ->
---   Cont $ \c ->
---   Dynamics $ \p ->
---   do let Dynamics m = enqueueCont (processQueue pid) (pointTime p + dt) c
---      m p
-
 -- | Hold the process for the specified time period.
 holdProcess :: Double -> Process ()
 holdProcess dt =

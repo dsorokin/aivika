@@ -18,7 +18,9 @@ module Simulation.Aivika.Dynamics.Resource
         resourceInitCount,
         resourceCount,
         requestResource,
-        releaseResource) where
+        tryRequestResourceInDynamics,
+        releaseResource,
+        releaseResourceInDynamics) where
 
 import Data.IORef
 import Control.Monad
@@ -102,9 +104,13 @@ requestResource r =
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
 releaseResource :: Resource -> Process ()
-releaseResource r =
-  Process $ \_ ->
-  Cont $ \c ->
+releaseResource r = 
+  liftDynamics $ releaseResourceInDynamics r
+
+-- | Release the resource increasing its count and resuming one of the
+-- previously suspended processes as possible.
+releaseResourceInDynamics :: Resource -> Dynamics ()
+releaseResourceInDynamics r =
   Dynamics $ \p ->
   do a <- readIORef (resourceCountRef r)
      let a' = a + 1
@@ -115,9 +121,20 @@ releaseResource r =
      f <- Q.queueNull (resourceWaitQueue r)
      if f 
        then a' `seq` writeIORef (resourceCountRef r) a'
-       else do c2 <- Q.queueFront (resourceWaitQueue r)
+       else do c <- Q.queueFront (resourceWaitQueue r)
                Q.dequeue (resourceWaitQueue r)
-               let Dynamics m = enqueueCont (resourceQueue r) (pointTime p) c2
+               let Dynamics m = enqueueCont (resourceQueue r) (pointTime p) c
                m p
-     let Dynamics m' = c ()
-     m' p
+
+-- | Try to request for the resource decreasing its count in case of success
+-- and returning 'True' in the 'Dynamics' monad; otherwise, returning 'False'.
+tryRequestResourceInDynamics :: Resource -> Dynamics Bool
+tryRequestResourceInDynamics r =
+  Dynamics $ \p ->
+  do a <- readIORef (resourceCountRef r)
+     if a == 0 
+       then return False
+       else do let a' = a - 1
+               a' `seq` writeIORef (resourceCountRef r) a'
+               return True
+

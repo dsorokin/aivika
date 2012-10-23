@@ -18,6 +18,9 @@ module Simulation.Aivika.Vector
         readVector, 
         writeVector,
         vectorBinarySearch,
+        vectorInsert,
+        vectorDeleteAt,
+        vectorIndex,
         freezeVector) where 
 
 import Data.Array
@@ -125,3 +128,55 @@ freezeVector vector =
      array   <- readIORef (vectorArrayRef vector')
      freeze array
      
+-- | Insert the element in the vector at the specified index.
+vectorInsert :: Vector a -> Int -> a -> IO ()          
+vectorInsert vector index item =
+  do count <- readIORef (vectorCountRef vector)
+     when (index < 0) $
+       error $
+       "Index cannot be " ++
+       "negative: vectorInsert."
+     when (index > count) $
+       error $
+       "Index cannot be greater " ++
+       "than the count: vectorInsert."
+     vectorEnsureCapacity vector (count + 1)
+     array <- readIORef (vectorArrayRef vector)
+     forM_ [count, count - 1 .. index + 1] $ \i ->
+       do x <- readArray array (i - 1)
+          writeArray array i x
+     writeArray array index item
+     writeIORef (vectorCountRef vector) (count + 1)
+     
+-- | Delete the element at the specified index.
+vectorDeleteAt :: Vector a -> Int -> IO ()
+vectorDeleteAt vector index =
+  do count <- readIORef (vectorCountRef vector)
+     when (index < 0) $
+       error $
+       "Index cannot be " ++
+       "negative: vectorDeleteAt."
+     when (index >= count) $
+       error $
+       "Index must be less " ++
+       "than the count: vectorDeleteAt."
+     array <- readIORef (vectorArrayRef vector)
+     forM_ [index, index + 1 .. count - 2] $ \i ->
+       do x <- readArray array (i + 1)
+          writeArray array i x
+     writeArray array (count - 1) undefined
+     writeIORef (vectorCountRef vector) (count - 1)
+     
+-- | Return the index of the item or -1.     
+vectorIndex :: Eq a => Vector a -> a -> IO Int
+vectorIndex vector item =
+  do count <- readIORef (vectorCountRef vector)
+     array <- readIORef (vectorArrayRef vector)
+     let loop index =
+           if index >= count
+           then return $ -1
+           else do x <- readArray array index
+                   if item == x
+                     then return index
+                     else loop $ index + 1
+     loop 0
