@@ -23,11 +23,16 @@ module Simulation.Aivika.Dynamics.Process
         processQueue,
         newProcessID,
         holdProcess,
+        interruptProcess,
+        processInterrupted,
         passivateProcess,
         processPassive,
         reactivateProcess,
         processID,
-        runProcess) where
+        cancelProcess,
+        processCanceled,
+        runProcess,
+        runProcessNow) where
 
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Internal.Process

@@ -12,7 +12,8 @@
 --
 module Simulation.Aivika.Dynamics.Internal.Cont
        (Cont(..),
-        runCont) where
+        runCont,
+        cancelCont) where
 
 import Control.Monad
 import Control.Monad.Trans
@@ -83,3 +84,9 @@ liftIOC m =
      let Dynamics m' = c a
      m' p
   
+-- | Cancel the computation.
+cancelCont :: Cont a
+cancelCont =
+  Cont $ \c ->
+  Dynamics $ \p ->
+  return ()
