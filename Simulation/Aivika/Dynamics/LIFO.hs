@@ -17,11 +17,11 @@ module Simulation.Aivika.Dynamics.LIFO
         lifoCount,
         lifoLostCount,
         newLIFO,
-        readLIFO,
-        tryReadLIFO,
-        writeLIFO,
-        tryWriteLIFO,
-        writeLIFOOrLost) where
+        dequeueLIFO,
+        tryDequeueLIFO,
+        enqueueLIFO,
+        tryEnqueueLIFO,
+        enqueueLIFOOrLost) where
 
 import Data.IORef
 import Data.Array
@@ -78,54 +78,54 @@ lifoLostCount :: LIFO a -> Dynamics Int
 lifoLostCount lifo =
   liftIO $ readIORef (lifoLostCountRef lifo)
   
--- | Read the LIFO queue.
-readLIFO :: LIFO a -> Process a  
-readLIFO lifo =
+-- | Dequeue from the LIFO queue.
+dequeueLIFO :: LIFO a -> Process a  
+dequeueLIFO lifo =
   do requestResource (lifoReadRes lifo)
-     a <- liftIO $ readImpl lifo
+     a <- liftIO $ dequeueImpl lifo
      releaseResource (lifoWriteRes lifo)
      return a
   
--- | Try to read the LIFO queue.  
-tryReadLIFO :: LIFO a -> Dynamics (Maybe a)
-tryReadLIFO lifo =
+-- | Try to dequeue from the LIFO queue.  
+tryDequeueLIFO :: LIFO a -> Dynamics (Maybe a)
+tryDequeueLIFO lifo =
   do x <- tryRequestResourceInDynamics (lifoReadRes lifo)
      if x 
-       then do a <- liftIO $ readImpl lifo
+       then do a <- liftIO $ dequeueImpl lifo
                releaseResourceInDynamics (lifoWriteRes lifo)
                return $ Just a
        else return Nothing
 
--- | Write in the LIFO queue.  
-writeLIFO :: LIFO a -> a -> Process ()
-writeLIFO lifo a =
+-- | Enqueue the item in the LIFO queue.  
+enqueueLIFO :: LIFO a -> a -> Process ()
+enqueueLIFO lifo a =
   do requestResource (lifoWriteRes lifo)
-     liftIO $ writeImpl lifo a
+     liftIO $ enqueueImpl lifo a
      releaseResource (lifoReadRes lifo)
      
--- | Try to write in the LIFO queue.  
-tryWriteLIFO :: LIFO a -> a -> Dynamics Bool
-tryWriteLIFO lifo a =
+-- | Try to enqueue the item in the LIFO queue.  
+tryEnqueueLIFO :: LIFO a -> a -> Dynamics Bool
+tryEnqueueLIFO lifo a =
   do x <- tryRequestResourceInDynamics (lifoWriteRes lifo)
      if x 
-       then do liftIO $ writeImpl lifo a
+       then do liftIO $ enqueueImpl lifo a
                releaseResourceInDynamics (lifoReadRes lifo)
                return True
        else return False
 
--- | Try to write in the LIFO queue. If the queue is full
+-- | Try to enqueue the item in the LIFO queue. If the queue is full
 -- then the item will be lost.
-writeLIFOOrLost :: LIFO a -> a -> Dynamics ()
-writeLIFOOrLost lifo a =
+enqueueLIFOOrLost :: LIFO a -> a -> Dynamics ()
+enqueueLIFOOrLost lifo a =
   do x <- tryRequestResourceInDynamics (lifoWriteRes lifo)
      if x
-       then do liftIO $ writeImpl lifo a
+       then do liftIO $ enqueueImpl lifo a
                releaseResourceInDynamics (lifoReadRes lifo)
        else liftIO $ modifyIORef (lifoLostCountRef lifo) $ (+) 1
 
 -- | An implementation method.
-readImpl :: LIFO a -> IO a
-readImpl lifo =
+dequeueImpl :: LIFO a -> IO a
+dequeueImpl lifo =
   do i <- readIORef (lifoCountRef lifo)
      let j = i - 1
      a <- j `seq` readArray (lifoArray lifo) j
@@ -134,8 +134,8 @@ readImpl lifo =
      return a
 
 -- | An implementation method.
-writeImpl :: LIFO a -> a -> IO ()
-writeImpl lifo a =
+enqueueImpl :: LIFO a -> a -> IO ()
+enqueueImpl lifo a =
   do i <- readIORef (lifoCountRef lifo)
      let j = i + 1
      a `seq` writeArray (lifoArray lifo) i a

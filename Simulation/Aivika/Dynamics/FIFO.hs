@@ -17,11 +17,11 @@ module Simulation.Aivika.Dynamics.FIFO
         fifoCount,
         fifoLostCount,
         newFIFO,
-        readFIFO,
-        tryReadFIFO,
-        writeFIFO,
-        tryWriteFIFO,
-        writeFIFOOrLost) where
+        dequeueFIFO,
+        tryDequeueFIFO,
+        enqueueFIFO,
+        tryEnqueueFIFO,
+        enqueueFIFOOrLost) where
 
 import Data.IORef
 import Data.Array
@@ -84,54 +84,54 @@ fifoLostCount :: FIFO a -> Dynamics Int
 fifoLostCount fifo =
   liftIO $ readIORef (fifoLostCountRef fifo)
   
--- | Read the FIFO queue.
-readFIFO :: FIFO a -> Process a  
-readFIFO fifo =
+-- | Dequeue from the FIFO queue.
+dequeueFIFO :: FIFO a -> Process a  
+dequeueFIFO fifo =
   do requestResource (fifoReadRes fifo)
-     a <- liftIO $ readImpl fifo
+     a <- liftIO $ dequeueImpl fifo
      releaseResource (fifoWriteRes fifo)
      return a
   
--- | Try to read the FIFO queue.  
-tryReadFIFO :: FIFO a -> Dynamics (Maybe a)
-tryReadFIFO fifo =
+-- | Try to dequeue from the FIFO queue.  
+tryDequeueFIFO :: FIFO a -> Dynamics (Maybe a)
+tryDequeueFIFO fifo =
   do x <- tryRequestResourceInDynamics (fifoReadRes fifo)
      if x 
-       then do a <- liftIO $ readImpl fifo
+       then do a <- liftIO $ dequeueImpl fifo
                releaseResourceInDynamics (fifoWriteRes fifo)
                return $ Just a
        else return Nothing
 
--- | Write in the FIFO queue.  
-writeFIFO :: FIFO a -> a -> Process ()
-writeFIFO fifo a =
+-- | Enqueue the item in the FIFO queue.  
+enqueueFIFO :: FIFO a -> a -> Process ()
+enqueueFIFO fifo a =
   do requestResource (fifoWriteRes fifo)
-     liftIO $ writeImpl fifo a
+     liftIO $ enqueueImpl fifo a
      releaseResource (fifoReadRes fifo)
      
--- | Try to write in the FIFO queue.  
-tryWriteFIFO :: FIFO a -> a -> Dynamics Bool
-tryWriteFIFO fifo a =
+-- | Try to enqueue the item in the FIFO queue.  
+tryEnqueueFIFO :: FIFO a -> a -> Dynamics Bool
+tryEnqueueFIFO fifo a =
   do x <- tryRequestResourceInDynamics (fifoWriteRes fifo)
      if x 
-       then do liftIO $ writeImpl fifo a
+       then do liftIO $ enqueueImpl fifo a
                releaseResourceInDynamics (fifoReadRes fifo)
                return True
        else return False
 
--- | Try to write in the FIFO queue. If the queue is full
+-- | Try to enqueue the item in the FIFO queue. If the queue is full
 -- then the item will be lost.
-writeFIFOOrLost :: FIFO a -> a -> Dynamics ()
-writeFIFOOrLost fifo a =
+enqueueFIFOOrLost :: FIFO a -> a -> Dynamics ()
+enqueueFIFOOrLost fifo a =
   do x <- tryRequestResourceInDynamics (fifoWriteRes fifo)
      if x
-       then do liftIO $ writeImpl fifo a
+       then do liftIO $ enqueueImpl fifo a
                releaseResourceInDynamics (fifoReadRes fifo)
        else liftIO $ modifyIORef (fifoLostCountRef fifo) $ (+) 1
 
 -- | An implementation method.
-readImpl :: FIFO a -> IO a
-readImpl fifo =
+dequeueImpl :: FIFO a -> IO a
+dequeueImpl fifo =
   do i <- readIORef (fifoCountRef fifo)
      s <- readIORef (fifoStartRef fifo)
      let i' = i - 1
@@ -143,8 +143,8 @@ readImpl fifo =
      return a
 
 -- | An implementation method.
-writeImpl :: FIFO a -> a -> IO ()
-writeImpl fifo a =
+enqueueImpl :: FIFO a -> a -> IO ()
+enqueueImpl fifo a =
   do i <- readIORef (fifoCountRef fifo)
      e <- readIORef (fifoEndRef fifo)
      let i' = i + 1
