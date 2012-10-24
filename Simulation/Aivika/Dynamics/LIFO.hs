@@ -13,6 +13,7 @@ module Simulation.Aivika.Dynamics.LIFO
        (LIFO,
         lifoQueue,
         lifoNull,
+        lifoFull,
         lifoMaxCount,
         lifoCount,
         lifoLostCount,
@@ -68,6 +69,12 @@ lifoNull lifo =
   do a <- lifoCount lifo
      return (a == 0)
 
+-- | Test whether the LIFO queue is full.
+lifoFull :: LIFO a -> Dynamics Bool
+lifoFull lifo =
+  do a <- lifoCount lifo
+     return (a == lifoMaxCount lifo)
+
 -- | Return the queue size.
 lifoCount :: LIFO a -> Dynamics Int
 lifoCount lifo =
@@ -78,7 +85,8 @@ lifoLostCount :: LIFO a -> Dynamics Int
 lifoLostCount lifo =
   liftIO $ readIORef (lifoLostCountRef lifo)
   
--- | Dequeue from the LIFO queue.
+-- | Dequeue from the LIFO queue suspending the process if
+-- the queue is empty.
 dequeueLIFO :: LIFO a -> Process a  
 dequeueLIFO lifo =
   do requestResource (lifoReadRes lifo)
@@ -86,7 +94,7 @@ dequeueLIFO lifo =
      releaseResource (lifoWriteRes lifo)
      return a
   
--- | Try to dequeue from the LIFO queue.  
+-- | Try to dequeue from the LIFO queue immediately.  
 tryDequeueLIFO :: LIFO a -> Dynamics (Maybe a)
 tryDequeueLIFO lifo =
   do x <- tryRequestResourceInDynamics (lifoReadRes lifo)
@@ -96,14 +104,16 @@ tryDequeueLIFO lifo =
                return $ Just a
        else return Nothing
 
--- | Enqueue the item in the LIFO queue.  
+-- | Enqueue the item in the LIFO queue suspending the process if
+-- the queue is full.  
 enqueueLIFO :: LIFO a -> a -> Process ()
 enqueueLIFO lifo a =
   do requestResource (lifoWriteRes lifo)
      liftIO $ enqueueImpl lifo a
      releaseResource (lifoReadRes lifo)
      
--- | Try to enqueue the item in the LIFO queue.  
+-- | Try to enqueue the item in the LIFO queue. Return 'False' in
+-- the monad if the queue is full.
 tryEnqueueLIFO :: LIFO a -> a -> Dynamics Bool
 tryEnqueueLIFO lifo a =
   do x <- tryRequestResourceInDynamics (lifoWriteRes lifo)

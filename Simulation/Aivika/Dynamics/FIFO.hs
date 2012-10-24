@@ -13,6 +13,7 @@ module Simulation.Aivika.Dynamics.FIFO
        (FIFO,
         fifoQueue,
         fifoNull,
+        fifoFull,
         fifoMaxCount,
         fifoCount,
         fifoLostCount,
@@ -74,6 +75,12 @@ fifoNull fifo =
   do a <- fifoCount fifo
      return (a == 0)
 
+-- | Test whether the FIFO queue is full.
+fifoFull :: FIFO a -> Dynamics Bool
+fifoFull fifo =
+  do a <- fifoCount fifo
+     return (a == fifoMaxCount fifo)
+
 -- | Return the queue size.
 fifoCount :: FIFO a -> Dynamics Int
 fifoCount fifo =
@@ -84,7 +91,8 @@ fifoLostCount :: FIFO a -> Dynamics Int
 fifoLostCount fifo =
   liftIO $ readIORef (fifoLostCountRef fifo)
   
--- | Dequeue from the FIFO queue.
+-- | Dequeue from the FIFO queue suspending the process if
+-- the queue is empty.
 dequeueFIFO :: FIFO a -> Process a  
 dequeueFIFO fifo =
   do requestResource (fifoReadRes fifo)
@@ -92,7 +100,7 @@ dequeueFIFO fifo =
      releaseResource (fifoWriteRes fifo)
      return a
   
--- | Try to dequeue from the FIFO queue.  
+-- | Try to dequeue from the FIFO queue immediately.  
 tryDequeueFIFO :: FIFO a -> Dynamics (Maybe a)
 tryDequeueFIFO fifo =
   do x <- tryRequestResourceInDynamics (fifoReadRes fifo)
@@ -102,14 +110,16 @@ tryDequeueFIFO fifo =
                return $ Just a
        else return Nothing
 
--- | Enqueue the item in the FIFO queue.  
+-- | Enqueue the item in the FIFO queue suspending the process
+-- if the queue is full.  
 enqueueFIFO :: FIFO a -> a -> Process ()
 enqueueFIFO fifo a =
   do requestResource (fifoWriteRes fifo)
      liftIO $ enqueueImpl fifo a
      releaseResource (fifoReadRes fifo)
      
--- | Try to enqueue the item in the FIFO queue.  
+-- | Try to enqueue the item in the FIFO queue. Return 'False' in
+-- the monad if the queue full.
 tryEnqueueFIFO :: FIFO a -> a -> Dynamics Bool
 tryEnqueueFIFO fifo a =
   do x <- tryRequestResourceInDynamics (fifoWriteRes fifo)
