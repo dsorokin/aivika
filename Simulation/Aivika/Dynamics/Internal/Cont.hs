@@ -12,9 +12,16 @@
 --
 module Simulation.Aivika.Dynamics.Internal.Cont
        (Cont(..),
+        ContParams,
         runCont,
-        cancelCont) where
+        resumeContByParams,
+        contParamsCanceled) where
 
+import Data.IORef
+
+import System.IO.Error
+
+import qualified Control.Exception as C
 import Control.Monad
 import Control.Monad.Trans
 
@@ -23,7 +30,18 @@ import Simulation.Aivika.Dynamics.Internal.Dynamics
 
 -- | The 'Cont' type is similar to the standard Cont monad but only
 -- the continuation uses a dynamic process as a result.
-newtype Cont a = Cont ((a -> Dynamics ()) -> Dynamics ())
+newtype Cont a = Cont (ContParams a -> Dynamics ())
+
+-- | The continuation parameters.
+data ContParams a = 
+  ContParams { contCont :: a -> Dynamics (), 
+               contAux  :: ContParamsAux }
+
+data ContParamsAux =
+  ContParamsAux { contECont :: IOError -> Dynamics (),
+                  contCCont :: () -> Dynamics (),
+                  contCancelRef :: IORef Bool, 
+                  contCatchFlag :: Bool }
 
 instance Monad Cont where
   return  = returnC
@@ -41,52 +59,136 @@ instance Functor Cont where
 instance MonadIO Cont where
   liftIO = liftIOC 
 
+invokeC :: Cont a -> ContParams a -> Dynamics ()
+{-# INLINE invokeC #-}
+invokeC (Cont m) args = m args
+
+invokeD :: Point -> Dynamics a -> IO a
+{-# INLINE invokeD #-}
+invokeD p (Dynamics m) = m p
+
 returnC :: a -> Cont a
 {-# INLINE returnC #-}
-returnC a = Cont $ \c -> c a
+returnC a = 
+  Cont $ \c ->
+  Dynamics $ \p ->
+  do z <- readIORef $ (contCancelRef . contAux) c
+     if z 
+       then invokeD p $ (contCCont . contAux) c ()
+       else invokeD p $ contCont c a
                           
 bindC :: Cont a -> (a -> Cont b) -> Cont b
 {-# INLINE bindC #-}
-bindC (Cont m) k = Cont $ \c -> m (\a -> let Cont m' = k a in m' c)
+bindC m k = 
+  Cont $ \c -> 
+  if (contCatchFlag . contAux $ c) 
+  then bindWithCatch m k c
+  else bindWithoutCatch m k c
+  
+bindWithoutCatch :: Cont a -> (a -> Cont b) -> ContParams b -> Dynamics ()
+{-# INLINE bindWithoutCatch #-}
+bindWithoutCatch (Cont m) k c = 
+  Dynamics $ \p ->
+  do z <- readIORef $ (contCancelRef . contAux) c
+     if z 
+       then invokeD p $ (contCCont . contAux) c ()
+       else invokeD p $ m $ 
+            let cont a = invokeC (k a) c
+            in c { contCont = cont }
 
--- | Run the 'Cont' computation.
-runCont :: Cont a -> (a -> Dynamics ()) -> Dynamics ()
-{-# INLINE runCont #-}
-runCont (Cont m) = m
+bindWithCatch :: Cont a -> (a -> Cont b) -> ContParams b -> Dynamics ()
+bindWithCatch (Cont m) k c = 
+  Dynamics $ \p ->
+  do z <- readIORef $ (contCancelRef . contAux) c
+     if z 
+       then invokeD p $ (contCCont . contAux) c ()
+       else invokeD p $ m $ 
+            let cont a = protect k a 
+                         (\m' -> invokeC m' c) 
+                         (contECont . contAux $ c)
+            in c { contCont = cont }
+
+-- | Run the 'Cont' computation with the specified cancelation token 
+-- and flag indicating whether to catch exceptions.
+runCont :: Cont a -> (a -> Dynamics ()) 
+           -> IORef Bool -> Bool -> Dynamics ()
+runCont (Cont m) cont token catch = 
+  let econt = liftIO . ioError
+      ccont () = return ()
+  in m ContParams { contCont = cont,
+                    contAux  = 
+                      ContParamsAux { contECont = econt,
+                                      contCCont = ccont,
+                                      contCancelRef = token, 
+                                      contCatchFlag = catch } }
 
 -- | Lift the 'Simulation' computation.
 liftSC :: Simulation a -> Cont a
-{-# INLINE liftSC #-}
 liftSC (Simulation m) = 
   Cont $ \c ->
   Dynamics $ \p ->
-  do a <- m $ pointRun p
-     let Dynamics m' = c a
-     m' p
+  do z <- readIORef $ (contCancelRef . contAux) c
+     if z
+       then invokeD p $ (contCCont . contAux) c ()
+       else do a <- m $ pointRun p
+               invokeD p $ contCont c a
      
 -- | Lift the 'Dynamics' computation.
 liftDC :: Dynamics a -> Cont a
-{-# INLINE liftDC #-}
 liftDC (Dynamics m) =
   Cont $ \c ->
   Dynamics $ \p ->
-  do a <- m p
-     let Dynamics m' = c a
-     m' p
+  do z <- readIORef $ (contCancelRef . contAux) c
+     if z
+       then invokeD p $ (contCCont . contAux) c ()
+       else do a <- m p
+               invokeD p $ contCont c a
      
 -- | Lift the IO computation.
 liftIOC :: IO a -> Cont a
-{-# INLINE liftIOC #-}
 liftIOC m =
   Cont $ \c ->
   Dynamics $ \p ->
-  do a <- m
-     let Dynamics m' = c a
-     m' p
+  do z <- readIORef $ (contCancelRef . contAux) c
+     if z
+       then invokeD p $ (contCCont . contAux) c ()
+       else do a <- m
+               invokeD p $ contCont c a
   
--- | Cancel the computation.
-cancelCont :: Cont a
-cancelCont =
-  Cont $ \c ->
+-- | Resume the computation by the specified parameters.
+resumeContByParams :: ContParams a -> a -> Dynamics ()
+{-# INLINE resumeContByParams #-}
+resumeContByParams c a = 
   Dynamics $ \p ->
-  return ()
+  do z <- readIORef $ (contCancelRef . contAux) c
+     if z
+       then invokeD p $ (contCCont . contAux) c ()
+       else invokeD p $ contCont c a
+
+-- | Test whether the computation is canceled
+contParamsCanceled :: ContParams a -> IO Bool
+{-# INLINE contParamsCanceled #-}
+contParamsCanceled c = 
+  readIORef $ (contCancelRef . contAux) c
+
+-- | Protect the computation.
+protect :: (a -> b) -> a -> 
+            (b -> Dynamics ()) -> 
+            (IOError -> Dynamics ()) -> 
+            Dynamics ()
+{-# INLINE protect #-}
+protect f x cont econt =
+  Dynamics $ \p ->
+  do a <- newIORef undefined
+     e <- newIORef Nothing
+     C.catch (writeIORef a $ f x)
+       (\exn -> writeIORef e $ Just (exn :: IOError))
+     e' <- readIORef e
+     case e' of
+       Nothing ->
+         do a' <- readIORef a
+            let Dynamics m = cont a'
+            m p
+       Just e' ->
+         do let Dynamics m = econt e'
+            m p  

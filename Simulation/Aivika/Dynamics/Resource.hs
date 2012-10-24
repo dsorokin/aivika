@@ -24,6 +24,7 @@ module Simulation.Aivika.Dynamics.Resource
 
 import Data.IORef
 import Control.Monad
+import Control.Monad.Trans
 
 import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
@@ -39,7 +40,7 @@ data Resource =
              resourceInitCount :: Int,
              -- ^ Return the initial count of the resource.
              resourceCountRef  :: IORef Int, 
-             resourceWaitQueue :: Q.Queue (() -> Dynamics ())}
+             resourceWaitQueue :: Q.Queue (ContParams ())}
 
 instance Eq Resource where
   x == y = resourceCountRef x == resourceCountRef y  -- unique references
@@ -90,7 +91,7 @@ resourceCount r =
 -- process releases the resource.
 requestResource :: Resource -> Process ()
 requestResource r =
-  Process $ \_ ->
+  Process $ \pid ->
   Cont $ \c ->
   Dynamics $ \p ->
   do a <- readIORef (resourceCountRef r)
@@ -98,7 +99,7 @@ requestResource r =
        then Q.enqueue (resourceWaitQueue r) c
        else do let a' = a - 1
                a' `seq` writeIORef (resourceCountRef r) a'
-               let Dynamics m = c ()
+               let Dynamics m = resumeContByParams c ()
                m p
 
 -- | Release the resource increasing its count and resuming one of the
@@ -123,7 +124,11 @@ releaseResourceInDynamics r =
        then a' `seq` writeIORef (resourceCountRef r) a'
        else do c <- Q.queueFront (resourceWaitQueue r)
                Q.dequeue (resourceWaitQueue r)
-               let Dynamics m = enqueueCont (resourceQueue r) (pointTime p) c
+               let Dynamics m = enqueue (resourceQueue r) (pointTime p) $
+                                do z <- liftIO $ contParamsCanceled c
+                                   if z
+                                     then releaseResourceInDynamics r
+                                     else resumeContByParams c ()
                m p
 
 -- | Try to request for the resource decreasing its count in case of success

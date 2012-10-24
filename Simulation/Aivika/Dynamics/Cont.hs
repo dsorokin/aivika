@@ -11,8 +11,7 @@
 -- the result of applying the continuation is a dynamic process.
 --
 module Simulation.Aivika.Dynamics.Cont
-       (Cont,
-        runCont) where
+       (Cont) where
 
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Internal.Cont

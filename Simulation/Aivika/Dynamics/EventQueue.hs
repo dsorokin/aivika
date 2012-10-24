@@ -15,7 +15,6 @@
 module Simulation.Aivika.Dynamics.EventQueue
        (EventQueue,
         newQueue,
-        enqueueCont,
         enqueue,
         queueRun) where
 
@@ -28,7 +27,7 @@ import qualified Simulation.Aivika.PriorityQueue as PQ
 
 -- | The 'EventQueue' type represents the event queue.
 data EventQueue = EventQueue { 
-  queuePQ   :: PQ.PriorityQueue (() -> Dynamics ()),
+  queuePQ   :: PQ.PriorityQueue (Dynamics ()),
   queueRun  :: Dynamics (),   -- ^ Run the event queue processing its events
   queueBusy :: IORef Bool,
   queueTime :: IORef Double }
@@ -48,13 +47,9 @@ newQueue =
      return q
              
 -- | Enqueue the event which must be actuated at the specified time.
-enqueueCont :: EventQueue -> Double -> (() -> Dynamics ()) -> Dynamics ()
-enqueueCont q t c = Dynamics r where
-  r p = let pq = queuePQ q in PQ.enqueue pq t c
-    
--- | Enqueue the event which must be actuated at the specified time.
 enqueue :: EventQueue -> Double -> Dynamics () -> Dynamics ()
-enqueue q t m = enqueueCont q t (const m) 
+enqueue q t c = Dynamics r where
+  r p = let pq = queuePQ q in PQ.enqueue pq t c
     
 -- | Run the event queue processing its events.
 runQueue :: EventQueue -> Dynamics ()
@@ -82,7 +77,7 @@ runQueue q = Dynamics r where
                      t0  = spcStartTime sc
                      dt  = spcDT sc
                      n2  = fromInteger $ toInteger $ floor ((t2 - t0) / dt)
-                     Dynamics k = c2 ()
+                     Dynamics k = c2
                  k $ p { pointTime = t2,
                          pointIteration = n2,
                          pointPhase = -1 }
