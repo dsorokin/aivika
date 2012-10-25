@@ -22,6 +22,8 @@ module Simulation.Aivika.Dynamics.Internal.Signal
         handleSignal,
         handleSignal_,
         mapSignal,
+        composeSignal,
+        apSignal,
         filterSignal,
         merge2Signals,
         merge3Signals,
@@ -215,3 +217,15 @@ merge5Signals m1 m2 m3 m4 m5 =
                x4 <- handleSignal m4 h
                x5 <- handleSignal m5 h
                return $ do { x1; x2; x3; x4; x5 } }
+
+-- | Compose the signal.
+composeSignal :: (a -> Dynamics b) -> Signal a -> Signal b
+composeSignal f m =
+  Signal { handleSignal = \h ->
+            handleSignal m $ \a -> f a >>= h }
+  
+-- | Transform the signal.
+apSignal :: Dynamics (a -> b) -> Signal a -> Signal b
+apSignal f m =
+  Signal { handleSignal = \h ->
+            handleSignal m $ \a -> do { x <- f; h (x a) } }

@@ -22,6 +22,8 @@ module Simulation.Aivika.Dynamics.Signal
         handleSignal_,
         awaitSignal,
         mapSignal,
+        composeSignal,
+        apSignal,
         filterSignal,
         merge2Signals,
         merge3Signals,
