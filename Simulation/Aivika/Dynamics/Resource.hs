@@ -57,7 +57,7 @@ newResource q initCount =
                        resourceWaitQueue = waitQueue }
 
 -- | Create a new resource with the specified initial count.
--- The third argument specifies how much the resource is consumed 
+-- The third argument specifies how the resource is consumed 
 -- at the beginning, i.e. it defines the current count, which must be 
 -- non-negative and less or equal to the initial count.
 newResourceWithCount :: EventQueue -> Int -> Int -> Simulation Resource

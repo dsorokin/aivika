@@ -80,7 +80,8 @@ holdProcess dt =
                    m p
      m p
 
--- | Interrupt a process with the specified ID.
+-- | Interrupt a process with the specified ID if the process
+-- was held by computation 'holdProcess'.
 interruptProcess :: ProcessID -> Dynamics ()
 interruptProcess pid =
   Dynamics $ \p ->

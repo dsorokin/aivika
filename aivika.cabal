@@ -39,7 +39,7 @@ maintainer:      David Sorokin <david.sorokin@gmail.com>
 homepage:        http://github.com/dsorokin/aivika
 cabal-version:   >= 1.2.0
 build-type:      Simple
-tested-with:     GHC == 7.0.4
+tested-with:     GHC == 7.4.1
 
 extra-source-files:  examples/BassDiffusion.hs
                      examples/ChemicalReaction.hs
@@ -69,6 +69,9 @@ library
                      Simulation.Aivika.Dynamics.SystemDynamics
                      Simulation.Aivika.Dynamics.UVar
                      Simulation.Aivika.Dynamics.Var
+                     Simulation.Aivika.Dynamics.FIFO
+                     Simulation.Aivika.Dynamics.LIFO
+                     Simulation.Aivika.Dynamics.Buffer
                      Simulation.Aivika.Statistics
                      Simulation.Aivika.PriorityQueue
                      Simulation.Aivika.Queue

@@ -11,7 +11,7 @@
 -- the items are not represented. We know only of their number in the buffer and 
 -- how many items were lost.
 --
-module Simulation.Aivika.Dynamics.FIFO
+module Simulation.Aivika.Dynamics.Buffer
        (Buffer,
         bufferQueue,
         bufferNull,

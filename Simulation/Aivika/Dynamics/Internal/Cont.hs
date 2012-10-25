@@ -7,8 +7,9 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.0.3
 --
--- The 'Cont' monad is a variation of the standard Cont monad, where
--- the result of applying the continuation is a dynamic process.
+-- The 'Cont' monad is a variation of the standard Cont monad 
+-- and F# async workflow, where the result of applying 
+-- the continuation is a dynamic process.
 --
 module Simulation.Aivika.Dynamics.Internal.Cont
        (Cont(..),
@@ -28,8 +29,9 @@ import Control.Monad.Trans
 import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 
--- | The 'Cont' type is similar to the standard Cont monad but only
--- the continuation uses a dynamic process as a result.
+-- | The 'Cont' type is similar to the standard Cont monad 
+-- and F# async workflow but only the continuations return
+-- a dynamic process as a result.
 newtype Cont a = Cont (ContParams a -> Dynamics ())
 
 -- | The continuation parameters.
@@ -37,6 +39,7 @@ data ContParams a =
   ContParams { contCont :: a -> Dynamics (), 
                contAux  :: ContParamsAux }
 
+-- | The auxiliary continuation parameters.
 data ContParamsAux =
   ContParamsAux { contECont :: IOError -> Dynamics (),
                   contCCont :: () -> Dynamics (),

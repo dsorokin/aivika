@@ -7,8 +7,9 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.0.3
 --
--- The 'Cont' monad is a variation of the standard Cont monad, where
--- the result of applying the continuation is a dynamic process.
+-- The 'Cont' monad is a variation of the standard Cont monad 
+-- and F# async workflow, where the result of applying 
+-- the continuation is a dynamic process.
 --
 module Simulation.Aivika.Dynamics.Cont
        (Cont) where
