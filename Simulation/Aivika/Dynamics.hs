@@ -15,6 +15,8 @@ module Simulation.Aivika.Dynamics
         DynamicsLift(..),
         runDynamicsInStartTime,
         runDynamicsInStopTime,
-        runDynamicsInIntegTimes) where
+        runDynamicsInIntegTimes,
+        runDynamicsInTime,
+        runDynamicsInTimes) where
 
 import Simulation.Aivika.Dynamics.Internal.Dynamics

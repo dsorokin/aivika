@@ -18,6 +18,8 @@ module Simulation.Aivika.Dynamics.Internal.Dynamics
         runDynamicsInStartTime,
         runDynamicsInStopTime,
         runDynamicsInIntegTimes,
+        runDynamicsInTime,
+        runDynamicsInTimes,
         -- * Utilities
         basicTime,
         iterationBnds,
@@ -170,6 +172,36 @@ runDynamicsInIntegTimes (Dynamics m) =
                            pointIteration = n,
                            pointPhase = 0 }
      return $ map (m . point) [nl .. nu]
+
+-- | Run the dynamic process in the specified time point.
+runDynamicsInTime :: Double -> Dynamics a -> Simulation a
+runDynamicsInTime t (Dynamics m) =
+  Simulation $ \r ->
+  do let sc = runSpecs r
+         t0 = spcStartTime sc
+         dt = spcDT sc
+         n  = fromInteger $ toInteger $ floor ((t - t0) / dt)
+     m Point { pointSpecs = sc,
+               pointRun = r,
+               pointTime = t,
+               pointIteration = n,
+               pointPhase = -1 }
+
+-- | Run the dynamic process in the specified time points.
+runDynamicsInTimes :: [Double] -> Dynamics a -> Simulation [IO a]
+runDynamicsInTimes ts (Dynamics m) =
+  Simulation $ \r ->
+  do let sc = runSpecs r
+         t0 = spcStartTime sc
+         dt = spcDT sc
+         point t =
+           let n = fromInteger $ toInteger $ floor ((t - t0) / dt)
+           in Point { pointSpecs = sc,
+                      pointRun = r,
+                      pointTime = t,
+                      pointIteration = n,
+                      pointPhase = -1 }
+     return $ map (m . point) ts
 
 instance Functor Dynamics where
   fmap = liftMD
