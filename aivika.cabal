@@ -1,5 +1,5 @@
 name:            aivika
-version:         0.3
+version:         0.4
 synopsis:        A multi-paradigm simulation library
 description:
     Aivika is a small simulation library that covers many paradigms. 
@@ -72,6 +72,7 @@ library
                      Simulation.Aivika.Dynamics.FIFO
                      Simulation.Aivika.Dynamics.LIFO
                      Simulation.Aivika.Dynamics.Buffer
+                     Simulation.Aivika.Dynamics.Signal
                      Simulation.Aivika.Statistics
                      Simulation.Aivika.PriorityQueue
                      Simulation.Aivika.Queue
@@ -84,6 +85,7 @@ library
                      Simulation.Aivika.Dynamics.Internal.Memo
                      Simulation.Aivika.Dynamics.Internal.Interpolate
                      Simulation.Aivika.Dynamics.Internal.Fold
+                     Simulation.Aivika.Dynamics.Internal.Signal
                      Simulation.Aivika.Vector
                      Simulation.Aivika.UVector
                      
