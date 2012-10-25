@@ -21,6 +21,6 @@ model =
      integDiff integA (- ka * a)
      integDiff integB (ka * a - kb * b)
      integDiff integC (kb * b)
-     runDynamicsInFinal $ sequence [a, b, c]
+     runDynamicsInStopTime $ sequence [a, b, c]
 
 main = runSimulation model specs >>= print

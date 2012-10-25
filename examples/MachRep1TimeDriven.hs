@@ -105,7 +105,7 @@ model =
      c1 <- iterateDynamics m1
      c2 <- iterateDynamics m2
      
-     runDynamicsInFinal $
+     runDynamicsInStopTime $
        do c1    -- involve in the simulation
           c2    -- involve in the simulation
           x <- readRef totalUpTime

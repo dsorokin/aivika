@@ -79,12 +79,12 @@ model =
               
               machine pid
 
-     runDynamicsInStart $
+     runDynamicsInStartTime $
        do t0 <- starttime
           runProcess (machine pid2) pid1 t0
           runProcess (machine pid1) pid2 t0
      
-     runDynamicsInFinal $
+     runDynamicsInStopTime $
        do x <- readRef totalUpTime
           y <- stoptime
           return $ x / (2 * y)

@@ -95,9 +95,9 @@ model =
      adopters <- newRef q 0
      ps <- createPersons q
      definePersons ps potentialAdopters adopters
-     runDynamicsInStart $
+     runDynamicsInStartTime $
        activatePersons ps
-     runDynamics $
+     runDynamicsInIntegTimes $
        do i1 <- readRef potentialAdopters
           i2 <- readRef adopters
           return [i1, i2]

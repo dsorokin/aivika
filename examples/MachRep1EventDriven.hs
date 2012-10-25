@@ -63,14 +63,14 @@ model =
               let t = startUpTime + upTime
               enqueue queue t $ machineBroken startUpTime
      
-     runDynamicsInStart $
+     runDynamicsInStartTime $
        do t0 <- starttime
           -- start the first machine
           enqueue queue t0 machineRepaired
           -- start the second machine
           enqueue queue t0 machineRepaired
           
-     runDynamicsInFinal $
+     runDynamicsInStopTime $
        do x <- readRef totalUpTime
           y <- stoptime
           return $ x / (2 * y)

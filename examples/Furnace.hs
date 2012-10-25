@@ -344,19 +344,19 @@ model =
      furnace <- newFurnace queue
      pid <- newProcessID queue
      
-     runDynamicsInStart $
+     runDynamicsInStartTime $
        initializeFurnace furnace
      
      -- get the furnace iterator
      iterator <- iterateFurnace furnace
      
      -- accept input ingots
-     runDynamicsInStart $
+     runDynamicsInStartTime $
        do t0 <- starttime
           runProcess (processFurnace furnace) pid t0
      
      -- run the model in the final time point
-     runDynamicsInFinal $
+     runDynamicsInStopTime $
        do iterator   --  iterate in each time point
          
           -- the ingots

@@ -53,6 +53,6 @@ model =
      integDiff shipsInteg shipBuildingRate
      integDiff totalProfitInteg annualProfit
      -- results --
-     runDynamicsInFinal annualProfit
+     runDynamicsInStopTime annualProfit
 
 main = runSimulation model specs >>= print

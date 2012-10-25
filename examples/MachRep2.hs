@@ -83,12 +83,12 @@ model =
               
               machine
          
-     runDynamicsInStart $
+     runDynamicsInStartTime $
        do t0 <- starttime
           runProcess machine pid1 t0
           runProcess machine pid2 t0
           
-     runDynamicsInFinal $
+     runDynamicsInStopTime $
        do x <- readRef totalUpTime
           y <- stoptime
           n <- readRef nRep

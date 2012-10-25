@@ -73,10 +73,10 @@ model =
            do holdProcess toPeriod
               liftDynamics $ interruptProcess nodePid
 
-     runDynamicsInStart $
+     runDynamicsInStartTime $
        runProcessNow node nodePid 
      
-     runDynamicsInFinal $
+     runDynamicsInStopTime $
        do x <- readRef nTimeOuts
           y <- readRef nMsgs
           return $ x / y

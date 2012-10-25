@@ -1,11 +1,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Dynamics.Internal.Dynamics
--- Copyright  : Copyright (c) 2009-2011, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2012, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.0.3
+-- Tested with: GHC 7.4.1
 --
 -- The module defines the 'Dynamics' monad representing an abstract dynamic 
 -- process, i.e. a time varying polymorphic function. 
@@ -15,9 +15,9 @@ module Simulation.Aivika.Dynamics.Internal.Dynamics
         Dynamics(..),
         DynamicsLift(..),
         Point(..),
-        runDynamicsInStart,
-        runDynamicsInFinal,
-        runDynamics,
+        runDynamicsInStartTime,
+        runDynamicsInStopTime,
+        runDynamicsInIntegTimes,
         -- * Utilities
         basicTime,
         iterationBnds,
@@ -133,8 +133,8 @@ bindD (Dynamics m) k =
      m' p
 
 -- | Run the dynamic process in the initial simulation point.
-runDynamicsInStart :: Dynamics a -> Simulation a
-runDynamicsInStart (Dynamics m) =
+runDynamicsInStartTime :: Dynamics a -> Simulation a
+runDynamicsInStartTime (Dynamics m) =
   Simulation $ \r ->
   do let sc = runSpecs r 
          n  = 0
@@ -146,8 +146,8 @@ runDynamicsInStart (Dynamics m) =
                pointPhase = 0 }
 
 -- | Run the dynamic process in the final simulation point.
-runDynamicsInFinal :: Dynamics a -> Simulation a
-runDynamicsInFinal (Dynamics m) =
+runDynamicsInStopTime :: Dynamics a -> Simulation a
+runDynamicsInStopTime (Dynamics m) =
   Simulation $ \r ->
   do let sc = runSpecs r 
          n  = iterationHiBnd sc
@@ -159,8 +159,8 @@ runDynamicsInFinal (Dynamics m) =
                pointPhase = 0 }
 
 -- | Run the dynamic process in all integration time points
-runDynamics :: Dynamics a -> Simulation [IO a]
-runDynamics (Dynamics m) =
+runDynamicsInIntegTimes :: Dynamics a -> Simulation [IO a]
+runDynamicsInIntegTimes (Dynamics m) =
   Simulation $ \r ->
   do let sc = runSpecs r
          (nl, nu) = iterationBnds sc

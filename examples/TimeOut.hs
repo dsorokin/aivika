@@ -92,10 +92,10 @@ model =
                    reactivateProcess nodePid
                    cancelProcess timeoutPid
 
-     runDynamicsInStart $
+     runDynamicsInStartTime $
        runProcessNow node nodePid 
      
-     runDynamicsInFinal $
+     runDynamicsInStopTime $
        do x <- readRef nTimeOuts
           y <- readRef nMsgs
           return $ x / y
