@@ -44,6 +44,7 @@ import Simulation.Aivika.Dynamics.Internal.Signal
 -- | Represents an agent.
 data Agent = Agent { agentQueue :: EventQueue,
                      -- ^ Return the bound event queue.
+                     agentTimeRef :: IORef Double,
                      agentModeRef :: IORef AgentMode,
                      agentStateRef :: IORef (Maybe AgentState), 
                      agentStateChangedSource :: SignalSource (Maybe AgentState), 
@@ -127,9 +128,11 @@ addTimeout st dt (Dynamics action) =
   do let q = agentQueue (stateAgent st)
          Dynamics m0 = queueRun q
      m0 p    -- ensure that the agent state is actual
+     checkTime p (stateAgent st) "addTimeout"
      v <- readIORef (stateVersionRef st)
      let m1 = Dynamics $ \p ->
-           do v' <- readIORef (stateVersionRef st)
+           do -- checkTime p (stateAgent st) "addTimeout"
+              v' <- readIORef (stateVersionRef st)
               when (v == v') $ action p
          Dynamics m2 = enqueue q (pointTime p + dt) m1
      m2 p
@@ -143,9 +146,11 @@ addTimer st (Dynamics dt) (Dynamics action) =
   do let q = agentQueue (stateAgent st)
          Dynamics m0 = queueRun q
      m0 p    -- ensure that the agent state is actual
+     checkTime p (stateAgent st) "addTimer"
      v <- readIORef (stateVersionRef st)
      let m1 = Dynamics $ \p ->
-           do v' <- readIORef (stateVersionRef st)
+           do -- checkTime p (stateAgent st) "addTimer"
+              v' <- readIORef (stateVersionRef st)
               when (v == v') $ do { m2 p; action p }
          Dynamics m2 = 
            Dynamics $ \p ->
@@ -185,13 +190,15 @@ newSubstate parent =
 newAgent :: EventQueue -> Simulation Agent
 newAgent queue =
   Simulation $ \r ->
-  do modeRef    <- newIORef CreationMode
+  do timeRef    <- newIORef $ spcStartTime $ runSpecs r
+     modeRef    <- newIORef CreationMode
      stateRef   <- newIORef Nothing
      let Simulation m1 = newSignalSourceUnsafe
          Simulation m2 = newSignalSourceWithUpdate $ queueRun queue
      stateChangedSource <- m1 r
      stateUpdatedSource <- m2 r
      return Agent { agentQueue = queue,
+                    agentTimeRef = timeRef,
                     agentModeRef = modeRef,
                     agentStateRef = stateRef, 
                     agentStateChangedSource = stateChangedSource, 
@@ -203,6 +210,7 @@ agentState agent =
   Dynamics $ \p -> 
   do let Dynamics m = queueRun $ agentQueue agent 
      m p    -- ensure that the agent state is actual
+     checkTime p agent "agentState"
      readIORef (agentStateRef agent)
                    
 -- | Select the next downmost active state.       
@@ -212,6 +220,7 @@ activateState st =
   do let agent = stateAgent st
          Dynamics m = queueRun $ agentQueue agent 
      m p    -- ensure that the agent state is actual
+     checkTime p agent "activateState"
      mode <- readIORef (agentModeRef agent)
      case mode of
        CreationMode ->
@@ -248,6 +257,7 @@ initState st =
   do let agent = stateAgent st
          Dynamics m = queueRun $ agentQueue agent 
      m p    -- ensure that the agent state is actual
+     checkTime p agent "initState"
      mode <- readIORef (agentModeRef agent)
      case mode of
        CreationMode ->
@@ -295,4 +305,12 @@ agentStateChanged_ :: Agent -> Signal ()
 agentStateChanged_ agent =
   mapSignal (const ()) $ agentStateChanged agent
         
-  
+-- | Check that we don't request for the past data.
+checkTime :: Point -> Agent -> String -> IO ()
+{-# INLINE checkTime #-}
+checkTime p agent name =
+  do t <- readIORef (agentTimeRef agent)
+     when (pointTime p < t) $
+       error $ "You cannot request for past data: " ++ name
+     when (pointTime p > t) $
+       writeIORef (agentTimeRef agent) (pointTime p)
