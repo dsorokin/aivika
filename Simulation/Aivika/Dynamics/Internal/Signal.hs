@@ -17,6 +17,7 @@ module Simulation.Aivika.Dynamics.Internal.Signal
        (Signal,
         SignalSource,
         newSignalSourceWithUpdate,
+        newSignalSourceUnsafe,
         publishSignal,
         triggerSignal,
         handleSignal,
@@ -101,6 +102,29 @@ newSignalSourceWithUpdate update =
               m p
               let h = queueStart queue
               triggerSignalHandlers h a p
+     return source
+     
+-- | Create a new signal source that has no update computation.
+newSignalSourceUnsafe :: Simulation (SignalSource a)
+newSignalSourceUnsafe =
+  Simulation $ \r ->
+  do start <- newIORef Nothing
+     end <- newIORef Nothing
+     let queue  = SignalHandlerQueue { queueStart = start,
+                                       queueEnd   = end }
+         signal = Signal { handleSignal = handle, 
+                           updateSignal = update }
+         source = SignalSource { publishSignal = signal, 
+                                 triggerSignal = trigger }
+         handle h =
+           do Simulation $ \r ->
+                do x <- enqueueSignalHandler queue h
+                   return $ liftIO $ dequeueSignalHandler queue x
+         trigger a =
+           Dynamics $ \p ->
+           let h = queueStart queue
+           in triggerSignalHandlers h a p
+         update = return ()
      return source
 
 -- | Trigger all next signal handlers.

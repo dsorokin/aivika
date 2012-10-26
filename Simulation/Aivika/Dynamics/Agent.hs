@@ -18,6 +18,8 @@ module Simulation.Aivika.Dynamics.Agent
         newSubstate,
         agentQueue,
         agentState,
+        agentStateChanged,
+        agentStateChanged_,
         activateState,
         initState,
         stateAgent,
@@ -33,6 +35,7 @@ import Control.Monad
 import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.EventQueue
+import Simulation.Aivika.Dynamics.Internal.Signal
 
 --
 -- Agent-based Modeling
@@ -42,7 +45,9 @@ import Simulation.Aivika.Dynamics.EventQueue
 data Agent = Agent { agentQueue :: EventQueue,
                      -- ^ Return the bound event queue.
                      agentModeRef :: IORef AgentMode,
-                     agentStateRef :: IORef (Maybe AgentState) }
+                     agentStateRef :: IORef (Maybe AgentState), 
+                     agentStateChangedSource :: SignalSource (Maybe AgentState), 
+                     agentStateUpdatedSource :: SignalSource (Maybe AgentState) }
 
 -- | Represents the agent state.
 data AgentState = AgentState { stateAgent :: Agent,
@@ -111,6 +116,8 @@ traversePath source target =
                activate st p
                when (st == target) $
                  writeIORef (agentModeRef agent) ProcessingMode
+          when (not (null path1 && null path2)) $
+            triggerAgentStateChanged p agent
 
 -- | Add to the state a timeout handler that will be actuated 
 -- in the specified time period, while the state remains active.
@@ -180,9 +187,15 @@ newAgent queue =
   Simulation $ \r ->
   do modeRef    <- newIORef CreationMode
      stateRef   <- newIORef Nothing
+     let Simulation m1 = newSignalSourceUnsafe
+         Simulation m2 = newSignalSourceWithUpdate $ queueRun queue
+     stateChangedSource <- m1 r
+     stateUpdatedSource <- m2 r
      return Agent { agentQueue = queue,
                     agentModeRef = modeRef,
-                    agentStateRef = stateRef }
+                    agentStateRef = stateRef, 
+                    agentStateChangedSource = stateChangedSource, 
+                    agentStateUpdatedSource = stateUpdatedSource }
 
 -- | Return the selected downmost active state.
 agentState :: Agent -> Dynamics (Maybe AgentState)
@@ -213,6 +226,7 @@ activateState st =
                 Dynamics m <- readIORef (stateActivateRef st)
                 m p
                 writeIORef (agentModeRef agent) ProcessingMode
+                triggerAgentStateChanged p agent
        InitialMode ->
          error $ 
          "Use the initState function during " ++
@@ -262,4 +276,23 @@ stateDeactivation :: AgentState -> Dynamics () -> Simulation ()
 stateDeactivation st action =
   Simulation $ \r ->
   writeIORef (stateDeactivateRef st) action
+  
+-- | Trigger the signal when the agent state changes.
+triggerAgentStateChanged :: Point -> Agent -> IO ()
+triggerAgentStateChanged p agent =
+  do st <- readIORef (agentStateRef agent)
+     let Dynamics m = triggerSignal (agentStateChangedSource agent) st
+     m p
+
+-- | Return a signal that notifies about every change of the state.
+agentStateChanged :: Agent -> Signal (Maybe AgentState)
+agentStateChanged agent = merge2Signals m1 m2
+  where m1 = publishSignal (agentStateChangedSource agent)
+        m2 = publishSignal (agentStateUpdatedSource agent)
+        
+-- | Return a signal that notifies about every change of the state.
+agentStateChanged_ :: Agent -> Signal ()
+agentStateChanged_ agent =
+  mapSignal (const ()) $ agentStateChanged agent
+        
   
