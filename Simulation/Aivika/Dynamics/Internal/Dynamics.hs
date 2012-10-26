@@ -20,6 +20,9 @@ module Simulation.Aivika.Dynamics.Internal.Dynamics
         runDynamicsInIntegTimes,
         runDynamicsInTime,
         runDynamicsInTimes,
+        -- * Error Handling
+        catchDynamics,
+        finallyDynamics,
         -- * Utilities
         basicTime,
         iterationBnds,
@@ -28,6 +31,9 @@ module Simulation.Aivika.Dynamics.Internal.Dynamics
         phaseBnds,
         phaseHiBnd,
         phaseLoBnd) where
+
+import qualified Control.Exception as C
+import Control.Exception (IOException)
 
 import Control.Monad
 import Control.Monad.Trans
@@ -271,3 +277,16 @@ class Monad m => DynamicsLift m where
   
   -- | Lift the specified 'Dynamics' computation in another monad.
   liftDynamics :: Dynamics a -> m a
+  
+-- | Exception handling within 'Dynamics' computations.
+catchDynamics :: Dynamics a -> (IOException -> Dynamics a) -> Dynamics a
+catchDynamics (Dynamics m) h =
+  Dynamics $ \p -> 
+  C.catch (m p) $ \e ->
+  let Dynamics m' = h e in m' p
+                           
+-- | A computation with finalization part.
+finallyDynamics :: Dynamics a -> Dynamics b -> Dynamics a
+finallyDynamics (Dynamics m) (Dynamics m') =
+  Dynamics $ \p ->
+  C.finally (m p) (m' p)

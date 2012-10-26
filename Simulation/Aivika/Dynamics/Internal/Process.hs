@@ -33,10 +33,13 @@ module Simulation.Aivika.Dynamics.Internal.Process
         cancelProcess,
         processCanceled,
         runProcess,
-        runProcessNow) where
+        runProcessNow,
+        catchProcess,
+        finallyProcess) where
 
 import Data.Maybe
 import Data.IORef
+import Control.Exception (IOException)
 import Control.Monad
 import Control.Monad.Trans
 
@@ -260,3 +263,16 @@ liftDP m = Process $ \pid -> liftDynamics m
 liftIOP :: IO a -> Process a
 {-# INLINE liftIOP #-}
 liftIOP m = Process $ \pid -> liftIO m
+
+-- | Exception handling within 'Process' computations.
+catchProcess :: Process a -> (IOException -> Process a) -> Process a
+catchProcess (Process m) h =
+  Process $ \pid ->
+  catchCont (m pid) $ \e ->
+  let Process m' = h e in m' pid
+                           
+-- | A computation with finalization part.
+finallyProcess :: Process a -> Process b -> Process a
+finallyProcess (Process m) (Process m') =
+  Process $ \pid ->
+  finallyCont (m pid) (m' pid)

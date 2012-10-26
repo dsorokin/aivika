@@ -15,14 +15,16 @@ module Simulation.Aivika.Dynamics.Internal.Cont
        (Cont(..),
         ContParams,
         runCont,
+        catchCont,
+        finallyCont,
         resumeContByParams,
         contParamsCanceled) where
 
 import Data.IORef
 
-import System.IO.Error
-
 import qualified Control.Exception as C
+import Control.Exception (IOException)
+
 import Control.Monad
 import Control.Monad.Trans
 
@@ -41,7 +43,7 @@ data ContParams a =
 
 -- | The auxiliary continuation parameters.
 data ContParamsAux =
-  ContParamsAux { contECont :: IOError -> Dynamics (),
+  ContParamsAux { contECont :: IOException -> Dynamics (),
                   contCCont :: () -> Dynamics (),
                   contCancelRef :: IORef Bool, 
                   contCatchFlag :: Bool }
@@ -106,10 +108,79 @@ bindWithCatch (Cont m) k c =
      if z 
        then invokeD p $ (contCCont . contAux) c ()
        else invokeD p $ m $ 
-            let cont a = protect k a 
-                         (\m' -> invokeC m' c) 
+            let cont a = catchDynamics 
+                         (invokeC (k a) c)
                          (contECont . contAux $ c)
             in c { contCont = cont }
+
+-- bindWithCatch (return a) k
+callWithCatch :: (a -> Cont b) -> a -> ContParams b -> Dynamics ()
+callWithCatch k a c =
+  Dynamics $ \p ->
+  do z <- readIORef $ (contCancelRef . contAux) c
+     if z 
+       then invokeD p $ (contCCont . contAux) c ()
+       else invokeD p $ catchDynamics 
+            (invokeC (k a) c)
+            (contECont . contAux $ c)
+
+-- | Exception handling within 'Cont' computations.
+catchCont :: Cont a -> (IOException -> Cont a) -> Cont a
+catchCont m h = 
+  Cont $ \c -> 
+  if (contCatchFlag . contAux $ c) 
+  then catchWithCatch m h c
+  else error $
+       "To catch exceptions, the process must be created " ++
+       "with help of newProcessIDWithCatch: catchCont."
+  
+catchWithCatch :: Cont a -> (IOException -> Cont a) -> ContParams a -> Dynamics ()
+catchWithCatch (Cont m) h c =
+  Dynamics $ \p -> 
+  do z <- readIORef $ (contCancelRef . contAux) c
+     if z 
+       then invokeD p $ (contCCont . contAux) c ()
+       else invokeD p $ m $
+            let econt e = callWithCatch h e c
+            in c { contAux = (contAux c) { contECont = econt } }
+               
+-- | A computation with finalization part.
+finallyCont :: Cont a -> Cont b -> Cont a
+finallyCont m m' = 
+  Cont $ \c -> 
+  if (contCatchFlag . contAux $ c) 
+  then finallyWithCatch m m' c
+  else error $
+       "To finalize computation, the process must be created " ++
+       "with help of newProcessIDWithCatch: finallyCont."
+  
+finallyWithCatch :: Cont a -> Cont b -> ContParams a -> Dynamics ()               
+finallyWithCatch (Cont m) (Cont m') c =
+  Dynamics $ \p ->
+  do z <- readIORef $ (contCancelRef . contAux) c
+     if z 
+       then invokeD p $ (contCCont . contAux) c ()
+       else invokeD p $ m $
+            let cont a   = 
+                  Dynamics $ \p ->
+                  invokeD p $ m' $
+                  let cont b = contCont c a
+                  in c { contCont = cont }
+                econt e  =
+                  Dynamics $ \p ->
+                  invokeD p $ m' $
+                  let cont b = (contECont . contAux $ c) e
+                  in c { contCont = cont }
+                ccont () = 
+                  Dynamics $ \p ->
+                  invokeD p $ m' $
+                  let cont b  = (contCCont . contAux $ c) ()
+                      econt e = (contCCont . contAux $ c) ()
+                  in c { contCont = cont,
+                         contAux  = (contAux c) { contECont = econt } }
+            in c { contCont = cont,
+                   contAux  = (contAux c) { contECont = econt,
+                                            contCCont = ccont } }
 
 -- | Run the 'Cont' computation with the specified cancelation token 
 -- and flag indicating whether to catch exceptions.
@@ -173,25 +244,3 @@ contParamsCanceled :: ContParams a -> IO Bool
 {-# INLINE contParamsCanceled #-}
 contParamsCanceled c = 
   readIORef $ (contCancelRef . contAux) c
-
--- | Protect the computation.
-protect :: (a -> b) -> a -> 
-            (b -> Dynamics ()) -> 
-            (IOError -> Dynamics ()) -> 
-            Dynamics ()
-{-# INLINE protect #-}
-protect f x cont econt =
-  Dynamics $ \p ->
-  do a <- newIORef undefined
-     e <- newIORef Nothing
-     C.catch (writeIORef a $ f x)
-       (\exn -> writeIORef e $ Just (exn :: IOError))
-     e' <- readIORef e
-     case e' of
-       Nothing ->
-         do a' <- readIORef a
-            let Dynamics m = cont a'
-            m p
-       Just e' ->
-         do let Dynamics m = econt e'
-            m p  

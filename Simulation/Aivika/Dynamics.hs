@@ -17,6 +17,8 @@ module Simulation.Aivika.Dynamics
         runDynamicsInStopTime,
         runDynamicsInIntegTimes,
         runDynamicsInTime,
-        runDynamicsInTimes) where
+        runDynamicsInTimes,
+        catchDynamics,
+        finallyDynamics) where
 
 import Simulation.Aivika.Dynamics.Internal.Dynamics

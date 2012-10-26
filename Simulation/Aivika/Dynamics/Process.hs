@@ -33,7 +33,9 @@ module Simulation.Aivika.Dynamics.Process
         cancelProcess,
         processCanceled,
         runProcess,
-        runProcessNow) where
+        runProcessNow,
+        catchProcess,
+        finallyProcess) where
 
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Internal.Process
