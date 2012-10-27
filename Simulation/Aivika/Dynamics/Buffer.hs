@@ -39,6 +39,9 @@ import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Process
 import Simulation.Aivika.Dynamics.Resource
 
+import Simulation.Aivika.Dynamics.LIFO
+import Simulation.Aivika.Dynamics.FIFO
+
 -- | Represents the limited queue similar to 'LIFO' and 'FIFO' but where the items are not repsented.
 -- So, there is no order of items but their number is strictly limited.
 data Buffer =

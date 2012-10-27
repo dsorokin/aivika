@@ -119,7 +119,7 @@ enqueueFIFO fifo a =
      releaseResource (fifoReadRes fifo)
      
 -- | Try to enqueue the item in the FIFO queue. Return 'False' in
--- the monad if the queue full.
+-- the monad if the queue is full.
 tryEnqueueFIFO :: FIFO a -> a -> Dynamics Bool
 tryEnqueueFIFO fifo a =
   do x <- tryRequestResourceInDynamics (fifoWriteRes fifo)
