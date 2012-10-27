@@ -27,8 +27,8 @@ description:
     .
     The PDF documentation is available at 
     <https://github.com/dsorokin/aivika/blob/master/doc/aivika.pdf>.
-    Please note that the documentation is obsolete and it corresponds to 
-    the previous version but it can still be helpful.
+    Please note that the documentation is outdated and it corresponds to 
+    the version 0.2 but it can still be helpful.
     .
 category:        Simulation
 license:         BSD3

@@ -20,7 +20,8 @@ module Simulation.Aivika.Dynamics.Resource
         requestResource,
         tryRequestResourceInDynamics,
         releaseResource,
-        releaseResourceInDynamics) where
+        releaseResourceInDynamics,
+        usingResource) where
 
 import Data.IORef
 import Control.Monad
@@ -82,8 +83,7 @@ newResourceWithCount q initCount count = do
 resourceCount :: Resource -> Dynamics Int
 resourceCount r =
   Dynamics $ \p ->
-  do let Dynamics m = queueRun (resourceQueue r)
-     m p
+  do invokeDynamics p $ queueRun (resourceQueue r)
      readIORef (resourceCountRef r)
 
 -- | Request for the resource decreasing its count in case of success,
@@ -99,47 +99,73 @@ requestResource r =
        then Q.enqueue (resourceWaitQueue r) c
        else do let a' = a - 1
                a' `seq` writeIORef (resourceCountRef r) a'
-               let Dynamics m = resumeContByParams c ()
-               m p
+               invokeDynamics p $ resumeContByParams c ()
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
 releaseResource :: Resource -> Process ()
 releaseResource r = 
-  liftDynamics $ releaseResourceInDynamics r
+  Process $ \_ ->
+  Cont $ \c ->
+  Dynamics $ \p ->
+  do invokeDynamics p $ releaseResourceUnsafe r
+     invokeDynamics p $ resumeContByParams c ()
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
 releaseResourceInDynamics :: Resource -> Dynamics ()
 releaseResourceInDynamics r =
   Dynamics $ \p ->
+  do invokeDynamics p $ queueRun (resourceQueue r)
+     invokeDynamics p $ releaseResourceUnsafe r
+
+releaseResourceUnsafe :: Resource -> Dynamics ()
+{-# INLINE releaseResourceUnsafe #-}
+releaseResourceUnsafe r =
+  Dynamics $ \p ->
   do a <- readIORef (resourceCountRef r)
      let a' = a + 1
      when (a' > resourceInitCount r) $
        error $
        "The resource count cannot be greater than " ++
-       "its initial value: releaseResource."
+       "its initial value: releaseResourceUnsafe."
      f <- Q.queueNull (resourceWaitQueue r)
      if f 
        then a' `seq` writeIORef (resourceCountRef r) a'
        else do c <- Q.queueFront (resourceWaitQueue r)
                Q.dequeue (resourceWaitQueue r)
-               let Dynamics m = enqueue (resourceQueue r) (pointTime p) $
-                                do z <- liftIO $ contParamsCanceled c
-                                   if z
-                                     then releaseResourceInDynamics r
-                                     else resumeContByParams c ()
-               m p
+               invokeDynamics p $ enqueue (resourceQueue r) (pointTime p) $
+                 Dynamics $ \p ->
+                 do z <- contParamsCanceled c
+                    if z
+                      then do invokeDynamics p $ releaseResourceUnsafe r
+                              invokeDynamics p $ resumeContByParams c ()
+                      else invokeDynamics p $ resumeContByParams c ()
 
 -- | Try to request for the resource decreasing its count in case of success
 -- and returning 'True' in the 'Dynamics' monad; otherwise, returning 'False'.
 tryRequestResourceInDynamics :: Resource -> Dynamics Bool
 tryRequestResourceInDynamics r =
   Dynamics $ \p ->
-  do a <- readIORef (resourceCountRef r)
+  do invokeDynamics p $ queueRun (resourceQueue r)
+     a <- readIORef (resourceCountRef r)
      if a == 0 
        then return False
        else do let a' = a - 1
                a' `seq` writeIORef (resourceCountRef r) a'
                return True
+               
+-- | Acquire the resource, perform some action and safely release the resource               
+-- in the end, even if the 'IOException' was raised within the action. 
+-- The process identifier must be created with support of exception 
+-- handling, i.e. with help of function 'newProcessIDWithCatch'. Unfortunately,
+-- such processes are slower than those that are created with help of
+-- other function 'newProcessID'.
+usingResource :: Resource -> Process a -> Process a
+usingResource r m =
+  do requestResource r
+     finallyProcess m $ releaseResource r
 
+invokeDynamics :: Point -> Dynamics a -> IO a
+{-# INLINE invokeDynamics #-}
+invokeDynamics p (Dynamics m) = m p 

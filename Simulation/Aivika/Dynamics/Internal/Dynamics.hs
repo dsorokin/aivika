@@ -23,6 +23,7 @@ module Simulation.Aivika.Dynamics.Internal.Dynamics
         -- * Error Handling
         catchDynamics,
         finallyDynamics,
+        throwDynamics,
         -- * Utilities
         basicTime,
         iterationBnds,
@@ -33,7 +34,7 @@ module Simulation.Aivika.Dynamics.Internal.Dynamics
         phaseLoBnd) where
 
 import qualified Control.Exception as C
-import Control.Exception (IOException)
+import Control.Exception (IOException, throw, finally)
 
 import Control.Monad
 import Control.Monad.Trans
@@ -285,8 +286,12 @@ catchDynamics (Dynamics m) h =
   C.catch (m p) $ \e ->
   let Dynamics m' = h e in m' p
                            
--- | A computation with finalization part.
+-- | A computation with finalization part like the 'finally' function.
 finallyDynamics :: Dynamics a -> Dynamics b -> Dynamics a
 finallyDynamics (Dynamics m) (Dynamics m') =
   Dynamics $ \p ->
   C.finally (m p) (m' p)
+
+-- | Like the standard 'throw' function.
+throwDynamics :: IOException -> Dynamics a
+throwDynamics = throw

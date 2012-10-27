@@ -35,11 +35,12 @@ module Simulation.Aivika.Dynamics.Internal.Process
         runProcess,
         runProcessNow,
         catchProcess,
-        finallyProcess) where
+        finallyProcess,
+        throwProcess) where
 
 import Data.Maybe
 import Data.IORef
-import Control.Exception (IOException)
+import Control.Exception (IOException, throw)
 import Control.Monad
 import Control.Monad.Trans
 
@@ -55,6 +56,7 @@ data ProcessID =
               processCatchFlag     :: Bool,
               processReactCont     :: IORef (Maybe (ContParams ())), 
               processCancelRef     :: IORef Bool, 
+              processCancelToken   :: IORef Bool,
               processInterruptRef  :: IORef Bool, 
               processInterruptCont :: IORef (Maybe (ContParams ())), 
               processInterruptVersion :: IORef Int }
@@ -149,8 +151,11 @@ reactivateProcess pid =
 -- | Start the process with the specified ID at the desired time.
 runProcess :: Process () -> ProcessID -> Double -> Dynamics ()
 runProcess (Process p) pid t =
-  runCont m return (processCancelRef pid) (processCatchFlag pid)
-    where m = do y <- liftIO $ readIORef (processStarted pid)
+  runCont m cont econt ccont (processCancelToken pid) (processCatchFlag pid)
+    where cont  = return
+          econt = throw
+          ccont = return
+          m = do y <- liftIO $ readIORef (processStarted pid)
                  if y 
                    then error $
                         "A process with such ID " ++
@@ -171,12 +176,13 @@ runProcessNow process pid =
 processID :: Process ProcessID
 processID = Process $ \pid -> return pid
 
--- | Create a new process ID.
+-- | Create a new process ID without exception handling.
 newProcessID :: EventQueue -> Simulation ProcessID
 newProcessID q =
   do x <- liftIO $ newIORef Nothing
      y <- liftIO $ newIORef False
      c <- liftIO $ newIORef False
+     t <- liftIO $ newIORef False
      i <- liftIO $ newIORef False
      z <- liftIO $ newIORef Nothing
      v <- liftIO $ newIORef 0
@@ -185,18 +191,21 @@ newProcessID q =
                         processCatchFlag     = False,
                         processReactCont     = x, 
                         processCancelRef     = c, 
+                        processCancelToken   = t,
                         processInterruptRef  = i,
                         processInterruptCont = z, 
                         processInterruptVersion = v }
 
 -- | Create a new process ID with capabilities of catching 
--- the IOError exceptions and finalizing the computation 
--- (to be implemented). The corresponded process will be slower.
+-- the IOError exceptions and finalizing the computation. 
+-- The corresponded process will be slower than that one
+-- which identifier is created with help of 'newProcessID'.
 newProcessIDWithCatch :: EventQueue -> Simulation ProcessID
 newProcessIDWithCatch q =
   do x <- liftIO $ newIORef Nothing
      y <- liftIO $ newIORef False
      c <- liftIO $ newIORef False
+     t <- liftIO $ newIORef False
      i <- liftIO $ newIORef False
      z <- liftIO $ newIORef Nothing
      v <- liftIO $ newIORef 0
@@ -205,6 +214,7 @@ newProcessIDWithCatch q =
                         processCatchFlag     = True,
                         processReactCont     = x, 
                         processCancelRef     = c, 
+                        processCancelToken   = t,
                         processInterruptRef  = i,
                         processInterruptCont = z, 
                         processInterruptVersion = v }
@@ -213,7 +223,10 @@ newProcessIDWithCatch q =
 cancelProcess :: ProcessID -> Dynamics ()
 cancelProcess pid =
   Dynamics $ \p ->
-  writeIORef (processCancelRef pid) True
+  do z <- readIORef (processCancelRef pid) 
+     when (not z) $
+       do writeIORef (processCancelRef pid) True
+          writeIORef (processCancelToken pid) True
 
 -- | Test whether the process with the specified ID is canceled.
 processCanceled :: ProcessID -> Dynamics Bool
@@ -276,3 +289,12 @@ finallyProcess :: Process a -> Process b -> Process a
 finallyProcess (Process m) (Process m') =
   Process $ \pid ->
   finallyCont (m pid) (m' pid)
+
+-- | Throw the exception with the further exception handling.
+-- By some reasons, the standard 'throw' function per se is not handled 
+-- properly within 'Process' computations, although it will be still 
+-- handled if it will be hidden under the 'liftIO' function. The problem 
+-- arises namely with the @throw@ function, not 'IO' computations.
+throwProcess :: IOException -> Process a
+throwProcess = liftIO . throw
+
