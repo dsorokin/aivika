@@ -89,8 +89,8 @@ data SignalHistory a =
 -- | Create a history of the signal values.
 newSignalHistory :: Signal a -> Simulation (SignalHistory a)
 newSignalHistory signal =
-  do ts <- liftIO $ UV.newVector
-     xs <- liftIO $ V.newVector
+  do ts <- liftIO UV.newVector
+     xs <- liftIO V.newVector
      handleSignal_ signal $ \a ->
        Dynamics $ \p ->
        do liftIO $ UV.appendVector ts (pointTime p)

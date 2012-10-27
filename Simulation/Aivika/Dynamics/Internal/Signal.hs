@@ -93,9 +93,9 @@ newSignalSourceWithUpdate update =
          source = SignalSource { publishSignal = signal, 
                                  triggerSignal = trigger }
          handle h =
-           do Simulation $ \r ->
-                do x <- enqueueSignalHandler queue h
-                   return $ liftIO $ dequeueSignalHandler queue x
+           Simulation $ \r ->
+           do x <- enqueueSignalHandler queue h
+              return $ liftIO $ dequeueSignalHandler queue x
          trigger a =
            Dynamics $ \p ->
            do let Dynamics m = update 
@@ -117,9 +117,9 @@ newSignalSourceUnsafe =
          source = SignalSource { publishSignal = signal, 
                                  triggerSignal = trigger }
          handle h =
-           do Simulation $ \r ->
-                do x <- enqueueSignalHandler queue h
-                   return $ liftIO $ dequeueSignalHandler queue x
+           Simulation $ \r ->
+           do x <- enqueueSignalHandler queue h
+              return $ liftIO $ dequeueSignalHandler queue x
          trigger a =
            Dynamics $ \p ->
            let h = queueStart queue
@@ -274,7 +274,7 @@ merge5Signals m1 m2 m3 m4 m5 =
 composeSignal :: (a -> Dynamics b) -> Signal a -> Signal b
 composeSignal f m =
   Signal { handleSignal = \h ->
-            handleSignal m $ \a -> f a >>= h,
+            handleSignal m (f >=> h),
            updateSignal = 
              updateSignal m }
   

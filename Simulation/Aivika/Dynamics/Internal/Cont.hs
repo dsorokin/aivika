@@ -67,7 +67,7 @@ instance MonadIO Cont where
 
 invokeC :: Cont a -> ContParams a -> Dynamics ()
 {-# INLINE invokeC #-}
-invokeC (Cont m) args = m args
+invokeC (Cont m) = m
 
 invokeD :: Point -> Dynamics a -> IO a
 {-# INLINE invokeD #-}
@@ -86,7 +86,7 @@ returnC a =
   Dynamics $ \p ->
   do z <- readIORef $ (contCancelRef . contAux) c
      if z 
-       then cancelD p $ c
+       then cancelD p c
        else invokeD p $ contCont c a
                           
 -- bindC :: Cont a -> (a -> Cont b) -> Cont b
@@ -151,7 +151,7 @@ callWithCatch k a c =
 catchCont :: Cont a -> (IOException -> Cont a) -> Cont a
 catchCont m h = 
   Cont $ \c -> 
-  if (contCatchFlag . contAux $ c) 
+  if contCatchFlag . contAux $ c
   then catchWithCatch m h c
   else error $
        "To catch exceptions, the process must be created " ++
@@ -172,7 +172,7 @@ catchWithCatch (Cont m) h c =
 finallyCont :: Cont a -> Cont b -> Cont a
 finallyCont m m' = 
   Cont $ \c -> 
-  if (contCatchFlag . contAux $ c) 
+  if contCatchFlag . contAux $ c
   then finallyWithCatch m m' c
   else error $
        "To finalize computation, the process must be created " ++
@@ -223,20 +223,20 @@ runCont :: Cont a ->
            IORef Bool -> 
            Bool -> 
            Dynamics ()
-runCont (Cont m) cont econt ccont token catch = 
+runCont (Cont m) cont econt ccont cancelToken catchFlag = 
   m ContParams { contCont = cont,
                  contAux  = 
                    ContParamsAux { contECont = econt,
                                    contCCont = ccont,
-                                   contCancelRef = token, 
-                                   contCatchFlag = catch } }
+                                   contCancelRef = cancelToken, 
+                                   contCatchFlag = catchFlag } }
 
 -- | Lift the 'Simulation' computation.
 liftSC :: Simulation a -> Cont a
 liftSC (Simulation m) = 
   Cont $ \c ->
   Dynamics $ \p ->
-  if (contCatchFlag . contAux $ c) 
+  if contCatchFlag . contAux $ c
   then liftIOWithCatch (m $ pointRun p) p c
   else liftIOWithoutCatch (m $ pointRun p) p c
      
@@ -245,7 +245,7 @@ liftDC :: Dynamics a -> Cont a
 liftDC (Dynamics m) =
   Cont $ \c ->
   Dynamics $ \p ->
-  if (contCatchFlag . contAux $ c) 
+  if contCatchFlag . contAux $ c
   then liftIOWithCatch (m p) p c
   else liftIOWithoutCatch (m p) p c
      
@@ -254,7 +254,7 @@ liftIOC :: IO a -> Cont a
 liftIOC m =
   Cont $ \c ->
   Dynamics $ \p ->
-  if (contCatchFlag . contAux $ c) 
+  if contCatchFlag . contAux $ c
   then liftIOWithCatch m p c
   else liftIOWithoutCatch m p c
   

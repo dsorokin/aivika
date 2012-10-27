@@ -53,7 +53,7 @@ newUVar q a =
      ys <- UV.newVector
      UV.appendVector xs $ spcStartTime $ runSpecs r
      UV.appendVector ys a
-     s  <- invokeSimulation r $ newSignalSourceUnsafe
+     s  <- invokeSimulation r newSignalSourceUnsafe
      u  <- invokeSimulation r $ newSignalSourceWithUpdate $ queueRun q
      return UVar { uvarQueue = q,
                    uvarRun   = queueRun q,

@@ -145,7 +145,7 @@ dequeueImpl fifo =
   do i <- readIORef (fifoCountRef fifo)
      s <- readIORef (fifoStartRef fifo)
      let i' = i - 1
-         s' = (s + 1) `mod` (fifoMaxCount fifo)
+         s' = (s + 1) `mod` fifoMaxCount fifo
      a <- readArray (fifoArray fifo) s
      writeArray (fifoArray fifo) s undefined
      i' `seq` writeIORef (fifoCountRef fifo) i'
@@ -158,7 +158,7 @@ enqueueImpl fifo a =
   do i <- readIORef (fifoCountRef fifo)
      e <- readIORef (fifoEndRef fifo)
      let i' = i + 1
-         e' = (e + 1) `mod` (fifoMaxCount fifo)
+         e' = (e + 1) `mod` fifoMaxCount fifo
      a `seq` writeArray (fifoArray fifo) e a
      i' `seq` writeIORef (fifoCountRef fifo) i'
      e' `seq` writeIORef (fifoEndRef fifo) e'

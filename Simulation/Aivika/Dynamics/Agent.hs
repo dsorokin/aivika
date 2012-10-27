@@ -117,7 +117,7 @@ traversePath source target =
                activate st p
                when (st == target) $
                  writeIORef (agentModeRef agent) ProcessingMode
-          when (not (null path1 && null path2)) $
+          unless (null path1 && null path2) $
             triggerAgentStateChanged p agent
 
 -- | Add to the state a timeout handler that will be actuated 

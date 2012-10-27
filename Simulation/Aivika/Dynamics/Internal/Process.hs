@@ -224,7 +224,7 @@ cancelProcess :: ProcessID -> Dynamics ()
 cancelProcess pid =
   Dynamics $ \p ->
   do z <- readIORef (processCancelRef pid) 
-     when (not z) $
+     unless z $
        do writeIORef (processCancelRef pid) True
           writeIORef (processCancelToken pid) True
 
