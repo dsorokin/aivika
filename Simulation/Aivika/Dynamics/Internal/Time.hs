@@ -14,7 +14,8 @@ module Simulation.Aivika.Dynamics.Internal.Time
        (starttime, 
         stoptime, 
         dt, 
-        time) where
+        time,
+        integTimes) where
 
 import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
@@ -34,3 +35,12 @@ dt = Dynamics $ return . spcDT . pointSpecs
 -- | Return the current simulation time.
 time :: Dynamics Double
 time = Dynamics $ return . pointTime 
+
+-- | Return the integration time points.
+integTimes :: Simulation [Double]
+integTimes =
+  Simulation $ \r ->
+  do let sc  = runSpecs r
+         (nl, nu) = iterationBnds sc
+         t n = basicTime sc n 0
+     return $ map t [nl .. nu]

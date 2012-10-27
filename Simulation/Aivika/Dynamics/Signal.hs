@@ -17,6 +17,7 @@ module Simulation.Aivika.Dynamics.Signal
         SignalSource,
         newSignalSource,
         newSignalSourceWithUpdate,
+        newSignalInTimes,
         publishSignal,
         triggerSignal,
         handleSignal,
@@ -106,3 +107,14 @@ readSignalHistory history =
      xs <- liftIO $ UV.freezeVector (signalHistoryTimes history)
      ys <- liftIO $ V.freezeVector (signalHistoryValues history)
      return (xs, ys)     
+
+-- | Return a signal that is triggered in the specified time points.
+newSignalInTimes :: EventQueue -> [Double] -> Dynamics (Signal Double)
+newSignalInTimes q xs =
+  do s <- liftSimulation $ newSignalSource q
+     let loop []       = return ()
+         loop (x : xs) = enqueue q x $ 
+                         do triggerSignal s x 
+                            loop xs
+     loop xs
+     return $ publishSignal s

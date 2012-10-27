@@ -16,6 +16,7 @@ module Simulation.Aivika.Dynamics.Base
         stoptime,
         dt,
         time,
+        integTimes,
         -- * Interpolation and Initial Value
         initDynamics,
         discrete,
