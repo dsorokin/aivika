@@ -24,9 +24,10 @@ module Simulation.Aivika.Dynamics.Internal.Signal
         handleSignal_,
         updateSignal,
         mapSignal,
-        composeSignal,
+        mapSignalM,
         apSignal,
         filterSignal,
+        filterSignalM,
         merge2Signals,
         merge3Signals,
         merge4Signals,
@@ -212,6 +213,17 @@ filterSignal p m =
            updateSignal =
              updateSignal m }
   
+-- | Filter only those signal values that satisfy to 
+-- the specified predicate.
+filterSignalM :: (a -> Dynamics Bool) -> Signal a -> Signal a
+filterSignalM p m =
+  Signal { handleSignal = \h ->
+            handleSignal m $ \a ->
+            do x <- p a
+               when x $ h a, 
+           updateSignal =
+             updateSignal m }
+  
 -- | Merge two signals.
 merge2Signals :: Signal a -> Signal a -> Signal a
 merge2Signals m1 m2 =
@@ -271,8 +283,8 @@ merge5Signals m1 m2 m3 m4 m5 =
                 updateSignal m5 }
 
 -- | Compose the signal.
-composeSignal :: (a -> Dynamics b) -> Signal a -> Signal b
-composeSignal f m =
+mapSignalM :: (a -> Dynamics b) -> Signal a -> Signal b
+mapSignalM f m =
   Signal { handleSignal = \h ->
             handleSignal m (f >=> h),
            updateSignal = 
