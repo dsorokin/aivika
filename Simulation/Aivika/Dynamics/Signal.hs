@@ -18,6 +18,9 @@ module Simulation.Aivika.Dynamics.Signal
         newSignalSource,
         newSignalSourceWithUpdate,
         newSignalInTimes,
+        newSignalInIntegTimes,
+        newSignalInStartTime,
+        newSignalInStopTime,
         publishSignal,
         triggerSignal,
         handleSignal,
@@ -118,3 +121,61 @@ newSignalInTimes q xs =
                             loop xs
      loop xs
      return $ publishSignal s
+       
+-- | Return a signal that is triggered in the specified time points.
+newSignalInPoints :: EventQueue -> [Point] -> Dynamics (Signal Double)
+newSignalInPoints q xs =
+  do s <- liftSimulation $ newSignalSource q
+     let loop []       = return ()
+         loop (x : xs) = enqueue q (pointTime x) $ 
+                         Dynamics $ \p ->
+                         do let Dynamics m = triggerSignal s (pointTime x) 
+                            m x    -- N.B. we substitute the time point!
+                            let Dynamics m = loop xs
+                            m p
+     loop xs
+     return $ publishSignal s
+       
+-- | Return a signal that is triggered in the integration time points.
+-- It should be called with help of 'runDynamicsInStartTime'.
+newSignalInIntegTimes :: EventQueue -> Dynamics (Signal Double)
+newSignalInIntegTimes q =
+  Dynamics $ \p ->
+  do let sc  = pointSpecs p
+         (nl, nu) = iterationBnds sc
+         point n = Point { pointSpecs = sc,
+                           pointRun = pointRun p,
+                           pointTime = basicTime sc n 0,
+                           pointIteration = n,
+                           pointPhase = 0 }
+         Dynamics m = newSignalInPoints q $ map point [nl .. nu]
+     m p
+     
+-- | Return a signal that is triggered in the start time.
+-- It should be called with help of 'runDynamicsInStartTime'.
+newSignalInStartTime :: EventQueue -> Dynamics (Signal Double)
+newSignalInStartTime q =
+  Dynamics $ \p ->
+  do let sc  = pointSpecs p
+         (nl, nu) = iterationBnds sc
+         point n = Point { pointSpecs = sc,
+                           pointRun = pointRun p,
+                           pointTime = basicTime sc n 0,
+                           pointIteration = n,
+                           pointPhase = 0 }
+         Dynamics m = newSignalInPoints q [point nl]
+     m p
+
+-- | Return a signal that is triggered in the stop time.
+newSignalInStopTime :: EventQueue -> Dynamics (Signal Double)
+newSignalInStopTime q =
+  Dynamics $ \p ->
+  do let sc  = pointSpecs p
+         (nl, nu) = iterationBnds sc
+         point n = Point { pointSpecs = sc,
+                           pointRun = pointRun p,
+                           pointTime = basicTime sc n 0,
+                           pointIteration = n,
+                           pointPhase = 0 }
+         Dynamics m = newSignalInPoints q [point nu]
+     m p
