@@ -50,6 +50,8 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/MachRep2.hs
                      examples/MachRep3.hs
                      examples/Furnace.hs
+                     examples/TimeOut.hs
+                     examples/TimeOutInt.hs
 
 data-files:          doc/aivika.pdf
 
