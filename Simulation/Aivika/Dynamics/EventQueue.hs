@@ -33,7 +33,7 @@ data EventQueue = EventQueue {
   queueTime :: IORef Double, 
   -- Optimization
   runQueue  :: Dynamics (),
-  -- ^ Run the event queue processing its events
+  -- ^ Run the event queue processing its events.
   runQueueSync :: Dynamics ()
   -- ^ Run the event queue synchronously, i.e. without past.
   }
