@@ -54,9 +54,9 @@ newVar q a =
      UV.appendVector xs $ spcStartTime $ runSpecs r
      V.appendVector ys a
      s  <- invokeSimulation r newSignalSourceUnsafe
-     u  <- invokeSimulation r $ newSignalSourceWithUpdate $ queueRun q
+     u  <- invokeSimulation r $ newSignalSourceWithUpdate $ runQueue q
      return Var { varQueue = q,
-                  varRun   = queueRun q,
+                  varRun   = runQueue q,
                   varXS = xs,
                   varYS = ys, 
                   varChangedSource = s, 

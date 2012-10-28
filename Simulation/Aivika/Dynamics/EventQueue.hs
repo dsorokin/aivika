@@ -16,7 +16,8 @@ module Simulation.Aivika.Dynamics.EventQueue
        (EventQueue,
         newQueue,
         enqueue,
-        queueRun) where
+        runQueue,
+        runQueueSync) where
 
 import Data.IORef
 import Control.Monad
@@ -28,9 +29,14 @@ import qualified Simulation.Aivika.PriorityQueue as PQ
 -- | The 'EventQueue' type represents the event queue.
 data EventQueue = EventQueue { 
   queuePQ   :: PQ.PriorityQueue (Dynamics ()),
-  queueRun  :: Dynamics (),   -- ^ Run the event queue processing its events
   queueBusy :: IORef Bool,
-  queueTime :: IORef Double }
+  queueTime :: IORef Double, 
+  -- Optimization
+  runQueue  :: Dynamics (),
+  -- ^ Run the event queue processing its events
+  runQueueSync :: Dynamics ()
+  -- ^ Run the event queue synchronously, i.e. without past.
+  }
 
 -- | Create a new event queue.
 newQueue :: Simulation EventQueue
@@ -41,9 +47,10 @@ newQueue =
      t <- newIORef $ spcStartTime sc
      pq <- PQ.newQueue
      let q = EventQueue { queuePQ   = pq,
-                          queueRun  = runQueue q,
                           queueBusy = f,
-                          queueTime = t }
+                          queueTime = t, 
+                          runQueue  = runQueueCore q,
+                          runQueueSync = runQueueSyncCore q }
      return q
              
 -- | Enqueue the event which must be actuated at the specified time.
@@ -52,8 +59,8 @@ enqueue q t c = Dynamics r where
   r p = let pq = queuePQ q in PQ.enqueue pq t c
     
 -- | Run the event queue processing its events.
-runQueue :: EventQueue -> Dynamics ()
-runQueue q = Dynamics r where
+runQueueCore :: EventQueue -> Dynamics ()
+runQueueCore q = Dynamics r where
   r p =
     do let f = queueBusy q
        f' <- readIORef f
@@ -69,7 +76,7 @@ runQueue q = Dynamics r where
             let t = queueTime q
             t' <- readIORef t
             when (t2 < t') $ 
-              error "The time value is too small: subrunQueue"
+              error "The time value is too small: runQueue"
             when (t2 <= pointTime p) $
               do writeIORef t t2
                  PQ.dequeue pq
@@ -82,3 +89,17 @@ runQueue q = Dynamics r where
                          pointIteration = n2,
                          pointPhase = -1 }
                  call q p
+
+-- | Run the event queue synchronously, i.e. without past.
+runQueueSyncCore :: EventQueue -> Dynamics ()
+runQueueSyncCore q = Dynamics r where
+  r p =
+    do let t = queueTime q
+       t' <- readIORef t
+       if pointTime p < t'
+         then error $
+              "The current time is less than " ++
+              "the time in the queue: runQueueSync"
+         else let Dynamics m = runQueue q
+              in m p
+  

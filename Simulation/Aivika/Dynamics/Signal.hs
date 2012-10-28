@@ -56,7 +56,7 @@ import qualified Simulation.Aivika.UVector as UV
 -- | Create a new signal source when the state depends on the event queue.
 newSignalSource :: EventQueue -> Simulation (SignalSource a)
 newSignalSource queue = 
-  newSignalSourceWithUpdate $ queueRun queue
+  newSignalSourceWithUpdate $ runQueue queue
 
 -- | Await the signal.
 awaitSignal :: Signal a -> Process a

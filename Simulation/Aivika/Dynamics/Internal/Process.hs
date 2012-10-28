@@ -125,7 +125,7 @@ passivateProcess =
 processPassive :: ProcessID -> Dynamics Bool
 processPassive pid =
   Dynamics $ \p ->
-  do let Dynamics m = queueRun $ processQueue pid
+  do let Dynamics m = runQueueSync $ processQueue pid
      m p
      let x = processReactCont pid
      a <- readIORef x
@@ -135,7 +135,7 @@ processPassive pid =
 reactivateProcess :: ProcessID -> Dynamics ()
 reactivateProcess pid =
   Dynamics $ \p ->
-  do let Dynamics m = queueRun $ processQueue pid
+  do let Dynamics m = runQueueSync $ processQueue pid
      m p
      let x = processReactCont pid
      a <- readIORef x

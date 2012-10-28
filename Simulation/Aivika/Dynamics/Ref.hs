@@ -43,9 +43,9 @@ newRef :: EventQueue -> a -> Simulation (Ref a)
 newRef q a =
   do x <- liftIO $ newIORef a
      s <- newSignalSourceUnsafe
-     u <- newSignalSourceWithUpdate (queueRun q)
+     u <- newSignalSourceWithUpdate (runQueue q)
      return Ref { refQueue = q,
-                  refRun   = queueRun q,
+                  refRun   = runQueueSync q,
                   refValue = x, 
                   refChangedSource = s, 
                   refUpdatedSource = u }

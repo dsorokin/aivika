@@ -83,7 +83,7 @@ newResourceWithCount q initCount count = do
 resourceCount :: Resource -> Dynamics Int
 resourceCount r =
   Dynamics $ \p ->
-  do invokeDynamics p $ queueRun (resourceQueue r)
+  do invokeDynamics p $ runQueueSync (resourceQueue r)
      readIORef (resourceCountRef r)
 
 -- | Request for the resource decreasing its count in case of success,
@@ -116,7 +116,7 @@ releaseResource r =
 releaseResourceInDynamics :: Resource -> Dynamics ()
 releaseResourceInDynamics r =
   Dynamics $ \p ->
-  do invokeDynamics p $ queueRun (resourceQueue r)
+  do invokeDynamics p $ runQueueSync (resourceQueue r)
      invokeDynamics p $ releaseResourceUnsafe r
 
 releaseResourceUnsafe :: Resource -> Dynamics ()
@@ -147,7 +147,7 @@ releaseResourceUnsafe r =
 tryRequestResourceInDynamics :: Resource -> Dynamics Bool
 tryRequestResourceInDynamics r =
   Dynamics $ \p ->
-  do invokeDynamics p $ queueRun (resourceQueue r)
+  do invokeDynamics p $ runQueueSync (resourceQueue r)
      a <- readIORef (resourceCountRef r)
      if a == 0 
        then return False
