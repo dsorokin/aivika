@@ -96,14 +96,15 @@ newSignalSourceWithUpdate update =
                                  triggerSignal = trigger }
          handle h =
            Dynamics $ \p ->
-           do let Dynamics m = update
-              m p
+           do invokeDynamics p update
               x <- enqueueSignalHandler queue h
-              return $ liftIO $ dequeueSignalHandler queue x
+              return $ 
+                Dynamics $ \p ->
+                do invokeDynamics p update
+                   dequeueSignalHandler queue x
          trigger a =
            Dynamics $ \p ->
-           do let Dynamics m = update 
-              m p
+           do invokeDynamics p update 
               let h = queueStart queue
               triggerSignalHandlers h a p
      return source
@@ -306,3 +307,7 @@ emptySignal :: Signal a
 emptySignal =
   Signal { handleSignal = \h -> return $ return (),
            updateSignal = return () }
+  
+invokeDynamics :: Point -> Dynamics a -> IO a
+{-# INLINE invokeDynamics #-}
+invokeDynamics p (Dynamics m) = m p
