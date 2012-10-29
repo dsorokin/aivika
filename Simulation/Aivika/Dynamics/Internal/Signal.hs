@@ -318,7 +318,7 @@ apSignal f m =
            updateSignal =
              updateSignal m }
 
--- | An empty signal that triggers nothing.
+-- | An empty signal which is never triggered.
 emptySignal :: Signal a
 emptySignal =
   Signal { handleSignal = \h -> return $ return (),
