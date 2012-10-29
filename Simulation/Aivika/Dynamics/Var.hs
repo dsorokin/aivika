@@ -145,9 +145,9 @@ freezeVar v =
      
 -- | Return a signal that notifies about every change of the variable state.
 varChanged :: Var a -> Signal a
-varChanged v = merge2Signals m1 m2
-  where m1 = publishSignal (varChangedSource v)
-        m2 = publishSignal (varUpdatedSource v)
+varChanged v = merge2Signals m1 m2    -- N.B. The order is important!
+  where m1 = publishSignal (varUpdatedSource v)
+        m2 = publishSignal (varChangedSource v)
 
 -- | Return a signal that notifies about every change of the variable state.
 varChanged_ :: Var a -> Signal ()

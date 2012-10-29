@@ -75,10 +75,9 @@ modifyRef r f = Dynamics $ \p ->
 
 -- | Return a signal that notifies about every change of the reference state.
 refChanged :: Ref a -> Signal a
-refChanged r = merge2Signals m1 m2
-  where
-    m1 = publishSignal (refChangedSource r)
-    m2 = publishSignal (refUpdatedSource r)
+refChanged v = merge2Signals m1 m2    -- N.B. The order is important!
+  where m1 = publishSignal (refUpdatedSource v)
+        m2 = publishSignal (refChangedSource v)
 
 -- | Return a signal that notifies about every change of the reference state.
 refChanged_ :: Ref a -> Signal ()

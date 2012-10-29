@@ -146,9 +146,9 @@ freezeUVar v =
      
 -- | Return a signal that notifies about every change of the variable state.
 uvarChanged :: UVar a -> Signal a
-uvarChanged v = merge2Signals m1 m2
-  where m1 = publishSignal (uvarChangedSource v)
-        m2 = publishSignal (uvarUpdatedSource v)
+uvarChanged v = merge2Signals m1 m2    -- N.B. The order is important!
+  where m1 = publishSignal (uvarUpdatedSource v)
+        m2 = publishSignal (uvarChangedSource v)
 
 -- | Return a signal that notifies about every change of the variable state.
 uvarChanged_ :: UVar a -> Signal ()

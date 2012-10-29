@@ -54,7 +54,7 @@ data SignalSource a =
 -- | The signal that can have disposable handlers.  
 data Signal a =
   Signal { handleSignal :: (a -> Dynamics ()) -> 
-                           Simulation (Simulation ()),
+                           Dynamics (Dynamics ()),
            -- ^ Subscribe the handler to the specified 
            -- signal and return a nested computation 
            -- that, being applied, unsubscribes the 
@@ -76,7 +76,7 @@ data SignalHandler a =
 
 -- | Subscribe the handler to the specified signal.
 -- To subscribe the disposable handlers, use function 'handleSignal'.
-handleSignal_ :: Signal a -> (a -> Dynamics ()) -> Simulation ()
+handleSignal_ :: Signal a -> (a -> Dynamics ()) -> Dynamics ()
 handleSignal_ signal h = 
   do x <- handleSignal signal h
      return ()
@@ -94,8 +94,10 @@ newSignalSourceWithUpdate update =
          source = SignalSource { publishSignal = signal, 
                                  triggerSignal = trigger }
          handle h =
-           Simulation $ \r ->
-           do x <- enqueueSignalHandler queue h
+           Dynamics $ \p ->
+           do let Dynamics m = update
+              m p
+              x <- enqueueSignalHandler queue h
               return $ liftIO $ dequeueSignalHandler queue x
          trigger a =
            Dynamics $ \p ->
@@ -118,7 +120,7 @@ newSignalSourceUnsafe =
          source = SignalSource { publishSignal = signal, 
                                  triggerSignal = trigger }
          handle h =
-           Simulation $ \r ->
+           Dynamics $ \p ->
            do x <- enqueueSignalHandler queue h
               return $ liftIO $ dequeueSignalHandler queue x
          trigger a =

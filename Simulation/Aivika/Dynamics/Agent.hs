@@ -288,10 +288,10 @@ triggerAgentStateChanged p agent =
 
 -- | Return a signal that notifies about every change of the state.
 agentStateChanged :: Agent -> Signal (Maybe AgentState)
-agentStateChanged agent = merge2Signals m1 m2
-  where m1 = publishSignal (agentStateChangedSource agent)
-        m2 = publishSignal (agentStateUpdatedSource agent)
-        
+agentStateChanged v = merge2Signals m1 m2    -- N.B. The order is important!
+  where m1 = publishSignal (agentStateUpdatedSource v)
+        m2 = publishSignal (agentStateChangedSource v)
+
 -- | Return a signal that notifies about every change of the state.
 agentStateChanged_ :: Agent -> Signal ()
 agentStateChanged_ agent =

@@ -60,7 +60,7 @@ import qualified Simulation.Aivika.UVector as UV
 -- | Create a new signal source when the state depends on the event queue.
 newSignalSource :: EventQueue -> Simulation (SignalSource a)
 newSignalSource queue = 
-  newSignalSourceWithUpdate $ runQueue queue
+  newSignalSourceWithUpdate $ runQueueSync queue
 
 -- | Await the signal.
 awaitSignal :: Signal a -> Process a
@@ -69,7 +69,7 @@ awaitSignal signal =
   Cont $ \c ->
   Dynamics $ \p ->
   do r <- newIORef Nothing
-     let Simulation m = 
+     let Dynamics m = 
            handleSignal signal $ 
            \a -> Dynamics $ 
                  \p -> do x <- readIORef r
@@ -77,11 +77,11 @@ awaitSignal signal =
                             Nothing ->
                               error "The signal was lost: awaitSignal."
                             Just x ->
-                              do let Simulation m = x
-                                 m $ pointRun p
+                              do let Dynamics m = x
+                                 m p
                                  let Dynamics m = resumeContByParams c a
                                  m p
-     h <- m $ pointRun p
+     h <- m p
      writeIORef r $ Just h
           
 -- | Represents the history of the signal values.
@@ -92,7 +92,7 @@ data SignalHistory a =
                   signalHistoryValues :: V.Vector a }
 
 -- | Create a history of the signal values.
-newSignalHistory :: Signal a -> Simulation (SignalHistory a)
+newSignalHistory :: Signal a -> Dynamics (SignalHistory a)
 newSignalHistory signal =
   do ts <- liftIO UV.newVector
      xs <- liftIO V.newVector
