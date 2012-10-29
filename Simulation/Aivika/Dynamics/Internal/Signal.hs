@@ -28,6 +28,7 @@ module Simulation.Aivika.Dynamics.Internal.Signal
         apSignal,
         filterSignal,
         filterSignalM,
+        emptySignal,
         merge2Signals,
         merge3Signals,
         merge4Signals,
@@ -299,3 +300,9 @@ apSignal f m =
             handleSignal m $ \a -> do { x <- f; h (x a) },
            updateSignal =
              updateSignal m }
+
+-- | An empty signal that triggers nothing.
+emptySignal :: Signal a
+emptySignal =
+  Signal { handleSignal = \h -> return $ return (),
+           updateSignal = return () }

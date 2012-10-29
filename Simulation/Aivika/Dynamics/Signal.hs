@@ -32,6 +32,7 @@ module Simulation.Aivika.Dynamics.Signal
         apSignal,
         filterSignal,
         filterSignalM,
+        emptySignal,
         merge2Signals,
         merge3Signals,
         merge4Signals,
