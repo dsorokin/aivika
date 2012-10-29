@@ -35,6 +35,7 @@ module Simulation.Aivika.Dynamics.Internal.Signal
         merge5Signals) where
 
 import Data.IORef
+import Data.Monoid
 
 import Control.Monad
 import Control.Monad.Trans
@@ -196,6 +197,24 @@ dequeueSignalHandler q h =
                    writeIORef (handlerPrev y) prev
                    writeIORef (handlerNext x) next
 
+instance Functor Signal where
+  fmap = mapSignal
+  
+instance Monoid (Signal a) where 
+  
+  mempty = emptySignal
+  
+  mappend = merge2Signals
+  
+  mconcat [] = emptySignal
+  mconcat [x1] = x1
+  mconcat [x1, x2] = merge2Signals x1 x2
+  mconcat [x1, x2, x3] = merge3Signals x1 x2 x3
+  mconcat [x1, x2, x3, x4] = merge4Signals x1 x2 x3 x4
+  mconcat [x1, x2, x3, x4, x5] = merge5Signals x1 x2 x3 x4 x5
+  mconcat (x1 : x2 : x3 : x4 : x5 : xs) = 
+    mconcat $ merge5Signals x1 x2 x3 x4 x5 : xs
+  
 -- | Map the signal according the specified function.
 mapSignal :: (a -> b) -> Signal a -> Signal b
 mapSignal f m =
@@ -204,9 +223,6 @@ mapSignal f m =
            updateSignal = 
              updateSignal m }
 
-instance Functor Signal where
-  fmap = mapSignal
-  
 -- | Filter only those signal values that satisfy to 
 -- the specified predicate.
 filterSignal :: (a -> Bool) -> Signal a -> Signal a
