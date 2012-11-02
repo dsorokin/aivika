@@ -90,7 +90,7 @@ phases sc =
     RungeKutta2 -> [0, 1]
     RungeKutta4 -> [0, 1, 2, 3]
 
--- | Returns the first and last phases.
+-- | Returns the first and last integration phases.
 phaseBnds :: Specs -> (Int, Int)
 phaseBnds sc = 
   case spcMethod sc of
@@ -98,11 +98,11 @@ phaseBnds sc =
     RungeKutta2 -> (0, 1)
     RungeKutta4 -> (0, 3)
 
--- | Returns the first phase, i.e. zero.
+-- | Returns the first integration phase, i.e. zero.
 phaseLoBnd :: Specs -> Int
 phaseLoBnd sc = 0
                   
--- | Returns the last phase, 1 for Euler's method, 2 for RK2 and 4 for RK4.
+-- | Returns the last integration phase, 1 for Euler's method, 2 for RK2 and 4 for RK4.
 phaseHiBnd :: Specs -> Int
 phaseHiBnd sc = 
   case spcMethod sc of

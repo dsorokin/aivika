@@ -15,7 +15,10 @@ module Simulation.Aivika.Dynamics.Internal.Time
         stoptime, 
         dt, 
         time,
-        integTimes) where
+        integTimes, 
+        isTimeInteg,
+        integIteration,
+        integPhase) where
 
 import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
@@ -44,3 +47,16 @@ integTimes =
          (nl, nu) = iterationBnds sc
          t n = basicTime sc n 0
      return $ map t [nl .. nu]
+     
+-- | Whether the current time is an integration time.
+isTimeInteg :: Dynamics Bool
+isTimeInteg = Dynamics $ \p -> return $ pointPhase p >= 0
+
+-- | Return the integration iteration closest to the current simulation time.
+integIteration :: Dynamics Int
+integIteration = Dynamics $ return . pointIteration
+
+-- | Return the integration phase for the current simulation time.
+-- It is @(-1)@ for non-integration time points.
+integPhase :: Dynamics Int
+integPhase = Dynamics $ return . pointPhase
