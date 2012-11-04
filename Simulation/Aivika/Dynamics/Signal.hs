@@ -40,7 +40,7 @@ module Simulation.Aivika.Dynamics.Signal
         SignalHistory,
         signalHistorySignal,
         newSignalHistory,
-        newSignalHistoryWithDelay,
+        newSignalHistoryThrough,
         readSignalHistory) where
 
 import Data.IORef
@@ -118,8 +118,8 @@ newSignalHistory signal =
 -- to the signal which must be triggered at the current time then it will be
 -- triggered. Using the event queue allows us to complete some preparation logic
 -- before the signal will be triggered at the same simulation time point.
-newSignalHistoryWithDelay :: EventQueue -> Signal a -> Dynamics (SignalHistory a)
-newSignalHistoryWithDelay q signal =
+newSignalHistoryThrough :: EventQueue -> Signal a -> Dynamics (SignalHistory a)
+newSignalHistoryThrough q signal =
   do ts <- liftIO UV.newVector
      xs <- liftIO V.newVector
      t  <- time
