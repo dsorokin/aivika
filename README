@@ -22,16 +22,20 @@ that represents a simulation run, in which scope the previous
 two monads exist. Almost everything is expressed through these monads, 
 including the event handlers, agent handlers and even integrals 
 except for the parameters and statistics that already use the IO monad.
-.
+
 The PDF documentation is available at 
 <https://github.com/dsorokin/aivika/blob/master/doc/aivika.pdf>.
 Please note that the documentation is outdated and it corresponds to 
 version 0.2 but it can still be helpful.
 
-Also please look at another my package on GitHub
-<https://github.com/dsorokin/aivika-experiment>
-that complements the Aivika library and allows specifying the simulation 
+Also please look at two other my packages on GitHub
+<https://github.com/dsorokin/aivika-experiment> and
+<https://github.com/dsorokin/aivika-experiment-chart>
+that complement the Aivika library and allow specifying the simulation 
 experiments that are easy to define and easy to analyze. The simulation 
 experiments are extensible and you can add your own views in which the 
 results can be saved. For example, the results might be saved as 
-the PDF documents or charts in the PNG format.
+the PDF documents. Already now they can be saved as tables in the CSV 
+format and as Time Series charts in the PNG format. The second package
+is separate, because it has more heavy dependencies on Haskell Charts, 
+Cairo and GTK.
