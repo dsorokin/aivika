@@ -44,7 +44,7 @@ integTimes :: Simulation [Double]
 integTimes =
   Simulation $ \r ->
   do let sc  = runSpecs r
-         (nl, nu) = iterationBnds sc
+         (nl, nu) = integIterationBnds sc
          t n = basicTime sc n 0
      return $ map t [nl .. nu]
      

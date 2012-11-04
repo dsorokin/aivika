@@ -144,7 +144,7 @@ newSignalInIntegTimes :: EventQueue -> Dynamics (Signal Double)
 newSignalInIntegTimes q =
   Dynamics $ \p ->
   do let sc  = pointSpecs p
-         (nl, nu) = iterationBnds sc
+         (nl, nu) = integIterationBnds sc
          point n = Point { pointSpecs = sc,
                            pointRun = pointRun p,
                            pointTime = basicTime sc n 0,
@@ -159,7 +159,7 @@ newSignalInStartTime :: EventQueue -> Dynamics (Signal Double)
 newSignalInStartTime q =
   Dynamics $ \p ->
   do let sc  = pointSpecs p
-         (nl, nu) = iterationBnds sc
+         (nl, nu) = integIterationBnds sc
          point n = Point { pointSpecs = sc,
                            pointRun = pointRun p,
                            pointTime = basicTime sc n 0,
@@ -173,7 +173,7 @@ newSignalInStopTime :: EventQueue -> Dynamics (Signal Double)
 newSignalInStopTime q =
   Dynamics $ \p ->
   do let sc  = pointSpecs p
-         (nl, nu) = iterationBnds sc
+         (nl, nu) = integIterationBnds sc
          point n = Point { pointSpecs = sc,
                            pointRun = pointRun p,
                            pointTime = basicTime sc n 0,

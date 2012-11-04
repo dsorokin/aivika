@@ -26,12 +26,12 @@ module Simulation.Aivika.Dynamics.Internal.Dynamics
         throwDynamics,
         -- * Utilities
         basicTime,
-        iterationBnds,
-        iterationHiBnd,
-        iterationLoBnd,
-        phaseBnds,
-        phaseHiBnd,
-        phaseLoBnd) where
+        integIterationBnds,
+        integIterationHiBnd,
+        integIterationLoBnd,
+        integPhaseBnds,
+        integPhaseHiBnd,
+        integPhaseLoBnd) where
 
 import qualified Control.Exception as C
 import Control.Exception (IOException, throw, finally)
@@ -61,50 +61,50 @@ data Point = Point { pointSpecs :: Specs,    -- ^ the simulation specs
                      pointPhase :: Int       -- ^ the current phase
                    } deriving (Eq, Ord, Show)
            
--- | Returns the iterations starting from zero.
-iterations :: Specs -> [Int]
-iterations sc = [i1 .. i2] where
+-- | Returns the integration iterations starting from zero.
+integIterations :: Specs -> [Int]
+integIterations sc = [i1 .. i2] where
   i1 = 0
   i2 = round ((spcStopTime sc - 
                spcStartTime sc) / spcDT sc)
 
--- | Returns the first and last iterations.
-iterationBnds :: Specs -> (Int, Int)
-iterationBnds sc = (0, round ((spcStopTime sc - 
-                               spcStartTime sc) / spcDT sc))
+-- | Returns the first and last integration iterations.
+integIterationBnds :: Specs -> (Int, Int)
+integIterationBnds sc = (0, round ((spcStopTime sc - 
+                                    spcStartTime sc) / spcDT sc))
 
--- | Returns the first iteration, i.e. zero.
-iterationLoBnd :: Specs -> Int
-iterationLoBnd sc = 0
+-- | Returns the first integration iteration, i.e. zero.
+integIterationLoBnd :: Specs -> Int
+integIterationLoBnd sc = 0
 
--- | Returns the last iteration.
-iterationHiBnd :: Specs -> Int
-iterationHiBnd sc = round ((spcStopTime sc - 
-                            spcStartTime sc) / spcDT sc)
+-- | Returns the last integration iteration.
+integIterationHiBnd :: Specs -> Int
+integIterationHiBnd sc = round ((spcStopTime sc - 
+                                 spcStartTime sc) / spcDT sc)
 
 -- | Returns the phases for the specified simulation specs starting from zero.
-phases :: Specs -> [Int]
-phases sc = 
+integPhases :: Specs -> [Int]
+integPhases sc = 
   case spcMethod sc of
     Euler -> [0]
     RungeKutta2 -> [0, 1]
     RungeKutta4 -> [0, 1, 2, 3]
 
 -- | Returns the first and last integration phases.
-phaseBnds :: Specs -> (Int, Int)
-phaseBnds sc = 
+integPhaseBnds :: Specs -> (Int, Int)
+integPhaseBnds sc = 
   case spcMethod sc of
     Euler -> (0, 0)
     RungeKutta2 -> (0, 1)
     RungeKutta4 -> (0, 3)
 
 -- | Returns the first integration phase, i.e. zero.
-phaseLoBnd :: Specs -> Int
-phaseLoBnd sc = 0
+integPhaseLoBnd :: Specs -> Int
+integPhaseLoBnd sc = 0
                   
--- | Returns the last integration phase, 1 for Euler's method, 2 for RK2 and 4 for RK4.
-phaseHiBnd :: Specs -> Int
-phaseHiBnd sc = 
+-- | Returns the last integration phase, 0 for Euler's method, 1 for RK2 and 3 for RK4.
+integPhaseHiBnd :: Specs -> Int
+integPhaseHiBnd sc = 
   case spcMethod sc of
     Euler -> 0
     RungeKutta2 -> 1
@@ -159,7 +159,7 @@ runDynamicsInStopTime :: Dynamics a -> Simulation a
 runDynamicsInStopTime (Dynamics m) =
   Simulation $ \r ->
   do let sc = runSpecs r 
-         n  = iterationHiBnd sc
+         n  = integIterationHiBnd sc
          t  = basicTime sc n 0
      m Point { pointSpecs = sc,
                pointRun = r,
@@ -172,7 +172,7 @@ runDynamicsInIntegTimes :: Dynamics a -> Simulation [IO a]
 runDynamicsInIntegTimes (Dynamics m) =
   Simulation $ \r ->
   do let sc = runSpecs r
-         (nl, nu) = iterationBnds sc
+         (nl, nu) = integIterationBnds sc
          point n = Point { pointSpecs = sc,
                            pointRun = r,
                            pointTime = basicTime sc n 0,

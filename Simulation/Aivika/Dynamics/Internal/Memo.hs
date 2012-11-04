@@ -43,8 +43,8 @@ memo :: Dynamics e -> Simulation (Dynamics e)
 memo (Dynamics m) = 
   Simulation $ \r ->
   do let sc = runSpecs r
-         (phl, phu) = phaseBnds sc
-         (nl, nu)   = iterationBnds sc
+         (phl, phu) = integPhaseBnds sc
+         (nl, nu)   = integIterationBnds sc
      arr   <- newMemoArray_ ((phl, nl), (phu, nu))
      nref  <- newIORef 0
      phref <- newIORef 0
@@ -52,7 +52,7 @@ memo (Dynamics m) =
            do let sc  = pointSpecs p
                   n   = pointIteration p
                   ph  = pointPhase p
-                  phu = phaseHiBnd sc 
+                  phu = integPhaseHiBnd sc 
                   loop n' ph' = 
                     if (n' > n) || ((n' == n) && (ph' > ph)) 
                     then 
@@ -80,8 +80,8 @@ umemo :: (MArray IOUArray e IO) => Dynamics e -> Simulation (Dynamics e)
 umemo (Dynamics m) = 
   Simulation $ \r ->
   do let sc = runSpecs r
-         (phl, phu) = phaseBnds sc
-         (nl, nu)   = iterationBnds sc
+         (phl, phu) = integPhaseBnds sc
+         (nl, nu)   = integIterationBnds sc
      arr   <- newMemoUArray_ ((phl, nl), (phu, nu))
      nref  <- newIORef 0
      phref <- newIORef 0
@@ -89,7 +89,7 @@ umemo (Dynamics m) =
            do let sc  = pointSpecs p
                   n   = pointIteration p
                   ph  = pointPhase p
-                  phu = phaseHiBnd sc 
+                  phu = integPhaseHiBnd sc 
                   loop n' ph' = 
                     if (n' > n) || ((n' == n) && (ph' > ph)) 
                     then 
@@ -122,7 +122,7 @@ memo0 :: Dynamics e -> Simulation (Dynamics e)
 memo0 (Dynamics m) = 
   Simulation $ \r ->
   do let sc   = runSpecs r
-         bnds = iterationBnds sc
+         bnds = integIterationBnds sc
      arr  <- newMemoArray_ bnds
      nref <- newIORef 0
      let r p =
@@ -150,7 +150,7 @@ umemo0 :: (MArray IOUArray e IO) => Dynamics e -> Simulation (Dynamics e)
 umemo0 (Dynamics m) = 
   Simulation $ \r ->
   do let sc   = runSpecs r
-         bnds = iterationBnds sc
+         bnds = integIterationBnds sc
      arr  <- newMemoUArray_ bnds
      nref <- newIORef 0
      let r p =
