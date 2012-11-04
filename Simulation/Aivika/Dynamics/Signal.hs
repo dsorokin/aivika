@@ -40,6 +40,7 @@ module Simulation.Aivika.Dynamics.Signal
         SignalHistory,
         signalHistorySignal,
         newSignalHistory,
+        newSignalHistoryWithDelay,
         readSignalHistory) where
 
 import Data.IORef
@@ -54,6 +55,7 @@ import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Internal.Cont
 import Simulation.Aivika.Dynamics.Internal.Process
+import Simulation.Aivika.Dynamics.Base
 
 import qualified Simulation.Aivika.Vector as V
 import qualified Simulation.Aivika.UVector as UV
@@ -98,6 +100,31 @@ newSignalHistory signal =
   do ts <- liftIO UV.newVector
      xs <- liftIO V.newVector
      handleSignal_ signal $ \a ->
+       Dynamics $ \p ->
+       do liftIO $ UV.appendVector ts (pointTime p)
+          liftIO $ V.appendVector xs a
+     return SignalHistory { signalHistorySignal = signal,
+                            signalHistoryTimes  = ts,
+                            signalHistoryValues = xs }
+       
+-- | Create a history of the signal values with delay through the event queue.
+-- The history will be created at the same simulation time, just the corresponded 
+-- handler will be subscribed to the signal after the new event will be processed 
+-- by the queue. 
+-- 
+-- It is very useful if we want the signal won't be triggered at the current 
+-- time until we complete some preparation. This is relatated to the fact that
+-- the signal is updated at time of subscribing the handler. So, if we subscribe
+-- to the signal which must be triggered at the current time then it will be
+-- triggered. Using the event queue allows us to complete some preparation logic
+-- before the signal will be triggered at the same simulation time point.
+newSignalHistoryWithDelay :: EventQueue -> Signal a -> Dynamics (SignalHistory a)
+newSignalHistoryWithDelay q signal =
+  do ts <- liftIO UV.newVector
+     xs <- liftIO V.newVector
+     t  <- time
+     enqueue q t $
+       handleSignal_ signal $ \a ->
        Dynamics $ \p ->
        do liftIO $ UV.appendVector ts (pointTime p)
           liftIO $ V.appendVector xs a
