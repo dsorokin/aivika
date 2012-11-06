@@ -46,13 +46,13 @@ data Furnace =
             -- ^ The pits for ingots.
             furnacePitCount :: UVar Int,
             -- ^ The count of active pits with ingots.
-            furnacePitCountStats :: Statistics Int,
+            furnacePitCountStats :: Ref (SamplingStats Int),
             -- ^ The statistics about the active pits.
             furnaceAwaitingIngots :: Q.Queue Ingot,
             -- ^ The awaiting ingots in the queue.
             furnaceQueueCount :: UVar Int,
             -- ^ The queue count.
-            furnaceQueueCountStats :: Statistics Int,
+            furnaceQueueCountStats :: Ref (SamplingStats Int),
             -- ^ The statistics about the queue count.
             furnaceWaitCount :: Ref Int,
             -- ^ The count of awaiting ingots.
@@ -103,10 +103,10 @@ newFurnace queue =
   do normalGen <- liftIO normalGen
      pits <- sequence [newPit queue | i <- [1..10]]
      pitCount <- newUVar queue 0
-     pitCountStats <- liftIO newStatistics
+     pitCountStats <- newRef queue emptySamplingStats
      awaitingIngots <- liftIO Q.newQueue
      queueCount <- newUVar queue 0
-     queueCountStats <- liftIO newStatistics
+     queueCountStats <- newRef queue emptySamplingStats
      waitCount <- newRef queue 0
      waitTime <- newRef queue 0.0
      heatingTime <- newRef queue 0.0
@@ -198,7 +198,8 @@ tryLoadPit furnace pit =
           t' <- time
           modifyUVar (furnaceQueueCount furnace) (+ (-1))
           c <- readUVar (furnaceQueueCount furnace)
-          liftIO $ addStatistics (furnaceQueueCountStats furnace) c
+          modifyRef (furnaceQueueCountStats furnace) $
+            addSamplingStats c
           loadIngot (ingot { ingotLoadTime = t',
                              ingotLoadTemp = 400.0 }) pit
               
@@ -213,7 +214,8 @@ unloadIngot ingot pit =
      let furnace = ingotFurnace ingot
      count <- readUVar (furnacePitCount furnace)
      writeUVar (furnacePitCount furnace) (count - 1)
-     liftIO $ addStatistics (furnacePitCountStats furnace) (count - 1)
+     modifyRef (furnacePitCountStats furnace) $
+       addSamplingStats (count - 1)
      
      -- how long did we heat the ingot up?
      t' <- time
@@ -236,7 +238,8 @@ loadIngot ingot pit =
      let furnace = ingotFurnace ingot
      count <- readUVar (furnacePitCount furnace)
      writeUVar (furnacePitCount furnace) (count + 1)
-     liftIO $ addStatistics (furnacePitCountStats furnace) (count + 1)
+     modifyRef (furnacePitCountStats furnace) $
+       addSamplingStats (count + 1)
      
      -- decrease the furnace temperature
      h <- readRef (furnaceTemp furnace)
@@ -293,7 +296,8 @@ acceptIngot furnace =
                liftIO $ Q.enqueue ingots ingot
                modifyUVar (furnaceQueueCount furnace) (+ 1)
                c <- readUVar (furnaceQueueCount furnace)
-               liftIO $ addStatistics (furnaceQueueCountStats furnace) c
+               modifyRef (furnaceQueueCountStats furnace) $
+                 addSamplingStats c
        else do pit:_ <- emptyPits furnace
                loadIngot ingot pit
        
@@ -384,19 +388,19 @@ model =
             putStrLn ""
                 
           -- the ingots in pits
-          r2 <- fmap analyzeData $ liftIO $ statisticsData (furnacePitCountStats furnace)
+          r2 <- readRef (furnacePitCountStats furnace)
               
           liftIO $ do
             putStrLn "The ingots in pits: "
-            putStrLn $ showResults r2 2 []
+            putStrLn $ showSamplingStats r2 2 []
             putStrLn ""
               
           -- the queue size
-          r3 <- fmap analyzeData $ liftIO $ statisticsData (furnaceQueueCountStats furnace)
+          r3 <- readRef (furnaceQueueCountStats furnace)
      
           liftIO $ do
             putStrLn "The queue size: "
-            putStrLn $ showResults r3 2 []
+            putStrLn $ showSamplingStats r3 2 []
             putStrLn ""
               
           -- the mean wait time in the queue

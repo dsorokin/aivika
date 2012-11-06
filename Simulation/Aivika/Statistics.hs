@@ -1,6 +1,4 @@
 
-{-# LANGUAGE FlexibleContexts #-}
-
 -- |
 -- Module     : Simulation.Aivika.Statistics
 -- Copyright  : Copyright (c) 2009-2012, David Sorokin <david.sorokin@gmail.com>
@@ -9,111 +7,139 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.0.3
 --
--- Represents statistics and results.
+-- Represents statistics.
 --
+
 module Simulation.Aivika.Statistics
-       (Statistics, 
-        newStatistics,
-        addStatistics,
-        statisticsData,
-        analyzeData,
-        AnalysisResults(..),
-        showResults) where 
+       (SamplingStats(..),
+        SamplingData(..),
+        samplingStatsVariance,
+        samplingStatsDeviation,
+        showSamplingStats) where 
 
-import Data.Foldable
-import Data.Array
-import Data.Array.IO
-import Control.Monad
-import Control.Monad.Trans
-import Control.Concurrent.MVar
+-- | Describes when the statistics consists of only samples 
+-- not bound to the simulation time.
+data SamplingStats a =       
+  SamplingStats { samplingStatsCount :: !Int,
+                  -- ^ The total number of samples.
+                  samplingStatsMin   :: !a,
+                  -- ^ The minimum value among the samples.
+                  samplingStatsMax   :: !a,
+                  -- ^ The maximum value among the samples.
+                  samplingStatsMean  :: !Double,
+                  -- ^ The average value.
+                  samplingStatsMean2 :: !Double 
+                  -- ^ The average square value.
+                }
+  deriving (Eq, Ord, Show)
+           
+-- | Specifies data type from which values we can gather the statistics.           
+class SamplingData a where           
+  
+  -- | An empty statistics that has no samples.           
+  emptySamplingStats :: SamplingStats a
+           
+  -- | Add a new sample to the statistics.
+  addSamplingStats :: a -> SamplingStats a -> SamplingStats a
 
-import Simulation.Aivika.UVector
+instance SamplingData Double where
 
--- | Represents statistics. 
--- 
--- All functions with the statistics in this module are thread-safe. Therefore 
--- you can use them in experiments when parallel simulations execute simultaneously.
-data Statistics a = Statistics { statData :: UVector a, 
-                                 statLock :: MVar () }
+  emptySamplingStats =
+    SamplingStats { samplingStatsCount = 0,
+                    samplingStatsMin   = 1 / 0,
+                    samplingStatsMax   = (-1) / 0,
+                    samplingStatsMean  = 0 / 0,
+                    samplingStatsMean2 = 0 / 0 }
+    
+  addSamplingStats = addSamplingStatsDouble
+  
+instance SamplingData Int where
 
--- | Create new statistics.
-newStatistics :: (MArray IOUArray a IO) => IO (Statistics a)
-newStatistics = 
-  do v <- newVector
-     l <- newMVar ()
-     return Statistics { statData = v, 
-                         statLock = l }
+  emptySamplingStats =
+    SamplingStats { samplingStatsCount = 0,
+                    samplingStatsMin   = maxBound,
+                    samplingStatsMax   = minBound,
+                    samplingStatsMean  = 0 / 0,
+                    samplingStatsMean2 = 0 / 0 }
+    
+  addSamplingStats = addSamplingStatsInt
+  
+addSamplingStatsDouble :: Double -> SamplingStats Double -> SamplingStats Double
+addSamplingStatsDouble a stats 
+  | isNaN x    = stats
+  | count == 1 = SamplingStats { samplingStatsCount = 1,
+                                 samplingStatsMin   = a,
+                                 samplingStatsMax   = a,
+                                 samplingStatsMean  = x,
+                                 samplingStatsMean2 = x * x }
+  | otherwise  = SamplingStats { samplingStatsCount = count,
+                                 samplingStatsMin   = minX,
+                                 samplingStatsMax   = maxX,
+                                 samplingStatsMean  = meanX,
+                                 samplingStatsMean2 = meanX2 }
+    where count  = 1 + samplingStatsCount stats
+          minX   = a `seq` (min a $ samplingStatsMin stats)
+          maxX   = a `seq` (max a $ samplingStatsMax stats)
+          meanX  = k1 * x + k2 * samplingStatsMean stats
+          meanX2 = k1 * x * x + k2 * samplingStatsMean2 stats
+          n      = fromInteger $ toInteger count
+          x      = a
+          k1     = 1.0 / n
+          k2     = (n - 1.0) / n
 
--- | Add data to the statistics. It is thread-safe.
-addStatistics :: (MArray IOUArray a IO) => Statistics a -> a -> IO ()
-addStatistics s x = 
-  withMVar (statLock s) $ \() ->
-  appendVector (statData s) x
+addSamplingStatsInt :: Int -> SamplingStats Int -> SamplingStats Int
+addSamplingStatsInt a stats 
+  | isNaN x    = stats
+  | count == 1 = SamplingStats { samplingStatsCount = 1,
+                                 samplingStatsMin   = a,
+                                 samplingStatsMax   = a,
+                                 samplingStatsMean  = x,
+                                 samplingStatsMean2 = x * x }
+  | otherwise  = SamplingStats { samplingStatsCount = count,
+                                 samplingStatsMin   = minX,
+                                 samplingStatsMax   = maxX,
+                                 samplingStatsMean  = meanX,
+                                 samplingStatsMean2 = meanX2 }
+    where count  = 1 + samplingStatsCount stats
+          minX   = a `seq` (min a $ samplingStatsMin stats)
+          maxX   = a `seq` (max a $ samplingStatsMax stats)
+          meanX  = k1 * x + k2 * samplingStatsMean stats
+          meanX2 = k1 * x * x + k2 * samplingStatsMean2 stats
+          n      = fromInteger $ toInteger count
+          x      = fromInteger $ toInteger a
+          k1     = 1.0 / n
+          k2     = (n - 1.0) / n
 
--- | Return the statistics data. It is thread-safe.
-statisticsData :: (MArray IOUArray a IO) => Statistics a -> IO (Array Int a)
-statisticsData s =
-  withMVar (statLock s) $ \() -> freezeVector (statData s)
+-- | Return the variance.
+samplingStatsVariance :: SamplingStats a -> Double
+samplingStatsVariance stats
+  | count == 1 = (meanX2 - meanX * meanX)
+  | otherwise  = (meanX2 - meanX * meanX) * (n / (n - 1))
+    where count  = samplingStatsCount stats
+          meanX  = samplingStatsMean stats
+          meanX2 = samplingStatsMean2 stats
+          n      = fromInteger $ toInteger count
+          
+-- | Return the deviation.          
+samplingStatsDeviation :: SamplingStats a -> Double
+samplingStatsDeviation = sqrt . samplingStatsVariance
+
+-- | Show the summary of the statistics with the specified indent.       
+showSamplingStats :: (Show a) => SamplingStats a -> Int -> ShowS
+showSamplingStats stats indent =
+  let tab = replicate indent ' '
+  in showString tab .
+     showString "count     = " . shows (samplingStatsCount stats) . 
+     showString "\n" . 
+     showString tab .
+     showString "mean      = " . shows (samplingStatsMean stats) . 
+     showString "\n" . 
+     showString tab .
+     showString "deviation = " . shows (samplingStatsDeviation stats) . 
+     showString "\n" .
+     showString tab .
+     showString "minimum   = " . shows (samplingStatsMin stats) . 
+     showString "\n" .
+     showString tab .
+     showString "maximum   = " . shows (samplingStatsMax stats)
        
--- | Represents the results of the statistic analysis.
-data AnalysisResults a = 
-  AnalysisResults { resultsData     :: Array Int a,
-                    -- ^ Statistic data.
-                    resultsMean     :: Double,
-                    -- ^ The average value.
-                    resultsVariance :: Double,
-                    -- ^ The variance.
-                    resultsMin      :: a,
-                    -- ^ The minimum value.
-                    resultsMax      :: a 
-                    -- ^ The maximum value.
-                  } deriving (Eq, Ord, Show)
-
--- | Analyze data.
-analyzeData :: Real a => Array Int a -> AnalysisResults a
-analyzeData xs =
-  let (i1, i2) = bounds xs
-      meanx = foldl' (\y i -> y * (1 - k i) + f i * k i) 0 [i1 .. i2]
-      sqrx  = foldl' (\y i -> y * (1 - k i) + g i * k i) 0 [i1 .. i2]
-      minx  = foldl' (\y i -> if i == 0 then x i else min y (x i)) 0 [i1 .. i2]
-      maxx  = foldl' (\y i -> if i == 0 then x i else max y (x i)) 0 [i1 .. i2]
-      x i = xs ! i
-      f i = fromRational (toRational (x i))
-      g i = let y = f i in y * y
-      k i = 1 / fromInteger (toInteger (i - i1 + 1))
-  in AnalysisResults { resultsData = xs,
-                       resultsMean = meanx,
-                       resultsVariance = sqrx - meanx * meanx,
-                       resultsMin = minx,
-                       resultsMax = maxx }
-       
--- | Show the results of analysis with the specified indent.       
-showResults :: (Show a) => AnalysisResults a -> Int -> ShowS
-showResults rs indent =
-  let (i1, i2) = bounds (resultsData rs)
-      tab = replicate indent ' '
-  in if i1 <= i2
-     then
-       showString tab .
-       showString "mean      = " . shows (resultsMean rs) . 
-       showString "\n" . 
-       showString tab .
-       showString "deviation = " . shows (sqrt (resultsVariance rs)) . 
-       showString "\n" .
-       showString tab .
-       showString "minimum   = " . shows (resultsMin rs) . 
-       showString "\n" .
-       showString tab .
-       showString "maximum   = " . shows (resultsMax rs)
-     else
-       showString tab .
-       showString "mean      = ---" .
-       showString "\n" . 
-       showString tab .
-       showString "deviation = ---" .
-       showString "\n" . 
-       showString tab .
-       showString "minimum   = ---" .
-       showString "\n" . 
-       showString tab .
-       showString "maximum   = ---"
