@@ -297,11 +297,3 @@ showTimingStats stats indent =
      showString "t in [" . shows (timingStatsStartTime stats) .
      showString ", " . shows (timingStatsLastTime stats) .
      showString "]"
-
-testStats :: TimingStats Int
-testStats =
-  addTimingStats 6 1 $
-  addTimingStats 5 2 $
-  addTimingStats 4 3 $
-  addTimingStats 3 4 $
-  emptyTimingStats
