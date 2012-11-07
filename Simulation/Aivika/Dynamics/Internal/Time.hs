@@ -40,13 +40,10 @@ time :: Dynamics Double
 time = Dynamics $ return . pointTime 
 
 -- | Return the integration time points.
-integTimes :: Simulation [Double]
-integTimes =
-  Simulation $ \r ->
-  do let sc  = runSpecs r
-         (nl, nu) = integIterationBnds sc
-         t n = basicTime sc n 0
-     return $ map t [nl .. nu]
+integTimes :: Specs -> [Double]
+integTimes sc = map t [nl .. nu]
+  where (nl, nu) = integIterationBnds sc
+        t n = basicTime sc n 0
      
 -- | Whether the current time is an integration time.
 isTimeInteg :: Dynamics Bool
