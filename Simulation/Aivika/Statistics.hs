@@ -94,8 +94,8 @@ addSamplingStatsGeneric a stats
                                  samplingStatsMean  = meanX,
                                  samplingStatsMean2 = meanX2 }
     where count  = 1 + samplingStatsCount stats
-          minX   = a `seq` (min a $ samplingStatsMin stats)
-          maxX   = a `seq` (max a $ samplingStatsMax stats)
+          minX   = a `seq` min a (samplingStatsMin stats)
+          maxX   = a `seq` max a (samplingStatsMax stats)
           meanX  = k1 * x + k2 * samplingStatsMean stats
           meanX2 = k1 * x * x + k2 * samplingStatsMean2 stats
           n      = fromInteger $ toInteger count
@@ -106,7 +106,7 @@ addSamplingStatsGeneric a stats
 -- | Return the variance.
 samplingStatsVariance :: SamplingStats a -> Double
 samplingStatsVariance stats
-  | count == 1 = (meanX2 - meanX * meanX)
+  | count == 1 = meanX2 - meanX * meanX
   | otherwise  = (meanX2 - meanX * meanX) * (n / (n - 1))
     where count  = samplingStatsCount stats
           meanX  = samplingStatsMean stats
@@ -232,8 +232,8 @@ addTimingStatsGeneric t a stats
     where count = 1 + timingStatsCount stats
           minX' = timingStatsMin stats
           maxX' = timingStatsMax stats
-          minX  = a `seq` (min a minX')
-          maxX  = a `seq` (max a maxX')
+          minX  = a `seq` min a minX'
+          maxX  = a `seq` max a maxX'
           minT | a < minX' = t
                | otherwise = timingStatsMinTime stats
           maxT | a > maxX' = t
