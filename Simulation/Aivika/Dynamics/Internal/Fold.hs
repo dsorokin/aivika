@@ -89,4 +89,4 @@ divideDynamics :: Dynamics Double -> Dynamics Double
 divideDynamics (Dynamics m) = 
   discrete $ Dynamics $ \p ->
   do a <- m p
-     return $ a / fromInteger (toInteger (pointIteration p + 1))
+     return $ a / fromIntegral (pointIteration p + 1)

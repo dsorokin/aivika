@@ -418,7 +418,7 @@ lookupStepwiseD (Dynamics m) tbl =
 --           n  = parIteration p
 --       a <- d p
 --       let t' = (t - a) - spcStartTime sc
---           n' = fromInteger $ toInteger $ floor $ t' / spcDT sc
+--           n' = fromIntegral $ floor $ t' / spcDT sc
 --           y | n' < 0    = i $ p { pointTime = spcStartTime sc,
 --                                   pointIteration = 0, 
 --                                   pointPhase = 0 }

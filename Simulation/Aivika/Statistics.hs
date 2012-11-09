@@ -31,7 +31,7 @@ instance ConvertableToDouble Double where
   convertToDouble = id
   
 instance ConvertableToDouble Int where
-  convertToDouble = fromInteger . toInteger
+  convertToDouble = fromIntegral
 
 -- | Describes when the statistics consists of only samples 
 -- not bound to the simulation time.
@@ -98,7 +98,7 @@ addSamplingStatsGeneric a stats
           maxX   = a `seq` max a (samplingStatsMax stats)
           meanX  = k1 * x + k2 * samplingStatsMean stats
           meanX2 = k1 * x * x + k2 * samplingStatsMean2 stats
-          n      = fromInteger $ toInteger count
+          n      = fromIntegral count
           x      = convertToDouble a
           k1     = 1.0 / n
           k2     = (n - 1.0) / n
@@ -111,7 +111,7 @@ samplingStatsVariance stats
     where count  = samplingStatsCount stats
           meanX  = samplingStatsMean stats
           meanX2 = samplingStatsMean2 stats
-          n      = fromInteger $ toInteger count
+          n      = fromIntegral count
           
 -- | Return the deviation.          
 samplingStatsDeviation :: SamplingStats a -> Double

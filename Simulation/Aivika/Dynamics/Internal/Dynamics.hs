@@ -118,7 +118,7 @@ basicTime sc n ph =
     error "Incorrect phase: basicTime"
   else
     spcStartTime sc + n' * spcDT sc + delta (spcMethod sc) ph 
-      where n' = fromInteger (toInteger n)
+      where n' = fromIntegral n
             delta Euler       0 = 0
             delta RungeKutta2 0 = 0
             delta RungeKutta2 1 = spcDT sc
@@ -187,7 +187,7 @@ runDynamicsInTime t (Dynamics m) =
   do let sc = runSpecs r
          t0 = spcStartTime sc
          dt = spcDT sc
-         n  = fromInteger $ toInteger $ floor ((t - t0) / dt)
+         n  = fromIntegral $ floor ((t - t0) / dt)
      m Point { pointSpecs = sc,
                pointRun = r,
                pointTime = t,
@@ -202,7 +202,7 @@ runDynamicsInTimes ts (Dynamics m) =
          t0 = spcStartTime sc
          dt = spcDT sc
          point t =
-           let n = fromInteger $ toInteger $ floor ((t - t0) / dt)
+           let n = fromIntegral $ floor ((t - t0) / dt)
            in Point { pointSpecs = sc,
                       pointRun = r,
                       pointTime = t,
