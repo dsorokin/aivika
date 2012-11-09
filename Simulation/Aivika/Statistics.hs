@@ -209,6 +209,7 @@ instance TimingData Int where
 
 addTimingStatsGeneric :: ConvertableToDouble a => Double -> a -> TimingStats a -> TimingStats a
 addTimingStatsGeneric t a stats
+  | t < t'     = error "The current time cannot be less than the previous one: addTimingStats"
   | isNaN x    = stats
   | count == 1 = TimingStats { timingStatsCount     = 1,
                                timingStatsMin       = a,
@@ -219,7 +220,6 @@ addTimingStatsGeneric t a stats
                                timingStatsLastTime  = t,
                                timingStatsSum       = 0,
                                timingStatsSum2      = 0 }
-  | t < t'     = error "The current time cannot be less than the previous one: addTimingStats"
   | otherwise  = TimingStats { timingStatsCount     = count,
                                timingStatsMin       = minX,
                                timingStatsMax       = maxX,
