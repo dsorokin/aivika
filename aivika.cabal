@@ -30,6 +30,11 @@ description:
     Please note that the documentation is outdated and it corresponds to 
     version 0.2 but it can still be helpful.
     .
+    Also please look at other two my packages
+    <http://hackage.haskell.org/package/aivika-experiment> and
+    <http://hackage.haskell.org/package/aivika-experiment-chart>
+    that complement the Aivika library.
+    .
 category:        Simulation
 license:         BSD3
 license-file:    LICENSE
