@@ -24,8 +24,8 @@ module Simulation.Aivika.Vector
         freezeVector) where 
 
 import Data.Array
-import Data.Array.MArray
-import Data.Array.IO
+import Data.Array.MArray.Safe
+import Data.Array.IO.Safe
 import Data.IORef
 import Control.Monad
 

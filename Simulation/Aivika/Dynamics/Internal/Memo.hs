@@ -22,7 +22,7 @@ module Simulation.Aivika.Dynamics.Internal.Memo
         iterateDynamics) where
 
 import Data.Array
-import Data.Array.IO
+import Data.Array.IO.Safe
 import Data.IORef
 import Control.Monad
 

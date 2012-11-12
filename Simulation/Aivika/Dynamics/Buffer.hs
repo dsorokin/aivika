@@ -27,8 +27,6 @@ module Simulation.Aivika.Dynamics.Buffer
         enqueueBufferOrLost) where
 
 import Data.IORef
-import Data.Array
-import Data.Array.IO
 
 import Control.Monad
 import Control.Monad.Trans

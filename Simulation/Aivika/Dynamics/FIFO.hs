@@ -26,7 +26,7 @@ module Simulation.Aivika.Dynamics.FIFO
 
 import Data.IORef
 import Data.Array
-import Data.Array.IO
+import Data.Array.IO.Safe
 
 import Control.Monad
 import Control.Monad.Trans

@@ -25,7 +25,7 @@ module Simulation.Aivika.Dynamics.UVar
 
 import Control.Monad
 import Data.Array
-import Data.Array.IO
+import Data.Array.IO.Safe
 import Data.IORef
 
 import Simulation.Aivika.Dynamics.Internal.Simulation
