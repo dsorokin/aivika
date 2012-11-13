@@ -17,6 +17,8 @@ module Simulation.Aivika.Dynamics.LIFO
         lifoMaxCount,
         lifoCount,
         lifoLostCount,
+        lifoEnqueue,
+        lifoDequeue,
         newLIFO,
         dequeueLIFO,
         tryDequeueLIFO,
@@ -36,6 +38,7 @@ import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Process
 import Simulation.Aivika.Dynamics.Resource
+import Simulation.Aivika.Dynamics.Internal.Signal
 
 -- | Represents the LIFO queue with rule: last input - first output.
 data LIFO a =
@@ -45,7 +48,10 @@ data LIFO a =
          lifoWriteRes :: Resource,
          lifoCountRef :: IORef Int,
          lifoLostCountRef :: IORef Int,
-         lifoArray :: IOArray Int a }
+         lifoArray :: IOArray Int a, 
+         lifoEnqueueSource :: SignalSource a,
+         lifoDequeueSource :: SignalSource a,
+         lifoUpdatedSource :: SignalSource a }
   
 -- | Create a new LIFO queue with the specified maximum available number of items.  
 newLIFO :: EventQueue -> Int -> Simulation (LIFO a)  
@@ -55,13 +61,19 @@ newLIFO q count =
      a <- liftIO $ newArray_ (0, count - 1)
      r <- newResourceWithCount q count 0
      w <- newResourceWithCount q count count
+     s1 <- newSignalSourceUnsafe
+     s2 <- newSignalSourceUnsafe
+     s3 <- newSignalSourceWithUpdate (runQueue q)
      return LIFO { lifoQueue = q,
                    lifoMaxCount = count,
                    lifoReadRes  = r,
                    lifoWriteRes = w,
                    lifoCountRef = i,
                    lifoLostCountRef = l,
-                   lifoArray = a }
+                   lifoArray = a,
+                   lifoEnqueueSource = s1,
+                   lifoDequeueSource = s2,
+                   lifoUpdatedSource = s3 }
   
 -- | Test whether the LIFO queue is empty.
 lifoNull :: LIFO a -> Dynamics Bool
@@ -91,6 +103,7 @@ dequeueLIFO :: LIFO a -> Process a
 dequeueLIFO lifo =
   do requestResource (lifoReadRes lifo)
      a <- liftIO $ dequeueImpl lifo
+     liftDynamics $ triggerSignal (lifoDequeueSource lifo) a
      releaseResource (lifoWriteRes lifo)
      return a
   
@@ -100,6 +113,7 @@ tryDequeueLIFO lifo =
   do x <- tryRequestResourceInDynamics (lifoReadRes lifo)
      if x 
        then do a <- liftIO $ dequeueImpl lifo
+               triggerSignal (lifoDequeueSource lifo) a
                releaseResourceInDynamics (lifoWriteRes lifo)
                return $ Just a
        else return Nothing
@@ -110,6 +124,7 @@ enqueueLIFO :: LIFO a -> a -> Process ()
 enqueueLIFO lifo a =
   do requestResource (lifoWriteRes lifo)
      liftIO $ enqueueImpl lifo a
+     liftDynamics $ triggerSignal (lifoEnqueueSource lifo) a
      releaseResource (lifoReadRes lifo)
      
 -- | Try to enqueue the item in the LIFO queue. Return 'False' in
@@ -119,6 +134,7 @@ tryEnqueueLIFO lifo a =
   do x <- tryRequestResourceInDynamics (lifoWriteRes lifo)
      if x 
        then do liftIO $ enqueueImpl lifo a
+               triggerSignal (lifoEnqueueSource lifo) a
                releaseResourceInDynamics (lifoReadRes lifo)
                return True
        else return False
@@ -130,8 +146,22 @@ enqueueLIFOOrLost lifo a =
   do x <- tryRequestResourceInDynamics (lifoWriteRes lifo)
      if x
        then do liftIO $ enqueueImpl lifo a
+               triggerSignal (lifoEnqueueSource lifo) a
                releaseResourceInDynamics (lifoReadRes lifo)
        else liftIO $ modifyIORef (lifoLostCountRef lifo) $ (+) 1
+
+-- | Return a signal that notifies when any item is enqueued.
+lifoEnqueue :: LIFO a -> Signal a
+lifoEnqueue lifo = merge2Signals m1 m2    -- N.B. The order is important (??)
+  where m1 = publishSignal (lifoUpdatedSource lifo)
+        m2 = publishSignal (lifoEnqueueSource lifo)
+
+-- | Return a signal that notifies when any item is dequeued.
+lifoDequeue :: LIFO a -> Signal a
+lifoDequeue lifo = merge2Signals m1 m2    -- N.B. The order is important (??)
+  where m1 = publishSignal (lifoUpdatedSource lifo)
+        m2 = publishSignal (lifoDequeueSource lifo)
+
 
 -- | An implementation method.
 dequeueImpl :: LIFO a -> IO a
