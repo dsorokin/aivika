@@ -152,13 +152,13 @@ enqueueLIFOOrLost lifo a =
 
 -- | Return a signal that notifies when any item is enqueued.
 lifoEnqueue :: LIFO a -> Signal a
-lifoEnqueue lifo = merge2Signals m1 m2    -- N.B. The order is important (??)
+lifoEnqueue lifo = merge2Signals m1 m2    -- N.B. The order is important!
   where m1 = publishSignal (lifoUpdatedSource lifo)
         m2 = publishSignal (lifoEnqueueSource lifo)
 
 -- | Return a signal that notifies when any item is dequeued.
 lifoDequeue :: LIFO a -> Signal a
-lifoDequeue lifo = merge2Signals m1 m2    -- N.B. The order is important (??)
+lifoDequeue lifo = merge2Signals m1 m2    -- N.B. The order is important!
   where m1 = publishSignal (lifoUpdatedSource lifo)
         m2 = publishSignal (lifoDequeueSource lifo)
 

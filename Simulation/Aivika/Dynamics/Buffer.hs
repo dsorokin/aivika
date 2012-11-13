@@ -150,13 +150,13 @@ enqueueBufferOrLost q =
 
 -- | Return a signal that notifies when any item is enqueued.
 bufferEnqueue :: Buffer -> Signal ()
-bufferEnqueue q = merge2Signals m1 m2    -- N.B. The order is important (??)
+bufferEnqueue q = merge2Signals m1 m2    -- N.B. The order is important!
   where m1 = publishSignal (bufferUpdatedSource q)
         m2 = publishSignal (bufferEnqueueSource q)
 
 -- | Return a signal that notifies when any item is dequeued.
 bufferDequeue :: Buffer -> Signal ()
-bufferDequeue q = merge2Signals m1 m2    -- N.B. The order is important (??)
+bufferDequeue q = merge2Signals m1 m2    -- N.B. The order is important!
   where m1 = publishSignal (bufferUpdatedSource q)
         m2 = publishSignal (bufferDequeueSource q)
 

@@ -158,13 +158,13 @@ enqueueFIFOOrLost fifo a =
 
 -- | Return a signal that notifies when any item is enqueued.
 fifoEnqueue :: FIFO a -> Signal a
-fifoEnqueue fifo = merge2Signals m1 m2    -- N.B. The order is important (??)
+fifoEnqueue fifo = merge2Signals m1 m2    -- N.B. The order is important!
   where m1 = publishSignal (fifoUpdatedSource fifo)
         m2 = publishSignal (fifoEnqueueSource fifo)
 
 -- | Return a signal that notifies when any item is dequeued.
 fifoDequeue :: FIFO a -> Signal a
-fifoDequeue fifo = merge2Signals m1 m2    -- N.B. The order is important (??)
+fifoDequeue fifo = merge2Signals m1 m2    -- N.B. The order is important!
   where m1 = publishSignal (fifoUpdatedSource fifo)
         m2 = publishSignal (fifoDequeueSource fifo)
 
