@@ -109,8 +109,8 @@ dequeueFIFO :: FIFO a -> Process a
 dequeueFIFO fifo =
   do requestResource (fifoReadRes fifo)
      a <- liftIO $ dequeueImpl fifo
-     liftDynamics $ triggerSignal (fifoDequeueSource fifo) a
      releaseResource (fifoWriteRes fifo)
+     liftDynamics $ triggerSignal (fifoDequeueSource fifo) a
      return a
   
 -- | Try to dequeue from the FIFO queue immediately.  
@@ -119,8 +119,8 @@ tryDequeueFIFO fifo =
   do x <- tryRequestResourceInDynamics (fifoReadRes fifo)
      if x 
        then do a <- liftIO $ dequeueImpl fifo
-               triggerSignal (fifoDequeueSource fifo) a
                releaseResourceInDynamics (fifoWriteRes fifo)
+               triggerSignal (fifoDequeueSource fifo) a
                return $ Just a
        else return Nothing
 
@@ -130,8 +130,8 @@ enqueueFIFO :: FIFO a -> a -> Process ()
 enqueueFIFO fifo a =
   do requestResource (fifoWriteRes fifo)
      liftIO $ enqueueImpl fifo a
-     liftDynamics $ triggerSignal (fifoEnqueueSource fifo) a
      releaseResource (fifoReadRes fifo)
+     liftDynamics $ triggerSignal (fifoEnqueueSource fifo) a
      
 -- | Try to enqueue the item in the FIFO queue. Return 'False' in
 -- the monad if the queue is full.
@@ -140,8 +140,8 @@ tryEnqueueFIFO fifo a =
   do x <- tryRequestResourceInDynamics (fifoWriteRes fifo)
      if x 
        then do liftIO $ enqueueImpl fifo a
-               triggerSignal (fifoEnqueueSource fifo) a
                releaseResourceInDynamics (fifoReadRes fifo)
+               triggerSignal (fifoEnqueueSource fifo) a
                return True
        else return False
 
@@ -152,8 +152,8 @@ enqueueFIFOOrLost fifo a =
   do x <- tryRequestResourceInDynamics (fifoWriteRes fifo)
      if x
        then do liftIO $ enqueueImpl fifo a
-               triggerSignal (fifoEnqueueSource fifo) a
                releaseResourceInDynamics (fifoReadRes fifo)
+               triggerSignal (fifoEnqueueSource fifo) a
        else liftIO $ modifyIORef (fifoLostCountRef fifo) $ (+) 1
 
 -- | Return a signal that notifies when any item is enqueued.

@@ -103,8 +103,8 @@ dequeueLIFO :: LIFO a -> Process a
 dequeueLIFO lifo =
   do requestResource (lifoReadRes lifo)
      a <- liftIO $ dequeueImpl lifo
-     liftDynamics $ triggerSignal (lifoDequeueSource lifo) a
      releaseResource (lifoWriteRes lifo)
+     liftDynamics $ triggerSignal (lifoDequeueSource lifo) a
      return a
   
 -- | Try to dequeue from the LIFO queue immediately.  
@@ -113,8 +113,8 @@ tryDequeueLIFO lifo =
   do x <- tryRequestResourceInDynamics (lifoReadRes lifo)
      if x 
        then do a <- liftIO $ dequeueImpl lifo
-               triggerSignal (lifoDequeueSource lifo) a
                releaseResourceInDynamics (lifoWriteRes lifo)
+               triggerSignal (lifoDequeueSource lifo) a
                return $ Just a
        else return Nothing
 
@@ -124,8 +124,8 @@ enqueueLIFO :: LIFO a -> a -> Process ()
 enqueueLIFO lifo a =
   do requestResource (lifoWriteRes lifo)
      liftIO $ enqueueImpl lifo a
-     liftDynamics $ triggerSignal (lifoEnqueueSource lifo) a
      releaseResource (lifoReadRes lifo)
+     liftDynamics $ triggerSignal (lifoEnqueueSource lifo) a
      
 -- | Try to enqueue the item in the LIFO queue. Return 'False' in
 -- the monad if the queue is full.
@@ -134,8 +134,8 @@ tryEnqueueLIFO lifo a =
   do x <- tryRequestResourceInDynamics (lifoWriteRes lifo)
      if x 
        then do liftIO $ enqueueImpl lifo a
-               triggerSignal (lifoEnqueueSource lifo) a
                releaseResourceInDynamics (lifoReadRes lifo)
+               triggerSignal (lifoEnqueueSource lifo) a
                return True
        else return False
 
@@ -146,8 +146,8 @@ enqueueLIFOOrLost lifo a =
   do x <- tryRequestResourceInDynamics (lifoWriteRes lifo)
      if x
        then do liftIO $ enqueueImpl lifo a
-               triggerSignal (lifoEnqueueSource lifo) a
                releaseResourceInDynamics (lifoReadRes lifo)
+               triggerSignal (lifoEnqueueSource lifo) a
        else liftIO $ modifyIORef (lifoLostCountRef lifo) $ (+) 1
 
 -- | Return a signal that notifies when any item is enqueued.
