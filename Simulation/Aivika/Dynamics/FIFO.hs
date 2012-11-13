@@ -17,6 +17,8 @@ module Simulation.Aivika.Dynamics.FIFO
         fifoMaxCount,
         fifoCount,
         fifoLostCount,
+        fifoEnqueue,
+        fifoDequeue,
         newFIFO,
         dequeueFIFO,
         tryDequeueFIFO,
@@ -36,6 +38,7 @@ import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Process
 import Simulation.Aivika.Dynamics.Resource
+import Simulation.Aivika.Dynamics.Internal.Signal
 
 -- | Represents the FIFO queue with rule: first input - first output.
 data FIFO a =
@@ -47,7 +50,10 @@ data FIFO a =
          fifoLostCountRef :: IORef Int,
          fifoStartRef :: IORef Int,
          fifoEndRef   :: IORef Int,
-         fifoArray :: IOArray Int a }
+         fifoArray :: IOArray Int a, 
+         fifoEnqueueSource :: SignalSource a,
+         fifoDequeueSource :: SignalSource a,
+         fifoUpdatedSource :: SignalSource a }
   
 -- | Create a new FIFO queue with the specified maximum available number of items.  
 newFIFO :: EventQueue -> Int -> Simulation (FIFO a)  
@@ -59,6 +65,9 @@ newFIFO q count =
      a <- liftIO $ newArray_ (0, count - 1)
      r <- newResourceWithCount q count 0
      w <- newResourceWithCount q count count
+     s1 <- newSignalSourceUnsafe
+     s2 <- newSignalSourceUnsafe
+     s3 <- newSignalSourceWithUpdate (runQueue q)
      return FIFO { fifoQueue = q,
                    fifoMaxCount = count,
                    fifoReadRes  = r,
@@ -67,7 +76,10 @@ newFIFO q count =
                    fifoLostCountRef = l,
                    fifoStartRef = s,
                    fifoEndRef   = e,
-                   fifoArray = a }
+                   fifoArray = a, 
+                   fifoEnqueueSource = s1,
+                   fifoDequeueSource = s2,
+                   fifoUpdatedSource = s3 }
   
 -- | Test whether the FIFO queue is empty.
 fifoNull :: FIFO a -> Dynamics Bool
@@ -97,6 +109,7 @@ dequeueFIFO :: FIFO a -> Process a
 dequeueFIFO fifo =
   do requestResource (fifoReadRes fifo)
      a <- liftIO $ dequeueImpl fifo
+     liftDynamics $ triggerSignal (fifoDequeueSource fifo) a
      releaseResource (fifoWriteRes fifo)
      return a
   
@@ -106,6 +119,7 @@ tryDequeueFIFO fifo =
   do x <- tryRequestResourceInDynamics (fifoReadRes fifo)
      if x 
        then do a <- liftIO $ dequeueImpl fifo
+               triggerSignal (fifoDequeueSource fifo) a
                releaseResourceInDynamics (fifoWriteRes fifo)
                return $ Just a
        else return Nothing
@@ -116,6 +130,7 @@ enqueueFIFO :: FIFO a -> a -> Process ()
 enqueueFIFO fifo a =
   do requestResource (fifoWriteRes fifo)
      liftIO $ enqueueImpl fifo a
+     liftDynamics $ triggerSignal (fifoEnqueueSource fifo) a
      releaseResource (fifoReadRes fifo)
      
 -- | Try to enqueue the item in the FIFO queue. Return 'False' in
@@ -125,6 +140,7 @@ tryEnqueueFIFO fifo a =
   do x <- tryRequestResourceInDynamics (fifoWriteRes fifo)
      if x 
        then do liftIO $ enqueueImpl fifo a
+               triggerSignal (fifoEnqueueSource fifo) a
                releaseResourceInDynamics (fifoReadRes fifo)
                return True
        else return False
@@ -136,8 +152,21 @@ enqueueFIFOOrLost fifo a =
   do x <- tryRequestResourceInDynamics (fifoWriteRes fifo)
      if x
        then do liftIO $ enqueueImpl fifo a
+               triggerSignal (fifoEnqueueSource fifo) a
                releaseResourceInDynamics (fifoReadRes fifo)
        else liftIO $ modifyIORef (fifoLostCountRef fifo) $ (+) 1
+
+-- | Return a signal that notifies when any item is enqueued.
+fifoEnqueue :: FIFO a -> Signal a
+fifoEnqueue fifo = merge2Signals m1 m2    -- N.B. The order is important (??)
+  where m1 = publishSignal (fifoUpdatedSource fifo)
+        m2 = publishSignal (fifoEnqueueSource fifo)
+
+-- | Return a signal that notifies when any item is dequeued.
+fifoDequeue :: FIFO a -> Signal a
+fifoDequeue fifo = merge2Signals m1 m2    -- N.B. The order is important (??)
+  where m1 = publishSignal (fifoUpdatedSource fifo)
+        m2 = publishSignal (fifoDequeueSource fifo)
 
 -- | An implementation method.
 dequeueImpl :: FIFO a -> IO a
