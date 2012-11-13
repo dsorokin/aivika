@@ -17,7 +17,8 @@ module Simulation.Aivika.Dynamics.EventQueue
         newQueue,
         enqueue,
         runQueue,
-        runQueueSync) where
+        runQueueSync,
+        queueCount) where
 
 import Data.IORef
 import Control.Monad
@@ -103,3 +104,11 @@ runQueueSyncCore q = Dynamics r where
          else let Dynamics m = runQueue q
               in m p
   
+-- | Return the number of pending events that should
+-- be yet actuated.
+queueCount :: EventQueue -> Dynamics Int
+queueCount q = Dynamics r where
+  r p = 
+    do let Dynamics m = runQueueSync q
+       m p
+       PQ.queueCount $ queuePQ q
