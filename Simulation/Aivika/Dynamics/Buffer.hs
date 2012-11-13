@@ -19,6 +19,8 @@ module Simulation.Aivika.Dynamics.Buffer
         bufferMaxCount,
         bufferCount,
         bufferLostCount,
+        bufferEnqueue,
+        bufferDequeue,
         newBuffer,
         dequeueBuffer,
         tryDequeueBuffer,
@@ -36,6 +38,7 @@ import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Process
 import Simulation.Aivika.Dynamics.Resource
+import Simulation.Aivika.Dynamics.Internal.Signal
 
 import Simulation.Aivika.Dynamics.LIFO
 import Simulation.Aivika.Dynamics.FIFO
@@ -48,7 +51,10 @@ data Buffer =
            bufferReadRes  :: Resource,
            bufferWriteRes :: Resource,
            bufferCountRef :: IORef Int,
-           bufferLostCountRef :: IORef Int }
+           bufferLostCountRef :: IORef Int, 
+           bufferEnqueueSource :: SignalSource (),
+           bufferDequeueSource :: SignalSource (),
+           bufferUpdatedSource :: SignalSource () }
   
 -- | Create a new queue with the specified maximum available number of items.  
 newBuffer :: EventQueue -> Int -> Simulation Buffer  
@@ -57,12 +63,18 @@ newBuffer q count =
      l <- liftIO $ newIORef 0
      r <- newResourceWithCount q count 0
      w <- newResourceWithCount q count count
+     s1 <- newSignalSourceUnsafe
+     s2 <- newSignalSourceUnsafe
+     s3 <- newSignalSourceWithUpdate (runQueue q)
      return Buffer { bufferQueue = q,
                      bufferMaxCount = count,
                      bufferReadRes  = r,
                      bufferWriteRes = w,
                      bufferCountRef = i,
-                     bufferLostCountRef = l }
+                     bufferLostCountRef = l, 
+                     bufferEnqueueSource = s1,
+                     bufferDequeueSource = s2,
+                     bufferUpdatedSource = s3 }
   
 -- | Test whether the queue is empty.
 bufferNull :: Buffer -> Dynamics Bool
@@ -92,6 +104,7 @@ dequeueBuffer q =
   do requestResource (bufferReadRes q)
      liftIO $ dequeueImpl q
      releaseResource (bufferWriteRes q)
+     liftDynamics $ triggerSignal (bufferDequeueSource q) ()
   
 -- | Try to dequeue immediately.  
 tryDequeueBuffer :: Buffer -> Dynamics Bool
@@ -100,6 +113,7 @@ tryDequeueBuffer q =
      if x 
        then do liftIO $ dequeueImpl q
                releaseResourceInDynamics (bufferWriteRes q)
+               triggerSignal (bufferDequeueSource q) ()
                return True
        else return False
 
@@ -110,6 +124,7 @@ enqueueBuffer q =
   do requestResource (bufferWriteRes q)
      liftIO $ enqueueImpl q
      releaseResource (bufferReadRes q)
+     liftDynamics $ triggerSignal (bufferEnqueueSource q) ()
      
 -- | Try to enqueue the item immediately.  
 tryEnqueueBuffer :: Buffer -> Dynamics Bool
@@ -118,6 +133,7 @@ tryEnqueueBuffer q =
      if x 
        then do liftIO $ enqueueImpl q
                releaseResourceInDynamics (bufferReadRes q)
+               triggerSignal (bufferEnqueueSource q) ()
                return True
        else return False
 
@@ -129,7 +145,20 @@ enqueueBufferOrLost q =
      if x
        then do liftIO $ enqueueImpl q
                releaseResourceInDynamics (bufferReadRes q)
+               triggerSignal (bufferEnqueueSource q) ()
        else liftIO $ modifyIORef (bufferLostCountRef q) $ (+) 1
+
+-- | Return a signal that notifies when any item is enqueued.
+bufferEnqueue :: Buffer -> Signal ()
+bufferEnqueue q = merge2Signals m1 m2    -- N.B. The order is important (??)
+  where m1 = publishSignal (bufferUpdatedSource q)
+        m2 = publishSignal (bufferEnqueueSource q)
+
+-- | Return a signal that notifies when any item is dequeued.
+bufferDequeue :: Buffer -> Signal ()
+bufferDequeue q = merge2Signals m1 m2    -- N.B. The order is important (??)
+  where m1 = publishSignal (bufferUpdatedSource q)
+        m2 = publishSignal (bufferDequeueSource q)
 
 -- | An implementation method.
 dequeueImpl :: Buffer -> IO ()
