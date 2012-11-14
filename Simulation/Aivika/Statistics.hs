@@ -294,6 +294,7 @@ showTimingStats stats indent =
      showString "maximum   = " . shows (timingStatsMax stats) .
      showString " at t = " . shows (timingStatsMaxTime stats) .
      showString "\n" .
+     showString tab .
      showString "t in [" . shows (timingStatsStartTime stats) .
      showString ", " . shows (timingStatsLastTime stats) .
      showString "]"
