@@ -19,6 +19,7 @@ module Simulation.Aivika.Dynamics.LIFO
         lifoLostCount,
         lifoEnqueue,
         lifoDequeue,
+        lifoEnqueueLost,
         newLIFO,
         dequeueLIFO,
         tryDequeueLIFO,
@@ -50,6 +51,7 @@ data LIFO a =
          lifoLostCountRef :: IORef Int,
          lifoArray :: IOArray Int a, 
          lifoEnqueueSource :: SignalSource a,
+         lifoEnqueueLostSource :: SignalSource a,
          lifoDequeueSource :: SignalSource a,
          lifoUpdatedSource :: SignalSource a }
   
@@ -63,7 +65,8 @@ newLIFO q count =
      w <- newResourceWithCount q count count
      s1 <- newSignalSourceUnsafe
      s2 <- newSignalSourceUnsafe
-     s3 <- newSignalSourceWithUpdate (runQueue q)
+     s3 <- newSignalSourceUnsafe
+     s4 <- newSignalSourceWithUpdate (runQueue q)
      return LIFO { lifoQueue = q,
                    lifoMaxCount = count,
                    lifoReadRes  = r,
@@ -72,8 +75,9 @@ newLIFO q count =
                    lifoLostCountRef = l,
                    lifoArray = a,
                    lifoEnqueueSource = s1,
-                   lifoDequeueSource = s2,
-                   lifoUpdatedSource = s3 }
+                   lifoEnqueueLostSource = s2,
+                   lifoDequeueSource = s3,
+                   lifoUpdatedSource = s4 }
   
 -- | Test whether the LIFO queue is empty.
 lifoNull :: LIFO a -> Dynamics Bool
@@ -148,13 +152,22 @@ enqueueLIFOOrLost lifo a =
        then do liftIO $ enqueueImpl lifo a
                releaseResourceInDynamics (lifoReadRes lifo)
                triggerSignal (lifoEnqueueSource lifo) a
-       else liftIO $ modifyIORef (lifoLostCountRef lifo) $ (+) 1
+       else do liftIO $ modifyIORef (lifoLostCountRef lifo) $ (+) 1
+               triggerSignal (lifoEnqueueLostSource lifo) a
 
 -- | Return a signal that notifies when any item is enqueued.
 lifoEnqueue :: LIFO a -> Signal a
 lifoEnqueue lifo = merge2Signals m1 m2    -- N.B. The order is important!
   where m1 = publishSignal (lifoUpdatedSource lifo)
         m2 = publishSignal (lifoEnqueueSource lifo)
+
+-- | Return a signal which notifies that the item was lost when
+-- attempting to add it to the full queue with help of
+-- 'enqueueLIFOOrLost'.
+lifoEnqueueLost :: LIFO a -> Signal a
+lifoEnqueueLost lifo = merge2Signals m1 m2    -- N.B. The order is important!
+  where m1 = publishSignal (lifoUpdatedSource lifo)
+        m2 = publishSignal (lifoEnqueueLostSource lifo)
 
 -- | Return a signal that notifies when any item is dequeued.
 lifoDequeue :: LIFO a -> Signal a

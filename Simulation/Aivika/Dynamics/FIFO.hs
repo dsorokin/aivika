@@ -19,6 +19,7 @@ module Simulation.Aivika.Dynamics.FIFO
         fifoLostCount,
         fifoEnqueue,
         fifoDequeue,
+        fifoEnqueueLost,
         newFIFO,
         dequeueFIFO,
         tryDequeueFIFO,
@@ -52,6 +53,7 @@ data FIFO a =
          fifoEndRef   :: IORef Int,
          fifoArray :: IOArray Int a, 
          fifoEnqueueSource :: SignalSource a,
+         fifoEnqueueLostSource :: SignalSource a,
          fifoDequeueSource :: SignalSource a,
          fifoUpdatedSource :: SignalSource a }
   
@@ -67,7 +69,8 @@ newFIFO q count =
      w <- newResourceWithCount q count count
      s1 <- newSignalSourceUnsafe
      s2 <- newSignalSourceUnsafe
-     s3 <- newSignalSourceWithUpdate (runQueue q)
+     s3 <- newSignalSourceUnsafe
+     s4 <- newSignalSourceWithUpdate (runQueue q)
      return FIFO { fifoQueue = q,
                    fifoMaxCount = count,
                    fifoReadRes  = r,
@@ -78,8 +81,9 @@ newFIFO q count =
                    fifoEndRef   = e,
                    fifoArray = a, 
                    fifoEnqueueSource = s1,
-                   fifoDequeueSource = s2,
-                   fifoUpdatedSource = s3 }
+                   fifoEnqueueLostSource = s2,
+                   fifoDequeueSource = s3,
+                   fifoUpdatedSource = s4 }
   
 -- | Test whether the FIFO queue is empty.
 fifoNull :: FIFO a -> Dynamics Bool
@@ -154,13 +158,22 @@ enqueueFIFOOrLost fifo a =
        then do liftIO $ enqueueImpl fifo a
                releaseResourceInDynamics (fifoReadRes fifo)
                triggerSignal (fifoEnqueueSource fifo) a
-       else liftIO $ modifyIORef (fifoLostCountRef fifo) $ (+) 1
+       else do liftIO $ modifyIORef (fifoLostCountRef fifo) $ (+) 1
+               triggerSignal (fifoEnqueueLostSource fifo) a
 
 -- | Return a signal that notifies when any item is enqueued.
 fifoEnqueue :: FIFO a -> Signal a
 fifoEnqueue fifo = merge2Signals m1 m2    -- N.B. The order is important!
   where m1 = publishSignal (fifoUpdatedSource fifo)
         m2 = publishSignal (fifoEnqueueSource fifo)
+
+-- | Return a signal which notifies that the item was lost when 
+-- attempting to add it to the full queue with help of
+-- 'enqueueFIFOOrLost'.
+fifoEnqueueLost :: FIFO a -> Signal a
+fifoEnqueueLost fifo = merge2Signals m1 m2    -- N.B. The order is important!
+  where m1 = publishSignal (fifoUpdatedSource fifo)
+        m2 = publishSignal (fifoEnqueueLostSource fifo)
 
 -- | Return a signal that notifies when any item is dequeued.
 fifoDequeue :: FIFO a -> Signal a

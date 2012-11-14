@@ -21,6 +21,7 @@ module Simulation.Aivika.Dynamics.Buffer
         bufferLostCount,
         bufferEnqueue,
         bufferDequeue,
+        bufferEnqueueLost,
         newBuffer,
         dequeueBuffer,
         tryDequeueBuffer,
@@ -53,6 +54,7 @@ data Buffer =
            bufferCountRef :: IORef Int,
            bufferLostCountRef :: IORef Int, 
            bufferEnqueueSource :: SignalSource (),
+           bufferEnqueueLostSource :: SignalSource (),
            bufferDequeueSource :: SignalSource (),
            bufferUpdatedSource :: SignalSource () }
   
@@ -65,7 +67,8 @@ newBuffer q count =
      w <- newResourceWithCount q count count
      s1 <- newSignalSourceUnsafe
      s2 <- newSignalSourceUnsafe
-     s3 <- newSignalSourceWithUpdate (runQueue q)
+     s3 <- newSignalSourceUnsafe
+     s4 <- newSignalSourceWithUpdate (runQueue q)
      return Buffer { bufferQueue = q,
                      bufferMaxCount = count,
                      bufferReadRes  = r,
@@ -73,8 +76,9 @@ newBuffer q count =
                      bufferCountRef = i,
                      bufferLostCountRef = l, 
                      bufferEnqueueSource = s1,
-                     bufferDequeueSource = s2,
-                     bufferUpdatedSource = s3 }
+                     bufferEnqueueLostSource = s2,
+                     bufferDequeueSource = s3,
+                     bufferUpdatedSource = s4 }
   
 -- | Test whether the queue is empty.
 bufferNull :: Buffer -> Dynamics Bool
@@ -146,13 +150,22 @@ enqueueBufferOrLost q =
        then do liftIO $ enqueueImpl q
                releaseResourceInDynamics (bufferReadRes q)
                triggerSignal (bufferEnqueueSource q) ()
-       else liftIO $ modifyIORef (bufferLostCountRef q) $ (+) 1
+       else do liftIO $ modifyIORef (bufferLostCountRef q) $ (+) 1
+               triggerSignal (bufferEnqueueLostSource q) ()
 
 -- | Return a signal that notifies when any item is enqueued.
 bufferEnqueue :: Buffer -> Signal ()
 bufferEnqueue q = merge2Signals m1 m2    -- N.B. The order is important!
   where m1 = publishSignal (bufferUpdatedSource q)
         m2 = publishSignal (bufferEnqueueSource q)
+
+-- | Return a signal which notifies that the item was lost when
+-- attempting to add it to the full queue with help of 
+-- 'enqueueBufferOrLost'.
+bufferEnqueueLost :: Buffer -> Signal ()
+bufferEnqueueLost q = merge2Signals m1 m2    -- N.B. The order is important!
+  where m1 = publishSignal (bufferUpdatedSource q)
+        m2 = publishSignal (bufferEnqueueLostSource q)
 
 -- | Return a signal that notifies when any item is dequeued.
 bufferDequeue :: Buffer -> Signal ()
