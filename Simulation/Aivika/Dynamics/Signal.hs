@@ -122,7 +122,7 @@ newSignalHistoryThrough :: EventQueue -> Signal a -> Dynamics (SignalHistory a)
 newSignalHistoryThrough q signal =
   do ts <- liftIO UV.newVector
      xs <- liftIO V.newVector
-     actuateThrough q $
+     enqueueWithCurrentTime q $
        handleSignal_ signal $ \a ->
        Dynamics $ \p ->
        do liftIO $ UV.appendVector ts (pointTime p)
@@ -150,7 +150,7 @@ triggerSignalWithTime s =
 newSignalInTimes :: EventQueue -> [Double] -> Dynamics (Signal Double)
 newSignalInTimes q xs =
   do s <- liftSimulation $ newSignalSource q
-     actuateInTimes q xs $ triggerSignalWithTime s
+     enqueueWithTimes q xs $ triggerSignalWithTime s
      return $ publishSignal s
        
 -- | Return a signal that is triggered in the integration time points.
@@ -158,7 +158,7 @@ newSignalInTimes q xs =
 newSignalInIntegTimes :: EventQueue -> Dynamics (Signal Double)
 newSignalInIntegTimes q =
   do s <- liftSimulation $ newSignalSource q
-     actuateInIntegTimes q $ triggerSignalWithTime s
+     enqueueWithIntegTimes q $ triggerSignalWithTime s
      return $ publishSignal s
      
 -- | Return a signal that is triggered in the start time.
@@ -166,12 +166,12 @@ newSignalInIntegTimes q =
 newSignalInStartTime :: EventQueue -> Dynamics (Signal Double)
 newSignalInStartTime q =
   do s <- liftSimulation $ newSignalSource q
-     actuateInStartTime q $ triggerSignalWithTime s
+     enqueueWithStartTime q $ triggerSignalWithTime s
      return $ publishSignal s
 
 -- | Return a signal that is triggered in the stop time.
 newSignalInStopTime :: EventQueue -> Dynamics (Signal Double)
 newSignalInStopTime q =
   do s <- liftSimulation $ newSignalSource q
-     actuateInStopTime q $ triggerSignalWithTime s
+     enqueueWithStopTime q $ triggerSignalWithTime s
      return $ publishSignal s

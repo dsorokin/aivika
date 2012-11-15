@@ -16,14 +16,14 @@ module Simulation.Aivika.Dynamics.EventQueue
        (EventQueue,
         newQueue,
         enqueue,
+        enqueueWithTimes,
+        enqueueWithIntegTimes,
+        enqueueWithStartTime,
+        enqueueWithStopTime,
+        enqueueWithCurrentTime,
         runQueue,
         runQueueSync,
-        queueCount,
-        actuateInTimes,
-        actuateInIntegTimes,
-        actuateInStartTime,
-        actuateInStopTime,
-        actuateThrough) where
+        queueCount) where
 
 import Data.IORef
 import Control.Monad
@@ -119,14 +119,14 @@ queueCount q = Dynamics r where
        PQ.queueCount $ queuePQ q
        
 -- | Actuate the event handler in the specified time points.
-actuateInTimes :: EventQueue -> [Double] -> Dynamics () -> Dynamics ()
-actuateInTimes q ts m = loop ts
+enqueueWithTimes :: EventQueue -> [Double] -> Dynamics () -> Dynamics ()
+enqueueWithTimes q ts m = loop ts
   where loop []       = return ()
         loop (t : ts) = enqueue q t $ m >> loop ts
        
 -- | Actuate the event handler in the specified time points.
-actuateInPoints :: EventQueue -> [Point] -> Dynamics () -> Dynamics ()
-actuateInPoints q xs (Dynamics m) = loop xs
+enqueueWithPoints :: EventQueue -> [Point] -> Dynamics () -> Dynamics ()
+enqueueWithPoints q xs (Dynamics m) = loop xs
   where loop []       = return ()
         loop (x : xs) = enqueue q (pointTime x) $ 
                         Dynamics $ \p ->
@@ -135,8 +135,8 @@ actuateInPoints q xs (Dynamics m) = loop xs
                            m' p
 
 -- | Actuate the event handler in the integration time points.
-actuateInIntegTimes :: EventQueue -> Dynamics () -> Dynamics ()
-actuateInIntegTimes q m =
+enqueueWithIntegTimes :: EventQueue -> Dynamics () -> Dynamics ()
+enqueueWithIntegTimes q m =
   Dynamics $ \p ->
   do let sc  = pointSpecs p
          (nl, nu) = integIterationBnds sc
@@ -146,12 +146,12 @@ actuateInIntegTimes q m =
                            pointTime = basicTime sc n 0,
                            pointIteration = n,
                            pointPhase = 0 }
-         Dynamics m' = actuateInPoints q points m
+         Dynamics m' = enqueueWithPoints q points m
      m' p
 
 -- | Actuate the event handler in the start time.
-actuateInStartTime :: EventQueue -> Dynamics () -> Dynamics ()
-actuateInStartTime q m =
+enqueueWithStartTime :: EventQueue -> Dynamics () -> Dynamics ()
+enqueueWithStartTime q m =
   Dynamics $ \p ->
   do let sc  = pointSpecs p
          (nl, nu) = integIterationBnds sc
@@ -160,12 +160,12 @@ actuateInStartTime q m =
                            pointTime = basicTime sc n 0,
                            pointIteration = n,
                            pointPhase = 0 }
-         Dynamics m' = actuateInPoints q [point nl] m
+         Dynamics m' = enqueueWithPoints q [point nl] m
      m' p
 
 -- | Actuate the event handler in the stop time.
-actuateInStopTime :: EventQueue -> Dynamics () -> Dynamics ()
-actuateInStopTime q m =
+enqueueWithStopTime :: EventQueue -> Dynamics () -> Dynamics ()
+enqueueWithStopTime q m =
   Dynamics $ \p ->
   do let sc  = pointSpecs p
          (nl, nu) = integIterationBnds sc
@@ -174,15 +174,15 @@ actuateInStopTime q m =
                            pointTime = basicTime sc n 0,
                            pointIteration = n,
                            pointPhase = 0 }
-         Dynamics m' = actuateInPoints q [point nu] m
+         Dynamics m' = enqueueWithPoints q [point nu] m
      m' p
 
 -- | Actuate the event handler in the current time but 
 -- through the event queue, which allows continuing the 
 -- current tasks and then calling the handler after the 
 -- tasks are finished. The simulation time will be the same.
-actuateThrough :: EventQueue -> Dynamics () -> Dynamics ()
-actuateThrough q m =
+enqueueWithCurrentTime :: EventQueue -> Dynamics () -> Dynamics ()
+enqueueWithCurrentTime q m =
   Dynamics $ \p ->
   do let Dynamics m' = enqueue q (pointTime p) m
      m' p
