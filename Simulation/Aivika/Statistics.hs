@@ -106,7 +106,7 @@ addSamplingStatsGeneric a stats
 -- | Return the variance.
 samplingStatsVariance :: SamplingStats a -> Double
 samplingStatsVariance stats
-  | count == 1 = meanX2 - meanX * meanX
+  | count == 1 = 0
   | otherwise  = (meanX2 - meanX * meanX) * (n / (n - 1))
     where count  = samplingStatsCount stats
           meanX  = samplingStatsMean stats
