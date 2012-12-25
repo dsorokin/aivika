@@ -48,7 +48,9 @@ tested-with:     GHC == 7.4.1
 
 extra-source-files:  examples/BassDiffusion.hs
                      examples/ChemicalReaction.hs
+                     examples/ChemicalReactionRec.hs
                      examples/FishBank.hs
+                     examples/FishBankRec.hs
                      examples/MachRep1.hs
                      examples/MachRep1EventDriven.hs
                      examples/MachRep1TimeDriven.hs
