@@ -1,5 +1,5 @@
 name:            aivika
-version:         0.5.1
+version:         0.5.2
 synopsis:        A multi-paradigm simulation library
 description:
     Aivika is a small simulation library that covers many paradigms. 
@@ -96,13 +96,14 @@ library
                      Simulation.Aivika.Vector
                      Simulation.Aivika.UVector
                      
-    build-depends:   base >= 3 && < 6,
-                     mtl >= 1.1.0.2,
+    build-depends:   base >= 4.5.0.0 && < 6,
+                     mtl >= 2.1.1,
                      array >= 0.3.0.0,
                      containers >= 0.4.0.0,
                      random >= 1.0.0.3
 
     extensions:      FlexibleContexts,
-                     BangPatterns
+                     BangPatterns,
+                     DoRec
                      
     ghc-options:     -O2

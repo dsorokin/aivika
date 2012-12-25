@@ -1,4 +1,6 @@
 
+{-# LANGUAGE DoRec #-}
+
 -- |
 -- Module     : Simulation.Aivika.Dynamics.Internal.Dynamics
 -- Copyright  : Copyright (c) 2009-2012, David Sorokin <david.sorokin@gmail.com>
@@ -38,6 +40,7 @@ import Control.Exception (IOException, throw, finally)
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.Fix
 
 import Simulation.Aivika.Dynamics.Internal.Simulation
 
@@ -295,3 +298,13 @@ finallyDynamics (Dynamics m) (Dynamics m') =
 -- | Like the standard 'throw' function.
 throwDynamics :: IOException -> Dynamics a
 throwDynamics = throw
+
+-- | Invoke the 'Dynamics' computation.
+invokeDynamics :: Dynamics a -> Point -> IO a
+{-# INLINE invokeDynamics #-}
+invokeDynamics (Dynamics m) p = m p
+
+instance MonadFix Dynamics where
+  mfix f = 
+    Dynamics $ \p ->
+    do { rec { a <- invokeDynamics (f a) p }; return a }

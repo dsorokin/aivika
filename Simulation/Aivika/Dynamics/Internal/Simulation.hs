@@ -1,4 +1,6 @@
 
+{-# LANGUAGE DoRec #-}
+
 -- |
 -- Module     : Simulation.Aivika.Dynamics.Internal.Simulation
 -- Copyright  : Copyright (c) 2009-2012, David Sorokin <david.sorokin@gmail.com>
@@ -25,6 +27,7 @@ module Simulation.Aivika.Dynamics.Internal.Simulation
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.Fix
 
 --
 -- The Simulation Monad
@@ -111,3 +114,13 @@ class Monad m => SimulationLift m where
   
   -- | Lift the specified 'Simulation' computation in another monad.
   liftSimulation :: Simulation a -> m a
+  
+-- | Invoke the 'Simulation' computation.
+invokeSimulation :: Simulation a -> Run -> IO a
+{-# INLINE invokeSimulation #-}
+invokeSimulation (Simulation m) r = m r
+
+instance MonadFix Simulation where
+  mfix f = 
+    Simulation $ \r ->
+    do { rec { a <- invokeSimulation (f a) r }; return a }  
