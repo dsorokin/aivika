@@ -1,11 +1,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Dynamics.EventQueue
--- Copyright  : Copyright (c) 2009-2011, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.0.3
+-- Tested with: GHC 7.6.3
 --
 -- The module introduces the event queue. Any event is the Dynamics computation,
 -- or, saying differently, a dynamic process that has a single purpose 

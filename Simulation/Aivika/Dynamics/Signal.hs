@@ -1,11 +1,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Dynamics.Signal
--- Copyright  : Copyright (c) 2009-2012, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.4.1
+-- Tested with: GHC 7.6.3
 --
 -- This module defines the signal which we can subscribe handlers to. 
 -- These handlers can be disposed. The signal is triggered in the 

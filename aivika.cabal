@@ -38,13 +38,13 @@ description:
 category:        Simulation
 license:         BSD3
 license-file:    LICENSE
-copyright:       (c) 2009-2012. David Sorokin <david.sorokin@gmail.com>
+copyright:       (c) 2009-2013. David Sorokin <david.sorokin@gmail.com>
 author:          David Sorokin
 maintainer:      David Sorokin <david.sorokin@gmail.com>
 homepage:        http://github.com/dsorokin/aivika
 cabal-version:   >= 1.2.0
 build-type:      Simple
-tested-with:     GHC == 7.4.1
+tested-with:     GHC == 7.6.3
 
 extra-source-files:  examples/BassDiffusion.hs
                      examples/ChemicalReaction.hs

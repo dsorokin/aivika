@@ -1,11 +1,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Dynamics.Internal.Process
--- Copyright  : Copyright (c) 2009-2012, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.0.3
+-- Tested with: GHC 7.6.3
 --
 -- A value in the 'Process' monad represents a discontinuous process that 
 -- can suspend in any simulation time point and then resume later in the same 

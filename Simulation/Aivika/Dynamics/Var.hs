@@ -1,11 +1,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Dynamics.Var
--- Copyright  : Copyright (c) 2009-2011, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.0.3
+-- Tested with: GHC 7.6.3
 --
 -- This module defines a variable that is bound to the event queue and 
 -- that keeps the history of changes storing the values in an array.

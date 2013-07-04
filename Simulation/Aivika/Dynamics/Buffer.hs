@@ -1,11 +1,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Dynamics.Buffer
--- Copyright  : Copyright (c) 2009-2012, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.4.1
+-- Tested with: GHC 7.6.3
 --
 -- This module defines the limited queue similar to 'LIFO' and 'FIFO' but where 
 -- the items are not represented. We know only of their number in the buffer and 

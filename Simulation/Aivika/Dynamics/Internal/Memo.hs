@@ -3,11 +3,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Dynamics.Internal.Memo
--- Copyright  : Copyright (c) 2009-2011, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.0.3
+-- Tested with: GHC 7.6.3
 --
 -- This module defines memo functions. The memoization creates such dynamic processes, 
 -- which values are cached in the integration time points. Then these values are 

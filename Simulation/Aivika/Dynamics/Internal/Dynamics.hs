@@ -7,7 +7,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.4.1
+-- Tested with: GHC 7.6.3
 --
 -- The module defines the 'Dynamics' monad representing an abstract dynamic 
 -- process, i.e. a time varying polymorphic function. 
