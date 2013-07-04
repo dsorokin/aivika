@@ -1,9 +1,9 @@
 
-{-# LANGUAGE DoRec #-}
+{-# LANGUAGE RecursiveDo #-}
 
 -- |
 -- Module     : Simulation.Aivika.Dynamics.Internal.Simulation
--- Copyright  : Copyright (c) 2009-2012, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental

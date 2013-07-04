@@ -1,5 +1,5 @@
 
-{-# LANGUAGE DoRec #-}
+{-# LANGUAGE RecursiveDo #-}
 
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation

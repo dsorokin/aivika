@@ -106,6 +106,6 @@ library
 
     extensions:      FlexibleContexts,
                      BangPatterns,
-                     DoRec
+                     RecursiveDo
                      
     ghc-options:     -O2

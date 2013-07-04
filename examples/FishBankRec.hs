@@ -1,5 +1,5 @@
 
-{-# LANGUAGE DoRec #-}
+{-# LANGUAGE RecursiveDo #-}
 
 import Data.Array
 
