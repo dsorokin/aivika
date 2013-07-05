@@ -21,6 +21,8 @@ module Simulation.Aivika.Statistics
         timingStatsDeviation,
         showTimingStats) where 
 
+import Data.Monoid
+
 -- | Defines data types that can be converted to 'Double'.
 class Ord a => ConvertableToDouble a where
   
@@ -58,6 +60,15 @@ class SamplingData a where
   -- | Add a new sample to the statistics.
   addSamplingStats :: a -> SamplingStats a -> SamplingStats a
 
+  -- | Combine two statistics.
+  combineSamplingStats :: SamplingStats a -> SamplingStats a -> SamplingStats a
+
+instance SamplingData a => Monoid (SamplingStats a) where 
+  
+  mempty = emptySamplingStats
+  
+  mappend = combineSamplingStats
+
 instance SamplingData Double where
 
   emptySamplingStats =
@@ -69,6 +80,8 @@ instance SamplingData Double where
     
   addSamplingStats = addSamplingStatsGeneric
   
+  combineSamplingStats = combineSamplingStatsGeneric
+  
 instance SamplingData Int where
 
   emptySamplingStats =
@@ -79,6 +92,8 @@ instance SamplingData Int where
                     samplingStatsMean2 = 0 / 0 }
     
   addSamplingStats = addSamplingStatsGeneric
+
+  combineSamplingStats = combineSamplingStatsGeneric
   
 addSamplingStatsGeneric :: ConvertableToDouble a => a -> SamplingStats a -> SamplingStats a
 addSamplingStatsGeneric a stats 
@@ -102,6 +117,37 @@ addSamplingStatsGeneric a stats
           x      = convertToDouble a
           k1     = 1.0 / n
           k2     = (n - 1.0) / n
+
+combineSamplingStatsGeneric :: ConvertableToDouble a =>
+                               SamplingStats a -> SamplingStats a -> SamplingStats a
+combineSamplingStatsGeneric stats1 stats2
+  | c1 == 0   = stats2
+  | c2 == 0   = stats1
+  | otherwise = SamplingStats { samplingStatsCount = c,
+                                samplingStatsMin   = minZ,
+                                samplingStatsMax   = maxZ,
+                                samplingStatsMean  = meanZ,
+                                samplingStatsMean2 = meanZ2 }
+  where c1     = samplingStatsCount stats1
+        c2     = samplingStatsCount stats2
+        c      = c1 + c2
+        n1     = fromIntegral c1
+        n2     = fromIntegral c2
+        n      = n1 + n2
+        minX   = samplingStatsMin stats1
+        minY   = samplingStatsMin stats2
+        minZ   = min minX minY
+        maxX   = samplingStatsMax stats1
+        maxY   = samplingStatsMax stats2
+        maxZ   = max maxX maxY
+        meanX  = samplingStatsMean stats1
+        meanY  = samplingStatsMean stats2
+        meanZ  = k1 * meanX + k2 * meanY
+        meanX2 = samplingStatsMean2 stats1
+        meanY2 = samplingStatsMean2 stats2
+        meanZ2 = k1 * meanX2 + k2 * meanY2
+        k1     = n1 / n
+        k2     = n2 / n
 
 -- | Return the variance.
 samplingStatsVariance :: SamplingStats a -> Double
