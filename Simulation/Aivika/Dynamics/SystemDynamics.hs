@@ -1,5 +1,5 @@
 
-{-# LANGUAGE FlexibleContexts, BangPatterns #-}
+{-# LANGUAGE FlexibleContexts, BangPatterns, RecursiveDo #-}
 
 -- |
 -- Module     : Simulation.Aivika.Dynamics.SystemDynamics
@@ -216,6 +216,31 @@ integRK4 (Dynamics f) (Dynamics i) (Dynamics y) p =
     _ -> 
       error "Incorrect phase: integRK4"
 
+-- | Return an integral with the specified derivative and initial value.
+-- If you want to create a loopback then you should use either the 'Integ' type
+-- or the @RecursiveDo@ pragma of GHC. The latter is more short, simple, fast and intuitive
+-- as allows defining the differential equations unordered as in mathematics:
+--
+-- @
+-- model :: Simulation [Double]
+-- model = 
+--   do rec a <- integ (- ka * a) 100
+--          b <- integ (ka * a - kb * b) 0
+--          c <- integ (kb * b) 0
+--          let ka = 1
+--              kb = 1
+--      runDynamicsInStopTime $ sequence [a, b, c]
+-- @
+integ :: Dynamics Double -> Dynamics Double -> Simulation (Dynamics Double)
+integ diff i =
+  do rec y <- umemo z
+         z <- Simulation $ \r ->
+           case spcMethod (runSpecs r) of
+             Euler -> return $ Dynamics $ integEuler diff i y
+             RungeKutta2 -> return $ Dynamics $ integRK2 diff i y
+             RungeKutta4 -> return $ Dynamics $ integRK4 diff i y
+     return y
+
 -- smoothI :: Dynamics Double -> Dynamics Double -> Dynamics Double 
 --           -> Dynamics Double
 -- smoothI x t i = y where
@@ -285,19 +310,6 @@ integRK4 (Dynamics f) (Dynamics i) (Dynamics y) p =
 --         -> Dynamics Double
 -- trend x at i =
 --   (x / smoothI x at (x / (1.0 + i * at)) - 1.0) / at
-
---
--- Integral Functions
---
-
--- | Return an integral with the specified derivative and initial value.
--- If you want to create a loopback then you should use the 'Integ' type 
--- directly. The 'integ' function is just a wrapper that uses this type.
-integ :: Dynamics Double -> Dynamics Double -> Simulation (Dynamics Double)
-integ diff i =
-  do x <- newInteg i
-     integDiff x diff
-     return $ integValue x
 
 --
 -- Difference Equations
