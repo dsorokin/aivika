@@ -307,10 +307,11 @@ smoothNI :: Dynamics Double -> Dynamics Double -> Int -> Dynamics Double
 smoothNI x t n i =
   do rec s <- forM [1 .. n] $ \k ->
            if k == 1
-           then integ ((x - s !! 1) / t') i
-           else integ ((s !! (k - 1) - s !! k) / t') i
-         let t' = t / fromIntegral n
-     return $ s !! n
+           then integ ((x - a ! 1) / t') i
+           else integ ((a ! (k - 1) - a ! k) / t') i
+         let a  = listArray (1, n) s 
+             t' = t / fromIntegral n
+     return $ a ! n
 
 -- | Return the n'th order exponential smooth of the first argument
 -- over the second one. This is a simplified version of the 'smoothNI'
