@@ -36,6 +36,8 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         delay3,
         delayNI,
         delayN,
+        forecast,
+        trend,
         -- * Difference Equations
         Sum,
         newSum,
@@ -264,7 +266,7 @@ integ diff i =
 --
 -- @
 -- smoothI x t i =
---   do rec y <- integ ((x - y) / t) i
+--   do rec y <- integ ((x - y) \/ t) i
 --      return y
 -- @     
 smoothI :: Dynamics Double                  -- ^ the value to smooth over time
@@ -291,10 +293,10 @@ smooth x t = smoothI x t x
 --
 -- @
 -- smooth3I x t i =
---   do rec y  <- integ ((s2 - y) / t') i
---          s2 <- integ ((s1 - s2) / t') i
---          s1 <- integ ((x - s1) / t') i
---          let t' = t / 3.0
+--   do rec y  <- integ ((s2 - y) \/ t') i
+--          s2 <- integ ((s1 - s2) \/ t') i
+--          s1 <- integ ((x - s1) \/ t') i
+--          let t' = t \/ 3.0
 --      return y
 -- @     
 smooth3I :: Dynamics Double                  -- ^ the value to smooth over time
@@ -354,8 +356,8 @@ smoothN x t n = smoothNI x t n x
 --
 -- @
 -- delay1I x t i =
---   do rec y <- integ (x - y / t) (i * t)
---      return $ y / t
+--   do rec y <- integ (x - y \/ t) (i * t)
+--      return $ y \/ t
 -- @     
 delay1I :: Dynamics Double                  -- ^ the value to conserve
            -> Dynamics Double               -- ^ time
@@ -420,15 +422,39 @@ delayN :: Dynamics Double                  -- ^ the value to conserve
           -> Simulation (Dynamics Double)  -- ^ the n'th order exponential delay
 delayN x t n = delayNI x t n x
 
--- forecast :: Dynamics Double -> Dynamics Double -> Dynamics Double 
---            -> Dynamics Double
+-- | Return the forecast.
+--
+-- The function has the following definition:
+--
+-- @
 -- forecast x at hz =
---   x * (1.0 + (x / smooth x at - 1.0) / at * hz)
+--   do y <- smooth x at
+--      return $ x * (1.0 + (x \/ y - 1.0) \/ at * hz)
+-- @
+forecast :: Dynamics Double                  -- ^ the value to forecast
+            -> Dynamics Double               -- ^ the average time
+            -> Dynamics Double               -- ^ the time horizon
+            -> Simulation (Dynamics Double)  -- ^ the forecast
+forecast x at hz =
+  do y <- smooth x at
+     return $ x * (1.0 + (x / y - 1.0) / at * hz)
 
--- trend :: Dynamics Double -> Dynamics Double -> Dynamics Double 
---         -> Dynamics Double
+-- | Return the trend.
+--
+-- The function has the following definition:
+--
+-- @
 -- trend x at i =
---   (x / smoothI x at (x / (1.0 + i * at)) - 1.0) / at
+--   do y <- smoothI x at (x \/ (1.0 + i * at))
+--      return $ (x \/ y - 1.0) \/ at
+-- @
+trend :: Dynamics Double                  -- ^ the value for which the trend is calculated
+         -> Dynamics Double               -- ^ the average time
+         -> Dynamics Double               -- ^ the initial value
+         -> Simulation (Dynamics Double)  -- ^ the fractional change rate
+trend x at i =
+  do y <- smoothI x at (x / (1.0 + i * at))
+     return $ (x / y - 1.0) / at
 
 --
 -- Difference Equations
