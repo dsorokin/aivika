@@ -30,6 +30,10 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         smooth3,
         smoothNI,
         smoothN,
+        delay1I,
+        delay1,
+        delay3I,
+        delay3,
         -- * Difference Equations
         Sum,
         newSum,
@@ -223,6 +227,7 @@ integRK4 (Dynamics f) (Dynamics i) (Dynamics y) p =
       error "Incorrect phase: integRK4"
 
 -- | Return an integral with the specified derivative and initial value.
+--
 -- If you want to create a loopback then you should use either the 'Integ' type
 -- or the recursive do-notation. Using the latter gives a more short, simple, fast
 -- and intuitive code as allows defining the differential equations unordered as
@@ -238,7 +243,9 @@ integRK4 (Dynamics f) (Dynamics i) (Dynamics y) p =
 --              kb = 1
 --      runDynamicsInStopTime $ sequence [a, b, c]
 -- @
-integ :: Dynamics Double -> Dynamics Double -> Simulation (Dynamics Double)
+integ :: Dynamics Double                  -- ^ the derivative
+         -> Dynamics Double               -- ^ the initial value
+         -> Simulation (Dynamics Double)  -- ^ the integral
 integ diff i =
   do rec y <- umemo z
          z <- Simulation $ \r ->
@@ -248,8 +255,7 @@ integ diff i =
              RungeKutta4 -> return $ Dynamics $ integRK4 diff i y
      return y
 
--- | Return the first order exponential smooth of the first argument
--- over the second one starting at the last argument.
+-- | Return the first order exponential smooth.
 --
 -- To create a loopback, you should use the recursive do-notation
 -- with help of which the function itself is defined:
@@ -259,51 +265,67 @@ integ diff i =
 --   do rec y <- integ ((x - y) / t) i
 --      return y
 -- @     
-smoothI :: Dynamics Double -> Dynamics Double -> Dynamics Double
-           -> Simulation (Dynamics Double)
+smoothI :: Dynamics Double                  -- ^ the value to smooth over time
+           -> Dynamics Double               -- ^ time
+           -> Dynamics Double               -- ^ the initial value
+           -> Simulation (Dynamics Double)  -- ^ the first order exponential smooth
 smoothI x t i =
   do rec y <- integ ((x - y) / t) i
      return y
 
--- | Return the first order exponential smooth of the first argument
--- over the second one. This is a simplified version of the 'smoothI'
--- function.
-smooth :: Dynamics Double -> Dynamics Double -> Simulation (Dynamics Double)
+-- | Return the first order exponential smooth.
+--
+-- This is a simplified version of the 'smoothI' function
+-- without specifing the initial value.
+smooth :: Dynamics Double                  -- ^ the value to smooth over time
+          -> Dynamics Double               -- ^ time
+          -> Simulation (Dynamics Double)  -- ^ the first order exponential smooth
 smooth x t = smoothI x t x
 
--- | Return the third order exponential smooth of the first argument
--- over the second one starting at the last argument.
+-- | Return the third order exponential smooth.
 --
 -- To create a loopback, you should use the recursive do-notation
 -- with help of which the function itself is defined:
 --
 -- @
 -- smooth3I x t i =
---   do rec y <- integ ((s2 - y) / t') i
+--   do rec y  <- integ ((s2 - y) / t') i
 --          s2 <- integ ((s1 - s2) / t') i
 --          s1 <- integ ((x - s1) / t') i
 --          let t' = t / 3.0
 --      return y
 -- @     
-smooth3I :: Dynamics Double -> Dynamics Double -> Dynamics Double
-            -> Simulation (Dynamics Double)
+smooth3I :: Dynamics Double                  -- ^ the value to smooth over time
+            -> Dynamics Double               -- ^ time
+            -> Dynamics Double               -- ^ the initial value
+            -> Simulation (Dynamics Double)  -- ^ the third order exponential smooth
 smooth3I x t i =
-  do rec y <- integ ((s2 - y) / t') i
+  do rec y  <- integ ((s2 - y) / t') i
          s2 <- integ ((s1 - s2) / t') i
          s1 <- integ ((x - s1) / t') i
          let t' = t / 3.0
      return y
 
--- | Return the third order exponential smooth of the first argument
--- over the second one. This is a simplified version of the 'smooth3I'
--- function.
-smooth3 :: Dynamics Double -> Dynamics Double -> Simulation (Dynamics Double)
+-- | Return the third order exponential smooth.
+-- 
+-- This is a simplified version of the 'smooth3I' function
+-- without specifying the initial value.
+smooth3 :: Dynamics Double                  -- ^ the value to smooth over time
+           -> Dynamics Double               -- ^ time
+           -> Simulation (Dynamics Double)  -- ^ the third order exponential smooth
 smooth3 x t = smooth3I x t x
 
--- | Return the n'th order exponential smooth of the first argument
--- over the second one starting at the last argument.
-smoothNI :: Dynamics Double -> Dynamics Double -> Int -> Dynamics Double 
-            -> Simulation (Dynamics Double)
+-- | Return the n'th order exponential smooth.
+--
+-- The result is not discrete in that sense that it may change within the integration time
+-- interval depending on the integration method used. Probably, you should apply
+-- the 'discrete' function to the result if you want to achieve an effect when the value is
+-- not changed within the time interval, which is used sometimes.
+smoothNI :: Dynamics Double                  -- ^ the value to smooth over time
+            -> Dynamics Double               -- ^ time
+            -> Int                           -- ^ the order
+            -> Dynamics Double               -- ^ the initial value
+            -> Simulation (Dynamics Double)  -- ^ the n'th order exponential smooth
 smoothNI x t n i =
   do rec s <- forM [1 .. n] $ \k ->
            if k == 1
@@ -313,31 +335,63 @@ smoothNI x t n i =
              t' = t / fromIntegral n
      return $ a ! n
 
--- | Return the n'th order exponential smooth of the first argument
--- over the second one. This is a simplified version of the 'smoothNI'
--- function.
-smoothN :: Dynamics Double -> Dynamics Double -> Int
-           -> Simulation (Dynamics Double)
+-- | Return the n'th order exponential smooth.
+--
+-- This is a simplified version of the 'smoothNI' function
+-- without specifying the initial value.
+smoothN :: Dynamics Double                  -- ^ the value to smooth over time
+           -> Dynamics Double               -- ^ time
+           -> Int                           -- ^ the order
+           -> Simulation (Dynamics Double)  -- ^ the n'th order exponential smooth
 smoothN x t n = smoothNI x t n x
 
--- delay1I :: Dynamics Double -> Dynamics Double -> Dynamics Double 
---           -> Dynamics Double
--- delay1I x t i = y where
---   y = integ (x - y) (i * t) / t
+-- | Return the first order exponential delay.
+--
+-- To create a loopback, you should use the recursive do-notation
+-- with help of which the function itself is defined:
+--
+-- @
+-- delay1I x t i =
+--   do rec y <- integ (x - y / t) (i * t)
+--      return $ y / t
+-- @     
+delay1I :: Dynamics Double                  -- ^ the value to conserve
+           -> Dynamics Double               -- ^ time
+           -> Dynamics Double               -- ^ the initial value
+           -> Simulation (Dynamics Double)  -- ^ the first order exponential delay
+delay1I x t i =
+  do rec y <- integ (x - y / t) (i * t)
+     return $ y / t
 
--- delay1 :: Dynamics Double -> Dynamics Double -> Dynamics Double
--- delay1 x t = delay1I x t x
+-- | Return the first order exponential delay.
+--
+-- This is a simplified version of the 'delay1I' function
+-- without specifying the initial value.
+delay1 :: Dynamics Double                  -- ^ the value to conserve
+          -> Dynamics Double               -- ^ time
+          -> Simulation (Dynamics Double)  -- ^ the first order exponential delay
+delay1 x t = delay1I x t x
 
--- delay3I :: Dynamics Double -> Dynamics Double -> Dynamics Double 
---           -> Dynamics Double
--- delay3I x t i = y where
---   y  = integ (s1 - y) (i * t') / t'
---   s1 = integ (s0 - s1) (i * t') / t'
---   s0 = integ (x - s0) (i * t') / t'
---   t' = t / 3.0
+-- | Return the third order exponential delay.
+delay3I :: Dynamics Double                  -- ^ the value to conserve
+           -> Dynamics Double               -- ^ time
+           -> Dynamics Double               -- ^ the initial value
+           -> Simulation (Dynamics Double)  -- ^ the third order exponential delay
+delay3I x t i =
+  do rec y  <- integ (s2 / t' - y / t') (i * t')
+         s2 <- integ (s1 / t' - s2 / t') (i * t')
+         s1 <- integ (x - s1 / t') (i * t')
+         let t' = t / 3.0
+     return $ y / t'         
 
--- delay3 :: Dynamics Double -> Dynamics Double -> Dynamics Double
--- delay3 x t = delay3I x t x
+-- | Return the third order exponential delay.
+--
+-- This is a simplified version of the 'delay3I' function
+-- without specifying the initial value.
+delay3 :: Dynamics Double                  -- ^ the value to conserve
+          -> Dynamics Double               -- ^ time
+          -> Simulation (Dynamics Double)  -- ^ the third order exponential delay
+delay3 x t = delay3I x t x
 
 -- delayNI :: Dynamics Double -> Dynamics Double -> Int -> Dynamics Double 
 --           -> Dynamics Double
