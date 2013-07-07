@@ -74,6 +74,12 @@ minDynamics = liftM2 min
 -- Integrals
 --
 
+{-# DEPRECATED Integ "Use the integ function instead" #-}
+{-# DEPRECATED newInteg "Use the integ function instead" #-}
+{-# DEPRECATED integInit "Use the integ function instead" #-}
+{-# DEPRECATED integValue "Use the integ function instead" #-}
+{-# DEPRECATED integDiff "Use the integ function instead" #-}
+
 -- | The 'Integ' type represents an integral.
 data Integ = Integ { integInit     :: Dynamics Double,   -- ^ The initial value.
                      integExternal :: IORef (Dynamics Double),
