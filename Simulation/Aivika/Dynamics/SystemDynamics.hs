@@ -24,6 +24,10 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         integDiff,
         -- * Integral Functions
         integ,
+        smoothI,
+        smooth,
+        smooth3I,
+        smooth3,
         -- * Difference Equations
         Sum,
         newSum,
@@ -218,8 +222,9 @@ integRK4 (Dynamics f) (Dynamics i) (Dynamics y) p =
 
 -- | Return an integral with the specified derivative and initial value.
 -- If you want to create a loopback then you should use either the 'Integ' type
--- or the @RecursiveDo@ pragma of GHC. The latter is more short, simple, fast and intuitive
--- as allows defining the differential equations unordered as in mathematics:
+-- or the recursive do-notation. Using the latter gives a more short, simple, fast
+-- and intuitive code as allows defining the differential equations unordered as
+-- in mathematics:
 --
 -- @
 -- model :: Simulation [Double]
@@ -241,27 +246,60 @@ integ diff i =
              RungeKutta4 -> return $ Dynamics $ integRK4 diff i y
      return y
 
--- smoothI :: Dynamics Double -> Dynamics Double -> Dynamics Double 
---           -> Dynamics Double
--- smoothI x t i = y where
---   y = integ ((x - y) / t) i
+-- | Return the first order exponential smooth of the first argument
+-- over the second one starting at the last argument.
+--
+-- To create a loopback, you should use the recursive do-notation
+-- with help of which the function itself is defined:
+--
+-- @
+-- smoothI x t i =
+--   do rec y <- integ ((x - y) / t) i
+--      return y
+-- @     
+smoothI :: Dynamics Double -> Dynamics Double -> Dynamics Double
+           -> Simulation (Dynamics Double)
+smoothI x t i =
+  do rec y <- integ ((x - y) / t) i
+     return y
 
--- smooth :: Dynamics Double -> Dynamics Double -> Dynamics Double
--- smooth x t = smoothI x t x
+-- | Return the first order exponential smooth of the first argument
+-- over the second one. This is a simplified version of the 'smoothI'
+-- function.
+smooth :: Dynamics Double -> Dynamics Double -> Simulation (Dynamics Double)
+smooth x t = smoothI x t x
 
--- smooth3I :: Dynamics Double -> Dynamics Double -> Dynamics Double 
---            -> Dynamics Double
--- smooth3I x t i = y where
---   y  = integ ((s1 - y) / t') i
---   s1 = integ ((s0 - s1) / t') i
---   s0 = integ ((x - s0) / t') i
---   t' = t / 3.0
+-- | Return the third order exponential smooth of the first argument
+-- over the second one starting at the last argument.
+--
+-- To create a loopback, you should use the recursive do-notation
+-- with help of which the function itself is defined:
+--
+-- @
+-- smooth3I x t i =
+--   do rec y <- integ ((s1 - y) / t') i
+--          s1 <- integ ((s0 - s1) / t') i
+--          s0 <- integ ((x - s0) / t') i
+--          let t' = t / 3.0
+--      return y
+-- @     
+smooth3I :: Dynamics Double -> Dynamics Double -> Dynamics Double
+            -> Simulation (Dynamics Double)
+smooth3I x t i =
+  do rec y <- integ ((s1 - y) / t') i
+         s1 <- integ ((s0 - s1) / t') i
+         s0 <- integ ((x - s0) / t') i
+         let t' = t / 3.0
+     return y
 
--- smooth3 :: Dynamics Double -> Dynamics Double -> Dynamics Double
--- smooth3 x t = smooth3I x t x
+-- | Return the third order exponential smooth of the first argument
+-- over the second one. This is a simplified version of the 'smooth3I'
+-- function.
+smooth3 :: Dynamics Double -> Dynamics Double -> Simulation (Dynamics Double)
+smooth3 x t = smooth3I x t x
 
 -- smoothNI :: Dynamics Double -> Dynamics Double -> Int -> Dynamics Double 
---            -> Dynamics Double
+--             -> Simulation (Dynamics Double)
 -- smoothNI x t n i = s ! n where
 --   s   = array (1, n) [(k, f k) | k <- [1 .. n]]
 --   f 0 = integ ((x - s ! 0) / t') i
