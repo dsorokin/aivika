@@ -28,6 +28,8 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         smooth,
         smooth3I,
         smooth3,
+        smoothNI,
+        smoothN,
         -- * Difference Equations
         Sum,
         newSum,
@@ -277,18 +279,18 @@ smooth x t = smoothI x t x
 --
 -- @
 -- smooth3I x t i =
---   do rec y <- integ ((s1 - y) / t') i
---          s1 <- integ ((s0 - s1) / t') i
---          s0 <- integ ((x - s0) / t') i
+--   do rec y <- integ ((s2 - y) / t') i
+--          s2 <- integ ((s1 - s2) / t') i
+--          s1 <- integ ((x - s1) / t') i
 --          let t' = t / 3.0
 --      return y
 -- @     
 smooth3I :: Dynamics Double -> Dynamics Double -> Dynamics Double
             -> Simulation (Dynamics Double)
 smooth3I x t i =
-  do rec y <- integ ((s1 - y) / t') i
-         s1 <- integ ((s0 - s1) / t') i
-         s0 <- integ ((x - s0) / t') i
+  do rec y <- integ ((s2 - y) / t') i
+         s2 <- integ ((s1 - s2) / t') i
+         s1 <- integ ((x - s1) / t') i
          let t' = t / 3.0
      return y
 
@@ -298,16 +300,24 @@ smooth3I x t i =
 smooth3 :: Dynamics Double -> Dynamics Double -> Simulation (Dynamics Double)
 smooth3 x t = smooth3I x t x
 
--- smoothNI :: Dynamics Double -> Dynamics Double -> Int -> Dynamics Double 
---             -> Simulation (Dynamics Double)
--- smoothNI x t n i = s ! n where
---   s   = array (1, n) [(k, f k) | k <- [1 .. n]]
---   f 0 = integ ((x - s ! 0) / t') i
---   f k = integ ((s ! (k - 1) - s ! k) / t') i
---   t'  = t / fromIntegral n
+-- | Return the n'th order exponential smooth of the first argument
+-- over the second one starting at the last argument.
+smoothNI :: Dynamics Double -> Dynamics Double -> Int -> Dynamics Double 
+            -> Simulation (Dynamics Double)
+smoothNI x t n i =
+  do rec s <- forM [1 .. n] $ \k ->
+           if k == 1
+           then integ ((x - s !! 1) / t') i
+           else integ ((s !! (k - 1) - s !! k) / t') i
+         let t' = t / fromIntegral n
+     return $ s !! n
 
--- smoothN :: Dynamics Double -> Dynamics Double -> Int -> Dynamics Double
--- smoothN x t n = smoothNI x t n x
+-- | Return the n'th order exponential smooth of the first argument
+-- over the second one. This is a simplified version of the 'smoothNI'
+-- function.
+smoothN :: Dynamics Double -> Dynamics Double -> Int
+           -> Simulation (Dynamics Double)
+smoothN x t n = smoothNI x t n x
 
 -- delay1I :: Dynamics Double -> Dynamics Double -> Dynamics Double 
 --           -> Dynamics Double
