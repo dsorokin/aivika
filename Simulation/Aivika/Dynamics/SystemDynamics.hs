@@ -34,6 +34,8 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         delay1,
         delay3I,
         delay3,
+        delayNI,
+        delayN,
         -- * Difference Equations
         Sum,
         newSum,
@@ -393,16 +395,30 @@ delay3 :: Dynamics Double                  -- ^ the value to conserve
           -> Simulation (Dynamics Double)  -- ^ the third order exponential delay
 delay3 x t = delay3I x t x
 
--- delayNI :: Dynamics Double -> Dynamics Double -> Int -> Dynamics Double 
---           -> Dynamics Double
--- delayNI x t n i = s ! n where
---   s   = array (1, n) [(k, f k) | k <- [1 .. n]]
---   f 0 = integ (x - s ! 0) (i * t') / t'
---   f k = integ (s ! (k - 1) - s ! k) (i * t') / t'
---   t'  = t / fromIntegral n
+-- | Return the n'th order exponential delay.
+delayNI :: Dynamics Double                  -- ^ the value to conserve
+           -> Dynamics Double               -- ^ time
+           -> Int                           -- ^ the order
+           -> Dynamics Double               -- ^ the initial value
+           -> Simulation (Dynamics Double)  -- ^ the n'th order exponential delay
+delayNI x t n i =
+  do rec s <- forM [1 .. n] $ \k ->
+           if k == 1
+           then integ (x - (a ! 1) / t') (i * t')
+           else integ ((a ! (k - 1)) / t' - (a ! k) / t') (i * t')
+         let a  = listArray (1, n) s
+             t' = t / fromIntegral n
+     return $ (a ! n) / t'
 
--- delayN :: Dynamics Double -> Dynamics Double -> Int -> Dynamics Double
--- delayN x t n = delayNI x t n x
+-- | Return the n'th order exponential delay.
+--
+-- This is a simplified version of the 'delayNI' function
+-- without specifying the initial value.
+delayN :: Dynamics Double                  -- ^ the value to conserve
+          -> Dynamics Double               -- ^ time
+          -> Int                           -- ^ the order
+          -> Simulation (Dynamics Double)  -- ^ the n'th order exponential delay
+delayN x t n = delayNI x t n x
 
 -- forecast :: Dynamics Double -> Dynamics Double -> Dynamics Double 
 --            -> Dynamics Double
