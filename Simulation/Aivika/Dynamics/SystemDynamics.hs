@@ -232,9 +232,8 @@ integRK4 (Dynamics f) (Dynamics i) (Dynamics y) p =
 
 -- | Return an integral with the specified derivative and initial value.
 --
--- If you want to create a loopback then you should use either the 'Integ' type
--- or the recursive do-notation. Using the latter gives a more short, simple, fast
--- and intuitive code as allows defining the differential equations unordered as
+-- To create a loopback, you should use the recursive do-notation.
+-- It allows defining the differential equations unordered as
 -- in mathematics:
 --
 -- @
