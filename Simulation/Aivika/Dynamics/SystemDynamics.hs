@@ -47,7 +47,13 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         sumDynamics,
         -- * Table Functions
         lookupD,
-        lookupStepwiseD) where
+        lookupStepwiseD,
+        -- * Discrete Functions
+        delayTrans,
+        delay,
+        delayI,
+        udelay,
+        udelayI) where
 
 import Data.Array
 import Data.Array.IO.Safe
@@ -601,39 +607,76 @@ lookupStepwiseD (Dynamics m) tbl =
                    | otherwise    = error "Incorrect index: table"
              in y
 
--- --
--- -- Discrete Functions
--- --
-    
--- delayTrans :: Dynamics a -> Dynamics Double -> Dynamics a 
---               -> (Dynamics a -> Dynamics a) -> Dynamics a
--- delayTrans (Dynamics x) (Dynamics d) (Dynamics i) tr = tr $ Dynamics r 
---   where
---     r p = do 
---       let t  = parTime p
---           sc = parSpecs p
---           n  = parIteration p
---       a <- d p
---       let t' = (t - a) - spcStartTime sc
---           n' = fromIntegral $ floor $ t' / spcDT sc
---           y | n' < 0    = i $ p { pointTime = spcStartTime sc,
---                                   pointIteration = 0, 
---                                   pointPhase = 0 }
---             | n' < n    = x $ p { pointTime = t',
---                                   pointIteration = n',
---                                   pointPhase = -1 }
---             | n' > n    = error "Cannot return the future data: delay"
---             | otherwise = error "Cannot return the current data: delay"
---       y    
+--
+-- Discrete Functions
+--
 
--- delay :: (Memo a) => Dynamics a -> Dynamics Double -> Dynamics a
--- delay x d = delayTrans x d x $ memo0 discrete
+-- | Return the delayed value. This is a general version using the specified transform,
+-- usually a memoization.
+delayTrans :: Dynamics a                                  -- ^ the value to delay
+              -> Dynamics Double                          -- ^ the lag time
+              -> Dynamics a                               -- ^ the initial value
+              -> (Dynamics a -> Simulation (Dynamics a))  -- ^ the transform (usually, a memoization)
+              -> Simulation (Dynamics a)                  -- ^ the delayed value
+delayTrans (Dynamics x) (Dynamics d) (Dynamics i) tr = tr $ Dynamics r 
+  where
+    r p = do 
+      let t  = pointTime p
+          sc = pointSpecs p
+          n  = pointIteration p
+      a <- d p
+      let t' = t - a
+          n' = fromIntegral $ floor $ (t' - spcStartTime sc) / spcDT sc
+          y | n' < 0    = i $ p { pointTime = spcStartTime sc,
+                                  pointIteration = 0, 
+                                  pointPhase = 0 }
+            | n' < n    = x $ p { pointTime = t',
+                                  pointIteration = n',
+                                  pointPhase = -1 }
+            | n' > n    = error "Cannot return the future data: delayTrans"
+            | otherwise = error "Cannot return the current data: delayTrans"
+      y
 
--- delay' :: (UMemo a) => Dynamics a -> Dynamics Double -> Dynamics a
--- delay' x d = delayTrans x d x $ memo0' discrete
+-- | Return the delayed value.
+--
+-- It is defined in the following way:
+--
+-- @ delay x d = delayTrans x d x memo0 @
+delay :: Dynamics a                  -- ^ the value to delay
+         -> Dynamics Double          -- ^ the lag time
+         -> Simulation (Dynamics a)  -- ^ the delayed value
+delay x d = delayTrans x d x memo0
 
--- delayI :: (Memo a) => Dynamics a -> Dynamics Double -> Dynamics a -> Dynamics a
--- delayI x d i = delayTrans x d i $ memo0 discrete         
+-- | Return the delayed value.
+--
+-- It is defined in the following way:
+--
+-- @ delayI x d i = delayTrans x d i memo0 @
+delayI :: Dynamics a                  -- ^ the value to delay
+          -> Dynamics Double          -- ^ the lag time
+          -> Dynamics a               -- ^ the initial value
+          -> Simulation (Dynamics a)  -- ^ the delayed value
+delayI x d i = delayTrans x d i memo0
 
--- delayI' :: (UMemo a) => Dynamics a -> Dynamics Double -> Dynamics a -> Dynamics a
--- delayI' x d i = delayTrans x d i $ memo0' discrete         
+-- | Return the delayed value. This is a more efficient unboxed version of the 'delay' function.
+--
+-- It is defined in the following way:
+--
+-- @ udelay x d = delayTrans x d x umemo0 @
+udelay :: (MArray IOUArray a IO, Num a)
+          => Dynamics a               -- ^ the value to delay
+          -> Dynamics Double          -- ^ the lag time
+          -> Simulation (Dynamics a)  -- ^ the delayed value
+udelay x d = delayTrans x d x umemo0
+
+-- | Return the delayed value. This is a more efficient unboxed version of the 'delayI' function.
+--
+-- It is defined in the following way:
+--
+-- @ udelayI x d i = delayTrans x d i umemo0 @
+udelayI :: (MArray IOUArray a IO, Num a)
+           => Dynamics a               -- ^ the value to delay
+           -> Dynamics Double          -- ^ the lag time
+           -> Dynamics a               -- ^ the initial value
+           -> Simulation (Dynamics a)  -- ^ the delayed value
+udelayI x d i = delayTrans x d i umemo0
