@@ -44,6 +44,7 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         sumInit,
         sumValue,
         sumDiff,
+        sumDynamics,
         -- * Table Functions
         lookupD,
         lookupStepwiseD) where
@@ -465,6 +466,12 @@ trend x at i =
 -- Difference Equations
 --
 
+{-# DEPRECATED Sum "Use the sumDynamics function instead" #-}
+{-# DEPRECATED newSum "Use the sumDynamics function instead" #-}
+{-# DEPRECATED sumInit "Use the sumDynamics function instead" #-}
+{-# DEPRECATED sumValue "Use the sumDynamics function instead" #-}
+{-# DEPRECATED sumDiff "Use the sumDynamics function instead" #-}
+
 -- | The 'Sum' type represents a sum defined by some difference equation.
 data Sum a = Sum { sumInit     :: Dynamics a,   -- ^ The initial value.
                    sumExternal :: IORef (Dynamics a),
@@ -512,6 +519,34 @@ sumDiff sum (Dynamics diff) =
                let !v = a + b
                return v
      liftIO $ writeIORef (sumInternal sum) z
+
+-- | Retun the sum for the difference equation.
+-- It is like an integral returned by the 'integ' function, only now
+-- the difference is used instead of derivative.
+--
+-- As usual, to create a loopback, you should use the recursive do-notation.
+sumDynamics :: (MArray IOUArray a IO, Num a)
+               => Dynamics a               -- ^ the difference
+               -> Dynamics a               -- ^ the initial value
+               -> Simulation (Dynamics a)  -- ^ the sum
+sumDynamics (Dynamics diff) (Dynamics i) =
+  do rec y <- umemo z
+         z <- Simulation $ \r ->
+           return $ Dynamics $ \p ->
+           case pointIteration p of
+             0 -> i p
+             n -> do 
+               let Dynamics m = y
+                   sc = pointSpecs p
+                   ty = basicTime sc (n - 1) 0
+                   py = p { pointTime = ty, 
+                            pointIteration = n - 1, 
+                            pointPhase = 0 }
+               a <- m py
+               b <- diff py
+               let !v = a + b
+               return v
+     return y
 
 --
 -- Table Functions
