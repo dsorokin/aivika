@@ -294,24 +294,24 @@ integRK4 (Dynamics f) (Dynamics i) (Dynamics y) p =
 -- @
 -- model :: Simulation [Double]
 -- model = 
---   do rec a <- integ (- ka * a) 100
---          b <- integ (ka * a - kb * b) 0
---          c <- integ (kb * b) 0
---          let ka = 1
---              kb = 1
---      runDynamicsInStopTime $ sequence [a, b, c]
+--   mdo a <- integ (- ka * a) 100
+--       b <- integ (ka * a - kb * b) 0
+--       c <- integ (kb * b) 0
+--       let ka = 1
+--           kb = 1
+--       runDynamicsInStopTime $ sequence [a, b, c]
 -- @
 integ :: Dynamics Double                  -- ^ the derivative
          -> Dynamics Double               -- ^ the initial value
          -> Simulation (Dynamics Double)  -- ^ the integral
 integ diff i =
-  do rec y <- umemo z
-         z <- Simulation $ \r ->
-           case spcMethod (runSpecs r) of
-             Euler -> return $ Dynamics $ integEuler diff i y
-             RungeKutta2 -> return $ Dynamics $ integRK2 diff i y
-             RungeKutta4 -> return $ Dynamics $ integRK4 diff i y
-     return y
+  mdo y <- umemo z
+      z <- Simulation $ \r ->
+        case spcMethod (runSpecs r) of
+          Euler -> return $ Dynamics $ integEuler diff i y
+          RungeKutta2 -> return $ Dynamics $ integRK2 diff i y
+          RungeKutta4 -> return $ Dynamics $ integRK4 diff i y
+      return y
 
 -- | Return the first order exponential smooth.
 --
@@ -320,16 +320,16 @@ integ diff i =
 --
 -- @
 -- smoothI x t i =
---   do rec y <- integ ((x - y) \/ t) i
---      return y
+--   mdo y <- integ ((x - y) \/ t) i
+--       return y
 -- @     
 smoothI :: Dynamics Double                  -- ^ the value to smooth over time
            -> Dynamics Double               -- ^ time
            -> Dynamics Double               -- ^ the initial value
            -> Simulation (Dynamics Double)  -- ^ the first order exponential smooth
 smoothI x t i =
-  do rec y <- integ ((x - y) / t) i
-     return y
+  mdo y <- integ ((x - y) / t) i
+      return y
 
 -- | Return the first order exponential smooth.
 --
@@ -347,22 +347,22 @@ smooth x t = smoothI x t x
 --
 -- @
 -- smooth3I x t i =
---   do rec y  <- integ ((s2 - y) \/ t') i
---          s2 <- integ ((s1 - s2) \/ t') i
---          s1 <- integ ((x - s1) \/ t') i
---          let t' = t \/ 3.0
---      return y
+--   mdo y  <- integ ((s2 - y) \/ t') i
+--       s2 <- integ ((s1 - s2) \/ t') i
+--       s1 <- integ ((x - s1) \/ t') i
+--       let t' = t \/ 3.0
+--       return y
 -- @     
 smooth3I :: Dynamics Double                  -- ^ the value to smooth over time
             -> Dynamics Double               -- ^ time
             -> Dynamics Double               -- ^ the initial value
             -> Simulation (Dynamics Double)  -- ^ the third order exponential smooth
 smooth3I x t i =
-  do rec y  <- integ ((s2 - y) / t') i
-         s2 <- integ ((s1 - s2) / t') i
-         s1 <- integ ((x - s1) / t') i
-         let t' = t / 3.0
-     return y
+  mdo y  <- integ ((s2 - y) / t') i
+      s2 <- integ ((s1 - s2) / t') i
+      s1 <- integ ((x - s1) / t') i
+      let t' = t / 3.0
+      return y
 
 -- | Return the third order exponential smooth.
 -- 
@@ -385,13 +385,13 @@ smoothNI :: Dynamics Double                  -- ^ the value to smooth over time
             -> Dynamics Double               -- ^ the initial value
             -> Simulation (Dynamics Double)  -- ^ the n'th order exponential smooth
 smoothNI x t n i =
-  do rec s <- forM [1 .. n] $ \k ->
-           if k == 1
-           then integ ((x - a ! 1) / t') i
-           else integ ((a ! (k - 1) - a ! k) / t') i
-         let a  = listArray (1, n) s 
-             t' = t / fromIntegral n
-     return $ a ! n
+  mdo s <- forM [1 .. n] $ \k ->
+        if k == 1
+        then integ ((x - a ! 1) / t') i
+        else integ ((a ! (k - 1) - a ! k) / t') i
+      let a  = listArray (1, n) s 
+          t' = t / fromIntegral n
+      return $ a ! n
 
 -- | Return the n'th order exponential smooth.
 --
@@ -410,16 +410,16 @@ smoothN x t n = smoothNI x t n x
 --
 -- @
 -- delay1I x t i =
---   do rec y <- integ (x - y \/ t) (i * t)
---      return $ y \/ t
+--   mdo y <- integ (x - y \/ t) (i * t)
+--       return $ y \/ t
 -- @     
 delay1I :: Dynamics Double                  -- ^ the value to conserve
            -> Dynamics Double               -- ^ time
            -> Dynamics Double               -- ^ the initial value
            -> Simulation (Dynamics Double)  -- ^ the first order exponential delay
 delay1I x t i =
-  do rec y <- integ (x - y / t) (i * t)
-     return $ y / t
+  mdo y <- integ (x - y / t) (i * t)
+      return $ y / t
 
 -- | Return the first order exponential delay.
 --
@@ -436,11 +436,11 @@ delay3I :: Dynamics Double                  -- ^ the value to conserve
            -> Dynamics Double               -- ^ the initial value
            -> Simulation (Dynamics Double)  -- ^ the third order exponential delay
 delay3I x t i =
-  do rec y  <- integ (s2 / t' - y / t') (i * t')
-         s2 <- integ (s1 / t' - s2 / t') (i * t')
-         s1 <- integ (x - s1 / t') (i * t')
-         let t' = t / 3.0
-     return $ y / t'         
+  mdo y  <- integ (s2 / t' - y / t') (i * t')
+      s2 <- integ (s1 / t' - s2 / t') (i * t')
+      s1 <- integ (x - s1 / t') (i * t')
+      let t' = t / 3.0
+      return $ y / t'         
 
 -- | Return the third order exponential delay.
 --
@@ -458,13 +458,13 @@ delayNI :: Dynamics Double                  -- ^ the value to conserve
            -> Dynamics Double               -- ^ the initial value
            -> Simulation (Dynamics Double)  -- ^ the n'th order exponential delay
 delayNI x t n i =
-  do rec s <- forM [1 .. n] $ \k ->
-           if k == 1
-           then integ (x - (a ! 1) / t') (i * t')
-           else integ ((a ! (k - 1)) / t' - (a ! k) / t') (i * t')
-         let a  = listArray (1, n) s
-             t' = t / fromIntegral n
-     return $ (a ! n) / t'
+  mdo s <- forM [1 .. n] $ \k ->
+        if k == 1
+        then integ (x - (a ! 1) / t') (i * t')
+        else integ ((a ! (k - 1)) / t' - (a ! k) / t') (i * t')
+      let a  = listArray (1, n) s
+          t' = t / fromIntegral n
+      return $ (a ! n) / t'
 
 -- | Return the n'th order exponential delay.
 --
@@ -578,23 +578,23 @@ sumDynamics :: (MArray IOUArray a IO, Num a)
                -> Dynamics a               -- ^ the initial value
                -> Simulation (Dynamics a)  -- ^ the sum
 sumDynamics (Dynamics diff) (Dynamics i) =
-  do rec y <- umemo z
-         z <- Simulation $ \r ->
-           return $ Dynamics $ \p ->
-           case pointIteration p of
-             0 -> i p
-             n -> do 
-               let Dynamics m = y
-                   sc = pointSpecs p
-                   ty = basicTime sc (n - 1) 0
-                   py = p { pointTime = ty, 
-                            pointIteration = n - 1, 
-                            pointPhase = 0 }
-               a <- m py
-               b <- diff py
-               let !v = a + b
-               return v
-     return y
+  mdo y <- umemo z
+      z <- Simulation $ \r ->
+        return $ Dynamics $ \p ->
+        case pointIteration p of
+          0 -> i p
+          n -> do 
+            let Dynamics m = y
+                sc = pointSpecs p
+                ty = basicTime sc (n - 1) 0
+                py = p { pointTime = ty, 
+                         pointIteration = n - 1, 
+                         pointPhase = 0 }
+            a <- m py
+            b <- diff py
+            let !v = a + b
+            return v
+      return y
 
 --
 -- Table Functions
@@ -752,9 +752,9 @@ udelayI x d i = delayTrans x d i umemo0
 --
 -- @
 -- npv stream rate init factor =
---   do rec df <- integ (- df * rate) 1
---          accum <- integ (stream * df) init
---      return $ (accum + dt * stream * df) * factor
+--   mdo df <- integ (- df * rate) 1
+--       accum <- integ (stream * df) init
+--       return $ (accum + dt * stream * df) * factor
 -- @
 npv :: Dynamics Double                  -- ^ the stream
        -> Dynamics Double               -- ^ the discount rate
@@ -762,9 +762,9 @@ npv :: Dynamics Double                  -- ^ the stream
        -> Dynamics Double               -- ^ factor
        -> Simulation (Dynamics Double)  -- ^ the Net Present Value (NPV)
 npv stream rate init factor =
-  do rec df <- integ (- df * rate) 1
-         accum <- integ (stream * df) init
-     return $ (accum + dt * stream * df) * factor
+  mdo df <- integ (- df * rate) 1
+      accum <- integ (stream * df) init
+      return $ (accum + dt * stream * df) * factor
 
 -- | Return the Net Present Value End of period (NPVE) of the stream computed
 -- using the specified discount rate, the initial value and some factor.
@@ -773,9 +773,9 @@ npv stream rate init factor =
 --
 -- @
 -- npve stream rate init factor =
---   do rec df <- integ (- df * rate \/ (1 + rate * dt)) (1 \/ (1 + rate * dt))
---          accum <- integ (stream * df) init
---      return $ (accum + dt * stream * df) * factor
+--   mdo df <- integ (- df * rate \/ (1 + rate * dt)) (1 \/ (1 + rate * dt))
+--       accum <- integ (stream * df) init
+--       return $ (accum + dt * stream * df) * factor
 -- @
 npve :: Dynamics Double                  -- ^ the stream
         -> Dynamics Double               -- ^ the discount rate
@@ -783,6 +783,6 @@ npve :: Dynamics Double                  -- ^ the stream
         -> Dynamics Double               -- ^ factor
         -> Simulation (Dynamics Double)  -- ^ the Net Present Value End (NPVE)
 npve stream rate init factor =
-  do rec df <- integ (- df * rate / (1 + rate * dt)) (1 / (1 + rate * dt))
-         accum <- integ (stream * df) init
-     return $ (accum + dt * stream * df) * factor
+  mdo df <- integ (- df * rate / (1 + rate * dt)) (1 / (1 + rate * dt))
+      accum <- integ (stream * df) init
+      return $ (accum + dt * stream * df) * factor
