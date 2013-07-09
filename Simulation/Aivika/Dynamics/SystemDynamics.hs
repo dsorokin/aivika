@@ -60,7 +60,10 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         delay,
         delayI,
         udelay,
-        udelayI) where
+        udelayI,
+        -- * Financial Functions
+        npv,
+        npve) where
 
 import Data.Array
 import Data.Array.IO.Safe
@@ -717,3 +720,49 @@ udelayI :: (MArray IOUArray a IO, Num a)
            -> Dynamics a               -- ^ the initial value
            -> Simulation (Dynamics a)  -- ^ the delayed value
 udelayI x d i = delayTrans x d i umemo0
+
+--
+-- Financial Functions
+--
+
+-- | Return the Net Present Value (NPV) of the stream computed using the specified
+-- discount rate, the initial value and some factor (usually 1).
+--
+-- It is defined in the following way:
+--
+-- @
+-- npv stream rate init factor =
+--   do rec df <- integ (- df * rate) 1
+--          accum <- integ (stream * df) init
+--      return $ (accum + dt * stream * df) * factor
+-- @
+npv :: Dynamics Double                  -- ^ the stream
+       -> Dynamics Double               -- ^ the discount rate
+       -> Dynamics Double               -- ^ the initial value
+       -> Dynamics Double               -- ^ factor
+       -> Simulation (Dynamics Double)  -- ^ the Net Present Value (NPV)
+npv stream rate init factor =
+  do rec df <- integ (- df * rate) 1
+         accum <- integ (stream * df) init
+     return $ (accum + dt * stream * df) * factor
+
+-- | Return the Net Present Value End of period (NPVE) of the stream computed
+-- using the specified discount rate, the initial value and some factor.
+--
+-- It is defined in the following way:
+--
+-- @
+-- npve stream rate init factor =
+--   do rec df <- integ (- df * rate \/ (1 + rate * dt)) (1 \/ (1 + rate * dt))
+--          accum <- integ (stream * df) init
+--      return $ (accum + dt * stream * df) * factor
+-- @
+npve :: Dynamics Double                  -- ^ the stream
+        -> Dynamics Double               -- ^ the discount rate
+        -> Dynamics Double               -- ^ the initial value
+        -> Dynamics Double               -- ^ factor
+        -> Simulation (Dynamics Double)  -- ^ the Net Present Value End (NPVE)
+npve stream rate init factor =
+  do rec df <- integ (- df * rate / (1 + rate * dt)) (1 / (1 + rate * dt))
+         accum <- integ (stream * df) init
+     return $ (accum + dt * stream * df) * factor
