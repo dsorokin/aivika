@@ -689,8 +689,12 @@ delayTrans (Dynamics x) (Dynamics d) (Dynamics i) tr = tr $ Dynamics r
             | n' < n    = x $ p { pointTime = t',
                                   pointIteration = n',
                                   pointPhase = -1 }
-            | n' > n    = error "Cannot return the future data: delayTrans"
-            | otherwise = error "Cannot return the current data: delayTrans"
+            | n' > n    = error $
+                          "Cannot return the future data: delayTrans. " ++
+                          "The lag time cannot be negative."
+            | otherwise = error $
+                          "Cannot return the current data: delayTrans. " ++
+                          "The lag time is too small."
       y
 
 -- | Return the delayed value.
