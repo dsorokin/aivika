@@ -55,6 +55,8 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         -- * Table Functions
         lookupD,
         lookupStepwiseD,
+        lookupDynamics,
+        lookupStepwiseDynamics,
         -- * Discrete Functions
         delayTrans,
         delay,
@@ -598,9 +600,22 @@ sumDynamics (Dynamics diff) (Dynamics i) =
 -- Table Functions
 --
 
+{-# DEPRECATED lookupD "Use the lookupDynamics function instead" #-}
+{-# DEPRECATED lookupStepwiseD "Use the lookupStepwiseDynamics function instead" #-}
+
 -- | Lookup @x@ in a table of pairs @(x, y)@ using linear interpolation.
 lookupD :: Dynamics Double -> Array Int (Double, Double) -> Dynamics Double
-lookupD (Dynamics m) tbl =
+lookupD = lookupDynamics
+
+-- | Lookup @x@ in a table of pairs @(x, y)@ using stepwise function.
+lookupStepwiseD :: Dynamics Double
+                   -> Array Int (Double, Double)
+                   -> Dynamics Double
+lookupStepwiseD = lookupStepwiseDynamics
+
+-- | Lookup @x@ in a table of pairs @(x, y)@ using linear interpolation.
+lookupDynamics :: Dynamics Double -> Array Int (Double, Double) -> Dynamics Double
+lookupDynamics (Dynamics m) tbl =
   Dynamics (\p -> do a <- m p; return $ find first last a) where
     (first, last) = bounds tbl
     find left right x =
@@ -625,9 +640,10 @@ lookupD (Dynamics m) tbl =
              in y
 
 -- | Lookup @x@ in a table of pairs @(x, y)@ using stepwise function.
-lookupStepwiseD :: Dynamics Double -> Array Int (Double, Double)
-                  -> Dynamics Double
-lookupStepwiseD (Dynamics m) tbl =
+lookupStepwiseDynamics :: Dynamics Double
+                          -> Array Int (Double, Double)
+                          -> Dynamics Double
+lookupStepwiseDynamics (Dynamics m) tbl =
   Dynamics (\p -> do a <- m p; return $ find first last a) where
     (first, last) = bounds tbl
     find left right x =
