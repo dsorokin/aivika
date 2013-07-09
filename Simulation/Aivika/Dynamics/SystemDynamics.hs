@@ -13,9 +13,16 @@
 --
 
 module Simulation.Aivika.Dynamics.SystemDynamics
-       (-- * Maximum and Minimum
+       (-- * Equality and Ordering
+        (.==.),
+        (./=.),
+        (.<.),
+        (.>=.),
+        (.>.),
+        (.<=.),
         maxDynamics,
         minDynamics,
+        ifDynamics,
         -- * Integrals
         Integ,
         newInteg,
@@ -66,8 +73,32 @@ import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Base
 
 --
--- Maximum and Minimum
+-- Equality and Ordering
 --
+
+-- | Compare for equality.
+(.==.) :: (Eq a) => Dynamics a -> Dynamics a -> Dynamics Bool
+(.==.) = liftM2 (==)
+
+-- | Compare for inequality.
+(./=.) :: (Eq a) => Dynamics a -> Dynamics a -> Dynamics Bool
+(./=.) = liftM2 (/=)
+
+-- | Compare for ordering.
+(.<.) :: (Ord a) => Dynamics a -> Dynamics a -> Dynamics Bool
+(.<.) = liftM2 (<)
+
+-- | Compare for ordering.
+(.>=.) :: (Ord a) => Dynamics a -> Dynamics a -> Dynamics Bool
+(.>=.) = liftM2 (>=)
+
+-- | Compare for ordering.
+(.>.) :: (Ord a) => Dynamics a -> Dynamics a -> Dynamics Bool
+(.>.) = liftM2 (>)
+
+-- | Compare for ordering.
+(.<=.) :: (Ord a) => Dynamics a -> Dynamics a -> Dynamics Bool
+(.<=.) = liftM2 (<=)
 
 -- | Return the maximum.
 maxDynamics :: (Ord a) => Dynamics a -> Dynamics a -> Dynamics a
@@ -76,6 +107,12 @@ maxDynamics = liftM2 max
 -- | Return the minimum.
 minDynamics :: (Ord a) => Dynamics a -> Dynamics a -> Dynamics a
 minDynamics = liftM2 min
+
+-- | Implement the if-then-else operator.
+ifDynamics :: Dynamics Bool -> Dynamics a -> Dynamics a -> Dynamics a
+ifDynamics cond x y =
+  do a <- cond
+     if a then x else y
 
 --
 -- Integrals
