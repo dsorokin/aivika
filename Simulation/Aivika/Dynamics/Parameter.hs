@@ -62,16 +62,22 @@ newIndexedParameter f =
                                      writeIORef dict $ M.insert i v m
                                      return v }
 
--- | Create a new random parameter distributed uniformly
--- between 0.0 and 1.0. The value doesn't change within
--- the simulation run but then the value is recalculated
--- for each new run.
-newRandomParameter :: IO (Simulation Double)
-newRandomParameter = newParameter $ getStdRandom random
+-- | Create a new random parameter distributed uniformly.
+-- The value doesn't change within the simulation run but
+-- then the value is recalculated for each new run.
+newRandomParameter :: Simulation Double     -- ^ minimum
+                      -> Simulation Double  -- ^ maximum
+                      -> IO (Simulation Double)
+newRandomParameter min max =
+  do x <- newParameter $ getStdRandom random
+     return $ min + x * (max - min)
 
--- | Create a new random parameter distributed normally
--- with mean 0.0 and variance 1.0. The value doesn't change
--- within the simulation run but then the value is recalculated
--- for each new run.
-newNormalParameter :: IO (Simulation Double)
-newNormalParameter = normalGen >>= newParameter
+-- | Create a new random parameter distributed normally.
+-- The value doesn't change within the simulation run but
+-- then the value is recalculated for each new run.
+newNormalParameter :: Simulation Double     -- ^ mean
+                      -> Simulation Double  -- ^ variance
+                      -> IO (Simulation Double)
+newNormalParameter mu nu =
+  do x <- normalGen >>= newParameter
+     return $ mu + x * nu

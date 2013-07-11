@@ -23,20 +23,26 @@ import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Base
 
--- | Return the uniform random numbers between 0.0 and 1.0 in
--- the integration time points.
-newRandom :: Simulation (Dynamics Double)
-newRandom =
-  memo0 $ liftIO $ getStdRandom random
+-- | Return the uniform random numbers in the integration time points.
+newRandom :: Dynamics Double     -- ^ minimum
+             -> Dynamics Double  -- ^ maximum
+             -> Simulation (Dynamics Double)
+newRandom min max =
+  umemo0 $ do
+    x <- liftIO $ getStdRandom random
+    min + return x * (max - min)
      
--- | Return the normal random numbers with mean 0.0 and variance 1.0 in
--- the integration time points.
-newNormal :: Simulation (Dynamics Double)
-newNormal =
+-- | Return the normal random numbers in the integration time points.
+newNormal :: Dynamics Double     -- ^ mean
+             -> Dynamics Double  -- ^ variance
+             -> Simulation (Dynamics Double)
+newNormal mu nu =
   do g <- liftIO normalGen
-     memo0 $ liftIO g
+     memo0 $ do
+       x <- liftIO g
+       mu + return x * nu
 
--- | Normal random number generator.
+-- | Normal random number generator with mean 0 and variance 1.
 normalGen :: IO (IO Double)
 normalGen =
   do nextRef <- newIORef 0.0
