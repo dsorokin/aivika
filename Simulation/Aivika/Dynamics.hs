@@ -11,13 +11,15 @@
 -- process, i.e. a time varying polymorphic function. 
 --
 module Simulation.Aivika.Dynamics 
-       (Dynamics,
+       (-- * Dynamics
+        Dynamics,
         DynamicsLift(..),
         runDynamicsInStartTime,
         runDynamicsInStopTime,
         runDynamicsInIntegTimes,
         runDynamicsInTime,
         runDynamicsInTimes,
+        -- * Error Handling
         catchDynamics,
         finallyDynamics,
         throwDynamics) where

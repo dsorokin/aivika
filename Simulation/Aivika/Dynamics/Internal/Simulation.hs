@@ -20,10 +20,17 @@ module Simulation.Aivika.Dynamics.Internal.Simulation
         Run(..),
         runSimulation,
         runSimulations,
+        -- * Error Handling
+        catchSimulation,
+        finallySimulation,
+        throwSimulation,
         -- * Utilities
         simulationIndex,
         simulationCount,
         simulationSpecs) where
+
+import qualified Control.Exception as C
+import Control.Exception (IOException, throw, finally)
 
 import Control.Monad
 import Control.Monad.Trans
@@ -101,10 +108,54 @@ simulationSpecs = Simulation $ return . runSpecs
 instance Functor Simulation where
   fmap = liftMS
 
+instance Eq (Simulation a) where
+  x == y = error "Can't compare simulation runs." 
+
+instance Show (Simulation a) where
+  showsPrec _ x = showString "<< Simulation >>"
+
 liftMS :: (a -> b) -> Simulation a -> Simulation b
 {-# INLINE liftMS #-}
 liftMS f (Simulation x) =
   Simulation $ \r -> do { a <- x r; return $ f a }
+
+liftM2S :: (a -> b -> c) -> Simulation a -> Simulation b -> Simulation c
+{-# INLINE liftM2S #-}
+liftM2S f (Simulation x) (Simulation y) =
+  Simulation $ \r -> do { a <- x r; b <- y r; return $ f a b }
+
+instance (Num a) => Num (Simulation a) where
+  x + y = liftM2S (+) x y
+  x - y = liftM2S (-) x y
+  x * y = liftM2S (*) x y
+  negate = liftMS negate
+  abs = liftMS abs
+  signum = liftMS signum
+  fromInteger i = return $ fromInteger i
+
+instance (Fractional a) => Fractional (Simulation a) where
+  x / y = liftM2S (/) x y
+  recip = liftMS recip
+  fromRational t = return $ fromRational t
+
+instance (Floating a) => Floating (Simulation a) where
+  pi = return pi
+  exp = liftMS exp
+  log = liftMS log
+  sqrt = liftMS sqrt
+  x ** y = liftM2S (**) x y
+  sin = liftMS sin
+  cos = liftMS cos
+  tan = liftMS tan
+  asin = liftMS asin
+  acos = liftMS acos
+  atan = liftMS atan
+  sinh = liftMS sinh
+  cosh = liftMS cosh
+  tanh = liftMS tanh
+  asinh = liftMS asinh
+  acosh = liftMS acosh
+  atanh = liftMS atanh
 
 instance MonadIO Simulation where
   liftIO m = Simulation $ const m
@@ -114,7 +165,24 @@ class Monad m => SimulationLift m where
   
   -- | Lift the specified 'Simulation' computation in another monad.
   liftSimulation :: Simulation a -> m a
-  
+    
+-- | Exception handling within 'Simulation' computations.
+catchSimulation :: Simulation a -> (IOException -> Simulation a) -> Simulation a
+catchSimulation (Simulation m) h =
+  Simulation $ \r -> 
+  C.catch (m r) $ \e ->
+  let Simulation m' = h e in m' r
+                           
+-- | A computation with finalization part like the 'finally' function.
+finallySimulation :: Simulation a -> Simulation b -> Simulation a
+finallySimulation (Simulation m) (Simulation m') =
+  Simulation $ \r ->
+  C.finally (m r) (m' r)
+
+-- | Like the standard 'throw' function.
+throwSimulation :: IOException -> Simulation a
+throwSimulation = throw
+
 -- | Invoke the 'Simulation' computation.
 invokeSimulation :: Simulation a -> Run -> IO a
 {-# INLINE invokeSimulation #-}

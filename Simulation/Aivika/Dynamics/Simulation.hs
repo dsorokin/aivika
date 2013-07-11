@@ -10,12 +10,18 @@
 -- The module defines the 'Simulation' monad representing a simulation run.
 --
 module Simulation.Aivika.Dynamics.Simulation
-       (Simulation,
+       (-- * Simulation
+        Simulation,
         SimulationLift(..),
         Specs(..),
         Method(..),
         runSimulation,
         runSimulations,
+        -- * Error Handling
+        catchSimulation,
+        finallySimulation,
+        throwSimulation,
+        -- * Utilities
         simulationIndex,
         simulationCount,
         simulationSpecs) where
