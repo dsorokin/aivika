@@ -1,0 +1,8 @@
+More examples are bundled with packages aivika-experiment and aivika-experiment-chart. 
+They plot charts and save the simulation results in the files that can be loaded then 
+in R or Microsoft Excel or OpenOffice.org. Some examples define a parametric Monte-Carlo 
+simulation, after which the deviation charts and histograms are plotted, for example.
+
+The reason why these packages are separated is that they have more heavy dependencies
+while the engine itself is very light-weight and compact. But the additional packages 
+should work on Linux, Windows and OS X. I tested on all three platforms.
