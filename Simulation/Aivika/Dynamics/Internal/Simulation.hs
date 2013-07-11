@@ -39,10 +39,18 @@ import Control.Monad.Fix
 --
 -- The Simulation Monad
 --
--- A value of the Simulation monad represents a simulation run.
---
 
--- | A value in the 'Simulation' monad represents a simulation run.
+-- | A value in the 'Simulation' monad represents something that
+-- doesn't change within the simulation run but may change for
+-- other runs.
+--
+-- This monad is ideal for representing the external
+-- parameters for the model, when the Monte-Carlo simulation
+-- is used. Also this monad is useful for defining some
+-- actions that should occur only once within the simulation run,
+-- for example, setting of the integral with help of recursive
+-- equations.
+--
 newtype Simulation a = Simulation (Run -> IO a)
 
 -- | It defines the simulation specs.
