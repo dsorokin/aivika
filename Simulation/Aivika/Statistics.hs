@@ -15,10 +15,15 @@ module Simulation.Aivika.Statistics
         SamplingData(..),
         samplingStatsVariance,
         samplingStatsDeviation,
+        returnSamplingStats,
+        listSamplingStats,
+        fromIntSamplingStats,
         showSamplingStats,
         TimingStats(..),
         TimingData(..),
         timingStatsDeviation,
+        returnTimingStats,
+        fromIntTimingStats,
         showTimingStats) where 
 
 import Data.Monoid
@@ -162,6 +167,20 @@ samplingStatsVariance stats
 -- | Return the deviation.          
 samplingStatsDeviation :: SamplingStats a -> Double
 samplingStatsDeviation = sqrt . samplingStatsVariance
+
+-- | Return the statistics by a single sample.
+returnSamplingStats :: SamplingData a => a -> SamplingStats a
+returnSamplingStats x = addSamplingStats x emptySamplingStats
+
+-- | Create the statistics by the specified list of data.
+listSamplingStats :: SamplingData a => [a] -> SamplingStats a
+listSamplingStats = foldr addSamplingStats emptySamplingStats
+
+-- | Convert the statistics from integer to double values.
+fromIntSamplingStats :: SamplingStats Int -> SamplingStats Double
+fromIntSamplingStats stats =
+  stats { samplingStatsMin = fromIntegral $ samplingStatsMin stats,
+          samplingStatsMax = fromIntegral $ samplingStatsMax stats }
 
 -- | Show the summary of the statistics with the specified indent.       
 showSamplingStats :: (Show a) => SamplingStats a -> Int -> ShowS
@@ -318,6 +337,16 @@ timingStatsVarianceGeneric stats = ex2 - ex * ex
 -- | Return the deviation.              
 timingStatsDeviation :: TimingData a => TimingStats a -> Double
 timingStatsDeviation = sqrt . timingStatsVariance
+
+-- | Return the statistics by single timing data.
+returnTimingStats :: TimingData a => Double -> a -> TimingStats a
+returnTimingStats t a = addTimingStats t a emptyTimingStats
+
+-- | Convert the statistics from integer to double values.
+fromIntTimingStats :: TimingStats Int -> TimingStats Double
+fromIntTimingStats stats =
+  stats { timingStatsMin = fromIntegral $ timingStatsMin stats,
+          timingStatsMax = fromIntegral $ timingStatsMax stats }
 
 -- | Show the summary of the statistics with the specified indent.       
 showTimingStats :: (Show a, TimingData a) => TimingStats a -> Int -> ShowS
