@@ -38,7 +38,7 @@ newNormal :: Dynamics Double     -- ^ mean
              -> Simulation (Dynamics Double)
 newNormal mu nu =
   do g <- liftIO normalGen
-     memo0 $ do
+     umemo0 $ do
        x <- liftIO g
        mu + return x * nu
 
