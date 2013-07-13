@@ -100,15 +100,15 @@ model =
      -- create two machines with type Dynamics ()
      m1 <- machine
      m2 <- machine
-     
-     -- create strictly sequential computations
-     c1 <- iterateDynamics m1
-     c2 <- iterateDynamics m2
-     
+
+     -- start the time-driven simulation of the machines through the event queue
+     runDynamicsInStartTime $
+       do enqueueWithIntegTimes queue m1
+          enqueueWithIntegTimes queue m2
+
+     -- return the result in the stop time
      runDynamicsInStopTime $
-       do c1    -- involve in the simulation
-          c2    -- involve in the simulation
-          x <- readRef totalUpTime
+       do x <- readRef totalUpTime
           y <- stoptime
           return $ x / (2 * y)
   
