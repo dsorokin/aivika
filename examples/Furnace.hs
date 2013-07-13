@@ -257,11 +257,12 @@ loadIngot ingot pit =
      -- count the loaded ingots
      modifyRef (furnaceLoadCount furnace) (+ 1)
   
--- | Iterate the furnace processing.
-iterateFurnace :: Furnace -> Simulation (Dynamics ())
-iterateFurnace furnace = 
-  let pits = furnacePits furnace
-  in iterateDynamics $
+-- | Start iterating the furnace processing through the event queue.
+startIteratingFurnace :: Furnace -> Dynamics ()
+startIteratingFurnace furnace = 
+  let queue = furnaceQueue furnace
+      pits = furnacePits furnace
+  in enqueueWithIntegTimes queue $
      do ready <- ingotsReady furnace
         when ready $ 
           do mapM_ (tryUnloadPit furnace) pits
@@ -347,12 +348,11 @@ model =
   do queue <- newQueue
      furnace <- newFurnace queue
      pid <- newProcessID queue
-     
+
+     -- initialize the furnace and start its iterating in start time
      runDynamicsInStartTime $
-       initializeFurnace furnace
-     
-     -- get the furnace iterator
-     iterator <- iterateFurnace furnace
+       do initializeFurnace furnace
+          startIteratingFurnace furnace
      
      -- accept input ingots
      runDynamicsInStartTime $
@@ -361,9 +361,7 @@ model =
      
      -- run the model in the final time point
      runDynamicsInStopTime $
-       do iterator   --  iterate in each time point
-         
-          -- the ingots
+       do -- the ingots
           c0 <- readRef (furnaceTotalCount furnace)
           c1 <- readRef (furnaceLoadCount furnace)
           c2 <- readRef (furnaceUnloadCount furnace)
