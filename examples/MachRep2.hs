@@ -71,10 +71,11 @@ model =
                 (+ (finishUpTime - startUpTime))
               
               -- check the resource availability
-              liftDynamics $ modifyRef nRep (+ 1)
-              n <- liftDynamics $ resourceCount repairPerson
-              when (n == 1) $
-                liftDynamics $ modifyRef nImmedRep (+ 1)
+              liftDynamics $
+                do modifyRef nRep (+ 1)
+                   n <- resourceCount repairPerson
+                   when (n == 1) $
+                     modifyRef nImmedRep (+ 1)
                 
               requestResource repairPerson
               repairTime <- liftIO $ exprnd repairRate
