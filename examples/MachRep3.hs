@@ -66,10 +66,10 @@ model =
               nUp' <- liftDynamics $ readRef nUp
               if nUp' == 1
                 then passivateProcess
-                else do n <- liftDynamics $ 
-                             resourceCount repairPerson
+                else liftDynamics $
+                     do n <- resourceCount repairPerson
                         when (n == 1) $ 
-                          liftDynamics $ reactivateProcess pid
+                          reactivateProcess pid
               
               requestResource repairPerson
               repairTime <- liftIO $ exprnd repairRate
