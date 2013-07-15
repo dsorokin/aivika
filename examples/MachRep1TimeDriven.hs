@@ -101,7 +101,8 @@ model =
      m1 <- machine
      m2 <- machine
 
-     -- start the time-driven simulation of the machines through the event queue
+     -- start the time-driven simulation of the machines
+     -- through the event queue
      runDynamicsInStartTime $
        do enqueueWithIntegTimes queue m1
           enqueueWithIntegTimes queue m2
