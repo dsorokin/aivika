@@ -27,7 +27,9 @@ module Simulation.Aivika.Dynamics.Agent
         addTimeout,
         addTimer,
         stateActivation,
-        stateDeactivation) where
+        stateDeactivation,
+        setStateActivation,
+        setStateDeactivation) where
 
 import Data.IORef
 import Control.Monad
@@ -267,15 +269,26 @@ initState st =
          "Use the activateState function everywhere outside " ++
          "the state activation: initState."
 
+{-# DEPRECATED stateActivation "Use the setStateActivation function instead" #-}
+{-# DEPRECATED stateDeactivation "Use the setStateDeactivation function instead" #-}
+
 -- | Set the activation computation for the specified state.
 stateActivation :: AgentState -> Dynamics () -> Simulation ()
-stateActivation st action =
+stateActivation = setStateActivation
+  
+-- | Set the deactivation computation for the specified state.
+stateDeactivation :: AgentState -> Dynamics () -> Simulation ()
+stateDeactivation = setStateDeactivation
+  
+-- | Set the activation computation for the specified state.
+setStateActivation :: AgentState -> Dynamics () -> Simulation ()
+setStateActivation st action =
   Simulation $ \r ->
   writeIORef (stateActivateRef st) action
   
 -- | Set the deactivation computation for the specified state.
-stateDeactivation :: AgentState -> Dynamics () -> Simulation ()
-stateDeactivation st action =
+setStateDeactivation :: AgentState -> Dynamics () -> Simulation ()
+setStateDeactivation st action =
   Simulation $ \r ->
   writeIORef (stateDeactivateRef st) action
   

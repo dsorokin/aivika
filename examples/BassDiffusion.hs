@@ -53,14 +53,14 @@ createPersons q =
      
 definePerson :: Person -> Array Int Person -> Ref Int -> Ref Int -> Simulation ()
 definePerson p ps potentialAdopters adopters =
-  do stateActivation (personPotentialAdopter p) $
+  do setStateActivation (personPotentialAdopter p) $
        do modifyRef potentialAdopters $ \a -> a + 1
           -- add a timeout
           t <- liftIO $ exprnd advertisingEffectiveness 
           let st  = personPotentialAdopter p
               st' = personAdopter p
           addTimeout st t $ activateState st'
-     stateActivation (personAdopter p) $ 
+     setStateActivation (personAdopter p) $ 
        do modifyRef adopters  $ \a -> a + 1
           -- add a timer that works while the state is active
           let t = liftIO $ exprnd contactRate    -- many times!
@@ -71,9 +71,9 @@ definePerson p ps potentialAdopters adopters =
                when (st == Just (personPotentialAdopter p')) $
                  do b <- liftIO $ boolrnd adoptionFraction
                     when b $ activateState (personAdopter p')
-     stateDeactivation (personPotentialAdopter p) $
+     setStateDeactivation (personPotentialAdopter p) $
        modifyRef potentialAdopters $ \a -> a - 1
-     stateDeactivation (personAdopter p) $
+     setStateDeactivation (personAdopter p) $
        modifyRef adopters $ \a -> a - 1
         
 definePersons :: Array Int Person -> Ref Int -> Ref Int -> Simulation ()
