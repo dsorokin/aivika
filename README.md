@@ -1,6 +1,6 @@
 Aivika -- a multi-paradigm simulation library
 
-Aivika is a multi-paradigm simulation library which has 
+[Aivika] [1] is a multi-paradigm simulation library which has 
 the following features:
 
 * allows defining recursive stochastic differential equations of 
@@ -37,8 +37,8 @@ the following features:
   (two of them support the recursive do-notation).
 
 Aivika itself is a light-weight engine with minimal dependencies. 
-However, it has additional packages [Aivika Experiment] [1] and 
-[Aivika Experiment Chart] [2] that offer the following features:
+However, it has additional packages [Aivika Experiment] [2] and 
+[Aivika Experiment Chart] [3] that offer the following features:
 
 * automating the simulation experiments;
 
@@ -56,9 +56,10 @@ However, it has additional packages [Aivika Experiment] [1] and
 All three libraries were tested on Linux, Windows and OS X.
 
 Please refer to the PDF document [An Introduction to 
-Aivika Simulation Library] [3] for more details 
+Aivika Simulation Library] [4] for more details 
 (the document is not finished yet).
 
-[1]: http://hackage.haskell.org/package/aivika-experiment  "Aivika Experiment"
-[2]: http://hackage.haskell.org/package/aivika-experiment-chart  "Aivika Experiment Chart"
-[3]: https://github.com/dsorokin/aivika/blob/master/doc/aivika.pdf  "An Introduction to Aivika Simulation Library"
+[1]: http://hackage.haskell.org/package/aivika  "Aivika"
+[2]: http://hackage.haskell.org/package/aivika-experiment  "Aivika Experiment"
+[3]: http://hackage.haskell.org/package/aivika-experiment-chart  "Aivika Experiment Chart"
+[4]: https://github.com/dsorokin/aivika/blob/master/doc/aivika.pdf  "An Introduction to Aivika Simulation Library"
