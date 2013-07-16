@@ -7,7 +7,9 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- This module introduces an agent-based modeling.
+-- This module introduces basic entities for the agent-based modeling.
+--
+-- WARNING: the module is not well tested.
 --
 
 module Simulation.Aivika.Dynamics.Agent
@@ -29,7 +31,8 @@ module Simulation.Aivika.Dynamics.Agent
         stateActivation,
         stateDeactivation,
         setStateActivation,
-        setStateDeactivation) where
+        setStateDeactivation,
+        setStateTransition) where
 
 import Data.IORef
 import Control.Monad
@@ -57,7 +60,8 @@ data AgentState = AgentState { stateAgent :: Agent,
                                stateParent :: Maybe AgentState,
                                -- ^ Return the parent state or 'Nothing'.
                                stateActivateRef :: IORef (Dynamics ()),
-                               stateDeactivateRef :: IORef (Dynamics ()), 
+                               stateDeactivateRef :: IORef (Dynamics ()),
+                               stateTransitRef :: IORef (Dynamics (Maybe AgentState)),
                                stateVersionRef :: IORef Int }
                   
 data AgentMode = CreationMode
@@ -71,55 +75,70 @@ instance Eq Agent where
 instance Eq AgentState where
   x == y = stateVersionRef x == stateVersionRef y  -- unique references
 
-findPath :: AgentState -> AgentState -> ([AgentState], [AgentState])
-findPath source target = 
-  if stateAgent source == stateAgent target 
-  then
-    partitionPath path1 path2
-  else
+fullPath :: AgentState -> [AgentState] -> [AgentState]
+fullPath st acc =
+  case stateParent st of
+    Nothing  -> st : acc
+    Just st' -> fullPath st' (st : acc)
+
+partitionPath :: [AgentState] -> [AgentState] -> ([AgentState], [AgentState])
+partitionPath path1 path2 =
+  case (path1, path2) of
+    (h1 : t1, [h2]) | h1 == h2 -> 
+      (reverse path1, path2)
+    (h1 : t1, h2 : t2) | h1 == h2 -> 
+      partitionPath t1 t2
+    _ ->
+      (reverse path1, path2)
+
+findPath :: Maybe AgentState -> AgentState -> ([AgentState], [AgentState])
+findPath Nothing target = ([], fullPath target [])
+findPath (Just source) target
+  | stateAgent source /= stateAgent target =
     error "Different agents: findPath."
-      where
-        path1 = fullPath source []
-        path2 = fullPath target []
-        fullPath st acc =
-          case stateParent st of
-            Nothing  -> st : acc
-            Just st' -> fullPath st' (st : acc)
-        partitionPath path1 path2 =
-          case (path1, path2) of
-            (h1 : t1, [h2]) | h1 == h2 -> 
-              (reverse path1, path2)
-            (h1 : t1, h2 : t2) | h1 == h2 -> 
-              partitionPath t1 t2
-            _ -> 
-              (reverse path1, path2)
-            
-traversePath :: AgentState -> AgentState -> Dynamics ()
+  | otherwise =
+    partitionPath path1 path2
+  where
+    path1 = fullPath source []
+    path2 = fullPath target []
+
+traversePath :: Maybe AgentState -> AgentState -> Dynamics ()
 traversePath source target =
   let (path1, path2) = findPath source target
-      agent = stateAgent source
+      agent = stateAgent target
       activate st p =
         do Dynamics m <- readIORef (stateActivateRef st)
            m p
       deactivate st p =
         do Dynamics m <- readIORef (stateDeactivateRef st)
            m p
+      transit st p =
+        do Dynamics m <- readIORef (stateTransitRef st)
+           m p
+      continue st p =
+        do let Dynamics m = traversePath (Just target) st
+           m p
   in Dynamics $ \p ->
+       unless (null path1 && null path2) $
        do writeIORef (agentModeRef agent) TransientMode
           forM_ path1 $ \st ->
             do writeIORef (agentStateRef agent) (Just st)
                deactivate st p
-               -- it makes all timeout and timer handlers obsolete
+               -- it makes all timeout and timer handlers outdated
                modifyIORef (stateVersionRef st) (1 +)
           forM_ path2 $ \st ->
             do when (st == target) $
                  writeIORef (agentModeRef agent) InitialMode
                writeIORef (agentStateRef agent) (Just st)
                activate st p
-               when (st == target) $
-                 writeIORef (agentModeRef agent) ProcessingMode
-          unless (null path1 && null path2) $
-            triggerAgentStateChanged p agent
+          writeIORef (agentModeRef agent) TransientMode     
+          st' <- transit target p
+          case st' of
+            Nothing ->
+              do writeIORef (agentModeRef agent) ProcessingMode
+                 triggerAgentStateChanged p agent
+            Just st' ->
+              continue st' p
 
 -- | Add to the state a timeout handler that will be actuated 
 -- in the specified time period, while the state remains active.
@@ -164,11 +183,13 @@ newState agent =
   Simulation $ \r ->
   do aref <- newIORef $ return ()
      dref <- newIORef $ return ()
+     tref <- newIORef $ return Nothing
      vref <- newIORef 0
      return AgentState { stateAgent = agent,
                          stateParent = Nothing,
                          stateActivateRef = aref,
                          stateDeactivateRef = dref,
+                         stateTransitRef = tref,
                          stateVersionRef = vref }
 
 -- | Create a child state.
@@ -178,11 +199,13 @@ newSubstate parent =
   do let agent = stateAgent parent 
      aref <- newIORef $ return ()
      dref <- newIORef $ return ()
+     tref <- newIORef $ return Nothing
      vref <- newIORef 0
      return AgentState { stateAgent = agent,
                          stateParent = Just parent,
                          stateActivateRef= aref,
                          stateDeactivateRef = dref,
+                         stateTransitRef = tref,
                          stateVersionRef = vref }
 
 -- | Create an agent bound with the specified event queue.
@@ -209,7 +232,8 @@ agentState agent =
      m p    -- ensure that the agent state is actual
      readIORef (agentStateRef agent)
                    
--- | Select the next downmost active state.       
+-- | Select the next downmost active state. The activation is repeated while
+-- there is the transition state defined by 'setStateTransition'.
 activateState :: AgentState -> Dynamics ()
 activateState st =
   Dynamics $ \p ->
@@ -219,30 +243,23 @@ activateState st =
      mode <- readIORef (agentModeRef agent)
      case mode of
        CreationMode ->
-         case stateParent st of
-           Just _ ->
-             error $ 
-             "To run the agent for the first time, an initial state " ++
-             "must be top-level: activateState."
-           Nothing ->
-             do writeIORef (agentModeRef agent) InitialMode
-                writeIORef (agentStateRef agent) (Just st)
-                Dynamics m <- readIORef (stateActivateRef st)
-                m p
-                writeIORef (agentModeRef agent) ProcessingMode
-                triggerAgentStateChanged p agent
+         do x0 <- readIORef (agentStateRef agent)
+            let Dynamics m = traversePath x0 st
+            m p
        InitialMode ->
          error $ 
-         "Use the initState function during " ++
-         "the state activation: activateState."
+         "Use the setStateTransition function to define " ++
+         "the transition state: activateState."
        TransientMode ->
          error $
-         "Use the initState function during " ++
-         "the state activation: activateState."
+         "Use the setStateTransition function to define " ++
+         "the transition state: activateState."
        ProcessingMode ->
-         do Just st0 <- readIORef (agentStateRef agent)
-            let Dynamics m = traversePath st0 st
+         do x0 @ (Just st0) <- readIORef (agentStateRef agent)
+            let Dynamics m = traversePath x0 st
             m p
+
+{-# DEPRECATED initState "Rewrite using the setStateTransition function instead." #-}
               
 -- | Activate the child state during the direct activation of 
 -- the parent state. This call is ignored in other cases.
@@ -259,8 +276,8 @@ initState st =
          "To run the agent for the fist time, use " ++
          "the activateState function: initState."
        InitialMode ->
-         do Just st0 <- readIORef (agentStateRef agent)
-            let Dynamics m = traversePath st0 st
+         do x0 @ (Just st0) <- readIORef (agentStateRef agent)
+            let Dynamics m = traversePath x0 st
             m p
        TransientMode -> 
          return ()
@@ -291,6 +308,15 @@ setStateDeactivation :: AgentState -> Dynamics () -> Simulation ()
 setStateDeactivation st action =
   Simulation $ \r ->
   writeIORef (stateDeactivateRef st) action
+  
+-- | Set the transition state which will be next and which is used only
+-- when activating the state directly with help of 'activateState'.
+-- If the state was activated intermediately, when activating directly
+-- another state, then this computation is not used.
+setStateTransition :: AgentState -> Dynamics (Maybe AgentState) -> Simulation ()
+setStateTransition st action =
+  Simulation $ \r ->
+  writeIORef (stateTransitRef st) action
   
 -- | Trigger the signal when the agent state changes.
 triggerAgentStateChanged :: Point -> Agent -> IO ()
