@@ -12,7 +12,8 @@ description:
       the Discrete Event Simulation (DES);
     .
     * has a basic support of the process-oriented paradigm of DES
-      with resuming, suspending and canceling the discontinuous process;
+      with an ability to resume, suspend and cancel 
+      the discontinuous processes;
     .
     * allows working with limited resources;
     .
