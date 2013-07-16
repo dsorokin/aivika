@@ -1,4 +1,5 @@
-Aivika -- a multi-paradigm simulation library
+Aivika -- a multi-paradigm simulation library for 
+the Haskell programming language and licensed under BSD3
 
 [Aivika] [1] is a multi-paradigm simulation library which has 
 the following features:
