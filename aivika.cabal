@@ -2,38 +2,68 @@ name:            aivika
 version:         0.5.5
 synopsis:        A multi-paradigm simulation library
 description:
-    Aivika is a small simulation library that covers many paradigms. 
-    It allows integrating a system of ordinary differential equations. 
-    Also it can be applied to the Discrete Event Simulation. It supports 
-    the event-oriented, process-oriented and activity-oriented paradigms. 
-    Aivika also supports the Agent-based Modeling. Finally, it can be applied 
-    to System Dynamics. 
+    Aivika is a multi-paradigm simulation library which has 
+    the following features:
     .
-    It is possible due to using a very general approach when the basic 
-    modeling entity is just a function of simulation time. The paradigms
-    are mainly distinguished by sets of the functions that are used to 
-    model the activities. These sets are small and do not pretend
-    to be comprehensive. Aivika is mostly a proof-of-concept project
-    rather than a big library that knows everything.
+    * allows defining recursive stochastic differential equations of 
+      System Dynamics (unordered as in maths via the recursive do-notation);
     .
-    The library widely uses monads. The dynamic system is represented as 
-    a computation in the Dynamics monad. There is also the Process
-    monad to represent the discontinuous processes which can suspend
-    at any time and then resume later. There is also the Simulation monad
-    that represents a simulation run, in which scope the previous 
-    two monads exist. Almost everything is expressed through these monads, 
-    including the event handlers, agent handlers and even integrals 
-    except for the parameters and statistics that already use the IO monad.
+    * has a basic support of the event-driven paradigm of 
+      the Discrete Event Simulation (DES);
     .
-    The PDF documentation is available at 
-    <https://github.com/dsorokin/aivika/blob/master/doc/aivika.pdf>.
-    Please note that the documentation is outdated and it corresponds to 
-    version 0.2 but it can still be helpful.
+    * has a basic support of the process-oriented paradigm of DES
+      with resuming, suspending and canceling the discontinuous process;
     .
-    Also please look at other two my packages
-    <http://hackage.haskell.org/package/aivika-experiment> and
-    <http://hackage.haskell.org/package/aivika-experiment-chart>
-    that complement the Aivika library.
+    * allows working with limited resources;
+    .
+    * supports the activity-oriented paradigm of DES;
+    .
+    * supports the basic constructs for the agent-based modeling;
+    .
+    * allows creating combined discrete-continuous models;
+    .
+    * the arrays of simulation variables are supported by design 
+      (this is mostly a feature of Haskell itself);
+    .
+    * supports the Monte-Carlo simulation;
+    .
+    * the simulation model can depend on external parameters;
+    .
+    * uses extensively the signals to notify the model about changing 
+      the reference and variable values;
+    .
+    * allows gathering statistics in time points;
+    .
+    * hides the technical details in high-level simulation monads
+      (two of them support the recursive do-notation).
+    .
+    Aivika itself is a light-weight engine with minimal dependencies. 
+    However, it has additional packages Aivika Experiment [1] and 
+    Aivika Experiment Chart [2] that offer the following features:
+    .
+    * automating the simulation experiments;
+    .
+    * saving the results in CSV files;
+    .
+    * plotting the deviation chart by rule 3-sigma, histogram, 
+      time series, XY chart;
+    .
+    * collecting the summary by statistical data;
+    .
+    * parallel execution of the Monte-Carlo simulation;
+    .
+    * have an extensible architecture.
+    .
+    All three libraries were tested on Linux, Windows and OS X.
+    .
+    Please refer to the PDF document [3] Introduction to 
+    Aivika Simulation Library for more details (the document is not finished yet).
+    .
+    \[1] <http://hackage.haskell.org/package/aivika-experiment>
+    .
+    \[2] <http://hackage.haskell.org/package/aivika-experiment-chart>
+    .
+    \[3] <https://github.com/dsorokin/aivika/blob/master/doc/aivika.pdf>
     .
 category:        Simulation
 license:         BSD3
