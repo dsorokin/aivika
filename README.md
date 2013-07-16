@@ -55,10 +55,10 @@ However, it has additional packages [Aivika Experiment] [1] and
 
 All three libraries were tested on Linux, Windows and OS X.
 
-Please refer to the PDF document [Introduction to 
+Please refer to the PDF document [An Introduction to 
 Aivika Simulation Library] [3] for more details 
 (the document is not finished yet).
 
 [1]: http://hackage.haskell.org/package/aivika-experiment  "Aivika Experiment"
 [2]: http://hackage.haskell.org/package/aivika-experiment-chart  "Aivika Experiment Chart"
-[3]: https://github.com/dsorokin/aivika/blob/master/doc/aivika.pdf  "Introduction to Aivika Simulation Library"
+[3]: https://github.com/dsorokin/aivika/blob/master/doc/aivika.pdf  "An Introduction to Aivika Simulation Library"
