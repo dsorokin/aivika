@@ -57,8 +57,8 @@ description:
     .
     All three libraries were tested on Linux, Windows and OS X.
     .
-    Please refer to the PDF document [3] An Introduction to 
-    Aivika Simulation Library for more details (the document is not finished yet).
+    Please refer to the PDF document An Introduction to 
+    Aivika Simulation Library [3] for more details (the document is not finished yet).
     .
     \[1] <http://hackage.haskell.org/package/aivika-experiment>
     .
