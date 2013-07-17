@@ -15,12 +15,7 @@ specs = Specs { spcStartTime = 0,
 
 model :: Simulation Double
 model =
-  mdo -- integrals --
-      fish <- integ (fishHatchRate - fishDeathRate - totalCatchPerYear) 1000
-      ships <- integ shipBuildingRate 10
-      totalProfit <- integ annualProfit 0
-      -- auxiliary values --
-      let annualProfit = profit
+  mdo let annualProfit = profit
           area = 100
           carryingCapacity = 1000
           catchPerShip = 
@@ -36,7 +31,8 @@ model =
                                (0.6, 5.118), (0.7, 5.247), (0.8, 5.849), 
                                (0.9, 6.151), (10.0, 6.194)]
           density = fish / area
-          fishDeathRate = maxDynamics 0 (fish * deathFraction)
+      fish <- integ (fishHatchRate - fishDeathRate - totalCatchPerYear) 1000
+      let fishDeathRate = maxDynamics 0 (fish * deathFraction)
           fishHatchRate = maxDynamics 0 (fish * hatchFraction)
           fishPrice = 20
           fractionInvested = 0.2
@@ -44,9 +40,11 @@ model =
           operatingCost = ships * 250
           profit = revenue - operatingCost
           revenue = totalCatchPerYear * fishPrice
-          shipBuildingRate = maxDynamics 0 (profit * fractionInvested / shipCost)
+      ships <- integ shipBuildingRate 10
+      let shipBuildingRate = maxDynamics 0 (profit * fractionInvested / shipCost)
           shipCost = 300
-          totalCatchPerYear = maxDynamics 0 (ships * catchPerShip)
+      totalProfit <- integ annualProfit 0
+      let totalCatchPerYear = maxDynamics 0 (ships * catchPerShip)
       -- results --
       runDynamicsInStopTime annualProfit
 
