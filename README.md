@@ -22,7 +22,7 @@ the following features:
 
 * allows creating combined discrete-continuous models;
 
-* the arrays of simulation variables are supported by design 
+* the arrays of simulation variables are inherently supported 
   (this is mostly a feature of Haskell itself);
 
 * supports the Monte-Carlo simulation;
