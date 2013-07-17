@@ -48,7 +48,7 @@ However, it has additional packages [Aivika Experiment] [2] and
 * plotting the deviation chart by rule 3-sigma, histogram, 
   time series, XY chart;
 
-* collecting the summary by statistical data;
+* collecting the summary of statistical data;
 
 * parallel execution of the Monte-Carlo simulation;
 
