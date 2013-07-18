@@ -6,3 +6,9 @@ simulation, after which the deviation charts and histograms are plotted, for exa
 The reason why these packages are separated is that they have more heavy dependencies
 while the engine itself is very light-weight and compact. But the additional packages 
 should work on Linux, Windows and OS X. I tested on all three platforms.
+
+Also you may find more examples on GitHub by the following link:
+
+https://github.com/dsorokin/aivika-models
+
+July 18, 2013
