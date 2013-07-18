@@ -92,6 +92,7 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/Furnace.hs
                      examples/TimeOut.hs
                      examples/TimeOutInt.hs
+                     examples/README
 
 data-files:          doc/aivika.pdf
 
