@@ -61,6 +61,10 @@ data Signal a =
            -- signal and return a nested computation 
            -- that, being applied, unsubscribes the 
            -- handler from this signal.
+           --
+           -- If the signal is bound up with the event queue
+           -- then the signal in the current time is not lost
+           -- by the handler any more. Changed in version 0.6.1.
            updateSignal :: Dynamics ()
            -- ^ Update the signal to its actual state.
          }
@@ -78,6 +82,10 @@ data SignalHandler a =
 
 -- | Subscribe the handler to the specified signal.
 -- To subscribe the disposable handlers, use function 'handleSignal'.
+--
+-- If the signal is bound up with the event queue then the signal in
+-- the current time is not lost by the handler any more.
+-- Changed in version 0.6.1.
 handleSignal_ :: Signal a -> (a -> Dynamics ()) -> Dynamics ()
 handleSignal_ signal h = 
   do x <- handleSignal signal h

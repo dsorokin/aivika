@@ -7,10 +7,10 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- The module introduces the event queue. Any event is the Dynamics computation,
--- or, saying differently, a dynamic process that has a single purpose 
--- to perform some side effect at the desired time. To pass the message, 
--- we actually use a closure.
+-- The module introduces the event queue. An event handler is
+-- the Dynamics computation that has a single purpose to perform
+-- some side effect at the desired time. To pass in any message
+-- to the event, you can use a closure.
 --
 module Simulation.Aivika.Dynamics.EventQueue
        (EventQueue,
@@ -23,6 +23,8 @@ module Simulation.Aivika.Dynamics.EventQueue
         enqueueWithCurrentTime,
         runQueue,
         runQueueSync,
+        runQueueBefore,
+        runQueueSyncBefore,
         queueCount) where
 
 import Data.IORef
@@ -40,8 +42,28 @@ data EventQueue = EventQueue {
   -- Optimization
   runQueue  :: Dynamics (),
   -- ^ Run the event queue processing its events.
-  runQueueSync :: Dynamics ()
-  -- ^ Run the event queue synchronously, i.e. without past.
+  -- There is no restiction on the time of the queue itself. It this time
+  -- is greater than the current simulation time then nothing happens.
+  runQueueSync :: Dynamics (),
+  -- ^ Run the event queue synchronously, i.e. the current time cannot be
+  -- less than the actual time of the queue itself.
+  --
+  -- You will rarely need to run the event queue explicitly, but
+  -- if you do want then this function is probably that one you should use.
+  runQueueBefore :: Dynamics (),
+  -- ^ Run the event queue processing only those events
+  -- which time is less than the current simulation time.
+  -- There is no restiction on the time of the queue itself. It this time
+  -- is greater than the current simulation time then nothing happens.
+  runQueueSyncBefore :: Dynamics ()
+  -- ^ Run the event queue synchronously processing only those events
+  -- which time is less than the current simulation time. But the current
+  -- time cannot be less than the actual time of the queue itself.
+  --
+  -- This function is usually called before a handler is subscribed
+  -- to the signal. Earlier 'runQueueSync' was called instead, which could
+  -- lead to the lost of the signal by the handler at time of direct
+  -- subscribing. Changed in version 0.6.1.
   }
 
 -- | Create a new event queue.
@@ -55,8 +77,10 @@ newQueue =
      let q = EventQueue { queuePQ   = pq,
                           queueBusy = f,
                           queueTime = t, 
-                          runQueue  = runQueueCore q,
-                          runQueueSync = runQueueSyncCore q }
+                          runQueue  = runQueueCore True q,
+                          runQueueSync = runQueueSyncCore True q,
+                          runQueueBefore = runQueueCore False q,
+                          runQueueSyncBefore = runQueueSyncCore False q }
      return q
              
 -- | Enqueue the event which must be actuated at the specified time.
@@ -65,8 +89,8 @@ enqueue q t c = Dynamics r where
   r p = let pq = queuePQ q in PQ.enqueue pq t c
     
 -- | Run the event queue processing its events.
-runQueueCore :: EventQueue -> Dynamics ()
-runQueueCore q = Dynamics r where
+runQueueCore :: Bool -> EventQueue -> Dynamics ()
+runQueueCore includingCurrentTime q = Dynamics r where
   r p =
     do let f = queueBusy q
        f' <- readIORef f
@@ -82,8 +106,9 @@ runQueueCore q = Dynamics r where
             let t = queueTime q
             t' <- readIORef t
             when (t2 < t') $ 
-              error "The time value is too small: runQueue"
-            when (t2 <= pointTime p) $
+              error "The time value is too small: runQueueCore"
+            when ((t2 < pointTime p) ||
+                  (includingCurrentTime && (t2 == pointTime p))) $
               do writeIORef t t2
                  PQ.dequeue pq
                  let sc  = pointSpecs p
@@ -97,17 +122,19 @@ runQueueCore q = Dynamics r where
                  call q p
 
 -- | Run the event queue synchronously, i.e. without past.
-runQueueSyncCore :: EventQueue -> Dynamics ()
-runQueueSyncCore q = Dynamics r where
+runQueueSyncCore :: Bool -> EventQueue -> Dynamics ()
+runQueueSyncCore includingCurrentTime q = Dynamics r where
   r p =
     do let t = queueTime q
        t' <- readIORef t
        if pointTime p < t'
          then error $
               "The current time is less than " ++
-              "the time in the queue: runQueueSync"
-         else let Dynamics m = runQueue q
-              in m p
+              "the time in the queue: runQueueSyncCore"
+         else m p
+  Dynamics m = if includingCurrentTime
+               then runQueue q
+               else runQueueBefore q
   
 -- | Return the number of pending events that should
 -- be yet actuated.
