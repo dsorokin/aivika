@@ -1,7 +1,9 @@
 More examples are bundled with packages aivika-experiment and aivika-experiment-chart. 
-They plot charts and save the simulation results in the files that can be loaded then 
-in R or Microsoft Excel or OpenOffice.org. Some examples define a parametric Monte-Carlo 
-simulation, after which the deviation charts and histograms are plotted, for example.
+They plot charts, save the simulation results in the CSV files and generate 
+an HTML web page which can be observed in your favourite Internet browser.
+
+Some examples define a parametric Monte-Carlo simulation, after which the deviation 
+charts and histograms are plotted, for example.
 
 The reason why these packages are separated is that they have more heavy dependencies
 while the engine itself is very light-weight and compact. But the additional packages 
@@ -10,5 +12,8 @@ should work on Linux, Windows and OS X. I tested on all three platforms.
 Also you may find more examples on GitHub by the following link:
 
 https://github.com/dsorokin/aivika-models
+
+I'm going to add new models to that Git repository. At least, one of them will use
+arrays or vectors. 
 
 July 18, 2013
