@@ -40,6 +40,7 @@ import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Process
 import Simulation.Aivika.Dynamics.Resource
 import Simulation.Aivika.Dynamics.Internal.Signal
+import Simulation.Aivika.Dynamics.Signal
 
 -- | Represents the FIFO queue with rule: first input - first output.
 data FIFO a =
@@ -70,7 +71,7 @@ newFIFO q count =
      s1 <- newSignalSourceUnsafe
      s2 <- newSignalSourceUnsafe
      s3 <- newSignalSourceUnsafe
-     s4 <- newSignalSourceWithUpdate (runQueue q)
+     s4 <- newSignalSource q
      return FIFO { fifoQueue = q,
                    fifoMaxCount = count,
                    fifoReadRes  = r,

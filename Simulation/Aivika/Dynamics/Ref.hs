@@ -27,6 +27,7 @@ import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Internal.Signal
+import Simulation.Aivika.Dynamics.Signal
 
 -- | The 'Ref' type represents a mutable variable similar to the 'IORef' variable 
 -- but only bound to some event queue, which makes the variable coordinated 
@@ -43,7 +44,7 @@ newRef :: EventQueue -> a -> Simulation (Ref a)
 newRef q a =
   do x <- liftIO $ newIORef a
      s <- newSignalSourceUnsafe
-     u <- newSignalSourceWithUpdate (runQueue q)
+     u <- newSignalSource q
      return Ref { refQueue = q,
                   refRun   = runQueueSync q,
                   refValue = x, 

@@ -40,6 +40,7 @@ import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Process
 import Simulation.Aivika.Dynamics.Resource
 import Simulation.Aivika.Dynamics.Internal.Signal
+import Simulation.Aivika.Dynamics.Signal
 
 import Simulation.Aivika.Dynamics.LIFO
 import Simulation.Aivika.Dynamics.FIFO
@@ -68,7 +69,7 @@ newBuffer q count =
      s1 <- newSignalSourceUnsafe
      s2 <- newSignalSourceUnsafe
      s3 <- newSignalSourceUnsafe
-     s4 <- newSignalSourceWithUpdate (runQueue q)
+     s4 <- newSignalSource q
      return Buffer { bufferQueue = q,
                      bufferMaxCount = count,
                      bufferReadRes  = r,

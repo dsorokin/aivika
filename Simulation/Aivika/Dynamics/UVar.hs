@@ -32,6 +32,7 @@ import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Internal.Signal
+import Simulation.Aivika.Dynamics.Signal
 
 import qualified Simulation.Aivika.UVector as UV
 
@@ -54,7 +55,7 @@ newUVar q a =
      UV.appendVector xs $ spcStartTime $ runSpecs r
      UV.appendVector ys a
      s  <- invokeSimulation r newSignalSourceUnsafe
-     u  <- invokeSimulation r $ newSignalSourceWithUpdate $ runQueue q
+     u  <- invokeSimulation r $ newSignalSource q
      return UVar { uvarQueue = q,
                    uvarRun   = runQueue q,
                    uvarXS = xs,

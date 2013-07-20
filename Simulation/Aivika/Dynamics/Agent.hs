@@ -46,6 +46,7 @@ import Simulation.Aivika.Dynamics.Internal.Simulation
 import Simulation.Aivika.Dynamics.Internal.Dynamics
 import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Internal.Signal
+import Simulation.Aivika.Dynamics.Signal
 
 --
 -- Agent-based Modeling
@@ -220,7 +221,7 @@ newAgent queue =
   do modeRef    <- newIORef CreationMode
      stateRef   <- newIORef Nothing
      let Simulation m1 = newSignalSourceUnsafe
-         Simulation m2 = newSignalSourceWithUpdate $ runQueue queue
+         Simulation m2 = newSignalSource queue
      stateChangedSource <- m1 r
      stateUpdatedSource <- m2 r
      return Agent { agentQueue = queue,
