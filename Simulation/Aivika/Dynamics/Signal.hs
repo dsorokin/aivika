@@ -61,6 +61,17 @@ import qualified Simulation.Aivika.Vector as V
 import qualified Simulation.Aivika.UVector as UV
 
 -- | Create a new signal source when the state depends on the event queue.
+--
+-- Since version 0.6.1 its 'updateSignal' function calls 'runQueueSyncBefore'
+-- instead of 'runQueueSync' as it was before. In case of need you can
+-- define your own update function with help of 'newSignalSourceWithUpdate'.
+--
+-- The function has the following defintion:
+--
+-- @
+-- newSignalSource queue = 
+--   newSignalSourceWithUpdate $ runQueueSyncBefore queue
+-- @
 newSignalSource :: EventQueue -> Simulation (SignalSource a)
 newSignalSource queue = 
   newSignalSourceWithUpdate $ runQueueSyncBefore queue

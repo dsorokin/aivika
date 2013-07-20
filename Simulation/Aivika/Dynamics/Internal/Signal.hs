@@ -67,6 +67,16 @@ data Signal a =
            -- by the handler any more. Changed in version 0.6.1.
            updateSignal :: Dynamics ()
            -- ^ Update the signal to its actual state.
+           --
+           -- You will rarely need to call this function directly
+           -- as it is usually called implicitly.
+           --
+           -- Since version 0.6.1 it processes only those events
+           -- which time is less than the current simulation time
+           -- if the signal is bound up with the event queue,
+           -- although you can define your own 'updateSignal'
+           -- function when creating a new signal source with help of
+           -- 'newSignalSourceWithUpdate'.
          }
   
 -- | The queue of signal handlers.
