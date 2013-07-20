@@ -122,13 +122,9 @@ newSignalHistory signal =
 -- The history will be created at the same simulation time, just the corresponded 
 -- handler will be subscribed to the signal after the new event will be processed 
 -- by the queue. 
--- 
--- It is very useful if we want the signal won't be triggered at the current 
--- time until we complete some preparation. This is relatated to the fact that
--- the signal is updated at time of subscribing the handler. So, if we subscribe
--- to the signal which must be triggered at the current time then it will be
--- triggered. Using the event queue allows us to complete some preparation logic
--- before the signal will be triggered at the same simulation time point.
+--
+-- Since version 0.6.1, this function has less meaning than before. Please use
+-- carefully as the behavior depends on the state of the event queue.
 newSignalHistoryThrough :: EventQueue -> Signal a -> Dynamics (SignalHistory a)
 newSignalHistoryThrough q signal =
   do ts <- liftIO UV.newVector
