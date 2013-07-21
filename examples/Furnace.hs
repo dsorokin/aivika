@@ -386,19 +386,19 @@ model =
             putStrLn ""
                 
           -- the ingots in pits
-          r2 <- readRef (furnacePitCountStats furnace)
+          r2 <- readUVar (furnacePitCount furnace)
               
           liftIO $ do
-            putStrLn "The ingots in pits: "
-            putStrLn $ showSamplingStats r2 2 []
+            putStrLn "The ingots in pits (in the final time): "
+            putStrLn $ show r2
             putStrLn ""
               
           -- the queue size
-          r3 <- readRef (furnaceQueueCountStats furnace)
+          r3 <- readUVar (furnaceQueueCount furnace)
      
           liftIO $ do
-            putStrLn "The queue size: "
-            putStrLn $ showSamplingStats r3 2 []
+            putStrLn "The queue size (in the final time): "
+            putStrLn $ show r3
             putStrLn ""
               
           -- the mean wait time in the queue
