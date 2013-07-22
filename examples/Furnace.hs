@@ -233,10 +233,9 @@ loadIngot ingot pit =
 
      -- how long did we keep the ingot in the queue?
      t' <- time
-     when (ingotReceiveTime ingot < t') $
-       do modifyRef (furnaceWaitCount furnace) (+ 1) 
-          modifyRef (furnaceWaitTime furnace)
-            (+ (t' - ingotReceiveTime ingot))
+     modifyRef (furnaceWaitCount furnace) (+ 1) 
+     modifyRef (furnaceWaitTime furnace)
+       (+ (t' - ingotReceiveTime ingot))
 
      -- count the loaded ingots
      modifyRef (furnaceLoadCount furnace) (+ 1)
