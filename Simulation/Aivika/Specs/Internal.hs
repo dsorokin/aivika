@@ -21,7 +21,12 @@ module Simulation.Aivika.Specs.Internal
         integIterationLoBnd,
         integPhaseBnds,
         integPhaseHiBnd,
-        integPhaseLoBnd) where
+        integPhaseLoBnd,
+        integTimes,
+        integPoints,
+        integStartPoint,
+        integStopPoint,
+        pointAt) where
 
 import Data.IORef
 
@@ -139,3 +144,56 @@ basicTime sc n ph =
             delta RungeKutta4 1 = spcDT sc / 2
             delta RungeKutta4 2 = spcDT sc / 2
             delta RungeKutta4 3 = spcDT sc
+
+-- | Return the integration time values.
+integTimes :: Specs -> [Double]
+integTimes sc = map t [nl .. nu]
+  where (nl, nu) = integIterationBnds sc
+        t n = basicTime sc n 0
+
+-- | Return the integration time points.
+integPoints :: Run -> [Point]
+integPoints r = points
+  where sc = runSpecs r
+        (nl, nu) = integIterationBnds sc
+        points   = map point [nl .. nu]
+        point n  = Point { pointSpecs = sc,
+                           pointRun = r,
+                           pointTime = basicTime sc n 0,
+                           pointIteration = n,
+                           pointPhase = 0 }
+
+-- | Return the start time point.
+integStartPoint :: Run -> Point
+integStartPoint r = point nl
+  where sc = runSpecs r
+        (nl, nu) = integIterationBnds sc
+        point n  = Point { pointSpecs = sc,
+                           pointRun = r,
+                           pointTime = basicTime sc n 0,
+                           pointIteration = n,
+                           pointPhase = 0 }
+
+-- | Return the stop time point.
+integStopPoint :: Run -> Point
+integStopPoint r = point nu
+  where sc = runSpecs r
+        (nl, nu) = integIterationBnds sc
+        point n  = Point { pointSpecs = sc,
+                           pointRun = r,
+                           pointTime = basicTime sc n 0,
+                           pointIteration = n,
+                           pointPhase = 0 }
+
+-- | Return the point at the specified time.
+pointAt :: Run -> Double -> Point
+pointAt r t = p
+  where sc = runSpecs r
+        t0 = spcStartTime sc
+        dt = spcDT sc
+        n  = fromIntegral $ floor ((t - t0) / dt)
+        p = Point { pointSpecs = sc,
+                    pointRun = r,
+                    pointTime = t,
+                    pointIteration = n,
+                    pointPhase = -1 }
