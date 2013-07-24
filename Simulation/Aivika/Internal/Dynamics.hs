@@ -2,7 +2,7 @@
 {-# LANGUAGE RecursiveDo #-}
 
 -- |
--- Module     : Simulation.Aivika.Dynamics.Internal
+-- Module     : Simulation.Aivika.Internal.Dynamics
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -11,7 +11,7 @@
 --
 -- The module defines the 'Dynamics' monad representing a time varying polymorphic function. 
 --
-module Simulation.Aivika.Dynamics.Internal
+module Simulation.Aivika.Internal.Dynamics
        (-- * Dynamics
         Dynamics(..),
         DynamicsLift(..),
@@ -41,8 +41,8 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
 
-import Simulation.Aivika.Specs.Internal
-import Simulation.Aivika.Simulation.Internal
+import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Simulation
 
 -- | A value in the 'Dynamics' monad represents a polymorphic time varying function.
 newtype Dynamics a = Dynamics (Point -> IO a)

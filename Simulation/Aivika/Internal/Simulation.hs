@@ -2,7 +2,7 @@
 {-# LANGUAGE RecursiveDo #-}
 
 -- |
--- Module     : Simulation.Aivika.Simulation.Internal
+-- Module     : Simulation.Aivika.Internal.Simulation
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -11,7 +11,7 @@
 --
 -- The module defines the 'Simulation' monad that represents a simulation run.
 -- 
-module Simulation.Aivika.Simulation.Internal
+module Simulation.Aivika.Internal.Simulation
        (-- * Simulation
         Simulation(..),
         SimulationLift(..),
@@ -35,7 +35,7 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
 
-import Simulation.Aivika.Specs.Internal
+import Simulation.Aivika.Internal.Specs
 
 -- | A value in the 'Simulation' monad represents something that
 -- doesn't change within the simulation run but may change for

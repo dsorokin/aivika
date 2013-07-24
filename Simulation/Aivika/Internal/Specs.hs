@@ -1,6 +1,6 @@
 
 -- |
--- Module     : Simulation.Aivika.Specs.Internal
+-- Module     : Simulation.Aivika.Internal.Specs
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -8,7 +8,7 @@
 -- Tested with: GHC 7.6.3
 --
 -- It defines the simulation specs and related stuff.
-module Simulation.Aivika.Specs.Internal
+module Simulation.Aivika.Internal.Specs
        (Specs(..),
         Method(..),
         Run(..),
