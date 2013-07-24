@@ -1,6 +1,4 @@
 
-{-# LANGUAGE RecursiveDo #-}
-
 -- |
 -- Module     : Simulation.Aivika.Specs.Internal
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
