@@ -29,7 +29,7 @@ import Control.Monad
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
-import Simulation.Aivika.Internal.Dynamics.Interpolate
+import Simulation.Aivika.Dynamics.Interpolate
 
 newMemoArray_ :: Ix i => (i, i) -> IO (IOArray i e)
 newMemoArray_ = newArray_

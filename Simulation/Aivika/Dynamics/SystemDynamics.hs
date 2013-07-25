@@ -52,11 +52,7 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         udelayI,
         -- * Financial Functions
         npv,
-        npve,
-        -- * Interpolation Functions
-        initDynamics,
-        discreteDynamics,
-        interpolateDynamics) where
+        npve) where
 
 import Data.Array
 import Data.Array.IO.Safe
@@ -67,7 +63,7 @@ import Control.Monad.Trans
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
-import Simulation.Aivika.Internal.Dynamics.Interpolate
+import Simulation.Aivika.Dynamics.Interpolate
 import Simulation.Aivika.Dynamics.Memo
 
 --
@@ -325,8 +321,8 @@ smooth3 x t = smooth3I x t x
 --
 -- The result is not discrete in that sense that it may change within the integration time
 -- interval depending on the integration method used. Probably, you should apply
--- the 'discrete' function to the result if you want to achieve an effect when the value is
--- not changed within the time interval, which is used sometimes.
+-- the 'discreteDynamics' function to the result if you want to achieve an effect when
+-- the value is not changed within the time interval, which is used sometimes.
 smoothNI :: Dynamics Double                  -- ^ the value to smooth over time
             -> Dynamics Double               -- ^ time
             -> Int                           -- ^ the order
