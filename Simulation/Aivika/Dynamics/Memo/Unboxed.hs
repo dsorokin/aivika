@@ -1,21 +1,22 @@
 
+{-# LANGUAGE FlexibleContexts #-}
+
 -- |
--- Module     : Simulation.Aivika.Dynamics.Memo
+-- Module     : Simulation.Aivika.Dynamics.Memo.Unboxed
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- This module defines memo functions. The memoization creates such 'Dynamics'
+-- This module defines the unboxed memo functions. The memoization creates such 'Dynamics'
 -- computations, which values are cached in the integration time points. Then
 -- these values are interpolated in all other time points.
 --
 
 module Simulation.Aivika.Dynamics.Memo
        (memoDynamics,
-        memo0Dynamics,
-        iterateDynamics) where
+        memo0Dynamics) where
 
 import Data.Array
 import Data.Array.IO.Safe
@@ -26,24 +27,21 @@ import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Interpolate
-
--- | Create a boxed array with default values.
-newBoxedArray_ :: Ix i => (i, i) -> IO (IOArray i e)
-newBoxedArray_ = newArray_
+import Simulation.Aivika.Unboxed
 
 -- | Memoize and order the computation in the integration time points using 
 -- the interpolation that knows of the Runge-Kutta method.
-memoDynamics :: Dynamics e -> Simulation (Dynamics e)
+memoDynamics :: Unboxed e => Dynamics e -> Simulation (Dynamics e)
 {-# INLINE memoDynamics #-}
 memoDynamics (Dynamics m) = 
   Simulation $ \r ->
   do let sc = runSpecs r
          (phl, phu) = integPhaseBnds sc
          (nl, nu)   = integIterationBnds sc
-     arr   <- newBoxedArray_ ((phl, nl), (phu, nu))
+     arr   <- newUnboxedArray_ ((phl, nl), (phu, nu))
      nref  <- newIORef 0
      phref <- newIORef 0
-     let r p = 
+     let r p =
            do let sc  = pointSpecs p
                   n   = pointIteration p
                   ph  = pointPhase p
@@ -53,7 +51,8 @@ memoDynamics (Dynamics m) =
                     then 
                       readArray arr (ph, n)
                     else 
-                      let p' = p { pointIteration = n', pointPhase = ph',
+                      let p' = p { pointIteration = n', 
+                                   pointPhase = ph',
                                    pointTime = basicTime sc n' ph' }
                       in do a <- m p'
                             a `seq` writeArray arr (ph', n') a
@@ -74,13 +73,13 @@ memoDynamics (Dynamics m) =
 -- difference when we request for values in the intermediate time points
 -- that are used by this method to integrate. In general case you should 
 -- prefer the 'memo0Dynamics' function above 'memoDynamics'.
-memo0Dynamics :: Dynamics e -> Simulation (Dynamics e)
+memo0Dynamics :: Unboxed e => Dynamics e -> Simulation (Dynamics e)
 {-# INLINE memo0Dynamics #-}
 memo0Dynamics (Dynamics m) = 
   Simulation $ \r ->
   do let sc   = runSpecs r
          bnds = integIterationBnds sc
-     arr  <- newBoxedArray_ bnds
+     arr  <- newUnboxedArray_ bnds
      nref <- newIORef 0
      let r p =
            do let sc = pointSpecs p
@@ -96,30 +95,6 @@ memo0Dynamics (Dynamics m) =
                             a `seq` writeArray arr n' a
                             writeIORef nref (n' + 1)
                             loop (n' + 1)
-              n' <- readIORef nref
-              loop n'
-     return $ discreteDynamics $ Dynamics r
-
--- | Iterate sequentially the dynamic process with side effects in 
--- the integration time points. It is equivalent to a call of the
--- 'memo0Dynamics' function but significantly more efficient, for the array 
--- is not created.
-iterateDynamics :: Dynamics () -> Simulation (Dynamics ())
-{-# INLINE iterateDynamics #-}
-iterateDynamics (Dynamics m) = 
-  Simulation $ \r ->
-  do let sc = runSpecs r
-     nref <- newIORef 0
-     let r p =
-           do let sc = pointSpecs p
-                  n  = pointIteration p
-                  loop n' = 
-                    unless (n' > n) $
-                    let p' = p { pointIteration = n', pointPhase = 0,
-                                 pointTime = basicTime sc n' 0 }
-                    in do a <- m p'
-                          a `seq` writeIORef nref (n' + 1)
-                          loop (n' + 1)
               n' <- readIORef nref
               loop n'
      return $ discreteDynamics $ Dynamics r
