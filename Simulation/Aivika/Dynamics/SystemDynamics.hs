@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts, BangPatterns, RecursiveDo #-}
 
 -- |
--- Module     : Simulation.Aivika.SystemDynamics
+-- Module     : Simulation.Aivika.Dynamics.SystemDynamics
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -67,8 +67,8 @@ import Control.Monad.Trans
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
-import Simulation.Aivika.Internal.Interpolate
-import Simulation.Aivika.Memo
+import Simulation.Aivika.Internal.Dynamics.Interpolate
+import Simulation.Aivika.Dynamics.Memo
 
 --
 -- Equality and Ordering

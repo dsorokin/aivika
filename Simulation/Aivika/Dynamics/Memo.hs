@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 -- |
--- Module     : Simulation.Aivika.Memo
+-- Module     : Simulation.Aivika.Dynamics.Memo
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -14,7 +14,7 @@
 -- these values are interpolated in all other time points.
 --
 
-module Simulation.Aivika.Memo
+module Simulation.Aivika.Dynamics.Memo
        (memoDynamics,
         umemoDynamics,
         memo0Dynamics,
@@ -29,7 +29,7 @@ import Control.Monad
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
-import Simulation.Aivika.Internal.Interpolate
+import Simulation.Aivika.Internal.Dynamics.Interpolate
 
 newMemoArray_ :: Ix i => (i, i) -> IO (IOArray i e)
 newMemoArray_ = newArray_

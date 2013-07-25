@@ -1,6 +1,6 @@
 
 -- |
--- Module     : Simulation.Aivika.Dynamics.Internal.Fold
+-- Module     : Simulation.Aivika.Dynamics.Fold
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -8,21 +8,20 @@
 -- Tested with: GHC 7.6.3
 --
 -- This module defines the fold functions that allows traversing the values of
--- any dynamic process in the integration time points.
+-- any 'Dynamics' computation in the integration time points.
 --
-module Simulation.Aivika.Dynamics.Internal.Fold
+module Simulation.Aivika.Dynamics.Fold
        (foldDynamics1,
-        foldDynamics,
-        divideDynamics) where
+        foldDynamics) where
 
 import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Dynamics.Internal.Simulation
-import Simulation.Aivika.Dynamics.Internal.Dynamics
-import Simulation.Aivika.Dynamics.Internal.Interpolate
-import Simulation.Aivika.Dynamics.Internal.Memo
+import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Simulation
+import Simulation.Aivika.Internal.Dynamics
+import Simulation.Aivika.Dynamics.Memo
 
 --
 -- Fold
@@ -31,7 +30,7 @@ import Simulation.Aivika.Dynamics.Internal.Memo
 -- | Like the standard 'foldl1' function but applied to values in 
 -- the integration time points. The accumulator values are transformed
 -- according to the first argument, which should be either function 
--- 'memo0' or 'umemo0'.
+-- 'memo0Dynamics' or 'umemo0Dynamics'.
 foldDynamics1 :: (Dynamics a -> Simulation (Dynamics a))
                  -> (a -> a -> a) 
                  -> Dynamics a 
@@ -57,7 +56,7 @@ foldDynamics1 tr f (Dynamics m) =
 -- | Like the standard 'foldl' function but applied to values in 
 -- the integration time points. The accumulator values are transformed
 -- according to the first argument, which should be either function
--- 'memo0' or 'umemo0'.
+-- 'memo0Dynamics' or 'umemo0Dynamics'.
 foldDynamics :: (Dynamics a -> Simulation (Dynamics a))
                 -> (a -> b -> a) 
                 -> a
@@ -81,12 +80,3 @@ foldDynamics tr f acc (Dynamics m) =
      y@(Dynamics m) <- tr z
      liftIO $ writeIORef r m
      return y
-
--- | Divide the values in integration time points by the number of
--- the current iteration. It can be useful for statistic functions in
--- combination with the fold.
-divideDynamics :: Dynamics Double -> Dynamics Double
-divideDynamics (Dynamics m) = 
-  discrete $ Dynamics $ \p ->
-  do a <- m p
-     return $ a / fromIntegral (pointIteration p + 1)

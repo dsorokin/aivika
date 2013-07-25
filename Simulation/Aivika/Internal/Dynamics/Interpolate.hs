@@ -1,6 +1,6 @@
 
 -- |
--- Module     : Simulation.Aivika.Internal.Interpolate
+-- Module     : Simulation.Aivika.Internal.Dynamics.Interpolate
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -13,7 +13,7 @@
 -- value of any dynamic process.
 --
 
-module Simulation.Aivika.Internal.Interpolate
+module Simulation.Aivika.Internal.Dynamics.Interpolate
        (initDynamics,
         discreteDynamics,
         interpolateDynamics) where
