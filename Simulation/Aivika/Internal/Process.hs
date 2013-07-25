@@ -141,7 +141,12 @@ reactivateProcess pid =
          do writeIORef x Nothing
             invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
 
--- | Start the process with the specified identifier.
+-- | Start immediately the process with the specified identifier.
+--
+-- To run the process at the specified time, you can use
+-- the 'enqueueEvent' function. But the 'enqueueEventWithCurrentTime'
+-- function is useful to run the process with the delay at the same
+-- simulation time.
 runProcess :: ProcessId -> Process () -> Event ()
 runProcess pid p =
   runCont m cont econt ccont (processCancelToken pid) (processCatchFlag pid)
