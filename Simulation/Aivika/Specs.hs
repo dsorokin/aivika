@@ -9,8 +9,10 @@
 --
 -- It defines the simulation specs and functions for this data type.
 module Simulation.Aivika.Specs
-       (Specs(..),
+       (-- * Simulation Specs
+        Specs(..),
         Method(..),
+        -- * Auxiliary Functions
         basicTime,
         integIterationBnds,
         integIterationHiBnd,
