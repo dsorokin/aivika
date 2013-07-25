@@ -49,7 +49,7 @@ data ContParams a =
 data ContParamsAux =
   ContParamsAux { contECont :: IOException -> Event (),
                   contCCont :: () -> Event (),
-                  contCancelRef :: IORef Bool,
+                  contCancelToken :: IORef Bool,
                   contCatchFlag   :: Bool }
 
 instance Monad Cont where
@@ -78,7 +78,7 @@ invokeCont p (Cont m) = m p
 cancelCont :: Point -> ContParams a -> IO ()
 {-# NOINLINE cancelCont #-}
 cancelCont p c =
-  do writeIORef (contCancelRef $ contAux c) False
+  do writeIORef (contCancelToken $ contAux c) False
      invokeEvent p $ (contCCont $ contAux c) ()
 
 returnC :: a -> Cont a
@@ -231,12 +231,12 @@ runCont :: Cont a ->
            Bool ->
            -- ^ whether to support the exception catching
            Event ()
-runCont (Cont m) cont econt ccont cancelRef catchFlag = 
+runCont (Cont m) cont econt ccont cancelToken catchFlag = 
   m ContParams { contCont = cont,
                  contAux  = 
                    ContParamsAux { contECont = econt,
                                    contCCont = ccont,
-                                   contCancelRef = cancelRef, 
+                                   contCancelToken = cancelToken, 
                                    contCatchFlag = catchFlag } }
 
 -- | Lift the 'Simulation' computation.
@@ -317,4 +317,4 @@ resumeCont c a =
 -- | Test whether the computation is canceled.
 contCanceled :: ContParams a -> IO Bool
 {-# INLINE contCanceled #-}
-contCanceled c = readIORef $ contCancelRef $ contAux c
+contCanceled c = readIORef $ contCancelToken $ contAux c
