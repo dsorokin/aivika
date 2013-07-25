@@ -1,6 +1,6 @@
 
 -- |
--- Module     : Simulation.Aivika.Dynamics.Internal.Signal
+-- Module     : Simulation.Aivika.Internal.Signal
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -13,16 +13,11 @@
 -- the handlers. 
 --
 
-module Simulation.Aivika.Dynamics.Internal.Signal
-       (Signal,
-        SignalSource,
-        newSignalSourceWithUpdate,
-        newSignalSourceUnsafe,
-        publishSignal,
-        triggerSignal,
-        handleSignal,
+module Simulation.Aivika.Internal.Signal
+       (Signal(..),
+        SignalSource(..),
+        newSignalSource,
         handleSignal_,
-        updateSignal,
         mapSignal,
         mapSignalM,
         apSignal,
@@ -40,14 +35,15 @@ import Data.Monoid
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Dynamics.Internal.Dynamics
-import Simulation.Aivika.Dynamics.Internal.Simulation
+import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Simulation
+import Simulation.Aivika.Internal.Event
 
 -- | The signal source that can publish its signal.
 data SignalSource a =
   SignalSource { publishSignal :: Signal a,
                                   -- ^ Publish the signal.
-                 triggerSignal :: a -> Dynamics ()
+                 triggerSignal :: a -> Event ()
                                   -- ^ Trigger the signal actuating 
                                   -- all its handlers at the current 
                                   -- simulation time point.
@@ -55,28 +51,11 @@ data SignalSource a =
   
 -- | The signal that can have disposable handlers.  
 data Signal a =
-  Signal { handleSignal :: (a -> Dynamics ()) -> 
-                           Dynamics (Dynamics ()),
+  Signal { handleSignal :: (a -> Event ()) -> Event (Event ())
            -- ^ Subscribe the handler to the specified 
            -- signal and return a nested computation 
            -- that, being applied, unsubscribes the 
            -- handler from this signal.
-           --
-           -- If the signal is bound up with the event queue
-           -- then the signal in the current time is not lost
-           -- by the handler any more. Changed in version 0.6.1.
-           updateSignal :: Dynamics ()
-           -- ^ Update the signal to its actual state.
-           --
-           -- You will rarely need to call this function directly
-           -- as it is usually called implicitly.
-           --
-           -- Since version 0.6.1 it processes only those events
-           -- which time is less than the current simulation time
-           -- if the signal is bound up with the event queue,
-           -- although you can define your own 'updateSignal'
-           -- function when creating a new signal source with help of
-           -- 'newSignalSourceWithUpdate'.
          }
   
 -- | The queue of signal handlers.
@@ -86,69 +65,37 @@ data SignalHandlerQueue a =
   
 -- | It contains the information about the disposable queue handler.
 data SignalHandler a =
-  SignalHandler { handlerComp :: a -> Dynamics (),
+  SignalHandler { handlerComp :: a -> Event (),
                   handlerPrev :: IORef (Maybe (SignalHandler a)),
                   handlerNext :: IORef (Maybe (SignalHandler a)) }
 
 -- | Subscribe the handler to the specified signal.
 -- To subscribe the disposable handlers, use function 'handleSignal'.
---
--- If the signal is bound up with the event queue then the signal in
--- the current time is not lost by the handler any more.
--- Changed in version 0.6.1.
-handleSignal_ :: Signal a -> (a -> Dynamics ()) -> Dynamics ()
+handleSignal_ :: Signal a -> (a -> Event ()) -> Event ()
 handleSignal_ signal h = 
   do x <- handleSignal signal h
      return ()
      
--- | Create a new signal source with the specified update computation.
-newSignalSourceWithUpdate :: Dynamics () -> Simulation (SignalSource a)
-newSignalSourceWithUpdate update =
+-- | Create a new signal source.
+newSignalSource :: Simulation (SignalSource a)
+newSignalSource =
   Simulation $ \r ->
   do start <- newIORef Nothing
      end <- newIORef Nothing
      let queue  = SignalHandlerQueue { queueStart = start,
                                        queueEnd   = end }
-         signal = Signal { handleSignal = handle, 
-                           updateSignal = update }
+         signal = Signal { handleSignal = handle }
          source = SignalSource { publishSignal = signal, 
                                  triggerSignal = trigger }
          handle h =
-           Dynamics $ \p ->
-           do invokeDynamics p update
-              x <- enqueueSignalHandler queue h
-              return $ 
-                Dynamics $ \p ->
-                do invokeDynamics p update
-                   dequeueSignalHandler queue x
-         trigger a =
-           Dynamics $ \p ->
-           do invokeDynamics p update 
-              let h = queueStart queue
-              triggerSignalHandlers h a p
-     return source
-     
--- | Create a new signal source that has no update computation.
-newSignalSourceUnsafe :: Simulation (SignalSource a)
-newSignalSourceUnsafe =
-  Simulation $ \r ->
-  do start <- newIORef Nothing
-     end <- newIORef Nothing
-     let queue  = SignalHandlerQueue { queueStart = start,
-                                       queueEnd   = end }
-         signal = Signal { handleSignal = handle, 
-                           updateSignal = update }
-         source = SignalSource { publishSignal = signal, 
-                                 triggerSignal = trigger }
-         handle h =
-           Dynamics $ \p ->
+           Event $ \p ->
            do x <- enqueueSignalHandler queue h
-              return $ liftIO $ dequeueSignalHandler queue x
+              return $
+                Event $ \p -> dequeueSignalHandler queue x
          trigger a =
-           Dynamics $ \p ->
+           Event $ \p ->
            let h = queueStart queue
            in triggerSignalHandlers h a p
-         update = return ()
      return source
 
 -- | Trigger all next signal handlers.
@@ -159,12 +106,11 @@ triggerSignalHandlers r a p =
      case x of
        Nothing -> return ()
        Just h ->
-         do let Dynamics m = handlerComp h a
-            m p
+         do invokeEvent p $ handlerComp h a
             triggerSignalHandlers (handlerNext h) a p
             
 -- | Enqueue the handler and return its representative in the queue.            
-enqueueSignalHandler :: SignalHandlerQueue a -> (a -> Dynamics ()) -> IO (SignalHandler a)
+enqueueSignalHandler :: SignalHandlerQueue a -> (a -> Event ()) -> IO (SignalHandler a)
 enqueueSignalHandler q h = 
   do tail <- readIORef (queueEnd q)
      case tail of
@@ -237,9 +183,7 @@ instance Monoid (Signal a) where
 mapSignal :: (a -> b) -> Signal a -> Signal b
 mapSignal f m =
   Signal { handleSignal = \h -> 
-            handleSignal m $ h . f, 
-           updateSignal = 
-             updateSignal m }
+            handleSignal m $ h . f }
 
 -- | Filter only those signal values that satisfy to 
 -- the specified predicate.
@@ -247,20 +191,16 @@ filterSignal :: (a -> Bool) -> Signal a -> Signal a
 filterSignal p m =
   Signal { handleSignal = \h ->
             handleSignal m $ \a ->
-            when (p a) $ h a, 
-           updateSignal =
-             updateSignal m }
+            when (p a) $ h a }
   
 -- | Filter only those signal values that satisfy to 
 -- the specified predicate.
-filterSignalM :: (a -> Dynamics Bool) -> Signal a -> Signal a
+filterSignalM :: (a -> Event Bool) -> Signal a -> Signal a
 filterSignalM p m =
   Signal { handleSignal = \h ->
             handleSignal m $ \a ->
             do x <- p a
-               when x $ h a, 
-           updateSignal =
-             updateSignal m }
+               when x $ h a }
   
 -- | Merge two signals.
 merge2Signals :: Signal a -> Signal a -> Signal a
@@ -268,10 +208,7 @@ merge2Signals m1 m2 =
   Signal { handleSignal = \h ->
             do x1 <- handleSignal m1 h
                x2 <- handleSignal m2 h
-               return $ do { x1; x2 }, 
-           updateSignal =
-             do updateSignal m1
-                updateSignal m2 }
+               return $ do { x1; x2 } }
 
 -- | Merge three signals.
 merge3Signals :: Signal a -> Signal a -> Signal a -> Signal a
@@ -280,11 +217,7 @@ merge3Signals m1 m2 m3 =
             do x1 <- handleSignal m1 h
                x2 <- handleSignal m2 h
                x3 <- handleSignal m3 h
-               return $ do { x1; x2; x3 },
-           updateSignal =
-             do updateSignal m1
-                updateSignal m2 
-                updateSignal m3 }
+               return $ do { x1; x2; x3 } }
 
 -- | Merge four signals.
 merge4Signals :: Signal a -> Signal a -> Signal a -> 
@@ -295,12 +228,7 @@ merge4Signals m1 m2 m3 m4 =
                x2 <- handleSignal m2 h
                x3 <- handleSignal m3 h
                x4 <- handleSignal m4 h
-               return $ do { x1; x2; x3; x4 },
-           updateSignal =
-             do updateSignal m1
-                updateSignal m2 
-                updateSignal m3 
-                updateSignal m4 }
+               return $ do { x1; x2; x3; x4 } }
            
 -- | Merge five signals.
 merge5Signals :: Signal a -> Signal a -> Signal a -> 
@@ -312,36 +240,21 @@ merge5Signals m1 m2 m3 m4 m5 =
                x3 <- handleSignal m3 h
                x4 <- handleSignal m4 h
                x5 <- handleSignal m5 h
-               return $ do { x1; x2; x3; x4; x5 },
-           updateSignal =
-             do updateSignal m1
-                updateSignal m2 
-                updateSignal m3 
-                updateSignal m4
-                updateSignal m5 }
+               return $ do { x1; x2; x3; x4; x5 } }
 
 -- | Compose the signal.
-mapSignalM :: (a -> Dynamics b) -> Signal a -> Signal b
+mapSignalM :: (a -> Event b) -> Signal a -> Signal b
 mapSignalM f m =
   Signal { handleSignal = \h ->
-            handleSignal m (f >=> h),
-           updateSignal = 
-             updateSignal m }
+            handleSignal m (f >=> h) }
   
 -- | Transform the signal.
-apSignal :: Dynamics (a -> b) -> Signal a -> Signal b
+apSignal :: Event (a -> b) -> Signal a -> Signal b
 apSignal f m =
   Signal { handleSignal = \h ->
-            handleSignal m $ \a -> do { x <- f; h (x a) },
-           updateSignal =
-             updateSignal m }
+            handleSignal m $ \a -> do { x <- f; h (x a) } }
 
 -- | An empty signal which is never triggered.
 emptySignal :: Signal a
 emptySignal =
-  Signal { handleSignal = \h -> return $ return (),
-           updateSignal = return () }
-  
-invokeDynamics :: Point -> Dynamics a -> IO a
-{-# INLINE invokeDynamics #-}
-invokeDynamics p (Dynamics m) = m p
+  Signal { handleSignal = \h -> return $ return () }
