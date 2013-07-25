@@ -51,7 +51,7 @@ import Simulation.Aivika.Internal.Cont
 import Simulation.Aivika.Internal.Process
 
 import qualified Simulation.Aivika.Vector as V
-import qualified Simulation.Aivika.UVector as UV
+import qualified Simulation.Aivika.Vector.Unboxed as UV
 
 -- | Await the signal.
 awaitSignal :: Signal a -> Process a
@@ -76,7 +76,7 @@ awaitSignal signal =
 data SignalHistory a =
   SignalHistory { signalHistorySignal :: Signal a,  
                   -- ^ The signal for which the history is created.
-                  signalHistoryTimes  :: UV.UVector Double,
+                  signalHistoryTimes  :: UV.Vector Double,
                   signalHistoryValues :: V.Vector a }
 
 -- | Create a history of the signal values.
