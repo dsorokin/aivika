@@ -21,6 +21,9 @@ module Simulation.Aivika.Internal.Process
        (ProcessId,
         Process(..),
         invokeProcess,
+        runProcess,
+        runProcessInStartTime,
+        runProcessInStopTime,
         newProcessId,
         newProcessIdWithCatch,
         holdProcess,
@@ -32,8 +35,6 @@ module Simulation.Aivika.Internal.Process
         processId,
         cancelProcess,
         processCanceled,
-        runProcess,
-        runProcessInStartTime,
         catchProcess,
         finallyProcess,
         throwProcess) where
@@ -166,6 +167,11 @@ runProcess pid p =
 runProcessInStartTime :: EventProcessing -> ProcessId -> Process () -> Simulation ()
 runProcessInStartTime processing pid p =
   runEventInStartTime processing $ runProcess pid p
+
+-- | Start the process in the stop time.
+runProcessInStopTime :: EventProcessing -> ProcessId -> Process () -> Simulation ()
+runProcessInStopTime processing pid p =
+  runEventInStopTime processing $ runProcess pid p
 
 -- | Return the current process identifier.
 processId :: Process ProcessId
