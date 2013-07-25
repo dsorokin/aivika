@@ -32,6 +32,7 @@ module Simulation.Aivika.Process
         cancelProcess,
         processCanceled,
         runProcess,
+        runProcessInStartTime,
         catchProcess,
         finallyProcess,
         throwProcess) where

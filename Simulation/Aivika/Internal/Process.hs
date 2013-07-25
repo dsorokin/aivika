@@ -33,6 +33,7 @@ module Simulation.Aivika.Internal.Process
         cancelProcess,
         processCanceled,
         runProcess,
+        runProcessInStartTime,
         catchProcess,
         finallyProcess,
         throwProcess) where
@@ -160,6 +161,11 @@ runProcess pid p =
                         "has been started already: runProcess"
                    else liftIO $ writeIORef (processStarted pid) True
                  invokeProcess pid p
+
+-- | Start the process in the start time.
+runProcessInStartTime :: EventProcessing -> ProcessId -> Process () -> Simulation ()
+runProcessInStartTime processing pid p =
+  runEventInStartTime processing $ runProcess pid p
 
 -- | Return the current process identifier.
 processId :: Process ProcessId
