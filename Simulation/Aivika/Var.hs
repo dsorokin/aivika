@@ -33,7 +33,7 @@ import Simulation.Aivika.Internal.Signal
 import Simulation.Aivika.Signal
 
 import qualified Simulation.Aivika.Vector as V
-import qualified Simulation.Aivika.UVector as UV
+import qualified Simulation.Aivika.Vector.Unboxed as UV
 
 -- | Like the 'Ref' reference but keeps the history of changes in 
 -- different time points. The 'Var' variable is usually safe in the hybrid 
@@ -42,7 +42,7 @@ import qualified Simulation.Aivika.UVector as UV
 -- same integration time point. Only this variable is much slower than
 -- the reference.
 data Var a = 
-  Var { varXS    :: UV.UVector Double, 
+  Var { varXS    :: UV.Vector Double, 
         varYS    :: V.Vector a,
         varChangedSource :: SignalSource a }
      
