@@ -7,11 +7,10 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- The module defines the 'Dynamics' monad representing an abstract dynamic 
--- process, i.e. a time varying polymorphic function. 
+-- The module defines the 'Dynamics' monad representing a time varying polymorphic function. 
 --
-module Simulation.Aivika.Dynamics 
-       (-- * Dynamics
+module Simulation.Aivika.Dynamics
+       (-- * Dynamics Monad
         Dynamics,
         DynamicsLift(..),
         runDynamicsInStartTime,
@@ -22,6 +21,14 @@ module Simulation.Aivika.Dynamics
         -- * Error Handling
         catchDynamics,
         finallyDynamics,
-        throwDynamics) where
+        throwDynamics,
+        -- * Time parameters
+        starttime,
+        stoptime,
+        dt,
+        time,
+        isTimeInteg,
+        integIteration,
+        integPhase) where
 
-import Simulation.Aivika.Dynamics.Internal.Dynamics
+import Simulation.Aivika.Internal.Dynamics
