@@ -17,12 +17,14 @@ module Simulation.Aivika.Internal.Event
         Event(..),
         EventLift(..),
         EventProcessing(..),
+        EventCancellation(..),
         invokeEvent,
         runEvent,
         runEventInStartTime,
         runEventInStopTime,
         -- * Event Queue
         enqueueEvent,
+        enqueueEventWithCancellation,
         enqueueEventWithTimes,
         enqueueEventWithPoints,
         enqueueEventWithIntegTimes,
@@ -299,3 +301,41 @@ enqueueEventWithCurrentTime :: Event () -> Event ()
 enqueueEventWithCurrentTime e =
   Event $ \p ->
   invokeEvent p $ enqueueEvent (pointTime p) e
+
+-- | It allows cancelling the event.
+data EventCancellation =
+  EventCancellation { cancelEvent   :: Event (),
+                      -- ^ Cancel the event.
+                      eventCanceled :: Event Bool,
+                      -- ^ Test whether the event was canceled.
+                      eventFinished :: Event Bool
+                      -- ^ Test whether the event was processed and finished.
+                    }
+
+-- | Enqueue the event with an ability to cancel it.
+enqueueEventWithCancellation :: Double -> Event () -> Event EventCancellation
+enqueueEventWithCancellation t e =
+  Event $ \p ->
+  do canceledRef <- newIORef False
+     cancellableRef <- newIORef True
+     finishedRef <- newIORef False
+     let cancel =
+           Event $ \p ->
+           do x <- readIORef cancellableRef
+              when x $
+                writeIORef canceledRef True
+         canceled =
+           Event $ \p -> readIORef canceledRef
+         finished =
+           Event $ \p -> readIORef finishedRef
+     invokeEvent p $
+       enqueueEvent t $
+       Event $ \p ->
+       do writeIORef cancellableRef False
+          x <- readIORef canceledRef
+          unless x $
+            do invokeEvent p e
+               writeIORef finishedRef True
+     return EventCancellation { cancelEvent   = cancel,
+                                eventCanceled = canceled,
+                                eventFinished = finished }
