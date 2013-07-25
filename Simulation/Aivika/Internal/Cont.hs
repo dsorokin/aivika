@@ -20,7 +20,7 @@ module Simulation.Aivika.Internal.Cont
         finallyCont,
         throwCont,
         resumeCont,
-        contCancelled) where
+        contCanceled) where
 
 import Data.IORef
 
@@ -86,7 +86,7 @@ returnC :: a -> Cont a
 returnC a = 
   Cont $ \c ->
   Event $ \p ->
-  do z <- contCancelled c
+  do z <- contCanceled c
      if z 
        then cancelCont p c
        else invokeEvent p $ contCont c a
@@ -108,7 +108,7 @@ bindWithoutCatch :: Cont a -> (a -> Cont b) -> ContParams b -> Event ()
 {-# INLINE bindWithoutCatch #-}
 bindWithoutCatch (Cont m) k c = 
   Event $ \p ->
-  do z <- contCancelled c
+  do z <- contCanceled c
      if z 
        then cancelCont p c
        else invokeEvent p $ m $ 
@@ -120,7 +120,7 @@ bindWithCatch :: Cont a -> (a -> Cont b) -> ContParams b -> Event ()
 {-# NOINLINE bindWithCatch #-}
 bindWithCatch (Cont m) k c = 
   Event $ \p ->
-  do z <- contCancelled c
+  do z <- contCanceled c
      if z 
        then cancelCont p c
        else invokeEvent p $ m $ 
@@ -133,7 +133,7 @@ bindWithCatch (Cont m) k c =
 callWithoutCatch :: (a -> Cont b) -> a -> ContParams b -> Event ()
 callWithoutCatch k a c =
   Event $ \p ->
-  do z <- contCancelled c
+  do z <- contCanceled c
      if z 
        then cancelCont p c
        else invokeEvent p $ invokeCont c (k a)
@@ -142,7 +142,7 @@ callWithoutCatch k a c =
 callWithCatch :: (a -> Cont b) -> a -> ContParams b -> Event ()
 callWithCatch k a c =
   Event $ \p ->
-  do z <- contCancelled c
+  do z <- contCanceled c
      if z 
        then cancelCont p c
        else invokeEvent p $ catchEvent 
@@ -162,7 +162,7 @@ catchCont m h =
 catchWithCatch :: Cont a -> (IOException -> Cont a) -> ContParams a -> Event ()
 catchWithCatch (Cont m) h c =
   Event $ \p -> 
-  do z <- contCancelled c
+  do z <- contCanceled c
      if z 
        then cancelCont p c
        else invokeEvent p $ m $
@@ -183,7 +183,7 @@ finallyCont m m' =
 finallyWithCatch :: Cont a -> Cont b -> ContParams a -> Event ()               
 finallyWithCatch (Cont m) (Cont m') c =
   Event $ \p ->
-  do z <- contCancelled c
+  do z <- contCanceled c
      if z 
        then cancelCont p c
        else invokeEvent p $ m $
@@ -278,7 +278,7 @@ liftIOC m =
 liftIOWithoutCatch :: IO a -> Point -> ContParams a -> IO ()
 {-# INLINE liftIOWithoutCatch #-}
 liftIOWithoutCatch m p c =
-  do z <- contCancelled c
+  do z <- contCanceled c
      if z
        then cancelCont p c
        else do a <- m
@@ -287,7 +287,7 @@ liftIOWithoutCatch m p c =
 liftIOWithCatch :: IO a -> Point -> ContParams a -> IO ()
 {-# NOINLINE liftIOWithCatch #-}
 liftIOWithCatch m p c =
-  do z <- contCancelled c
+  do z <- contCanceled c
      if z
        then cancelCont p c
        else do aref <- newIORef undefined
@@ -309,12 +309,12 @@ resumeCont :: ContParams a -> a -> Event ()
 {-# INLINE resumeCont #-}
 resumeCont c a = 
   Event $ \p ->
-  do z <- contCancelled c
+  do z <- contCanceled c
      if z
        then cancelCont p c
        else invokeEvent p $ contCont c a
 
--- | Test whether the computation is canceled
-contCancelled :: ContParams a -> IO Bool
-{-# INLINE contCancelled #-}
-contCancelled c = readIORef $ contCancelRef $ contAux c
+-- | Test whether the computation is canceled.
+contCanceled :: ContParams a -> IO Bool
+{-# INLINE contCanceled #-}
+contCanceled c = readIORef $ contCancelRef $ contAux c
