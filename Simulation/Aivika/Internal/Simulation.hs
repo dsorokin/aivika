@@ -180,11 +180,11 @@ throwSimulation :: IOException -> Simulation a
 throwSimulation = throw
 
 -- | Invoke the 'Simulation' computation.
-invokeSimulation :: Simulation a -> Run -> IO a
+invokeSimulation :: Run -> Simulation a -> IO a
 {-# INLINE invokeSimulation #-}
-invokeSimulation (Simulation m) r = m r
+invokeSimulation r (Simulation m) = m r
 
 instance MonadFix Simulation where
   mfix f = 
     Simulation $ \r ->
-    do { rec { a <- invokeSimulation (f a) r }; return a }  
+    do { rec { a <- invokeSimulation r (f a) }; return a }  

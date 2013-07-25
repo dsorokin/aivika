@@ -124,29 +124,31 @@ instance MonadFix Event where
 
 -- | Defines how the events are processed.
 data EventProcessing = IncludingCurrentEvents
-                       -- ^ process all earlier and then current events
+                       -- ^ either process all earlier and then current events,
+                       -- or raise an error if the current simulation time is less
+                       -- than the actual time of the event queue
                      | IncludingEarlierEvents
-                       -- ^ process all earlier events not affecting
-                       -- the events at the current simulation time
+                       -- ^ either process all earlier events not affecting
+                       -- the events at the current simulation time,
+                       -- or raise an error if the current simulation time is less
+                       -- than the actual time of the event queue
                      | IncludingCurrentEventsOrFromPast
                        -- ^ either process all earlier and then current events,
                        -- or do nothing if the current simulation time is less
                        -- than the actual time of the event queue
-                       -- (should be used with care and this option is mostly
-                       -- intended for internal use)
+                       -- (do not use unless the documentation states the opposite)
                      | IncludingEarlierEventsOrFromPast
                        -- ^ either process all earlier events,
                        -- or do nothing if the current simulation time is less
                        -- than the actual time of the event queue
-                       -- (should be used with care and this option is mostly
-                       -- intended for internal use)
+                       -- (do not use unless the documentation states the opposite)
                      deriving (Eq, Ord, Show)
 
 -- | Enqueue the event which must be actuated at the specified time.
 --
 -- The events are processed when calling the 'runEvent' function. So,
 -- if you want to insist on their immediate execution then you can apply
--- within any 'Event' computation something like
+-- something like
 --
 -- @
 --   liftDynamics $ runEvent IncludingCurrentEvents $ return ()

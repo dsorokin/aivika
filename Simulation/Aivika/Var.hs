@@ -1,18 +1,19 @@
 
 -- |
--- Module     : Simulation.Aivika.Dynamics.Var
+-- Module     : Simulation.Aivika.Var
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- This module defines a variable that is bound to the event queue and 
--- that keeps the history of changes storing the values in an array.
+-- This module defines a variable that is bound up with the event queue and 
+-- that keeps the history of changes storing the values in an array, which
+-- allows using the variable in differential and difference equations under
+-- some conditions.
 --
-module Simulation.Aivika.Dynamics.Var
+module Simulation.Aivika.Var
        (Var,
-        varQueue,
         varChanged,
         varChanged_,
         newVar,
@@ -25,51 +26,53 @@ import Data.Array
 import Data.Array.IO.Safe
 import Data.IORef
 
-import Simulation.Aivika.Dynamics.Internal.Simulation
-import Simulation.Aivika.Dynamics.Internal.Dynamics
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Internal.Signal
-import Simulation.Aivika.Dynamics.Signal
+import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Simulation
+import Simulation.Aivika.Internal.Event
+import Simulation.Aivika.Internal.Signal
+import Simulation.Aivika.Signal
 
 import qualified Simulation.Aivika.Vector as V
 import qualified Simulation.Aivika.UVector as UV
 
 -- | Like the 'Ref' reference but keeps the history of changes in 
--- different time points. The 'Var' variable is safe in the hybrid 
--- simulation and when you use different event queues, but this variable is 
--- slower than references.
+-- different time points. The 'Var' variable is usually safe in the hybrid 
+-- simulation, for example, when it can be used in the differential or
+-- difference equations unless you update the variable twice in the
+-- same integration time point. Only this variable is much slower than
+-- the reference.
 data Var a = 
-  Var { varQueue :: EventQueue,  -- ^ Return the bound event queue.
-        varRun   :: Dynamics (),
-        varXS    :: UV.UVector Double, 
+  Var { varXS    :: UV.UVector Double, 
         varYS    :: V.Vector a,
-        varChangedSource :: SignalSource a, 
-        varUpdatedSource :: SignalSource a }
+        varChangedSource :: SignalSource a }
      
 -- | Create a new variable bound to the specified event queue.
-newVar :: EventQueue -> a -> Simulation (Var a)
-newVar q a =
+newVar :: a -> Simulation (Var a)
+newVar a =
   Simulation $ \r ->
   do xs <- UV.newVector
      ys <- V.newVector
      UV.appendVector xs $ spcStartTime $ runSpecs r
      V.appendVector ys a
-     s  <- invokeSimulation r newSignalSourceUnsafe
-     u  <- invokeSimulation r $ newSignalSource q
-     return Var { varQueue = q,
-                  varRun   = runQueue q,
-                  varXS = xs,
+     s  <- invokeSimulation r newSignalSource
+     return Var { varXS = xs,
                   varYS = ys, 
-                  varChangedSource = s, 
-                  varUpdatedSource = u }
+                  varChangedSource = s }
 
 -- | Read the value of a variable, forcing the bound event queue to raise 
 -- the events in case of need.
-readVar :: Var a -> Dynamics a
+--
+-- It is safe to run the resulting computation with help of the 'runEvent'
+-- function using modes 'IncludingCurrentEventsOrFromPast' and
+-- 'IncludingEarlierEventsOrFromPast', which is necessary if you are going
+-- to use the variable in the differential or difference equations. Only
+-- in the latter case it is preferrable if the variable is not updated twice
+-- in the same integration time point; otherwise, different values can be returned
+-- for the same point.
+readVar :: Var a -> Event a
 readVar v =
-  Dynamics $ \p ->
-  do invokeDynamics p $ varRun v
-     let xs = varXS v
+  Event $ \p ->
+  do let xs = varXS v
          ys = varYS v
          t  = pointTime p
      count <- UV.vectorCount xs
@@ -83,9 +86,9 @@ readVar v =
                  else V.readVector ys $ - (i + 1) - 1
 
 -- | Write a new value into the variable.
-writeVar :: Var a -> a -> Dynamics ()
+writeVar :: Var a -> a -> Event ()
 writeVar v a =
-  Dynamics $ \p ->
+  Event $ \p ->
   do let xs = varXS v
          ys = varYS v
          t  = pointTime p
@@ -99,15 +102,14 @@ writeVar v a =
             then V.writeVector ys i $! a
             else do UV.appendVector xs t
                     V.appendVector ys $! a
-     invokeDynamics p $ triggerSignal s a
+     invokeEvent p $ triggerSignal s a
 
 -- | Mutate the contents of the variable, forcing the bound event queue to
 -- raise all pending events in case of need.
-modifyVar :: Var a -> (a -> a) -> Dynamics ()
+modifyVar :: Var a -> (a -> a) -> Event ()
 modifyVar v f =
-  Dynamics $ \p ->
-  do invokeDynamics p $ varRun v
-     let xs = varXS v
+  Event $ \p ->
+  do let xs = varXS v
          ys = varYS v
          t  = pointTime p
          s  = varChangedSource v
@@ -120,44 +122,39 @@ modifyVar v f =
             then do a <- V.readVector ys i
                     let b = f a
                     V.writeVector ys i $! b
-                    invokeDynamics p $ triggerSignal s b
+                    invokeEvent p $ triggerSignal s b
             else do i <- UV.vectorBinarySearch xs t
                     if i >= 0
                       then do a <- V.readVector ys i
                               let b = f a
                               UV.appendVector xs t
                               V.appendVector ys $! b
-                              invokeDynamics p $ triggerSignal s b
+                              invokeEvent p $ triggerSignal s b
                       else do a <- V.readVector ys $ - (i + 1) - 1
                               let b = f a
                               UV.appendVector xs t
                               V.appendVector ys $! b
-                              invokeDynamics p $ triggerSignal s b
+                              invokeEvent p $ triggerSignal s b
 
 -- | Freeze the variable and return in arrays the time points and corresponded 
--- values when the variable had changed.
-freezeVar :: Var a -> Dynamics (Array Int Double, Array Int a)
+-- values when the variable had changed in different time points: (1) the last
+-- actual value per each time point is provided and (2) the time points are
+-- sorted in ascending order.
+--
+-- If you need to get all changes including those ones that correspond to the same
+-- simulation time points then you can use the 'newSignalHistory' function passing
+-- in the 'varChanged' signal to it and then call function 'readSignalHistory'.
+freezeVar :: Var a -> Event (Array Int Double, Array Int a)
 freezeVar v =
-  Dynamics $ \p ->
-  do invokeDynamics p $ varRun v
-     xs <- UV.freezeVector (varXS v)
+  Event $ \p ->
+  do xs <- UV.freezeVector (varXS v)
      ys <- V.freezeVector (varYS v)
      return (xs, ys)
      
 -- | Return a signal that notifies about every change of the variable state.
 varChanged :: Var a -> Signal a
-varChanged v = merge2Signals m1 m2    -- N.B. The order is important!
-  where m1 = publishSignal (varUpdatedSource v)
-        m2 = publishSignal (varChangedSource v)
+varChanged v = publishSignal (varChangedSource v)
 
 -- | Return a signal that notifies about every change of the variable state.
 varChanged_ :: Var a -> Signal ()
 varChanged_ v = mapSignal (const ()) $ varChanged v     
-
-invokeDynamics :: Point -> Dynamics a -> IO a
-{-# INLINE invokeDynamics #-}
-invokeDynamics p (Dynamics m) = m p
-
-invokeSimulation :: Run -> Simulation a -> IO a
-{-# INLINE invokeSimulation #-}
-invokeSimulation r (Simulation m) = m r
