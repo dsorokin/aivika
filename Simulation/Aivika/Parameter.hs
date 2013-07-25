@@ -1,6 +1,6 @@
 
 -- |
--- Module     : Simulation.Aivika.Dynamics.Parameter
+-- Module     : Simulation.Aivika.Parameter
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -10,22 +10,18 @@
 -- This module defines the parameters of simulation experiments.
 --
 
-module Simulation.Aivika.Dynamics.Parameter
+module Simulation.Aivika.Parameter
        (newParameter,
         newTableParameter,
-        newIndexedParameter,
-        newRandomParameter,
-        newNormalParameter) where
+        newIndexedParameter) where
 
 import Data.Array
 import Data.IORef
 import qualified Data.Map as M
 import Control.Concurrent.MVar
-import System.Random
 
-import Simulation.Aivika.Dynamics.Internal.Simulation
-import Simulation.Aivika.Dynamics.Internal.Dynamics
-import Simulation.Aivika.Dynamics.Random
+import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Simulation
 
 -- | Create a thread-safe parameter that returns always the same value within the simulation run, 
 -- where the value is recalculated for each new run.
@@ -61,23 +57,3 @@ newIndexedParameter f =
                              else do v <- f i
                                      writeIORef dict $ M.insert i v m
                                      return v }
-
--- | Create a new random parameter distributed uniformly.
--- The value doesn't change within the simulation run but
--- then the value is recalculated for each new run.
-newRandomParameter :: Simulation Double     -- ^ minimum
-                      -> Simulation Double  -- ^ maximum
-                      -> IO (Simulation Double)
-newRandomParameter min max =
-  do x <- newParameter $ getStdRandom random
-     return $ min + x * (max - min)
-
--- | Create a new random parameter distributed normally.
--- The value doesn't change within the simulation run but
--- then the value is recalculated for each new run.
-newNormalParameter :: Simulation Double     -- ^ mean
-                      -> Simulation Double  -- ^ variance
-                      -> IO (Simulation Double)
-newNormalParameter mu nu =
-  do x <- normalGen >>= newParameter
-     return $ mu + x * nu
