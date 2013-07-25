@@ -1,5 +1,5 @@
 
-{-# LANGUAGE FlexibleContexts, BangPatterns, RecursiveDo #-}
+{-# LANGUAGE BangPatterns, RecursiveDo #-}
 
 -- |
 -- Module     : Simulation.Aivika.Dynamics.SystemDynamics
@@ -45,11 +45,7 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         lookupDynamics,
         lookupStepwiseDynamics,
         -- * Discrete Functions
-        delayTrans,
         delay,
-        delayI,
-        udelay,
-        udelayI,
         -- * Financial Functions
         npv,
         npve) where
@@ -64,7 +60,8 @@ import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Interpolate
-import Simulation.Aivika.Dynamics.Memo
+import Simulation.Aivika.Dynamics.Memo.Unboxed
+import Simulation.Aivika.Unboxed
 
 --
 -- Equality and Ordering
@@ -249,7 +246,7 @@ integ :: Dynamics Double                  -- ^ the derivative
          -> Dynamics Double               -- ^ the initial value
          -> Simulation (Dynamics Double)  -- ^ the integral
 integ diff i =
-  mdo y <- umemoDynamics z
+  mdo y <- memoDynamics z
       z <- Simulation $ \r ->
         case spcMethod (runSpecs r) of
           Euler -> return $ Dynamics $ integEuler diff i y
@@ -463,12 +460,12 @@ trend x at i =
 -- the difference is used instead of derivative.
 --
 -- As usual, to create a loopback, you should use the recursive do-notation.
-sumDynamics :: (MArray IOUArray a IO, Num a)
+sumDynamics :: (Num a, Unboxed a)
                => Dynamics a               -- ^ the difference
                -> Dynamics a               -- ^ the initial value
                -> Simulation (Dynamics a)  -- ^ the sum
 sumDynamics (Dynamics diff) (Dynamics i) =
-  mdo y <- umemoDynamics z
+  mdo y <- memoDynamics z
       z <- Simulation $ \r ->
         return $ Dynamics $ \p ->
         case pointIteration p of
@@ -544,14 +541,16 @@ lookupStepwiseDynamics (Dynamics m) tbl =
 -- Discrete Functions
 --
 
--- | Return the delayed value. This is a general version using the specified transform,
--- usually a memoization.
-delayTrans :: Dynamics a                                  -- ^ the value to delay
-              -> Dynamics Double                          -- ^ the lag time
-              -> Dynamics a                               -- ^ the initial value
-              -> (Dynamics a -> Simulation (Dynamics a))  -- ^ the transform (usually, a memoization)
-              -> Simulation (Dynamics a)                  -- ^ the delayed value
-delayTrans (Dynamics x) (Dynamics d) (Dynamics i) tr = tr $ Dynamics r 
+-- | Return the delayed value.
+--
+-- If you want to apply the result recursively in some loopback then you
+-- should use one of the memoization functions such as 'memoDynamics'
+-- and 'memo0Dynamics'.    
+delay :: Dynamics a          -- ^ the value to delay
+         -> Dynamics Double  -- ^ the lag time
+         -> Dynamics a       -- ^ the initial value
+         -> Dynamics a       -- ^ the delayed value
+delay (Dynamics x) (Dynamics d) (Dynamics i) = Dynamics r 
   where
     r p = do 
       let t  = pointTime p
@@ -567,56 +566,12 @@ delayTrans (Dynamics x) (Dynamics d) (Dynamics i) tr = tr $ Dynamics r
                                   pointIteration = n',
                                   pointPhase = -1 }
             | n' > n    = error $
-                          "Cannot return the future data: delayTrans. " ++
+                          "Cannot return the future data: delay. " ++
                           "The lag time cannot be negative."
             | otherwise = error $
-                          "Cannot return the current data: delayTrans. " ++
+                          "Cannot return the current data: delay. " ++
                           "The lag time is too small."
       y
-
--- | Return the delayed value.
---
--- It is defined in the following way:
---
--- @ delay x d = delayTrans x d x memo0Dynamics @
-delay :: Dynamics a                  -- ^ the value to delay
-         -> Dynamics Double          -- ^ the lag time
-         -> Simulation (Dynamics a)  -- ^ the delayed value
-delay x d = delayTrans x d x memo0Dynamics
-
--- | Return the delayed value.
---
--- It is defined in the following way:
---
--- @ delayI x d i = delayTrans x d i memo0Dynamics @
-delayI :: Dynamics a                  -- ^ the value to delay
-          -> Dynamics Double          -- ^ the lag time
-          -> Dynamics a               -- ^ the initial value
-          -> Simulation (Dynamics a)  -- ^ the delayed value
-delayI x d i = delayTrans x d i memo0Dynamics
-
--- | Return the delayed value. This is a more efficient unboxed version of the 'delay' function.
---
--- It is defined in the following way:
---
--- @ udelay x d = delayTrans x d x umemo0Dynamics @
-udelay :: (MArray IOUArray a IO, Num a)
-          => Dynamics a               -- ^ the value to delay
-          -> Dynamics Double          -- ^ the lag time
-          -> Simulation (Dynamics a)  -- ^ the delayed value
-udelay x d = delayTrans x d x umemo0Dynamics
-
--- | Return the delayed value. This is a more efficient unboxed version of the 'delayI' function.
---
--- It is defined in the following way:
---
--- @ udelayI x d i = delayTrans x d i umemo0Dynamics @
-udelayI :: (MArray IOUArray a IO, Num a)
-           => Dynamics a               -- ^ the value to delay
-           -> Dynamics Double          -- ^ the lag time
-           -> Dynamics a               -- ^ the initial value
-           -> Simulation (Dynamics a)  -- ^ the delayed value
-udelayI x d i = delayTrans x d i umemo0Dynamics
 
 --
 -- Financial Functions
