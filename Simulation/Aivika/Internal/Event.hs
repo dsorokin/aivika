@@ -24,6 +24,7 @@ module Simulation.Aivika.Internal.Event
         -- * Event Queue
         enqueueEvent,
         enqueueEventWithTimes,
+        enqueueEventWithPoints,
         enqueueEventWithIntegTimes,
         enqueueEventWithStartTime,
         enqueueEventWithStopTime,
