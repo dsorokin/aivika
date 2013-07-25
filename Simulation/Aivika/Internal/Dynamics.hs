@@ -175,14 +175,14 @@ throwDynamics :: IOException -> Dynamics a
 throwDynamics = throw
 
 -- | Invoke the 'Dynamics' computation.
-invokeDynamics :: Dynamics a -> Point -> IO a
+invokeDynamics :: Point -> Dynamics a -> IO a
 {-# INLINE invokeDynamics #-}
-invokeDynamics (Dynamics m) p = m p
+invokeDynamics p (Dynamics m) = m p
 
 instance MonadFix Dynamics where
   mfix f = 
     Dynamics $ \p ->
-    do { rec { a <- invokeDynamics (f a) p }; return a }
+    do { rec { a <- invokeDynamics p (f a) }; return a }
 
 -- | Return the start simulation time.
 starttime :: Dynamics Double

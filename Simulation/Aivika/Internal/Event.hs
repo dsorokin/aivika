@@ -113,14 +113,14 @@ throwEvent :: IOException -> Event a
 throwEvent = throw
 
 -- | Invoke the 'Event' computation.
-invokeEvent :: Event a -> Point -> IO a
+invokeEvent :: Point -> Event a -> IO a
 {-# INLINE invokeEvent #-}
-invokeEvent (Event m) p = m p
+invokeEvent p (Event m) = m p
 
 instance MonadFix Event where
   mfix f = 
     Event $ \p ->
-    do { rec { a <- invokeEvent (f a) p }; return a }
+    do { rec { a <- invokeEvent p (f a) }; return a }
 
 -- | Defines how the events are processed.
 data EventProcessing = IncludingCurrentEvents
@@ -193,7 +193,7 @@ processPendingEvents includingCurrentEvents = Dynamics r where
          then error $
               "The current time is less than " ++
               "the time in the queue: processPendingEvents"
-         else invokeDynamics m p
+         else invokeDynamics p m
   m = processPendingEventsCore includingCurrentEvents
 
 -- | A memoized value.
@@ -220,7 +220,7 @@ processEvents IncludingEarlierEventsOrFromPast = processEventsIncludingEarlierCo
 runEvent :: EventProcessing -> Event a -> Dynamics a
 runEvent processing (Event e) =
   Dynamics $ \p ->
-  do invokeDynamics (processEvents processing) p
+  do invokeDynamics p $ processEvents processing
      e p
 
 -- | Run the 'Event' computation in the start time.
@@ -252,28 +252,28 @@ enqueueEventWithPoints xs (Event e) = loop xs
         loop (x : xs) = enqueueEvent (pointTime x) $ 
                         Event $ \p ->
                         do e x    -- N.B. we substitute the time point!
-                           invokeEvent (loop xs) p
+                           invokeEvent p $ loop xs
                            
 -- | Actuate the event handler in the integration time points.
 enqueueEventWithIntegTimes :: Event () -> Event ()
 enqueueEventWithIntegTimes e =
   Event $ \p ->
   let points = integPoints $ pointRun p
-  in invokeEvent (enqueueEventWithPoints points e) p
+  in invokeEvent p $ enqueueEventWithPoints points e
 
 -- | Actuate the event handler in the start time.
 enqueueEventWithStartTime :: Event () -> Event ()
 enqueueEventWithStartTime e =
   Event $ \p ->
   let point = integStartPoint $ pointRun p
-  in invokeEvent (enqueueEventWithPoints [point] e) p
+  in invokeEvent p $ enqueueEventWithPoints [point] e
 
 -- | Actuate the event handler in the stop time.
 enqueueEventWithStopTime :: Event () -> Event ()
 enqueueEventWithStopTime e =
   Event $ \p ->
   let point = integStopPoint $ pointRun p
-  in invokeEvent (enqueueEventWithPoints [point] e) p
+  in invokeEvent p $ enqueueEventWithPoints [point] e
 
 -- | Actuate the event handler in the current time but 
 -- through the event queue, which allows continuing the 
@@ -282,4 +282,4 @@ enqueueEventWithStopTime e =
 enqueueEventWithCurrentTime :: Event () -> Event ()
 enqueueEventWithCurrentTime e =
   Event $ \p ->
-  invokeEvent (enqueueEvent (pointTime p) e) p
+  invokeEvent p $ enqueueEvent (pointTime p) e
