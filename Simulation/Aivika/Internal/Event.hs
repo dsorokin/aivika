@@ -143,6 +143,16 @@ data EventProcessing = IncludingCurrentEvents
                      deriving (Eq, Ord, Show)
 
 -- | Enqueue the event which must be actuated at the specified time.
+--
+-- The events are processed when calling the 'runEvent' function. So,
+-- if you want to insist on their immediate execution then you can apply
+-- within any 'Event' computation something like
+--
+-- @
+--   liftDynamics $ runEvent IncludingCurrentEvents $ return ()
+-- @
+--
+-- although this is generally not good idea.  
 enqueueEvent :: Double -> Event () -> Event ()
 enqueueEvent t (Event m) =
   Event $ \p ->
