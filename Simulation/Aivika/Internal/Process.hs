@@ -1,6 +1,6 @@
 
 -- |
--- Module     : Simulation.Aivika.Dynamics.Internal.Process
+-- Module     : Simulation.Aivika.Internal.Process
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -11,29 +11,28 @@
 -- can suspend in any simulation time point and then resume later in the same 
 -- or another time point. 
 -- 
--- The process of this type behaves like a dynamic process too. So, any value 
--- in the 'Dynamics' monad can be lifted to the Process monad. Moreover, 
--- a value in the Process monad can be run in the Dynamics monad.
+-- The process of this type can involve the 'Event', 'Dynamics' and 'Simulation'
+-- computations. Moreover, a value in the @Process@ monad can be run within
+-- the @Event@ computation.
 --
--- A value of the 'ProcessID' type is just an identifier of such a process.
+-- A value of the 'ProcessId' type is just an identifier of such a process.
 --
-module Simulation.Aivika.Dynamics.Internal.Process
-       (ProcessID,
+module Simulation.Aivika.Internal.Process
+       (ProcessId,
         Process(..),
-        processQueue,
-        newProcessID,
-        newProcessIDWithCatch,
+        invokeProcess,
+        newProcessId,
+        newProcessIdWithCatch,
         holdProcess,
         interruptProcess,
         processInterrupted,
         passivateProcess,
         processPassive,
         reactivateProcess,
-        processID,
+        processId,
         cancelProcess,
         processCanceled,
         runProcess,
-        runProcessNow,
         catchProcess,
         finallyProcess,
         throwProcess) where
@@ -44,15 +43,15 @@ import Control.Exception (IOException, throw)
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Dynamics.Internal.Simulation
-import Simulation.Aivika.Dynamics.Internal.Dynamics
-import Simulation.Aivika.Dynamics.Internal.Cont
-import Simulation.Aivika.Dynamics.EventQueue
+import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Simulation
+import Simulation.Aivika.Internal.Dynamics
+import Simulation.Aivika.Internal.Event
+import Simulation.Aivika.Internal.Cont
 
--- | Represents a process identificator.
-data ProcessID = 
-  ProcessID { processQueue   :: EventQueue,  -- ^ Return the event queue.
-              processStarted :: IORef Bool,
+-- | Represents a process identifier.
+data ProcessId = 
+  ProcessId { processStarted :: IORef Bool,
               processCatchFlag     :: Bool,
               processReactCont     :: IORef (Maybe (ContParams ())), 
               processCancelRef     :: IORef Bool, 
@@ -63,33 +62,36 @@ data ProcessID =
 
 -- | Specifies a discontinuous process that can suspend at any time
 -- and then resume later.
-newtype Process a = Process (ProcessID -> Cont a)
+newtype Process a = Process (ProcessId -> Cont a)
+
+-- | Invoke the process computation.
+invokeProcess :: ProcessId -> Process a -> Cont a
+{-# INLINE invokeProcess #-}
+invokeProcess pid (Process m) = m pid
 
 -- | Hold the process for the specified time period.
 holdProcess :: Double -> Process ()
 holdProcess dt =
   Process $ \pid ->
   Cont $ \c ->
-  Dynamics $ \p ->
+  Event $ \p ->
   do let x = processInterruptCont pid
      writeIORef x $ Just c
      writeIORef (processInterruptRef pid) False
      v <- readIORef (processInterruptVersion pid)
-     let Dynamics m = 
-           enqueue (processQueue pid) (pointTime p + dt) $
-           Dynamics $ \p ->
-           do v' <- readIORef (processInterruptVersion pid)
-              when (v == v') $ 
-                do writeIORef x Nothing
-                   let Dynamics m = resumeContByParams c ()
-                   m p
-     m p
+     invokeEvent p $
+       enqueueEvent (pointTime p + dt) $
+       Event $ \p ->
+       do v' <- readIORef (processInterruptVersion pid)
+          when (v == v') $ 
+            do writeIORef x Nothing
+               invokeEvent p $ resumeCont c ()
 
--- | Interrupt a process with the specified ID if the process
--- was held by computation 'holdProcess'.
-interruptProcess :: ProcessID -> Dynamics ()
+-- | Interrupt a process with the specified identifier if the process
+-- is held by computation 'holdProcess'.
+interruptProcess :: ProcessId -> Event ()
 interruptProcess pid =
-  Dynamics $ \p ->
+  Event $ \p ->
   do let x = processInterruptCont pid
      a <- readIORef x
      case a of
@@ -98,15 +100,12 @@ interruptProcess pid =
          do writeIORef x Nothing
             writeIORef (processInterruptRef pid) True
             modifyIORef (processInterruptVersion pid) $ (+) 1
-            let Dynamics m = 
-                  enqueue (processQueue pid) (pointTime p) $ 
-                  resumeContByParams c ()
-            m p
+            invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
             
--- | Test whether the process with the specified ID was interrupted.
-processInterrupted :: ProcessID -> Dynamics Bool
+-- | Test whether the process with the specified identifier was interrupted.
+processInterrupted :: ProcessId -> Event Bool
 processInterrupted pid =
-  Dynamics $ \p ->
+  Event $ \p ->
   readIORef (processInterruptRef pid)
 
 -- | Passivate the process.
@@ -114,71 +113,56 @@ passivateProcess :: Process ()
 passivateProcess =
   Process $ \pid ->
   Cont $ \c ->
-  Dynamics $ \p ->
+  Event $ \p ->
   do let x = processReactCont pid
      a <- readIORef x
      case a of
        Nothing -> writeIORef x $ Just c
        Just _  -> error "Cannot passivate the process twice: passivate"
 
--- | Test whether the process with the specified ID is passivated.
-processPassive :: ProcessID -> Dynamics Bool
+-- | Test whether the process with the specified identifier is passivated.
+processPassive :: ProcessId -> Event Bool
 processPassive pid =
-  Dynamics $ \p ->
-  do let Dynamics m = runQueueSync $ processQueue pid
-     m p
-     let x = processReactCont pid
+  Event $ \p ->
+  do let x = processReactCont pid
      a <- readIORef x
      return $ isJust a
 
--- | Reactivate a process with the specified ID.
-reactivateProcess :: ProcessID -> Dynamics ()
+-- | Reactivate a process with the specified identifier.
+reactivateProcess :: ProcessId -> Event ()
 reactivateProcess pid =
-  Dynamics $ \p ->
-  do let Dynamics m = runQueueSync $ processQueue pid
-     m p
-     let x = processReactCont pid
+  Event $ \p ->
+  do let x = processReactCont pid
      a <- readIORef x
      case a of
        Nothing -> 
          return ()
        Just c ->
          do writeIORef x Nothing
-            let Dynamics m  = enqueue (processQueue pid) (pointTime p) $ 
-                              resumeContByParams c ()
-            m p
+            invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
 
--- | Start the process with the specified ID at the desired time.
-runProcess :: Process () -> ProcessID -> Double -> Dynamics ()
-runProcess (Process p) pid t =
+-- | Start the process with the specified identifier.
+runProcess :: ProcessId -> Process () -> Event ()
+runProcess pid p =
   runCont m cont econt ccont (processCancelToken pid) (processCatchFlag pid)
     where cont  = return
-          econt = throw
+          econt = throwEvent
           ccont = return
           m = do y <- liftIO $ readIORef (processStarted pid)
                  if y 
                    then error $
-                        "A process with such ID " ++
-                        "has been started already: runProc"
+                        "Another process with this identifier " ++
+                        "has been started already: runProcess"
                    else liftIO $ writeIORef (processStarted pid) True
-                 Cont $ \c -> enqueue (processQueue pid) t $ 
-                              resumeContByParams c ()
-                 p pid
+                 invokeProcess pid p
 
--- | Start the process with the specified ID at the current simulation time.
-runProcessNow :: Process () -> ProcessID -> Dynamics ()
-runProcessNow process pid =
-  Dynamics $ \p ->
-  do let Dynamics m = runProcess process pid (pointTime p)
-     m p
+-- | Return the current process identifier.
+processId :: Process ProcessId
+processId = Process return
 
--- | Return the current process ID.
-processID :: Process ProcessID
-processID = Process $ \pid -> return pid
-
--- | Create a new process ID without exception handling.
-newProcessID :: EventQueue -> Simulation ProcessID
-newProcessID q =
+-- | Create a new process identifier without exception handling.
+newProcessId :: Simulation ProcessId
+newProcessId =
   do x <- liftIO $ newIORef Nothing
      y <- liftIO $ newIORef False
      c <- liftIO $ newIORef False
@@ -186,8 +170,7 @@ newProcessID q =
      i <- liftIO $ newIORef False
      z <- liftIO $ newIORef Nothing
      v <- liftIO $ newIORef 0
-     return ProcessID { processQueue   = q,
-                        processStarted = y,
+     return ProcessId { processStarted = y,
                         processCatchFlag     = False,
                         processReactCont     = x, 
                         processCancelRef     = c, 
@@ -196,12 +179,12 @@ newProcessID q =
                         processInterruptCont = z, 
                         processInterruptVersion = v }
 
--- | Create a new process ID with capabilities of catching 
--- the IOError exceptions and finalizing the computation. 
+-- | Create a new process identifier with capabilities of catching 
+-- the 'IOError' exceptions and finalizing the computation. 
 -- The corresponded process will be slower than that one
--- which identifier is created with help of 'newProcessID'.
-newProcessIDWithCatch :: EventQueue -> Simulation ProcessID
-newProcessIDWithCatch q =
+-- which identifier is created with help of 'newProcessId'.
+newProcessIdWithCatch :: Simulation ProcessId
+newProcessIdWithCatch =
   do x <- liftIO $ newIORef Nothing
      y <- liftIO $ newIORef False
      c <- liftIO $ newIORef False
@@ -209,8 +192,7 @@ newProcessIDWithCatch q =
      i <- liftIO $ newIORef False
      z <- liftIO $ newIORef Nothing
      v <- liftIO $ newIORef 0
-     return ProcessID { processQueue   = q,
-                        processStarted = y,
+     return ProcessId { processStarted = y,
                         processCatchFlag     = True,
                         processReactCont     = x, 
                         processCancelRef     = c, 
@@ -219,22 +201,22 @@ newProcessIDWithCatch q =
                         processInterruptCont = z, 
                         processInterruptVersion = v }
 
--- | Cancel a process with the specified ID.
-cancelProcess :: ProcessID -> Dynamics ()
+-- | Cancel a process with the specified identifier.
+cancelProcess :: ProcessId -> Event ()
 cancelProcess pid =
-  Dynamics $ \p ->
+  Event $ \p ->
   do z <- readIORef (processCancelRef pid) 
      unless z $
        do writeIORef (processCancelRef pid) True
           writeIORef (processCancelToken pid) True
 
--- | Test whether the process with the specified ID is canceled.
-processCanceled :: ProcessID -> Dynamics Bool
+-- | Test whether the process with the specified identifier was canceled.
+processCanceled :: ProcessId -> Event Bool
 processCanceled pid =
-  Dynamics $ \p ->
+  Event $ \p ->
   readIORef (processCancelRef pid)
 
-instance Eq ProcessID where
+instance Eq ProcessId where
   x == y = processReactCont x == processReactCont y    -- for the references are unique
 
 instance Monad Process where
@@ -249,6 +231,9 @@ instance SimulationLift Process where
   
 instance DynamicsLift Process where
   liftDynamics = liftDP
+  
+instance EventLift Process where
+  liftEvent = liftEP
   
 instance MonadIO Process where
   liftIO = liftIOP
@@ -272,6 +257,10 @@ liftSP m = Process $ \pid -> liftSimulation m
 liftDP :: Dynamics a -> Process a
 {-# INLINE liftDP #-}
 liftDP m = Process $ \pid -> liftDynamics m
+
+liftEP :: Event a -> Process a
+{-# INLINE liftEP #-}
+liftEP m = Process $ \pid -> liftEvent m
 
 liftIOP :: IO a -> Process a
 {-# INLINE liftIOP #-}
