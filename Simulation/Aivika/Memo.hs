@@ -14,7 +14,7 @@
 -- these values are interpolated in all other time points.
 --
 
-module Simulation.Aivika.Internal.Memo
+module Simulation.Aivika.Memo
        (memoDynamics,
         umemoDynamics,
         memo0Dynamics,

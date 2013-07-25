@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts, BangPatterns, RecursiveDo #-}
 
 -- |
--- Module     : Simulation.Aivika.Dynamics.SystemDynamics
+-- Module     : Simulation.Aivika.SystemDynamics
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -23,13 +23,7 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         maxDynamics,
         minDynamics,
         ifDynamics,
-        -- * Integrals
-        Integ,
-        newInteg,
-        integInit,
-        integValue,
-        integDiff,
-        -- * Integral Functions
+        -- * Ordinary Differential Equations
         integ,
         smoothI,
         smooth,
@@ -46,15 +40,8 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         forecast,
         trend,
         -- * Difference Equations
-        Sum,
-        newSum,
-        sumInit,
-        sumValue,
-        sumDiff,
         sumDynamics,
         -- * Table Functions
-        lookupD,
-        lookupStepwiseD,
         lookupDynamics,
         lookupStepwiseDynamics,
         -- * Discrete Functions
@@ -65,7 +52,11 @@ module Simulation.Aivika.Dynamics.SystemDynamics
         udelayI,
         -- * Financial Functions
         npv,
-        npve) where
+        npve,
+        -- * Interpolation Functions
+        initDynamics,
+        discreteDynamics,
+        interpolateDynamics) where
 
 import Data.Array
 import Data.Array.IO.Safe
@@ -73,9 +64,11 @@ import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Dynamics.Internal.Simulation
-import Simulation.Aivika.Dynamics.Internal.Dynamics
-import Simulation.Aivika.Dynamics.Base
+import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Simulation
+import Simulation.Aivika.Internal.Dynamics
+import Simulation.Aivika.Internal.Interpolate
+import Simulation.Aivika.Memo
 
 --
 -- Equality and Ordering
@@ -120,53 +113,8 @@ ifDynamics cond x y =
      if a then x else y
 
 --
--- Integrals
+-- Ordinary Differential Equations
 --
-
-{-# DEPRECATED Integ "Use the integ function instead" #-}
-{-# DEPRECATED newInteg "Use the integ function instead" #-}
-{-# DEPRECATED integInit "Use the integ function instead" #-}
-{-# DEPRECATED integValue "Use the integ function instead" #-}
-{-# DEPRECATED integDiff "Use the integ function instead" #-}
-
--- | The 'Integ' type represents an integral.
-data Integ = Integ { integInit     :: Dynamics Double,   -- ^ The initial value.
-                     integExternal :: IORef (Dynamics Double),
-                     integInternal :: IORef (Dynamics Double) }
-
--- | Create a new integral with the specified initial value.
-newInteg :: Dynamics Double -> Simulation Integ
-newInteg i = 
-  do r1 <- liftIO $ newIORef $ initDynamics i 
-     r2 <- liftIO $ newIORef $ initDynamics i 
-     let integ = Integ { integInit     = i, 
-                         integExternal = r1,
-                         integInternal = r2 }
-         z = Dynamics $ \p -> 
-           do (Dynamics m) <- readIORef (integInternal integ)
-              m p
-     y <- umemo z
-     liftIO $ writeIORef (integExternal integ) y
-     return integ
-
--- | Return the integral's value.
-integValue :: Integ -> Dynamics Double
-integValue integ = 
-  Dynamics $ \p ->
-  do (Dynamics m) <- readIORef (integExternal integ)
-     m p
-
--- | Set the derivative for the integral.
-integDiff :: Integ -> Dynamics Double -> Simulation ()
-integDiff integ diff =
-  do let z = Dynamics $ \p ->
-           do y <- readIORef (integExternal integ)
-              let i = integInit integ
-              case spcMethod (pointSpecs p) of
-                Euler -> integEuler diff i y p
-                RungeKutta2 -> integRK2 diff i y p
-                RungeKutta4 -> integRK4 diff i y p
-     liftIO $ writeIORef (integInternal integ) z
 
 integEuler :: Dynamics Double
              -> Dynamics Double 
@@ -305,7 +253,7 @@ integ :: Dynamics Double                  -- ^ the derivative
          -> Dynamics Double               -- ^ the initial value
          -> Simulation (Dynamics Double)  -- ^ the integral
 integ diff i =
-  mdo y <- umemo z
+  mdo y <- umemoDynamics z
       z <- Simulation $ \r ->
         case spcMethod (runSpecs r) of
           Euler -> return $ Dynamics $ integEuler diff i y
@@ -514,60 +462,6 @@ trend x at i =
 -- Difference Equations
 --
 
-{-# DEPRECATED Sum "Use the sumDynamics function instead" #-}
-{-# DEPRECATED newSum "Use the sumDynamics function instead" #-}
-{-# DEPRECATED sumInit "Use the sumDynamics function instead" #-}
-{-# DEPRECATED sumValue "Use the sumDynamics function instead" #-}
-{-# DEPRECATED sumDiff "Use the sumDynamics function instead" #-}
-
--- | The 'Sum' type represents a sum defined by some difference equation.
-data Sum a = Sum { sumInit     :: Dynamics a,   -- ^ The initial value.
-                   sumExternal :: IORef (Dynamics a),
-                   sumInternal :: IORef (Dynamics a) }
-
--- | Create a new sum with the specified initial value.
-newSum :: (MArray IOUArray a IO, Num a) => Dynamics a -> Simulation (Sum a)
-newSum i =   
-  do r1 <- liftIO $ newIORef $ initDynamics i 
-     r2 <- liftIO $ newIORef $ initDynamics i 
-     let sum = Sum { sumInit     = i, 
-                     sumExternal = r1,
-                     sumInternal = r2 }
-         z = Dynamics $ \p -> 
-           do (Dynamics m) <- readIORef (sumInternal sum)
-              m p
-     y <- umemo0 z
-     liftIO $ writeIORef (sumExternal sum) y
-     return sum
-
--- | Return the total sum defined by the difference equation.
-sumValue :: Sum a -> Dynamics a
-sumValue sum = 
-  Dynamics $ \p ->
-  do (Dynamics m) <- readIORef (sumExternal sum)
-     m p
-
--- | Set the difference equation for the sum.
-sumDiff :: (MArray IOUArray a IO, Num a) => Sum a -> Dynamics a -> Simulation ()
-sumDiff sum (Dynamics diff) =
-  do let z = Dynamics $ \p ->
-           case pointIteration p of
-             0 -> do
-               let Dynamics i = sumInit sum
-               i p
-             n -> do 
-               Dynamics y <- readIORef (sumExternal sum)
-               let sc = pointSpecs p
-                   ty = basicTime sc (n - 1) 0
-                   py = p { pointTime = ty, 
-                            pointIteration = n - 1, 
-                            pointPhase = 0 }
-               a <- y py
-               b <- diff py
-               let !v = a + b
-               return v
-     liftIO $ writeIORef (sumInternal sum) z
-
 -- | Retun the sum for the difference equation.
 -- It is like an integral returned by the 'integ' function, only now
 -- the difference is used instead of derivative.
@@ -578,7 +472,7 @@ sumDynamics :: (MArray IOUArray a IO, Num a)
                -> Dynamics a               -- ^ the initial value
                -> Simulation (Dynamics a)  -- ^ the sum
 sumDynamics (Dynamics diff) (Dynamics i) =
-  mdo y <- umemo z
+  mdo y <- umemoDynamics z
       z <- Simulation $ \r ->
         return $ Dynamics $ \p ->
         case pointIteration p of
@@ -599,19 +493,6 @@ sumDynamics (Dynamics diff) (Dynamics i) =
 --
 -- Table Functions
 --
-
-{-# DEPRECATED lookupD "Use the lookupDynamics function instead" #-}
-{-# DEPRECATED lookupStepwiseD "Use the lookupStepwiseDynamics function instead" #-}
-
--- | Lookup @x@ in a table of pairs @(x, y)@ using linear interpolation.
-lookupD :: Dynamics Double -> Array Int (Double, Double) -> Dynamics Double
-lookupD = lookupDynamics
-
--- | Lookup @x@ in a table of pairs @(x, y)@ using stepwise function.
-lookupStepwiseD :: Dynamics Double
-                   -> Array Int (Double, Double)
-                   -> Dynamics Double
-lookupStepwiseD = lookupStepwiseDynamics
 
 -- | Lookup @x@ in a table of pairs @(x, y)@ using linear interpolation.
 lookupDynamics :: Dynamics Double -> Array Int (Double, Double) -> Dynamics Double
@@ -701,45 +582,45 @@ delayTrans (Dynamics x) (Dynamics d) (Dynamics i) tr = tr $ Dynamics r
 --
 -- It is defined in the following way:
 --
--- @ delay x d = delayTrans x d x memo0 @
+-- @ delay x d = delayTrans x d x memo0Dynamics @
 delay :: Dynamics a                  -- ^ the value to delay
          -> Dynamics Double          -- ^ the lag time
          -> Simulation (Dynamics a)  -- ^ the delayed value
-delay x d = delayTrans x d x memo0
+delay x d = delayTrans x d x memo0Dynamics
 
 -- | Return the delayed value.
 --
 -- It is defined in the following way:
 --
--- @ delayI x d i = delayTrans x d i memo0 @
+-- @ delayI x d i = delayTrans x d i memo0Dynamics @
 delayI :: Dynamics a                  -- ^ the value to delay
           -> Dynamics Double          -- ^ the lag time
           -> Dynamics a               -- ^ the initial value
           -> Simulation (Dynamics a)  -- ^ the delayed value
-delayI x d i = delayTrans x d i memo0
+delayI x d i = delayTrans x d i memo0Dynamics
 
 -- | Return the delayed value. This is a more efficient unboxed version of the 'delay' function.
 --
 -- It is defined in the following way:
 --
--- @ udelay x d = delayTrans x d x umemo0 @
+-- @ udelay x d = delayTrans x d x umemo0Dynamics @
 udelay :: (MArray IOUArray a IO, Num a)
           => Dynamics a               -- ^ the value to delay
           -> Dynamics Double          -- ^ the lag time
           -> Simulation (Dynamics a)  -- ^ the delayed value
-udelay x d = delayTrans x d x umemo0
+udelay x d = delayTrans x d x umemo0Dynamics
 
 -- | Return the delayed value. This is a more efficient unboxed version of the 'delayI' function.
 --
 -- It is defined in the following way:
 --
--- @ udelayI x d i = delayTrans x d i umemo0 @
+-- @ udelayI x d i = delayTrans x d i umemo0Dynamics @
 udelayI :: (MArray IOUArray a IO, Num a)
            => Dynamics a               -- ^ the value to delay
            -> Dynamics Double          -- ^ the lag time
            -> Dynamics a               -- ^ the initial value
            -> Simulation (Dynamics a)  -- ^ the delayed value
-udelayI x d i = delayTrans x d i umemo0
+udelayI x d i = delayTrans x d i umemo0Dynamics
 
 --
 -- Financial Functions
