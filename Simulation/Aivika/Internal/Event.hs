@@ -13,14 +13,28 @@
 -- monad but only now the computation is strongly synchronized with the event queue.
 --
 module Simulation.Aivika.Internal.Event
-       (-- * Event
+       (-- * Event Monad
         Event(..),
         EventLift(..),
+        EventProcessing(..),
         invokeEvent,
+        runEvent,
+        runEventInStartTime,
+        runEventInStopTime,
+        -- * Event Queue
+        enqueueEvent,
+        enqueueEventWithTimes,
+        enqueueEventWithIntegTimes,
+        enqueueEventWithStartTime,
+        enqueueEventWithStopTime,
+        enqueueEventWithCurrentTime,
+        eventQueueCount,
         -- * Error Handling
         catchEvent,
         finallyEvent,
         throwEvent) where
+
+import Data.IORef
 
 import qualified Control.Exception as C
 import Control.Exception (IOException, throw, finally)
@@ -28,6 +42,8 @@ import Control.Exception (IOException, throw, finally)
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+
+import qualified Simulation.Aivika.PriorityQueue as PQ
 
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
@@ -104,3 +120,165 @@ instance MonadFix Event where
   mfix f = 
     Event $ \p ->
     do { rec { a <- invokeEvent (f a) p }; return a }
+
+-- | Defines how the events are processed.
+data EventProcessing = IncludingCurrentEvents
+                       -- ^ process all earlier and then current events
+                     | IncludingEarlierEvents
+                       -- ^ process all earlier events not affecting
+                       -- the events at the current simulation time
+                     | IncludingCurrentEventsOrFromPast
+                       -- ^ either process all earlier and then current events,
+                       -- or do nothing if the current simulation time is less
+                       -- than the actual time of the event queue
+                       -- (should be used with care and this option is mostly
+                       -- intended for internal use)
+                     | IncludingEarlierEventsOrFromPast
+                       -- ^ either process all earlier events,
+                       -- or do nothing if the current simulation time is less
+                       -- than the actual time of the event queue
+                       -- (should be used with care and this option is mostly
+                       -- intended for internal use)
+
+-- | Enqueue the event which must be actuated at the specified time.
+enqueueEvent :: Double -> Event () -> Event ()
+enqueueEvent t (Event m) =
+  Event $ \p ->
+  let pq = queuePQ $ runEventQueue $ pointRun p
+  in PQ.enqueue pq t m
+
+-- | Process the pending events.
+processPendingEventsCore :: Bool -> Dynamics ()
+processPendingEventsCore includingCurrentEvents = Dynamics r where
+  r p =
+    do let q = runEventQueue $ pointRun p
+           f = queueBusy q
+       f' <- readIORef f
+       unless f' $
+         do writeIORef f True
+            call q p
+            writeIORef f False
+  call q p =
+    do let pq = queuePQ q
+           r  = pointRun p
+       f <- PQ.queueNull pq
+       unless f $
+         do (t2, c2) <- PQ.queueFront pq
+            let t = queueTime q
+            t' <- readIORef t
+            when (t2 < t') $ 
+              error "The time value is too small: processPendingEventsCore"
+            when ((t2 < pointTime p) ||
+                  (includingCurrentEvents && (t2 == pointTime p))) $
+              do writeIORef t t2
+                 PQ.dequeue pq
+                 let sc = pointSpecs p
+                     t0 = spcStartTime sc
+                     dt = spcDT sc
+                     n2 = fromIntegral $ floor ((t2 - t0) / dt)
+                 c2 $ p { pointTime = t2,
+                          pointIteration = n2,
+                          pointPhase = -1 }
+                 call q p
+
+-- | Process the pending events synchronously, i.e. without past.
+processPendingEvents :: Bool -> Dynamics ()
+processPendingEvents includingCurrentEvents = Dynamics r where
+  r p =
+    do let q = runEventQueue $ pointRun p
+           t = queueTime q
+       t' <- readIORef t
+       if pointTime p < t'
+         then error $
+              "The current time is less than " ++
+              "the time in the queue: processPendingEvents"
+         else invokeDynamics m p
+  m = processPendingEventsCore includingCurrentEvents
+
+-- | A memoized value.
+processEventsIncludingCurrent = processPendingEvents True
+
+-- | A memoized value.
+processEventsIncludingEarlier = processPendingEvents False
+
+-- | A memoized value.
+processEventsIncludingCurrentCore = processPendingEventsCore True
+
+-- | A memoized value.
+processEventsIncludingEarlierCore = processPendingEventsCore True
+
+-- | Process the events.
+processEvents :: EventProcessing -> Dynamics ()
+processEvents IncludingCurrentEvents = processEventsIncludingCurrent
+processEvents IncludingEarlierEvents = processEventsIncludingEarlier
+processEvents IncludingCurrentEventsOrFromPast = processEventsIncludingCurrentCore
+processEvents IncludingEarlierEventsOrFromPast = processEventsIncludingEarlierCore
+
+-- | Run the 'Event' computation in the current simulation time
+-- within the 'Dynamics' computation.
+runEvent :: EventProcessing -> Event a -> Dynamics a
+runEvent processing (Event e) =
+  Dynamics $ \p ->
+  do invokeDynamics (processEvents processing) p
+     e p
+
+-- | Run the 'Event' computation in the start time.
+runEventInStartTime :: EventProcessing -> Event a -> Simulation a
+runEventInStartTime processing e =
+  runDynamicsInStartTime $ runEvent processing e
+
+-- | Run the 'Event' computation in the stop time.
+runEventInStopTime :: EventProcessing -> Event a -> Simulation a
+runEventInStopTime processing e =
+  runDynamicsInStopTime $ runEvent processing e
+
+-- | Return the number of pending events that should
+-- be yet actuated.
+eventQueueCount :: Event Int
+eventQueueCount =
+  Event $ PQ.queueCount . queuePQ . runEventQueue . pointRun
+
+-- | Actuate the event handler in the specified time points.
+enqueueEventWithTimes :: [Double] -> Event () -> Event ()
+enqueueEventWithTimes ts e = loop ts
+  where loop []       = return ()
+        loop (t : ts) = enqueueEvent t $ e >> loop ts
+       
+-- | Actuate the event handler in the specified time points.
+enqueueEventWithPoints :: [Point] -> Event () -> Event ()
+enqueueEventWithPoints xs (Event e) = loop xs
+  where loop []       = return ()
+        loop (x : xs) = enqueueEvent (pointTime x) $ 
+                        Event $ \p ->
+                        do e x    -- N.B. we substitute the time point!
+                           invokeEvent (loop xs) p
+                           
+-- | Actuate the event handler in the integration time points.
+enqueueEventWithIntegTimes :: Event () -> Event ()
+enqueueEventWithIntegTimes e =
+  Event $ \p ->
+  let points = integPoints $ pointRun p
+  in invokeEvent (enqueueEventWithPoints points e) p
+
+-- | Actuate the event handler in the start time.
+enqueueEventWithStartTime :: Event () -> Event ()
+enqueueEventWithStartTime e =
+  Event $ \p ->
+  let point = integStartPoint $ pointRun p
+  in invokeEvent (enqueueEventWithPoints [point] e) p
+
+-- | Actuate the event handler in the stop time.
+enqueueEventWithStopTime :: Event () -> Event ()
+enqueueEventWithStopTime e =
+  Event $ \p ->
+  let point = integStopPoint $ pointRun p
+  in invokeEvent (enqueueEventWithPoints [point] e) p
+
+-- | Actuate the event handler in the current time but 
+-- through the event queue, which allows continuing the 
+-- current tasks and then calling the handler after the 
+-- tasks are finished. The simulation time will be the same.
+enqueueEventWithCurrentTime :: Event () -> Event ()
+enqueueEventWithCurrentTime e =
+  Event $ \p ->
+  invokeEvent (enqueueEvent (pointTime p) e) p
