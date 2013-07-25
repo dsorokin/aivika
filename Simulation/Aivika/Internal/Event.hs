@@ -140,6 +140,7 @@ data EventProcessing = IncludingCurrentEvents
                        -- than the actual time of the event queue
                        -- (should be used with care and this option is mostly
                        -- intended for internal use)
+                     deriving (Eq, Ord, Show)
 
 -- | Enqueue the event which must be actuated at the specified time.
 enqueueEvent :: Double -> Event () -> Event ()
