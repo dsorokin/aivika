@@ -94,6 +94,9 @@ class Monad m => EventLift m where
   
   -- | Lift the specified 'Event' computation to another monad.
   liftEvent :: Event a -> m a
+
+instance EventLift Event where
+  liftEvent = id
   
 -- | Exception handling within 'Event' computations.
 catchEvent :: Event a -> (IOException -> Event a) -> Event a

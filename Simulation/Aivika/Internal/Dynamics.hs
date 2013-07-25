@@ -156,6 +156,9 @@ class Monad m => DynamicsLift m where
   
   -- | Lift the specified 'Dynamics' computation in another monad.
   liftDynamics :: Dynamics a -> m a
+
+instance DynamicsLift Dynamics where
+  liftDynamics = id
   
 -- | Exception handling within 'Dynamics' computations.
 catchDynamics :: Dynamics a -> (IOException -> Dynamics a) -> Dynamics a

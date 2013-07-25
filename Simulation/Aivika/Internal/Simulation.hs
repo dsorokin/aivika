@@ -161,6 +161,9 @@ class Monad m => SimulationLift m where
   
   -- | Lift the specified 'Simulation' computation in another monad.
   liftSimulation :: Simulation a -> m a
+
+instance SimulationLift Simulation where
+  liftSimulation = id
     
 -- | Exception handling within 'Simulation' computations.
 catchSimulation :: Simulation a -> (IOException -> Simulation a) -> Simulation a
