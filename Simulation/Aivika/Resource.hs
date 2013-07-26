@@ -17,10 +17,12 @@ module Simulation.Aivika.Resource
         resourceMaxCount,
         resourceCount,
         requestResource,
+        requestResourceWithPriority,
         tryRequestResourceWithinEvent,
         releaseResource,
         releaseResourceWithinEvent,
-        usingResource) where
+        usingResource,
+        usingResourceWithPriority) where
 
 import Data.IORef
 import Control.Monad
@@ -32,32 +34,33 @@ import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Cont
 import Simulation.Aivika.Internal.Process
 
-import Simulation.Aivika.DoubleLinkedList
+import Simulation.Aivika.QueueStrategy
 
--- | Represents a limited resource with applying the following strategy when
--- exceeding the available limit: First Come - First Served (FCFS).
-data Resource = 
-  Resource { resourceMaxCount :: Int,
+-- | Represents a limited resource.
+data Resource s q = 
+  Resource { resourceStrategy :: s,
+             resourceMaxCount :: Int,
              -- ^ Return the maximum count of the resource.
              resourceCountRef :: IORef Int, 
-             resourceWaitList :: DoubleLinkedList (ContParams ())}
+             resourceWaitList :: q (ContParams ())}
 
-instance Eq Resource where
+instance Eq (Resource s q) where
   x == y = resourceCountRef x == resourceCountRef y  -- unique references
 
--- | Create a new resource with the specified maximum count.
-newResource :: Int -> Simulation Resource
-newResource maxCount =
+-- | Create a new resource with the specified queue strategy and maximum count.
+newResource :: QueueStrategy s q => s -> Int -> Simulation (Resource s q)
+newResource s maxCount =
   Simulation $ \r ->
   do countRef <- newIORef maxCount
-     waitList <- newList
-     return Resource { resourceMaxCount = maxCount,
+     waitList <- newStrategyQueue s
+     return Resource { resourceStrategy = s,
+                       resourceMaxCount = maxCount,
                        resourceCountRef = countRef,
                        resourceWaitList = waitList }
 
--- | Create a new resource with the specified maximum and initial count.
-newResourceWithCount :: Int -> Int -> Simulation Resource
-newResourceWithCount maxCount count = do
+-- | Create a new resource with the specified queue strategy, maximum and initial count.
+newResourceWithCount :: QueueStrategy s q => s -> Int -> Int -> Simulation (Resource s q)
+newResourceWithCount s maxCount count = do
   when (count < 0) $
     error $
     "The resource count cannot be negative: " ++
@@ -68,34 +71,50 @@ newResourceWithCount maxCount count = do
     "its maximum value: newResourceWithCount."
   Simulation $ \r ->
     do countRef <- newIORef count
-       waitList <- newList
-       return Resource { resourceMaxCount = maxCount,
+       waitList <- newStrategyQueue s
+       return Resource { resourceStrategy = s,
+                         resourceMaxCount = maxCount,
                          resourceCountRef = countRef,
                          resourceWaitList = waitList }
 
 -- | Return the current count of the resource.
-resourceCount :: Resource -> Event Int
+resourceCount :: Resource s q -> Event Int
 resourceCount r =
   Event $ \p -> readIORef (resourceCountRef r)
 
 -- | Request for the resource decreasing its count in case of success,
 -- otherwise suspending the discontinuous process until some other 
 -- process releases the resource.
-requestResource :: Resource -> Process ()
+requestResource :: UnitQueueStrategy s q => Resource s q -> Process ()
 requestResource r =
   Process $ \pid ->
   Cont $ \c ->
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
      if a == 0 
-       then listAddLast (resourceWaitList r) c
+       then strategyEnqueue (resourceStrategy r) (resourceWaitList r) c
+       else do let a' = a - 1
+               a' `seq` writeIORef (resourceCountRef r) a'
+               invokeEvent p $ resumeCont c ()
+
+-- | Request with the priority for the resource decreasing its count
+-- in case of success, otherwise suspending the discontinuous process
+-- until some other process releases the resource.
+requestResourceWithPriority :: PriorityQueueStrategy s q => Resource s q -> Double -> Process ()
+requestResourceWithPriority r priority =
+  Process $ \pid ->
+  Cont $ \c ->
+  Event $ \p ->
+  do a <- readIORef (resourceCountRef r)
+     if a == 0 
+       then strategyEnqueueWithPriority (resourceStrategy r) (resourceWaitList r) priority c
        else do let a' = a - 1
                a' `seq` writeIORef (resourceCountRef r) a'
                invokeEvent p $ resumeCont c ()
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
-releaseResource :: Resource -> Process ()
+releaseResource :: QueueStrategy s q => Resource s q -> Process ()
 releaseResource r = 
   Process $ \_ ->
   Cont $ \c ->
@@ -105,7 +124,7 @@ releaseResource r =
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
-releaseResourceWithinEvent :: Resource -> Event ()
+releaseResourceWithinEvent :: QueueStrategy s q => Resource s q -> Event ()
 releaseResourceWithinEvent r =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
@@ -114,11 +133,11 @@ releaseResourceWithinEvent r =
        error $
        "The resource count cannot be greater than " ++
        "its maximum value: releaseResourceWithinEvent."
-     f <- listNull (resourceWaitList r)
+     f <- strategyQueueNull (resourceStrategy r) (resourceWaitList r)
      if f 
        then a' `seq` writeIORef (resourceCountRef r) a'
-       else do c <- listFirst (resourceWaitList r)
-               listRemoveFirst (resourceWaitList r)
+       else do c <- strategyQueueFront (resourceStrategy r) (resourceWaitList r)
+               strategyDequeue (resourceStrategy r) (resourceWaitList r)
                invokeEvent p $ enqueueEvent (pointTime p) $
                  Event $ \p ->
                  do z <- contCanceled c
@@ -129,7 +148,7 @@ releaseResourceWithinEvent r =
 
 -- | Try to request for the resource decreasing its count in case of success
 -- and returning 'True' in the 'Event' monad; otherwise, returning 'False'.
-tryRequestResourceWithinEvent :: Resource -> Event Bool
+tryRequestResourceWithinEvent :: Resource s q -> Event Bool
 tryRequestResourceWithinEvent r =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
@@ -145,7 +164,18 @@ tryRequestResourceWithinEvent r =
 -- handling, i.e. with help of function 'newProcessIdWithCatch'. Unfortunately,
 -- such processes are slower than those that are created with help of
 -- other function 'newProcessId'.
-usingResource :: Resource -> Process a -> Process a
+usingResource :: UnitQueueStrategy s q => Resource s q -> Process a -> Process a
 usingResource r m =
   do requestResource r
+     finallyProcess m $ releaseResource r
+
+-- | Acquire the resource with the specified priority, perform some action and
+-- safely release the resource in the end, even if the 'IOException' was raised
+-- within the action. The process identifier must be created with support of exception 
+-- handling, i.e. with help of function 'newProcessIdWithCatch'. Unfortunately,
+-- such processes are slower than those that are created with help of
+-- other function 'newProcessId'.
+usingResourceWithPriority :: PriorityQueueStrategy s q => Resource s q -> Double -> Process a -> Process a
+usingResourceWithPriority r priority m =
+  do requestResourceWithPriority r priority
      finallyProcess m $ releaseResource r

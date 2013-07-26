@@ -140,6 +140,8 @@ library
 
     extensions:      FlexibleContexts,
                      BangPatterns,
-                     RecursiveDo
+                     RecursiveDo,
+                     MultiParamTypeClasses,
+                     FunctionalDependencies
                      
     ghc-options:     -O2
