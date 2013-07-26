@@ -85,7 +85,7 @@ resourceCount r =
 -- | Request for the resource decreasing its count in case of success,
 -- otherwise suspending the discontinuous process until some other 
 -- process releases the resource.
-requestResource :: UnitQueueStrategy s q => Resource s q -> Process ()
+requestResource :: EnqueueStrategy s q => Resource s q -> Process ()
 requestResource r =
   Process $ \pid ->
   Cont $ \c ->
@@ -114,7 +114,7 @@ requestResourceWithPriority r priority =
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
-releaseResource :: QueueStrategy s q => Resource s q -> Process ()
+releaseResource :: DequeueStrategy s q => Resource s q -> Process ()
 releaseResource r = 
   Process $ \_ ->
   Cont $ \c ->
@@ -124,7 +124,7 @@ releaseResource r =
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
-releaseResourceWithinEvent :: QueueStrategy s q => Resource s q -> Event ()
+releaseResourceWithinEvent :: DequeueStrategy s q => Resource s q -> Event ()
 releaseResourceWithinEvent r =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
@@ -163,7 +163,7 @@ tryRequestResourceWithinEvent r =
 -- handling, i.e. with help of function 'newProcessIdWithCatch'. Unfortunately,
 -- such processes are slower than those that are created with help of
 -- other function 'newProcessId'.
-usingResource :: UnitQueueStrategy s q => Resource s q -> Process a -> Process a
+usingResource :: EnqueueStrategy s q => Resource s q -> Process a -> Process a
 usingResource r m =
   do requestResource r
      finallyProcess m $ releaseResource r

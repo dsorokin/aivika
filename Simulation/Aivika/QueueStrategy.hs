@@ -13,7 +13,8 @@
 --
 module Simulation.Aivika.QueueStrategy
        (QueueStrategy(..),
-        UnitQueueStrategy(..),
+        DequeueStrategy(..),
+        EnqueueStrategy(..),
         PriorityQueueStrategy(..)) where
 
 import Simulation.Aivika.DoubleLinkedList
@@ -28,17 +29,20 @@ class QueueStrategy s q | s -> q where
   -- | Test whether the queue is empty.
   strategyQueueNull :: s -> q i -> IO Bool
 
+-- | Defines a strategy with support of the dequeuing operation.
+class QueueStrategy s q => DequeueStrategy s q | s -> q where
+
   -- | Dequeue the front element and return it.
   strategyDequeue :: s -> q i -> IO i
 
--- | It defines a strategy when we enqueue a single element.
-class QueueStrategy s q => UnitQueueStrategy s q | s -> q where
+-- | It defines a strategy when we can enqueue a single element.
+class DequeueStrategy s q => EnqueueStrategy s q | s -> q where
 
   -- | Enqueue an element.
   strategyEnqueue :: s -> q i -> i -> IO ()
 
--- | It defines a strategy when we enqueue an element with the specified priority.
-class QueueStrategy s q => PriorityQueueStrategy s q | s -> q where
+-- | It defines a strategy when we can enqueue an element with the specified priority.
+class DequeueStrategy s q => PriorityQueueStrategy s q | s -> q where
 
   -- | Enqueue an element with the specified priority.
   strategyEnqueueWithPriority :: s -> q i -> Double -> i -> IO ()
@@ -56,31 +60,35 @@ instance QueueStrategy FCFS DoubleLinkedList where
 
   newStrategyQueue = const newList
 
+  strategyQueueNull = const listNull
+
+instance DequeueStrategy FCFS DoubleLinkedList where
+
   strategyDequeue =
     const $ \q ->
     do i <- listFirst q
        listRemoveFirst q
        return i
 
-  strategyQueueNull = const listNull
-
-instance UnitQueueStrategy FCFS DoubleLinkedList where
+instance EnqueueStrategy FCFS DoubleLinkedList where
 
   strategyEnqueue = const listAddLast
 
 instance QueueStrategy LCFS DoubleLinkedList where
 
   newStrategyQueue = const newList
+       
+  strategyQueueNull = const listNull
+
+instance DequeueStrategy LCFS DoubleLinkedList where
 
   strategyDequeue =
     const $ \q ->
     do i <- listFirst q
        listRemoveFirst q
        return i
-       
-  strategyQueueNull = const listNull
 
-instance UnitQueueStrategy LCFS DoubleLinkedList where
+instance EnqueueStrategy LCFS DoubleLinkedList where
 
   strategyEnqueue = const listInsertFirst
 
@@ -88,13 +96,15 @@ instance QueueStrategy StaticPriorities PQ.PriorityQueue where
 
   newStrategyQueue = const PQ.newQueue
 
+  strategyQueueNull = const PQ.queueNull
+
+instance DequeueStrategy StaticPriorities PQ.PriorityQueue where
+
   strategyDequeue =
     const $ \q ->
     do (_, i) <- PQ.queueFront q
        PQ.dequeue q
        return i
-
-  strategyQueueNull = const PQ.queueNull
 
 instance PriorityQueueStrategy StaticPriorities PQ.PriorityQueue where
 
