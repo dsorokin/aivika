@@ -14,8 +14,11 @@ module Simulation.Aivika.DoubleLinkedList
         listNull, 
         listCount,
         newList, 
-        listInsertFirst, 
-        listRemoveLast, 
+        listInsertFirst,
+        listAddLast,
+        listRemoveFirst,
+        listRemoveLast,
+        listFirst,
         listLast) where 
 
 import Data.IORef
@@ -79,6 +82,49 @@ listInsertFirst x v =
             writeIORef (itemPrev h) item
             writeIORef (listHead x) item
 
+-- | Add a new element to the end.
+listAddLast :: DoubleLinkedList a -> a -> IO ()
+listAddLast x v =
+  do size <- readIORef (listSize x)
+     writeIORef (listSize x) (size + 1)
+     tail <- readIORef (listTail x)
+     case tail of
+       Nothing ->
+         do prev <- newIORef Nothing
+            next <- newIORef Nothing
+            let item = Just DoubleLinkedItem { itemVal = v, 
+                                               itemPrev = prev, 
+                                               itemNext = next }
+            writeIORef (listHead x) item
+            writeIORef (listTail x) item
+       Just t ->
+         do prev <- newIORef tail
+            next <- newIORef Nothing
+            let item = Just DoubleLinkedItem { itemVal = v,
+                                               itemPrev = prev,
+                                               itemNext = next }
+            writeIORef (itemNext t) item
+            writeIORef (listTail x) item
+
+-- | Remove the first element.
+listRemoveFirst :: DoubleLinkedList a -> IO ()
+listRemoveFirst x =
+  do head <- readIORef (listHead x) 
+     case head of
+       Nothing ->
+         error "Empty list: listRemoveFirst"
+       Just h ->
+         do size  <- readIORef (listSize x)
+            writeIORef (listSize x) (size - 1)
+            head' <- readIORef (itemNext h)
+            case head' of
+              Nothing ->
+                do writeIORef (listHead x) Nothing
+                   writeIORef (listTail x) Nothing
+              Just h' ->
+                do writeIORef (itemPrev h') Nothing
+                   writeIORef (listHead x) head'
+
 -- | Remove the last element.
 listRemoveLast :: DoubleLinkedList a -> IO ()
 listRemoveLast x =
@@ -97,6 +143,16 @@ listRemoveLast x =
               Just t' ->
                 do writeIORef (itemNext t') Nothing
                    writeIORef (listTail x) tail'
+
+-- | Return the first element.
+listFirst :: DoubleLinkedList a -> IO a
+listFirst x =
+  do head <- readIORef (listHead x)
+     case head of
+       Nothing ->
+         error "Empty list: listFirst"
+       Just h ->
+         return $ itemVal h
 
 -- | Return the last element.
 listLast :: DoubleLinkedList a -> IO a
