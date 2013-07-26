@@ -52,7 +52,7 @@ newResource :: QueueStrategy s q => s -> Int -> Simulation (Resource s q)
 newResource s maxCount =
   Simulation $ \r ->
   do countRef <- newIORef maxCount
-     waitList <- newStrategyQueue s
+     waitList <- invokeSimulation r $ newStrategyQueue s
      return Resource { resourceStrategy = s,
                        resourceMaxCount = maxCount,
                        resourceCountRef = countRef,
@@ -71,7 +71,7 @@ newResourceWithCount s maxCount count = do
     "its maximum value: newResourceWithCount."
   Simulation $ \r ->
     do countRef <- newIORef count
-       waitList <- newStrategyQueue s
+       waitList <- invokeSimulation r $ newStrategyQueue s
        return Resource { resourceStrategy = s,
                          resourceMaxCount = maxCount,
                          resourceCountRef = countRef,
@@ -92,7 +92,8 @@ requestResource r =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
      if a == 0 
-       then strategyEnqueue (resourceStrategy r) (resourceWaitList r) c
+       then invokeEvent p $
+            strategyEnqueue (resourceStrategy r) (resourceWaitList r) c
        else do let a' = a - 1
                a' `seq` writeIORef (resourceCountRef r) a'
                invokeEvent p $ resumeCont c ()
@@ -107,7 +108,8 @@ requestResourceWithPriority r priority =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
      if a == 0 
-       then strategyEnqueueWithPriority (resourceStrategy r) (resourceWaitList r) priority c
+       then invokeEvent p $
+            strategyEnqueueWithPriority (resourceStrategy r) (resourceWaitList r) priority c
        else do let a' = a - 1
                a' `seq` writeIORef (resourceCountRef r) a'
                invokeEvent p $ resumeCont c ()
@@ -133,10 +135,12 @@ releaseResourceWithinEvent r =
        error $
        "The resource count cannot be greater than " ++
        "its maximum value: releaseResourceWithinEvent."
-     f <- strategyQueueNull (resourceStrategy r) (resourceWaitList r)
+     f <- invokeEvent p $
+          strategyQueueNull (resourceStrategy r) (resourceWaitList r)
      if f 
        then a' `seq` writeIORef (resourceCountRef r) a'
-       else do c <- strategyDequeue (resourceStrategy r) (resourceWaitList r)
+       else do c <- invokeEvent p $
+                    strategyDequeue (resourceStrategy r) (resourceWaitList r)
                invokeEvent p $ enqueueEvent (pointTime p) $
                  Event $ \p ->
                  do z <- contCanceled c

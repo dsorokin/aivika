@@ -22,7 +22,10 @@ module Simulation.Aivika.QueueStrategy
         StaticPriorities(..)) where
 
 import System.Random
+import Control.Monad.Trans
 
+import Simulation.Aivika.Simulation
+import Simulation.Aivika.Event
 import Simulation.Aivika.DoubleLinkedList
 import qualified Simulation.Aivika.PriorityQueue as PQ
 import qualified Simulation.Aivika.Vector as V
@@ -31,28 +34,28 @@ import qualified Simulation.Aivika.Vector as V
 class QueueStrategy s q | s -> q where
 
   -- | Create a new queue by the specified strategy.
-  newStrategyQueue :: s -> IO (q i)
+  newStrategyQueue :: s -> Simulation (q i)
 
   -- | Test whether the queue is empty.
-  strategyQueueNull :: s -> q i -> IO Bool
+  strategyQueueNull :: s -> q i -> Event Bool
 
 -- | Defines a strategy with support of the dequeuing operation.
 class QueueStrategy s q => DequeueStrategy s q | s -> q where
 
   -- | Dequeue the front element and return it.
-  strategyDequeue :: s -> q i -> IO i
+  strategyDequeue :: s -> q i -> Event i
 
 -- | It defines a strategy when we can enqueue a single element.
 class DequeueStrategy s q => EnqueueStrategy s q | s -> q where
 
   -- | Enqueue an element.
-  strategyEnqueue :: s -> q i -> i -> IO ()
+  strategyEnqueue :: s -> q i -> i -> Event ()
 
 -- | It defines a strategy when we can enqueue an element with the specified priority.
 class DequeueStrategy s q => PriorityQueueStrategy s q | s -> q where
 
   -- | Enqueue an element with the specified priority.
-  strategyEnqueueWithPriority :: s -> q i -> Double -> i -> IO ()
+  strategyEnqueueWithPriority :: s -> q i -> Double -> i -> Event ()
 
 -- | Strategy: First Come - First Served (FCFS).
 data FCFS = FCFS
@@ -68,70 +71,71 @@ data StaticPriorities = StaticPriorities
 
 instance QueueStrategy FCFS DoubleLinkedList where
 
-  newStrategyQueue = const newList
+  newStrategyQueue s = liftIO newList
 
-  strategyQueueNull = const listNull
+  strategyQueueNull s q = liftIO $ listNull q
 
 instance DequeueStrategy FCFS DoubleLinkedList where
 
-  strategyDequeue =
-    const $ \q ->
+  strategyDequeue s q =
+    liftIO $
     do i <- listFirst q
        listRemoveFirst q
        return i
 
 instance EnqueueStrategy FCFS DoubleLinkedList where
 
-  strategyEnqueue = const listAddLast
+  strategyEnqueue s q i = liftIO $ listAddLast q i
 
 instance QueueStrategy LCFS DoubleLinkedList where
 
-  newStrategyQueue = const newList
+  newStrategyQueue s = liftIO newList
        
-  strategyQueueNull = const listNull
+  strategyQueueNull s q = liftIO $ listNull q
 
 instance DequeueStrategy LCFS DoubleLinkedList where
 
-  strategyDequeue =
-    const $ \q ->
+  strategyDequeue s q =
+    liftIO $
     do i <- listFirst q
        listRemoveFirst q
        return i
 
 instance EnqueueStrategy LCFS DoubleLinkedList where
 
-  strategyEnqueue = const listInsertFirst
+  strategyEnqueue s q i = liftIO $ listInsertFirst q i
 
 instance QueueStrategy StaticPriorities PQ.PriorityQueue where
 
-  newStrategyQueue = const PQ.newQueue
+  newStrategyQueue s = liftIO PQ.newQueue
 
-  strategyQueueNull = const PQ.queueNull
+  strategyQueueNull s q = liftIO $ PQ.queueNull q
 
 instance DequeueStrategy StaticPriorities PQ.PriorityQueue where
 
-  strategyDequeue =
-    const $ \q ->
+  strategyDequeue s q =
+    liftIO $
     do (_, i) <- PQ.queueFront q
        PQ.dequeue q
        return i
 
 instance PriorityQueueStrategy StaticPriorities PQ.PriorityQueue where
 
-  strategyEnqueueWithPriority = const PQ.enqueue
+  strategyEnqueueWithPriority s q p i = liftIO $ PQ.enqueue q p i
 
 instance QueueStrategy SIRO V.Vector where
 
-  newStrategyQueue = const V.newVector
+  newStrategyQueue s = liftIO V.newVector
 
-  strategyQueueNull = const $ \q ->
+  strategyQueueNull s q =
+    liftIO $
     do n <- V.vectorCount q
        return (n == 0)
 
 instance DequeueStrategy SIRO V.Vector where
 
-  strategyDequeue =
-    const $ \q ->
+  strategyDequeue s q =
+    liftIO $
     do n <- V.vectorCount q
        i <- getStdRandom (randomR (0, n - 1))
        x <- V.readVector q i
@@ -140,4 +144,4 @@ instance DequeueStrategy SIRO V.Vector where
 
 instance EnqueueStrategy SIRO V.Vector where
 
-  strategyEnqueue = const V.appendVector
+  strategyEnqueue s q i = liftIO $ V.appendVector q i
