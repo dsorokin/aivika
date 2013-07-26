@@ -1,6 +1,6 @@
 
 -- |
--- Module     : Simulation.Aivika.Dynamics.Agent
+-- Module     : Simulation.Aivika.Agent
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -17,24 +17,20 @@
 -- already processed by the event queue.
 --
 
-module Simulation.Aivika.Dynamics.Agent
+module Simulation.Aivika.Agent
        (Agent,
         AgentState,
         newAgent,
         newState,
         newSubstate,
-        agentQueue,
         agentState,
         agentStateChanged,
         agentStateChanged_,
         activateState,
-        initState,
         stateAgent,
         stateParent,
         addTimeout,
         addTimer,
-        stateActivation,
-        stateDeactivation,
         setStateActivation,
         setStateDeactivation,
         setStateTransition) where
@@ -42,36 +38,31 @@ module Simulation.Aivika.Dynamics.Agent
 import Data.IORef
 import Control.Monad
 
-import Simulation.Aivika.Dynamics.Internal.Simulation
-import Simulation.Aivika.Dynamics.Internal.Dynamics
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Internal.Signal
-import Simulation.Aivika.Dynamics.Signal
+import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Simulation
+import Simulation.Aivika.Internal.Event
+import Simulation.Aivika.Internal.Signal
 
 --
 -- Agent-based Modeling
 --
 
 -- | Represents an agent.
-data Agent = Agent { agentQueue :: EventQueue,
-                     -- ^ Return the bound event queue.
-                     agentModeRef :: IORef AgentMode,
-                     agentStateRef :: IORef (Maybe AgentState), 
-                     agentStateChangedSource :: SignalSource (Maybe AgentState), 
-                     agentStateUpdatedSource :: SignalSource (Maybe AgentState) }
+data Agent = Agent { agentModeRef            :: IORef AgentMode,
+                     agentStateRef           :: IORef (Maybe AgentState), 
+                     agentStateChangedSource :: SignalSource (Maybe AgentState) }
 
 -- | Represents the agent state.
-data AgentState = AgentState { stateAgent :: Agent,
+data AgentState = AgentState { stateAgent         :: Agent,
                                -- ^ Return the corresponded agent.
-                               stateParent :: Maybe AgentState,
+                               stateParent        :: Maybe AgentState,
                                -- ^ Return the parent state or 'Nothing'.
-                               stateActivateRef :: IORef (Dynamics ()),
-                               stateDeactivateRef :: IORef (Dynamics ()),
-                               stateTransitRef :: IORef (Dynamics (Maybe AgentState)),
-                               stateVersionRef :: IORef Int }
+                               stateActivateRef   :: IORef (Event ()),
+                               stateDeactivateRef :: IORef (Event ()),
+                               stateTransitRef    :: IORef (Event (Maybe AgentState)),
+                               stateVersionRef    :: IORef Int }
                   
 data AgentMode = CreationMode
-               | InitialMode
                | TransientMode
                | ProcessingMode
                       
@@ -108,23 +99,15 @@ findPath (Just source) target
     path1 = fullPath source []
     path2 = fullPath target []
 
-traversePath :: Maybe AgentState -> AgentState -> Dynamics ()
+traversePath :: Maybe AgentState -> AgentState -> Event ()
 traversePath source target =
   let (path1, path2) = findPath source target
       agent = stateAgent target
-      activate st p =
-        do Dynamics m <- readIORef (stateActivateRef st)
-           m p
-      deactivate st p =
-        do Dynamics m <- readIORef (stateDeactivateRef st)
-           m p
-      transit st p =
-        do Dynamics m <- readIORef (stateTransitRef st)
-           m p
-      continue st p =
-        do let Dynamics m = traversePath (Just target) st
-           m p
-  in Dynamics $ \p ->
+      activate st p   = invokeEvent p =<< readIORef (stateActivateRef st)
+      deactivate st p = invokeEvent p =<< readIORef (stateDeactivateRef st)
+      transit st p    = invokeEvent p =<< readIORef (stateTransitRef st)
+      continue st p   = invokeEvent p $ traversePath (Just target) st
+  in Event $ \p ->
        unless (null path1 && null path2) $
        do writeIORef (agentModeRef agent) TransientMode
           forM_ path1 $ \st ->
@@ -133,11 +116,8 @@ traversePath source target =
                -- it makes all timeout and timer handlers outdated
                modifyIORef (stateVersionRef st) (1 +)
           forM_ path2 $ \st ->
-            do when (st == target) $
-                 writeIORef (agentModeRef agent) InitialMode
-               writeIORef (agentStateRef agent) (Just st)
+            do writeIORef (agentStateRef agent) (Just st)
                activate st p
-          writeIORef (agentModeRef agent) TransientMode     
           st' <- transit target p
           case st' of
             Nothing ->
@@ -148,40 +128,33 @@ traversePath source target =
 
 -- | Add to the state a timeout handler that will be actuated 
 -- in the specified time period, while the state remains active.
-addTimeout :: AgentState -> Double -> Dynamics () -> Dynamics ()
-addTimeout st dt (Dynamics action) =
-  Dynamics $ \p ->
-  do let q = agentQueue (stateAgent st)
-         Dynamics m0 = runQueueSync q
-     m0 p    -- ensure that the agent state is actual
-     v <- readIORef (stateVersionRef st)
-     let m1 = Dynamics $ \p ->
-           do -- checkTime p (stateAgent st) "addTimeout"
-              v' <- readIORef (stateVersionRef st)
-              when (v == v') $ action p
-         Dynamics m2 = enqueue q (pointTime p + dt) m1
-     m2 p
+addTimeout :: AgentState -> Double -> Event () -> Event ()
+addTimeout st dt action =
+  Event $ \p ->
+  do v <- readIORef (stateVersionRef st)
+     let m1 = Event $ \p ->
+           do v' <- readIORef (stateVersionRef st)
+              when (v == v') $
+                invokeEvent p action
+         m2 = enqueueEvent (pointTime p + dt) m1
+     invokeEvent p m2
 
 -- | Add to the state a timer handler that will be actuated
 -- in the specified time period and then repeated again many times,
 -- while the state remains active.
-addTimer :: AgentState -> Dynamics Double -> Dynamics () -> Dynamics ()
-addTimer st (Dynamics dt) (Dynamics action) =
-  Dynamics $ \p ->
-  do let q = agentQueue (stateAgent st)
-         Dynamics m0 = runQueueSync q
-     m0 p    -- ensure that the agent state is actual
-     v <- readIORef (stateVersionRef st)
-     let m1 = Dynamics $ \p ->
-           do -- checkTime p (stateAgent st) "addTimer"
-              v' <- readIORef (stateVersionRef st)
-              when (v == v') $ do { m2 p; action p }
-         Dynamics m2 = 
-           Dynamics $ \p ->
-           do dt' <- dt p
-              let Dynamics m3 = enqueue q (pointTime p + dt') m1
-              m3 p
-     m2 p
+addTimer :: AgentState -> Event Double -> Event () -> Event ()
+addTimer st dt action =
+  Event $ \p ->
+  do v <- readIORef (stateVersionRef st)
+     let m1 = Event $ \p ->
+           do v' <- readIORef (stateVersionRef st)
+              when (v == v') $
+                do invokeEvent p m2
+                   invokeEvent p action
+         m2 = Event $ \p ->
+           do dt' <- invokeEvent p dt
+              invokeEvent p $ enqueueEvent (pointTime p + dt') m1
+     invokeEvent p m2
 
 -- | Create a new state.
 newState :: Agent -> Simulation AgentState
@@ -214,103 +187,49 @@ newSubstate parent =
                          stateTransitRef = tref,
                          stateVersionRef = vref }
 
--- | Create an agent bound with the specified event queue.
-newAgent :: EventQueue -> Simulation Agent
-newAgent queue =
+-- | Create an agent.
+newAgent :: Simulation Agent
+newAgent =
   Simulation $ \r ->
-  do modeRef    <- newIORef CreationMode
-     stateRef   <- newIORef Nothing
-     let Simulation m1 = newSignalSourceUnsafe
-         Simulation m2 = newSignalSource queue
-     stateChangedSource <- m1 r
-     stateUpdatedSource <- m2 r
-     return Agent { agentQueue = queue,
-                    agentModeRef = modeRef,
+  do modeRef  <- newIORef CreationMode
+     stateRef <- newIORef Nothing
+     stateChangedSource <- invokeSimulation r newSignalSource
+     return Agent { agentModeRef = modeRef,
                     agentStateRef = stateRef, 
-                    agentStateChangedSource = stateChangedSource, 
-                    agentStateUpdatedSource = stateUpdatedSource }
+                    agentStateChangedSource = stateChangedSource }
 
 -- | Return the selected downmost active state.
-agentState :: Agent -> Dynamics (Maybe AgentState)
+agentState :: Agent -> Event (Maybe AgentState)
 agentState agent =
-  Dynamics $ \p -> 
-  do let Dynamics m = runQueueSync $ agentQueue agent 
-     m p    -- ensure that the agent state is actual
-     readIORef (agentStateRef agent)
+  Event $ \p -> readIORef (agentStateRef agent)
                    
 -- | Select the next downmost active state. The activation is repeated while
 -- there is the transition state defined by 'setStateTransition'.
-activateState :: AgentState -> Dynamics ()
+activateState :: AgentState -> Event ()
 activateState st =
-  Dynamics $ \p ->
+  Event $ \p ->
   do let agent = stateAgent st
-         Dynamics m = runQueueSync $ agentQueue agent 
-     m p    -- ensure that the agent state is actual
      mode <- readIORef (agentModeRef agent)
      case mode of
        CreationMode ->
          do x0 <- readIORef (agentStateRef agent)
-            let Dynamics m = traversePath x0 st
-            m p
-       InitialMode ->
-         error $ 
-         "Use the setStateTransition function to define " ++
-         "the transition state: activateState."
+            invokeEvent p $ traversePath x0 st
        TransientMode ->
          error $
          "Use the setStateTransition function to define " ++
          "the transition state: activateState."
        ProcessingMode ->
          do x0 @ (Just st0) <- readIORef (agentStateRef agent)
-            let Dynamics m = traversePath x0 st
-            m p
-
-{-# DEPRECATED initState "Rewrite using the setStateTransition function instead." #-}
-              
--- | Activate the child state during the direct activation of 
--- the parent state. This call is ignored in other cases.
-initState :: AgentState -> Dynamics ()
-initState st =
-  Dynamics $ \p ->
-  do let agent = stateAgent st
-         Dynamics m = runQueueSync $ agentQueue agent 
-     m p    -- ensure that the agent state is actual
-     mode <- readIORef (agentModeRef agent)
-     case mode of
-       CreationMode ->
-         error $
-         "To run the agent for the fist time, use " ++
-         "the activateState function: initState."
-       InitialMode ->
-         do x0 @ (Just st0) <- readIORef (agentStateRef agent)
-            let Dynamics m = traversePath x0 st
-            m p
-       TransientMode -> 
-         return ()
-       ProcessingMode ->
-         error $
-         "Use the activateState function everywhere outside " ++
-         "the state activation: initState."
-
-{-# DEPRECATED stateActivation "Use the setStateActivation function instead" #-}
-{-# DEPRECATED stateDeactivation "Use the setStateDeactivation function instead" #-}
+            invokeEvent p $ traversePath x0 st
 
 -- | Set the activation computation for the specified state.
-stateActivation :: AgentState -> Dynamics () -> Simulation ()
-stateActivation = setStateActivation
-  
--- | Set the deactivation computation for the specified state.
-stateDeactivation :: AgentState -> Dynamics () -> Simulation ()
-stateDeactivation = setStateDeactivation
-  
--- | Set the activation computation for the specified state.
-setStateActivation :: AgentState -> Dynamics () -> Simulation ()
+setStateActivation :: AgentState -> Event () -> Simulation ()
 setStateActivation st action =
   Simulation $ \r ->
   writeIORef (stateActivateRef st) action
   
 -- | Set the deactivation computation for the specified state.
-setStateDeactivation :: AgentState -> Dynamics () -> Simulation ()
+setStateDeactivation :: AgentState -> Event () -> Simulation ()
 setStateDeactivation st action =
   Simulation $ \r ->
   writeIORef (stateDeactivateRef st) action
@@ -319,7 +238,7 @@ setStateDeactivation st action =
 -- when activating the state directly with help of 'activateState'.
 -- If the state was activated intermediately, when activating directly
 -- another state, then this computation is not used.
-setStateTransition :: AgentState -> Dynamics (Maybe AgentState) -> Simulation ()
+setStateTransition :: AgentState -> Event (Maybe AgentState) -> Simulation ()
 setStateTransition st action =
   Simulation $ \r ->
   writeIORef (stateTransitRef st) action
@@ -328,14 +247,12 @@ setStateTransition st action =
 triggerAgentStateChanged :: Point -> Agent -> IO ()
 triggerAgentStateChanged p agent =
   do st <- readIORef (agentStateRef agent)
-     let Dynamics m = triggerSignal (agentStateChangedSource agent) st
-     m p
+     invokeEvent p $ triggerSignal (agentStateChangedSource agent) st
 
 -- | Return a signal that notifies about every change of the state.
 agentStateChanged :: Agent -> Signal (Maybe AgentState)
-agentStateChanged v = merge2Signals m1 m2    -- N.B. The order is important!
-  where m1 = publishSignal (agentStateUpdatedSource v)
-        m2 = publishSignal (agentStateChangedSource v)
+agentStateChanged agent =
+  publishSignal (agentStateChangedSource agent)
 
 -- | Return a signal that notifies about every change of the state.
 agentStateChanged_ :: Agent -> Signal ()
