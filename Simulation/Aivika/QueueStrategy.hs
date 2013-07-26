@@ -15,10 +15,17 @@ module Simulation.Aivika.QueueStrategy
        (QueueStrategy(..),
         DequeueStrategy(..),
         EnqueueStrategy(..),
-        PriorityQueueStrategy(..)) where
+        PriorityQueueStrategy(..),
+        FCFS(..),
+        LCFS(..),
+        SIRO(..),
+        StaticPriorities(..)) where
+
+import System.Random
 
 import Simulation.Aivika.DoubleLinkedList
 import qualified Simulation.Aivika.PriorityQueue as PQ
+import qualified Simulation.Aivika.Vector as V
 
 -- | Defines the basic queue strategy.
 class QueueStrategy s q | s -> q where
@@ -52,6 +59,9 @@ data FCFS = FCFS
 
 -- | Strategy: Last Come - First Served (LCFS)
 data LCFS = LCFS
+
+-- | Strategy: Service in Random Order (SIRO).
+data SIRO = SIRO
 
 -- | Strategy: Static Priorities. It uses the priority queue.
 data StaticPriorities = StaticPriorities
@@ -109,3 +119,25 @@ instance DequeueStrategy StaticPriorities PQ.PriorityQueue where
 instance PriorityQueueStrategy StaticPriorities PQ.PriorityQueue where
 
   strategyEnqueueWithPriority = const PQ.enqueue
+
+instance QueueStrategy SIRO V.Vector where
+
+  newStrategyQueue = const V.newVector
+
+  strategyQueueNull = const $ \q ->
+    do n <- V.vectorCount q
+       return (n == 0)
+
+instance DequeueStrategy SIRO V.Vector where
+
+  strategyDequeue =
+    const $ \q ->
+    do n <- V.vectorCount q
+       i <- getStdRandom (randomR (0, n - 1))
+       x <- V.readVector q i
+       V.vectorDeleteAt q i
+       return x
+
+instance EnqueueStrategy SIRO V.Vector where
+
+  strategyEnqueue = const V.appendVector
