@@ -136,8 +136,7 @@ releaseResourceWithinEvent r =
      f <- strategyQueueNull (resourceStrategy r) (resourceWaitList r)
      if f 
        then a' `seq` writeIORef (resourceCountRef r) a'
-       else do c <- strategyQueueFront (resourceStrategy r) (resourceWaitList r)
-               strategyDequeue (resourceStrategy r) (resourceWaitList r)
+       else do c <- strategyDequeue (resourceStrategy r) (resourceWaitList r)
                invokeEvent p $ enqueueEvent (pointTime p) $
                  Event $ \p ->
                  do z <- contCanceled c

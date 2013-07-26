@@ -28,11 +28,8 @@ class QueueStrategy s q | s -> q where
   -- | Test whether the queue is empty.
   strategyQueueNull :: s -> q i -> IO Bool
 
-  -- | Get the front element from the queue.
-  strategyQueueFront :: s -> q i -> IO i
-
-  -- | Dequeue the front element.
-  strategyDequeue :: s -> q i -> IO ()
+  -- | Dequeue the front element and return it.
+  strategyDequeue :: s -> q i -> IO i
 
 -- | It defines a strategy when we enqueue a single element.
 class QueueStrategy s q => UnitQueueStrategy s q | s -> q where
@@ -59,11 +56,13 @@ instance QueueStrategy FCFS DoubleLinkedList where
 
   newStrategyQueue = const newList
 
-  strategyDequeue = const listRemoveFirst
+  strategyDequeue =
+    const $ \q ->
+    do i <- listFirst q
+       listRemoveFirst q
+       return i
 
   strategyQueueNull = const listNull
-
-  strategyQueueFront = const listFirst
 
 instance UnitQueueStrategy FCFS DoubleLinkedList where
 
@@ -73,11 +72,13 @@ instance QueueStrategy LCFS DoubleLinkedList where
 
   newStrategyQueue = const newList
 
-  strategyDequeue = const listRemoveFirst
-
+  strategyDequeue =
+    const $ \q ->
+    do i <- listFirst q
+       listRemoveFirst q
+       return i
+       
   strategyQueueNull = const listNull
-
-  strategyQueueFront = const listFirst
 
 instance UnitQueueStrategy LCFS DoubleLinkedList where
 
@@ -87,13 +88,14 @@ instance QueueStrategy StaticPriorities PQ.PriorityQueue where
 
   newStrategyQueue = const PQ.newQueue
 
-  strategyDequeue = const PQ.dequeue
+  strategyDequeue =
+    const $ \q ->
+    do (_, i) <- PQ.queueFront q
+       PQ.dequeue q
+       return i
 
   strategyQueueNull = const PQ.queueNull
-
-  strategyQueueFront = const $ fmap snd . PQ.queueFront
 
 instance PriorityQueueStrategy StaticPriorities PQ.PriorityQueue where
 
   strategyEnqueueWithPriority = const PQ.enqueue
-
