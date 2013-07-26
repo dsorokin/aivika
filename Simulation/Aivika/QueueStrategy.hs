@@ -17,6 +17,7 @@ module Simulation.Aivika.QueueStrategy
         PriorityQueueStrategy(..)) where
 
 import Simulation.Aivika.DoubleLinkedList
+import qualified Simulation.Aivika.PriorityQueue as PQ
 
 -- | Defines the basic queue strategy.
 class QueueStrategy s q | s -> q where
@@ -51,6 +52,9 @@ data FCFS = FCFS
 -- | Strategy: Last Come - First Served (LCFS)
 data LCFS = LCFS
 
+-- | Strategy: Static Priorities. It uses the priority queue.
+data StaticPriorities = StaticPriorities
+
 instance QueueStrategy FCFS DoubleLinkedList where
 
   newStrategyQueue = const newList
@@ -78,3 +82,18 @@ instance QueueStrategy LCFS DoubleLinkedList where
 instance UnitQueueStrategy LCFS DoubleLinkedList where
 
   strategyEnqueue = const listInsertFirst
+
+instance QueueStrategy StaticPriorities PQ.PriorityQueue where
+
+  newStrategyQueue = const PQ.newQueue
+
+  strategyDequeue = const PQ.dequeue
+
+  strategyQueueNull = const PQ.queueNull
+
+  strategyQueueFront = const $ fmap snd . PQ.queueFront
+
+instance PriorityQueueStrategy StaticPriorities PQ.PriorityQueue where
+
+  strategyEnqueueWithPriority = const PQ.enqueue
+
