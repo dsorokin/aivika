@@ -24,6 +24,9 @@ module Simulation.Aivika.Internal.Process
         runProcess,
         runProcessInStartTime,
         runProcessInStopTime,
+        enqueueProcess,
+        enqueueProcessWithStartTime,
+        enqueueProcessWithStopTime,
         newProcessId,
         newProcessIdWithCatch,
         holdProcess,
@@ -144,11 +147,9 @@ reactivateProcess pid =
             invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
 
 -- | Start immediately the process with the specified identifier.
---
+--            
 -- To run the process at the specified time, you can use
--- the 'enqueueEvent' function. But the 'enqueueEventWithCurrentTime'
--- function is useful to run the process with the delay at the same
--- simulation time.
+-- the 'enqueueProcess' function.
 runProcess :: ProcessId -> Process () -> Event ()
 runProcess pid p =
   runCont m cont econt ccont (processCancelToken pid) (processCatchFlag pid)
@@ -163,15 +164,33 @@ runProcess pid p =
                    else liftIO $ writeIORef (processStarted pid) True
                  invokeProcess pid p
 
--- | Start the process in the start time.
+-- | Start the process in the start time immediately.
 runProcessInStartTime :: EventProcessing -> ProcessId -> Process () -> Simulation ()
 runProcessInStartTime processing pid p =
   runEventInStartTime processing $ runProcess pid p
 
--- | Start the process in the stop time.
+-- | Start the process in the stop time immediately.
 runProcessInStopTime :: EventProcessing -> ProcessId -> Process () -> Simulation ()
 runProcessInStopTime processing pid p =
   runEventInStopTime processing $ runProcess pid p
+
+-- | Enqueue the process that will be then started at the specified time
+-- from the event queue.
+enqueueProcess :: Double -> ProcessId -> Process () -> Event ()
+enqueueProcess t pid p =
+  enqueueEvent t $ runProcess pid p
+
+-- | Enqueue the process that will be then started in the start time
+-- from the event queue.
+enqueueProcessWithStartTime :: ProcessId -> Process () -> Event ()
+enqueueProcessWithStartTime pid p =
+  enqueueEventWithStartTime $ runProcess pid p
+
+-- | Enqueue the process that will be then started in the stop time
+-- from the event queue.
+enqueueProcessWithStopTime :: ProcessId -> Process () -> Event ()
+enqueueProcessWithStopTime pid p =
+  enqueueEventWithStopTime $ runProcess pid p
 
 -- | Return the current process identifier.
 processId :: Process ProcessId
