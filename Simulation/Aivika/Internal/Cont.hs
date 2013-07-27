@@ -218,19 +218,19 @@ throwCont e = liftIO $ throw e
 
 -- | Run the 'Cont' computation with the specified cancelation token 
 -- and flag indicating whether to catch exceptions.
-runCont :: Cont a ->
+runCont :: Cont a
            -- ^ the computation to run
-           (a -> Event ()) ->
+           -> (a -> Event ())
            -- ^ the main branch 
-           (IOError -> Event ()) ->
+           -> (IOError -> Event ())
            -- ^ the branch for handing exceptions
-           (() -> Event ()) ->
+           -> (() -> Event ())
            -- ^ the branch for cancellation
-           IORef Bool ->
+           -> IORef Bool
            -- ^ the cancellation token
-           Bool ->
+           -> Bool
            -- ^ whether to support the exception catching
-           Event ()
+           -> Event ()
 runCont (Cont m) cont econt ccont cancelToken catchFlag = 
   m ContParams { contCont = cont,
                  contAux  = 
