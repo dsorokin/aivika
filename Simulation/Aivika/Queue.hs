@@ -129,8 +129,11 @@ queueLostCount q =
 -- | Dequeue suspending the process if the queue is empty.
 dequeue :: (DequeueStrategy si qi,
             DequeueStrategy sm qm,
-            EnqueueStrategy so qo) =>
-           Queue si qi sm qm so qo a -> Process a  
+            EnqueueStrategy so qo)
+           => Queue si qi sm qm so qo a
+           -- ^ the queue
+           -> Process a
+           -- ^ the dequeued value
 dequeue q =
   do requestResource (queueOutputRes q)
      a <- liftEvent $
@@ -143,8 +146,13 @@ dequeue q =
 -- | Dequeue with the priority suspending the process if the queue is empty.
 dequeueWithPriority :: (DequeueStrategy si qi,
                         DequeueStrategy sm qm,
-                        PriorityQueueStrategy so qo) =>
-                       Queue si qi sm qm so qo a -> Double -> Process a  
+                        PriorityQueueStrategy so qo)
+                       => Queue si qi sm qm so qo a
+                       -- ^ the queue
+                       -> Double
+                       -- ^ the priority
+                       -> Process a
+                       -- ^ the dequeued value
 dequeueWithPriority q priority =
   do requestResourceWithPriority (queueOutputRes q) priority
      a <- liftEvent $
@@ -157,8 +165,13 @@ dequeueWithPriority q priority =
 -- | Dequeue with the dynamic priority suspending the process if the queue is empty.
 dequeueWithDynamicPriority :: (DequeueStrategy si qi,
                                DequeueStrategy sm qm,
-                               DynamicPriorityQueueStrategy so qo) =>
-                              Queue si qi sm qm so qo a -> Event Double -> Process a  
+                               DynamicPriorityQueueStrategy so qo)
+                              => Queue si qi sm qm so qo a
+                              -- ^ the queue
+                              -> Event Double
+                              -- ^ the dynamic priority
+                              -> Process a
+                              -- ^ the dequeued value
 dequeueWithDynamicPriority q priority =
   do requestResourceWithDynamicPriority (queueOutputRes q) priority
      a <- liftEvent $
@@ -170,8 +183,11 @@ dequeueWithDynamicPriority q priority =
   
 -- | Try to dequeue from the queue immediately.  
 tryDequeue :: (DequeueStrategy si qi,
-               DequeueStrategy sm qm) =>
-              Queue si qi sm qm so qo a -> Event (Maybe a)
+               DequeueStrategy sm qm)
+              => Queue si qi sm qm so qo a
+              -- ^ the queue
+              -> Event (Maybe a)
+              -- ^ the dequeued value of 'Nothing'
 tryDequeue q =
   do x <- tryRequestResourceWithinEvent (queueOutputRes q)
      if x 
@@ -184,8 +200,12 @@ tryDequeue q =
 -- | Enqueue the item suspending the process if the queue is full.  
 enqueue :: (EnqueueStrategy si qi,
             EnqueueStrategy sm qm,
-            DequeueStrategy so qo) =>
-           Queue si qi sm qm so qo a -> a -> Process ()
+            DequeueStrategy so qo)
+           => Queue si qi sm qm so qo a
+           -- ^ the queue
+           -> a
+           -- ^ the item to enqueue
+           -> Process ()
 enqueue q a =
   do requestResource (queueInputRes q)
      liftEvent $
@@ -197,8 +217,14 @@ enqueue q a =
 -- | Enqueue with the priority the item suspending the process if the queue is full.  
 enqueueWithPriority :: (PriorityQueueStrategy si qi,
                         EnqueueStrategy sm qm,
-                        DequeueStrategy so qo) =>
-                       Queue si qi sm qm so qo a -> Double -> a -> Process ()
+                        DequeueStrategy so qo)
+                       => Queue si qi sm qm so qo a
+                       -- ^ the queue
+                       -> Double
+                       -- ^ the priority
+                       -> a
+                       -- ^ the item to enqueue
+                       -> Process ()
 enqueueWithPriority q priority a =
   do requestResourceWithPriority (queueInputRes q) priority
      liftEvent $
@@ -210,8 +236,14 @@ enqueueWithPriority q priority a =
 -- | Enqueue with the dynamic priority the item suspending the process if the queue is full.  
 enqueueWithDynamicPriority :: (DynamicPriorityQueueStrategy si qi,
                                EnqueueStrategy sm qm,
-                               DequeueStrategy so qo) =>
-                              Queue si qi sm qm so qo a -> Event Double -> a -> Process ()
+                               DequeueStrategy so qo)
+                              => Queue si qi sm qm so qo a
+                              -- ^ the queue
+                              -> Event Double
+                              -- ^ the dynamic priority
+                              -> a
+                              -- ^ the item to enqueue
+                              -> Process ()
 enqueueWithDynamicPriority q priority a =
   do requestResourceWithDynamicPriority (queueInputRes q) priority
      liftEvent $
@@ -222,8 +254,12 @@ enqueueWithDynamicPriority q priority a =
      
 -- | Try to enqueue the item. Return 'False' in the monad if the queue is full.
 tryEnqueue :: (EnqueueStrategy sm qm,
-               DequeueStrategy so qo) =>
-              Queue si qi sm qm so qo a -> a -> Event Bool
+               DequeueStrategy so qo)
+              => Queue si qi sm qm so qo a
+              -- ^ the queue
+              -> a
+              -- ^ the item which we try to enqueue
+              -> Event Bool
 tryEnqueue q a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x 
@@ -236,8 +272,12 @@ tryEnqueue q a =
 -- | Try to enqueue the item. If the queue is full then the item will be lost
 -- and 'False' will be returned.
 enqueueOrLost :: (EnqueueStrategy sm qm,
-                  DequeueStrategy so qo) =>
-                 Queue si qi sm qm so qo a -> a -> Event Bool
+                  DequeueStrategy so qo)
+                 => Queue si qi sm qm so qo a
+                 -- ^ the queue
+                 -> a
+                 -- ^ the item which we try to enqueue
+                 -> Event Bool
 enqueueOrLost q a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x
@@ -251,8 +291,12 @@ enqueueOrLost q a =
 
 -- | Try to enqueue the item. If the queue is full then the item will be lost.
 enqueueOrLost_ :: (EnqueueStrategy sm qm,
-                   DequeueStrategy so qo) =>
-                  Queue si qi sm qm so qo a -> a -> Event ()
+                   DequeueStrategy so qo)
+                  => Queue si qi sm qm so qo a
+                  -- ^ the queue
+                  -> a
+                  -- ^ the item which we try to enqueue
+                  -> Event ()
 enqueueOrLost_ q a =
   do x <- enqueueOrLost q a
      return ()
