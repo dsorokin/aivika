@@ -35,22 +35,42 @@ import qualified Simulation.Aivika.Vector as V
 class QueueStrategy s q | s -> q where
 
   -- | Create a new queue by the specified strategy.
-  newStrategyQueue :: s -> Simulation (q i)
+  newStrategyQueue :: s
+                      -- ^ the strategy
+                      -> Simulation (q i)
+                      -- ^ a new queue
 
   -- | Test whether the queue is empty.
-  strategyQueueNull :: s -> q i -> Event Bool
+  strategyQueueNull :: s
+                       -- ^ the strategy
+                       -> q i
+                       -- ^ the queue
+                       -> Event Bool
+                       -- ^ the result of the test
 
 -- | Defines a strategy with support of the dequeuing operation.
 class QueueStrategy s q => DequeueStrategy s q | s -> q where
 
   -- | Dequeue the front element and return it.
-  strategyDequeue :: s -> q i -> Event i
+  strategyDequeue :: s
+                     -- ^ the strategy
+                     -> q i
+                     -- ^ the queue
+                     -> Event i
+                     -- ^ the dequeued element
 
 -- | It defines a strategy when we can enqueue a single element.
 class DequeueStrategy s q => EnqueueStrategy s q | s -> q where
 
   -- | Enqueue an element.
-  strategyEnqueue :: s -> q i -> i -> Event ()
+  strategyEnqueue :: s
+                     -- ^ the strategy
+                     -> q i
+                     -- ^ the queue
+                     -> i
+                     -- ^ the element to be enqueued
+                     -> Event ()
+                     -- ^ the action of enqueuing
 
 -- | It defines a strategy when we can enqueue an element with the specified priority.
 class DequeueStrategy s q => PriorityQueueStrategy s q | s -> q where
