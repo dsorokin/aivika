@@ -28,13 +28,13 @@ import Simulation.Aivika.Internal.Signal
 import Simulation.Aivika.Signal
 
 -- | The 'Ref' type represents a mutable variable similar to the 'IORef' variable 
--- but only managed by the event queue, which makes the variable value synchronized
--- with the model.
+-- but only dependent on the event queue, which allows synchronizing the reference
+-- with the model explicitly through the 'Event' monad.
 data Ref a = 
   Ref { refValue :: IORef a, 
         refChangedSource :: SignalSource a }
 
--- | Create a new reference bound up with the event queue.
+-- | Create a new reference.
 newRef :: a -> Simulation (Ref a)
 newRef a =
   do x <- liftIO $ newIORef a
@@ -42,8 +42,7 @@ newRef a =
      return Ref { refValue = x, 
                   refChangedSource = s }
      
--- | Read the value of a reference, forcing the bound event queue to raise 
--- the events in case of need.
+-- | Read the value of a reference.
 readRef :: Ref a -> Event a
 readRef r = Event $ \p -> readIORef (refValue r)
 
@@ -53,8 +52,7 @@ writeRef r a = Event $ \p ->
   do a `seq` writeIORef (refValue r) a
      invokeEvent p $ triggerSignal (refChangedSource r) a
 
--- | Mutate the contents of the reference, forcing the bound event queue to
--- raise all pending events in case of need.
+-- | Mutate the contents of the reference.
 modifyRef :: Ref a -> (a -> a) -> Event ()
 modifyRef r f = Event $ \p -> 
   do a <- readIORef (refValue r)
