@@ -16,7 +16,6 @@ module Simulation.Aivika.QueueStrategy
         DequeueStrategy(..),
         EnqueueStrategy(..),
         PriorityQueueStrategy(..),
-        DynamicPriorityQueueStrategy(..),
         FCFS(..),
         LCFS(..),
         SIRO(..),
@@ -73,16 +72,19 @@ class DequeueStrategy s q => EnqueueStrategy s q | s -> q where
                      -- ^ the action of enqueuing
 
 -- | It defines a strategy when we can enqueue an element with the specified priority.
-class DequeueStrategy s q => PriorityQueueStrategy s q | s -> q where
+class DequeueStrategy s q => PriorityQueueStrategy s q p | s -> q, s -> p where
 
   -- | Enqueue an element with the specified priority.
-  strategyEnqueueWithPriority :: s -> q i -> Double -> i -> Event ()
-
--- | It defines a strategy when we can enqueue an element with the dynamic priority.
-class DequeueStrategy s q => DynamicPriorityQueueStrategy s q | s -> q where
-
-  -- | Enqueue an element with the specified priority.
-  strategyEnqueueWithDynamicPriority :: s -> q i -> Event Double -> i -> Event ()
+  strategyEnqueueWithPriority :: s
+                                 -- ^ the strategy
+                                 -> q i
+                                 -- ^ the queue
+                                 -> p
+                                 -- ^ the priority
+                                 -> i
+                                 -- ^ the element to be enqueued
+                                 -> Event ()
+                                 -- ^ the action of enqueuing
 
 -- | Strategy: First Come - First Served (FCFS).
 data FCFS = FCFS
@@ -146,7 +148,7 @@ instance DequeueStrategy StaticPriorities PQ.PriorityQueue where
        PQ.dequeue q
        return i
 
-instance PriorityQueueStrategy StaticPriorities PQ.PriorityQueue where
+instance PriorityQueueStrategy StaticPriorities PQ.PriorityQueue Double where
 
   strategyEnqueueWithPriority s q p i = liftIO $ PQ.enqueue q p i
 

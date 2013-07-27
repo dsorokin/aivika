@@ -18,13 +18,11 @@ module Simulation.Aivika.Resource
         resourceCount,
         requestResource,
         requestResourceWithPriority,
-        requestResourceWithDynamicPriority,
         tryRequestResourceWithinEvent,
         releaseResource,
         releaseResourceWithinEvent,
         usingResource,
-        usingResourceWithPriority,
-        usingResourceWithDynamicPriority) where
+        usingResourceWithPriority) where
 
 import Data.IORef
 import Control.Monad
@@ -118,10 +116,10 @@ requestResource r =
 -- | Request with the priority for the resource decreasing its count
 -- in case of success, otherwise suspending the discontinuous process
 -- until some other process releases the resource.
-requestResourceWithPriority :: PriorityQueueStrategy s q
+requestResourceWithPriority :: PriorityQueueStrategy s q p
                                => Resource s q
                                -- ^ the requested resource
-                               -> Double
+                               -> p
                                -- ^ the priority
                                -> Process ()
 requestResourceWithPriority r priority =
@@ -132,27 +130,6 @@ requestResourceWithPriority r priority =
      if a == 0 
        then invokeEvent p $
             strategyEnqueueWithPriority (resourceStrategy r) (resourceWaitList r) priority c
-       else do let a' = a - 1
-               a' `seq` writeIORef (resourceCountRef r) a'
-               invokeEvent p $ resumeCont c ()
-
--- | Request with the dynamic priority for the resource decreasing its count
--- in case of success, otherwise suspending the discontinuous process
--- until some other process releases the resource.
-requestResourceWithDynamicPriority :: DynamicPriorityQueueStrategy s q
-                                      => Resource s q
-                                      -- ^ the requested resource
-                                      -> Event Double
-                                      -- ^ the dynamic priority
-                                      -> Process ()
-requestResourceWithDynamicPriority r priority =
-  Process $ \pid ->
-  Cont $ \c ->
-  Event $ \p ->
-  do a <- readIORef (resourceCountRef r)
-     if a == 0 
-       then invokeEvent p $
-            strategyEnqueueWithDynamicPriority (resourceStrategy r) (resourceWaitList r) priority c
        else do let a' = a - 1
                a' `seq` writeIORef (resourceCountRef r) a'
                invokeEvent p $ resumeCont c ()
@@ -235,11 +212,11 @@ usingResource r m =
 -- handling, i.e. with help of function 'newProcessIdWithCatch'. Unfortunately,
 -- such processes are slower than those that are created with help of
 -- other function 'newProcessId'.
-usingResourceWithPriority :: PriorityQueueStrategy s q
+usingResourceWithPriority :: PriorityQueueStrategy s q p
                              => Resource s q
                              -- ^ the resource we are going to request for and then
                              -- release in the end
-                             -> Double
+                             -> p
                              -- ^ the priority
                              -> Process a
                              -- ^ the action we are going to apply having the resource
@@ -247,24 +224,4 @@ usingResourceWithPriority :: PriorityQueueStrategy s q
                              -- ^ the result of the action
 usingResourceWithPriority r priority m =
   do requestResourceWithPriority r priority
-     finallyProcess m $ releaseResource r
-
--- | Acquire the resource with the dynamic priority, perform some action and
--- safely release the resource in the end, even if the 'IOException' was raised
--- within the action. The process identifier must be created with support of exception 
--- handling, i.e. with help of function 'newProcessIdWithCatch'. Unfortunately,
--- such processes are slower than those that are created with help of
--- other function 'newProcessId'.
-usingResourceWithDynamicPriority :: DynamicPriorityQueueStrategy s q
-                                    => Resource s q
-                                    -- ^ the resource we are going to request for and then
-                                    -- release in the end
-                                    -> Event Double
-                                    -- ^ the dynamic priority
-                                    -> Process a
-                                    -- ^ the action we are going to apply having the resource
-                                    -> Process a
-                                    -- ^ the result of the action
-usingResourceWithDynamicPriority r priority m =
-  do requestResourceWithDynamicPriority r priority
      finallyProcess m $ releaseResource r

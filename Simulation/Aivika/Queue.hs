@@ -25,11 +25,9 @@ module Simulation.Aivika.Queue
         newQueue,
         dequeue,
         dequeueWithPriority,
-        dequeueWithDynamicPriority,
         tryDequeue,
         enqueue,
         enqueueWithPriority,
-        enqueueWithDynamicPriority,
         tryEnqueue,
         enqueueOrLost,
         enqueueOrLost_) where
@@ -146,34 +144,15 @@ dequeue q =
 -- | Dequeue with the priority suspending the process if the queue is empty.
 dequeueWithPriority :: (DequeueStrategy si qi,
                         DequeueStrategy sm qm,
-                        PriorityQueueStrategy so qo)
+                        PriorityQueueStrategy so qo po)
                        => Queue si qi sm qm so qo a
                        -- ^ the queue
-                       -> Double
+                       -> po
                        -- ^ the priority
                        -> Process a
                        -- ^ the dequeued value
 dequeueWithPriority q priority =
   do requestResourceWithPriority (queueOutputRes q) priority
-     a <- liftEvent $
-          strategyDequeue (queueMemoryStrategy q) (queueMemory q)
-     releaseResource (queueInputRes q)
-     liftEvent $
-       triggerSignal (dequeuedSource q) a
-     return a
-  
--- | Dequeue with the dynamic priority suspending the process if the queue is empty.
-dequeueWithDynamicPriority :: (DequeueStrategy si qi,
-                               DequeueStrategy sm qm,
-                               DynamicPriorityQueueStrategy so qo)
-                              => Queue si qi sm qm so qo a
-                              -- ^ the queue
-                              -> Event Double
-                              -- ^ the dynamic priority
-                              -> Process a
-                              -- ^ the dequeued value
-dequeueWithDynamicPriority q priority =
-  do requestResourceWithDynamicPriority (queueOutputRes q) priority
      a <- liftEvent $
           strategyDequeue (queueMemoryStrategy q) (queueMemory q)
      releaseResource (queueInputRes q)
@@ -215,37 +194,18 @@ enqueue q a =
        triggerSignal (enqueuedSource q) a
      
 -- | Enqueue with the priority the item suspending the process if the queue is full.  
-enqueueWithPriority :: (PriorityQueueStrategy si qi,
+enqueueWithPriority :: (PriorityQueueStrategy si qi pi,
                         EnqueueStrategy sm qm,
                         DequeueStrategy so qo)
                        => Queue si qi sm qm so qo a
                        -- ^ the queue
-                       -> Double
+                       -> pi
                        -- ^ the priority
                        -> a
                        -- ^ the item to enqueue
                        -> Process ()
 enqueueWithPriority q priority a =
   do requestResourceWithPriority (queueInputRes q) priority
-     liftEvent $
-       strategyEnqueue (queueMemoryStrategy q) (queueMemory q) a
-     releaseResource (queueOutputRes q)
-     liftEvent $
-       triggerSignal (enqueuedSource q) a
-     
--- | Enqueue with the dynamic priority the item suspending the process if the queue is full.  
-enqueueWithDynamicPriority :: (DynamicPriorityQueueStrategy si qi,
-                               EnqueueStrategy sm qm,
-                               DequeueStrategy so qo)
-                              => Queue si qi sm qm so qo a
-                              -- ^ the queue
-                              -> Event Double
-                              -- ^ the dynamic priority
-                              -> a
-                              -- ^ the item to enqueue
-                              -> Process ()
-enqueueWithDynamicPriority q priority a =
-  do requestResourceWithDynamicPriority (queueInputRes q) priority
      liftEvent $
        strategyEnqueue (queueMemoryStrategy q) (queueMemory q) a
      releaseResource (queueOutputRes q)
