@@ -15,7 +15,7 @@ module Simulation.Aivika.Random
 import System.Random
 import Data.IORef
 
--- | Normal random number generator with mean 0 and variance 1.
+-- | Createa a normal random number generator with mean 0 and variance 1.
 newNormalGen :: IO (IO Double)
 newNormalGen =
   do nextRef <- newIORef 0.0
