@@ -124,6 +124,7 @@ vectorBinarySearch vector item =
      count <- readIORef (vectorCountRef vector)
      vectorBinarySearch' array item 0 (count - 1)
 
+-- | Return the elements of the vector in an immutable array.
 freezeVector :: Unboxed a => Vector a -> IO (Array Int a)
 freezeVector vector = 
   do vector' <- copyVector vector
