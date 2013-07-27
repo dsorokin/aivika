@@ -151,10 +151,10 @@ liftDS :: Simulation a -> Dynamics a
 liftDS (Simulation m) =
   Dynamics $ \p -> m $ pointRun p
 
--- | A type class to lift the 'Dynamics' computations in other monads.
+-- | A type class to lift the 'Dynamics' computations to other monads.
 class Monad m => DynamicsLift m where
   
-  -- | Lift the specified 'Dynamics' computation in another monad.
+  -- | Lift the specified 'Dynamics' computation to another monad.
   liftDynamics :: Dynamics a -> m a
 
 instance DynamicsLift Dynamics where
