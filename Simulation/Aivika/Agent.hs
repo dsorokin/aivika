@@ -9,14 +9,6 @@
 --
 -- This module introduces basic entities for the agent-based modeling.
 --
--- WARNING: the module is not well tested. This caution is related mainly to
--- managing the nested states.
--- 
--- At the same time, the timer and timeout handlers seem to be well tested as
--- they are just light-weight wrappers creating the event handlers that are
--- already processed by the event queue.
---
-
 module Simulation.Aivika.Agent
        (Agent,
         AgentState,
