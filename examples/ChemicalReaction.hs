@@ -1,6 +1,9 @@
 
+{-# LANGUAGE RecursiveDo #-}
+
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.SystemDynamics
 
 specs = Specs { spcStartTime = 0, 
@@ -9,18 +12,12 @@ specs = Specs { spcStartTime = 0,
                 spcMethod = RungeKutta4 }
 
 model :: Simulation [Double]
-model =
-  do integA <- newInteg 100
-     integB <- newInteg 0
-     integC <- newInteg 0
-     let a = integValue integA
-         b = integValue integB
-         c = integValue integC
-     let ka = 1
-         kb = 1
-     integDiff integA (- ka * a)
-     integDiff integB (ka * a - kb * b)
-     integDiff integC (kb * b)
-     runDynamicsInStopTime $ sequence [a, b, c]
+model = 
+  mdo a <- integ (- ka * a) 100
+      b <- integ (ka * a - kb * b) 0
+      c <- integ (kb * b) 0
+      let ka = 1
+          kb = 1
+      runDynamicsInStopTime $ sequence [a, b, c]
 
 main = runSimulation model specs >>= print
