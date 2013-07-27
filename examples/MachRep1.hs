@@ -18,12 +18,12 @@
 import System.Random
 import Control.Monad.Trans
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
+import Simulation.Aivika.Event
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Base
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Ref
-import Simulation.Aivika.Dynamics.Process
+import Simulation.Aivika.Ref
+import Simulation.Aivika.Process
 
 upRate = 1.0 / 1.0       -- reciprocal of mean up time
 repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
@@ -40,11 +40,10 @@ exprnd lambda =
      
 model :: Simulation Double
 model =
-  do queue <- newQueue
-     totalUpTime <- newRef queue 0.0
+  do totalUpTime <- newRef 0.0
      
-     pid1 <- newProcessID queue
-     pid2 <- newProcessID queue
+     pid1 <- newProcessId
+     pid2 <- newProcessId
      
      let machine :: Process ()
          machine =
@@ -52,21 +51,22 @@ model =
               upTime <- liftIO $ exprnd upRate
               holdProcess upTime
               finishUpTime <- liftDynamics time
-              liftDynamics $ 
+              liftEvent $ 
                 modifyRef totalUpTime
                 (+ (finishUpTime - startUpTime))
               repairTime <- liftIO $ exprnd repairRate
               holdProcess repairTime
               machine
-         
-     runDynamicsInStartTime $
-       do t0 <- starttime
-          runProcess machine pid1 t0
-          runProcess machine pid2 t0
+
+     runProcessInStartTime IncludingCurrentEvents
+       pid1 machine
+       
+     runProcessInStartTime IncludingCurrentEvents
+       pid2 machine
      
-     runDynamicsInStopTime $
+     runEventInStopTime IncludingCurrentEvents $
        do x <- readRef totalUpTime
-          y <- stoptime
+          y <- liftDynamics stoptime
           return $ x / (2 * y)
   
 main = runSimulation model specs >>= print

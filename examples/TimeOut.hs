@@ -22,12 +22,12 @@ import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.Base
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Ref
-import Simulation.Aivika.Dynamics.Process
+import Simulation.Aivika.Event
+import Simulation.Aivika.Ref
+import Simulation.Aivika.Process
 
 ackRate = 1.0 / 1.0  -- reciprocal of the acknowledge mean time
 toPeriod = 0.5       -- timeout period
@@ -44,58 +44,57 @@ exprnd lambda =
      
 model :: Simulation Double
 model =
-  do queue <- newQueue
-     
-     -- number of messages sent
-     nMsgs <- newRef queue 0
+  do -- number of messages sent
+     nMsgs <- newRef 0
      
      -- number of timeouts which have occured
-     nTimeOuts <- newRef queue 0
+     nTimeOuts <- newRef 0
      
      -- reactivatedCode will 1 if timeout occurred, 
      -- 2 ACK if received
-     reactivatedCode <- newRef queue 0
+     reactivatedCode <- newRef 0
      
-     nodePid <- newProcessID queue
+     nodePid <- newProcessId
      
      let node :: Process ()
          node =
-           do liftDynamics $ modifyRef nMsgs $ (+) 1
+           do liftEvent $ modifyRef nMsgs $ (+) 1
               -- create process IDs
-              timeoutPid <- liftSimulation $ newProcessID queue
-              ackPid <- liftSimulation $ newProcessID queue
+              timeoutPid <- liftSimulation newProcessId
+              ackPid <- liftSimulation newProcessId
               -- set up the timeout
-              liftDynamics $ runProcessNow (timeout ackPid) timeoutPid
+              liftEvent $ runProcess timeoutPid (timeout ackPid)
               -- set up the message send/ACK
-              liftDynamics $ runProcessNow (acknowledge timeoutPid) ackPid
+              liftEvent $ runProcess ackPid (acknowledge timeoutPid)
               passivateProcess
-              code <- liftDynamics $ readRef reactivatedCode
-              when (code == 1) $
-                liftDynamics $ modifyRef nTimeOuts $ (+) 1
-              liftDynamics $ writeRef reactivatedCode 0
+              liftEvent $
+                do code <- readRef reactivatedCode
+                   when (code == 1) $
+                     modifyRef nTimeOuts $ (+) 1
+                   writeRef reactivatedCode 0
               node
               
-         timeout :: ProcessID -> Process ()
+         timeout :: ProcessId -> Process ()
          timeout ackPid =
            do holdProcess toPeriod
-              liftDynamics $
+              liftEvent $
                 do writeRef reactivatedCode 1
                    reactivateProcess nodePid
                    cancelProcess ackPid
          
-         acknowledge :: ProcessID -> Process ()
+         acknowledge :: ProcessId -> Process ()
          acknowledge timeoutPid =
            do ackTime <- liftIO $ exprnd ackRate
               holdProcess ackTime
-              liftDynamics $
+              liftEvent $
                 do writeRef reactivatedCode 2
                    reactivateProcess nodePid
                    cancelProcess timeoutPid
 
-     runDynamicsInStartTime $
-       runProcessNow node nodePid 
+     runProcessInStartTime IncludingCurrentEvents
+       nodePid node
      
-     runDynamicsInStopTime $
+     runEventInStopTime IncludingCurrentEvents $
        do x <- readRef nTimeOuts
           y <- readRef nMsgs
           return $ x / y

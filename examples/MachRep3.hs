@@ -17,13 +17,14 @@ import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.Base
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Ref
-import Simulation.Aivika.Dynamics.Resource
-import Simulation.Aivika.Dynamics.Process
+import Simulation.Aivika.Event
+import Simulation.Aivika.Ref
+import Simulation.Aivika.QueueStrategy
+import Simulation.Aivika.Resource
+import Simulation.Aivika.Process
 
 upRate = 1.0 / 1.0       -- reciprocal of mean up time
 repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
@@ -40,33 +41,31 @@ exprnd lambda =
      
 model :: Simulation Double
 model =
-  do queue <- newQueue
-     
-     -- number of machines currently up
-     nUp <- newRef queue 2
+  do -- number of machines currently up
+     nUp <- newRef 2
      
      -- total up time for all machines
-     totalUpTime <- newRef queue 0.0
+     totalUpTime <- newRef 0.0
      
-     repairPerson <- newResource queue 1
+     repairPerson <- newResource FCFS 1
      
-     pid1 <- newProcessID queue
-     pid2 <- newProcessID queue
+     pid1 <- newProcessId
+     pid2 <- newProcessId
      
-     let machine :: ProcessID -> Process ()
+     let machine :: ProcessId -> Process ()
          machine pid =
            do startUpTime <- liftDynamics time
               upTime <- liftIO $ exprnd upRate
               holdProcess upTime
               finishUpTime <- liftDynamics time
-              liftDynamics $ modifyRef totalUpTime 
+              liftEvent $ modifyRef totalUpTime 
                 (+ (finishUpTime - startUpTime))
                 
-              liftDynamics $ modifyRef nUp $ \a -> a - 1
-              nUp' <- liftDynamics $ readRef nUp
+              liftEvent $ modifyRef nUp $ \a -> a - 1
+              nUp' <- liftEvent $ readRef nUp
               if nUp' == 1
                 then passivateProcess
-                else liftDynamics $
+                else liftEvent $
                      do n <- resourceCount repairPerson
                         when (n == 1) $ 
                           reactivateProcess pid
@@ -74,19 +73,20 @@ model =
               requestResource repairPerson
               repairTime <- liftIO $ exprnd repairRate
               holdProcess repairTime
-              liftDynamics $ modifyRef nUp $ \a -> a + 1
+              liftEvent $ modifyRef nUp $ \a -> a + 1
               releaseResource repairPerson
               
               machine pid
 
-     runDynamicsInStartTime $
-       do t0 <- starttime
-          runProcess (machine pid2) pid1 t0
-          runProcess (machine pid1) pid2 t0
-     
-     runDynamicsInStopTime $
+     runProcessInStartTime IncludingCurrentEvents
+       pid1 (machine pid2)
+
+     runProcessInStartTime IncludingCurrentEvents
+       pid2 (machine pid1)
+
+     runEventInStopTime IncludingCurrentEvents $
        do x <- readRef totalUpTime
-          y <- stoptime
+          y <- liftDynamics stoptime
           return $ x / (2 * y)
   
 main = runSimulation model specs >>= print

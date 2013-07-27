@@ -20,12 +20,12 @@ import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.Base
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Ref
-import Simulation.Aivika.Dynamics.Process
+import Simulation.Aivika.Event
+import Simulation.Aivika.Ref
+import Simulation.Aivika.Process
 
 ackRate = 1.0 / 1.0  -- reciprocal of the acknowledge mean time
 toPeriod = 0.5       -- timeout period
@@ -42,41 +42,40 @@ exprnd lambda =
      
 model :: Simulation Double
 model =
-  do queue <- newQueue
-     
-     -- number of messages sent
-     nMsgs <- newRef queue 0
+  do -- number of messages sent
+     nMsgs <- newRef 0
      
      -- number of timeouts which have occured
-     nTimeOuts <- newRef queue 0
+     nTimeOuts <- newRef 0
      
-     nodePid <- newProcessID queue
+     nodePid <- newProcessId
      
      let node :: Process ()
          node =
-           do liftDynamics $ modifyRef nMsgs $ (+) 1
+           do liftEvent $ modifyRef nMsgs $ (+) 1
               -- create the process ID
-              timeoutPid <- liftSimulation $ newProcessID queue
+              timeoutPid <- liftSimulation newProcessId
               -- set up the timeout
-              liftDynamics $ runProcessNow timeout timeoutPid
+              liftEvent $ runProcess timeoutPid timeout
               -- wait for ACK, but could be timeout
               ackTime <- liftIO $ exprnd ackRate 
               holdProcess ackTime
-              interrupted <- liftDynamics $ processInterrupted nodePid
-              if interrupted
-                then liftDynamics $ modifyRef nTimeOuts $ (+) 1
-                else liftDynamics $ cancelProcess timeoutPid
+              liftEvent $
+                do interrupted <- processInterrupted nodePid
+                   if interrupted
+                     then modifyRef nTimeOuts $ (+) 1
+                     else cancelProcess timeoutPid
               node
               
          timeout :: Process ()
          timeout =
            do holdProcess toPeriod
-              liftDynamics $ interruptProcess nodePid
+              liftEvent $ interruptProcess nodePid
 
-     runDynamicsInStartTime $
-       runProcessNow node nodePid 
+     runProcessInStartTime IncludingCurrentEvents
+       nodePid node 
      
-     runDynamicsInStopTime $
+     runEventInStopTime IncludingCurrentEvents $
        do x <- readRef nTimeOuts
           y <- readRef nMsgs
           return $ x / y

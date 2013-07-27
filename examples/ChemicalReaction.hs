@@ -4,7 +4,7 @@
 import Simulation.Aivika.Specs
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.SystemDynamics
+import Simulation.Aivika.SystemDynamics
 
 specs = Specs { spcStartTime = 0, 
                 spcStopTime = 13, 

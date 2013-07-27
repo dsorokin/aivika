@@ -21,13 +21,14 @@ import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.Base
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Ref
-import Simulation.Aivika.Dynamics.Resource
-import Simulation.Aivika.Dynamics.Process
+import Simulation.Aivika.Event
+import Simulation.Aivika.Ref
+import Simulation.Aivika.QueueStrategy
+import Simulation.Aivika.Resource
+import Simulation.Aivika.Process
 
 upRate = 1.0 / 1.0       -- reciprocal of mean up time
 repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
@@ -44,22 +45,20 @@ exprnd lambda =
      
 model :: Simulation (Double, Double)
 model =
-  do queue <- newQueue
-     
-     -- number of times the machines have broken down
-     nRep <- newRef queue 0 
+  do -- number of times the machines have broken down
+     nRep <- newRef 0 
      
      -- number of breakdowns in which the machine 
      -- started repair service right away
-     nImmedRep <- newRef queue 0
+     nImmedRep <- newRef 0
      
      -- total up time for all machines
-     totalUpTime <- newRef queue 0.0
+     totalUpTime <- newRef 0.0
      
-     repairPerson <- newResource queue 1
+     repairPerson <- newResource FCFS 1
      
-     pid1 <- newProcessID queue
-     pid2 <- newProcessID queue
+     pid1 <- newProcessId
+     pid2 <- newProcessId
      
      let machine :: Process ()
          machine =
@@ -67,11 +66,11 @@ model =
               upTime <- liftIO $ exprnd upRate
               holdProcess upTime
               finishUpTime <- liftDynamics time
-              liftDynamics $ modifyRef totalUpTime 
+              liftEvent $ modifyRef totalUpTime 
                 (+ (finishUpTime - startUpTime))
               
               -- check the resource availability
-              liftDynamics $
+              liftEvent $
                 do modifyRef nRep (+ 1)
                    n <- resourceCount repairPerson
                    when (n == 1) $
@@ -83,15 +82,16 @@ model =
               releaseResource repairPerson
               
               machine
-         
-     runDynamicsInStartTime $
-       do t0 <- starttime
-          runProcess machine pid1 t0
-          runProcess machine pid2 t0
+
+     runProcessInStartTime IncludingCurrentEvents
+       pid1 machine
+
+     runProcessInStartTime IncludingCurrentEvents
+       pid2 machine
           
-     runDynamicsInStopTime $
+     runEventInStopTime IncludingCurrentEvents $
        do x <- readRef totalUpTime
-          y <- stoptime
+          y <- liftDynamics stoptime
           n <- readRef nRep
           nImmed <- readRef nImmedRep
           return (x / (2 * y), 

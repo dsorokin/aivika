@@ -18,11 +18,11 @@
 import System.Random
 import Control.Monad.Trans
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.Base
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Ref
+import Simulation.Aivika.Event
+import Simulation.Aivika.Ref
 
 upRate = 1.0 / 1.0       -- reciprocal of mean up time
 repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
@@ -39,20 +39,19 @@ exprnd lambda =
      
 model :: Simulation Double
 model =
-  do queue <- newQueue
-     totalUpTime <- newRef queue 0.0
+  do totalUpTime <- newRef 0.0
      
-     let machine :: Simulation (Dynamics ())
+     let machine :: Simulation (Event ())
          machine =
-           do startUpTime <- newRef queue 0.0 
+           do startUpTime <- newRef 0.0 
              
               -- a number of iterations when 
               -- the machine works
-              upNum <- newRef queue (-1)
+              upNum <- newRef (-1)
               
               -- a number of iterations when 
               -- the machine is broken
-              repairNum <- newRef queue (-1)
+              repairNum <- newRef (-1)
               
               -- create a simulation model
               return $
@@ -69,8 +68,8 @@ model =
                          do writeRef upNum (-1)
                             -- the machine is broken
                             startUpTime' <- readRef startUpTime
-                            finishUpTime' <- time
-                            dt' <- dt
+                            finishUpTime' <- liftDynamics time
+                            dt' <- liftDynamics dt
                             modifyRef totalUpTime $ 
                               \a -> a +
                               (finishUpTime' - startUpTime')
@@ -82,8 +81,8 @@ model =
                        repaired =
                          do writeRef repairNum (-1)
                             -- the machine is repaired
-                            t'  <- time
-                            dt' <- dt
+                            t'  <- liftDynamics time
+                            dt' <- liftDynamics dt
                             writeRef startUpTime t'
                             upTime' <- 
                               liftIO $ exprnd upRate
@@ -97,20 +96,21 @@ model =
                               | otherwise      = repaired 
                    result
                             
-     -- create two machines with type Dynamics ()
+     -- create two machines with type Event ()
      m1 <- machine
      m2 <- machine
 
      -- start the time-driven simulation of the machines
-     -- through the event queue
-     runDynamicsInStartTime $
-       do enqueueWithIntegTimes queue m1
-          enqueueWithIntegTimes queue m2
+     runEventInStartTime IncludingCurrentEvents $
+       -- in the integration time points
+       enqueueEventWithIntegTimes $
+       do m1
+          m2
 
      -- return the result in the stop time
-     runDynamicsInStopTime $
+     runEventInStopTime IncludingCurrentEvents $
        do x <- readRef totalUpTime
-          y <- stoptime
+          y <- liftDynamics stoptime
           return $ x / (2 * y)
   
 main = runSimulation model specs >>= print
