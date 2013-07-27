@@ -2,7 +2,7 @@
 {-# LANGUAGE BangPatterns, RecursiveDo #-}
 
 -- |
--- Module     : Simulation.Aivika.Dynamics.SystemDynamics
+-- Module     : Simulation.Aivika.SystemDynamics
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -12,7 +12,7 @@
 -- This module defines integrals and other functions of System Dynamics.
 --
 
-module Simulation.Aivika.Dynamics.SystemDynamics
+module Simulation.Aivika.SystemDynamics
        (-- * Equality and Ordering
         (.==.),
         (./=.),
