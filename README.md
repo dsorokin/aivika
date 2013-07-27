@@ -14,7 +14,11 @@ the following features:
   with an ability to resume, suspend and cancel 
   the discontinuous processes;
 
-* allows working with limited resources;
+* allows working with limited resources (you can define your own behaviour
+  or use the predefined queue strategies);
+
+* allows customizing the queues (you can define your own behaviour
+  or use the predefined queue strategies);
 
 * supports the activity-oriented paradigm of DES;
 
