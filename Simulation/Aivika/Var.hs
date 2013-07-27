@@ -65,7 +65,7 @@ newVar a =
 -- function using modes 'IncludingCurrentEventsOrFromPast' and
 -- 'IncludingEarlierEventsOrFromPast', which is necessary if you are going
 -- to use the variable in the differential or difference equations. Only
--- in the latter case it is preferrable if the variable is not updated twice
+-- it is preferrable if the variable is not updated twice
 -- in the same integration time point; otherwise, different values can be returned
 -- for the same point.
 readVar :: Var a -> Event a
