@@ -50,7 +50,12 @@ instance Eq (Resource s q) where
   x == y = resourceCountRef x == resourceCountRef y  -- unique references
 
 -- | Create a new resource with the specified queue strategy and maximum count.
-newResource :: QueueStrategy s q => s -> Int -> Simulation (Resource s q)
+newResource :: QueueStrategy s q
+               => s
+               -- ^ the strategy for managing the queuing requests
+               -> Int
+               -- ^ the maximum count of the resource
+               -> Simulation (Resource s q)
 newResource s maxCount =
   Simulation $ \r ->
   do countRef <- newIORef maxCount
@@ -61,7 +66,14 @@ newResource s maxCount =
                        resourceWaitList = waitList }
 
 -- | Create a new resource with the specified queue strategy, maximum and initial count.
-newResourceWithCount :: QueueStrategy s q => s -> Int -> Int -> Simulation (Resource s q)
+newResourceWithCount :: QueueStrategy s q
+                        => s
+                        -- ^ the strategy for managing the queuing requests
+                        -> Int
+                        -- ^ the maximum count of the resource
+                        -> Int
+                        -- ^ the initial count of the resource
+                        -> Simulation (Resource s q)
 newResourceWithCount s maxCount count = do
   when (count < 0) $
     error $
@@ -87,7 +99,10 @@ resourceCount r =
 -- | Request for the resource decreasing its count in case of success,
 -- otherwise suspending the discontinuous process until some other 
 -- process releases the resource.
-requestResource :: EnqueueStrategy s q => Resource s q -> Process ()
+requestResource :: EnqueueStrategy s q
+                   => Resource s q
+                   -- ^ the requested resource
+                   -> Process ()
 requestResource r =
   Process $ \pid ->
   Cont $ \c ->
@@ -103,7 +118,12 @@ requestResource r =
 -- | Request with the priority for the resource decreasing its count
 -- in case of success, otherwise suspending the discontinuous process
 -- until some other process releases the resource.
-requestResourceWithPriority :: PriorityQueueStrategy s q => Resource s q -> Double -> Process ()
+requestResourceWithPriority :: PriorityQueueStrategy s q
+                               => Resource s q
+                               -- ^ the requested resource
+                               -> Double
+                               -- ^ the priority
+                               -> Process ()
 requestResourceWithPriority r priority =
   Process $ \pid ->
   Cont $ \c ->
@@ -119,8 +139,12 @@ requestResourceWithPriority r priority =
 -- | Request with the dynamic priority for the resource decreasing its count
 -- in case of success, otherwise suspending the discontinuous process
 -- until some other process releases the resource.
-requestResourceWithDynamicPriority ::
-  DynamicPriorityQueueStrategy s q => Resource s q -> Event Double -> Process ()
+requestResourceWithDynamicPriority :: DynamicPriorityQueueStrategy s q
+                                      => Resource s q
+                                      -- ^ the requested resource
+                                      -> Event Double
+                                      -- ^ the dynamic priority
+                                      -> Process ()
 requestResourceWithDynamicPriority r priority =
   Process $ \pid ->
   Cont $ \c ->
@@ -135,7 +159,10 @@ requestResourceWithDynamicPriority r priority =
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
-releaseResource :: DequeueStrategy s q => Resource s q -> Process ()
+releaseResource :: DequeueStrategy s q
+                   => Resource s q
+                   -- ^ the resource to release
+                   -> Process ()
 releaseResource r = 
   Process $ \_ ->
   Cont $ \c ->
@@ -145,7 +172,10 @@ releaseResource r =
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
-releaseResourceWithinEvent :: DequeueStrategy s q => Resource s q -> Event ()
+releaseResourceWithinEvent :: DequeueStrategy s q
+                              => Resource s q
+                              -- ^ the resource to release
+                              -> Event ()
 releaseResourceWithinEvent r =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
@@ -170,7 +200,9 @@ releaseResourceWithinEvent r =
 
 -- | Try to request for the resource decreasing its count in case of success
 -- and returning 'True' in the 'Event' monad; otherwise, returning 'False'.
-tryRequestResourceWithinEvent :: Resource s q -> Event Bool
+tryRequestResourceWithinEvent :: Resource s q
+                                 -- ^ the resource which we try to request for
+                                 -> Event Bool
 tryRequestResourceWithinEvent r =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
@@ -186,7 +218,13 @@ tryRequestResourceWithinEvent r =
 -- handling, i.e. with help of function 'newProcessIdWithCatch'. Unfortunately,
 -- such processes are slower than those that are created with help of
 -- other function 'newProcessId'.
-usingResource :: EnqueueStrategy s q => Resource s q -> Process a -> Process a
+usingResource :: EnqueueStrategy s q
+                 => Resource s q
+                 -- ^ the resource we are going to request for and then release in the end
+                 -> Process a
+                 -- ^ the action we are going to apply having the resource
+                 -> Process a
+                 -- ^ the result of the action
 usingResource r m =
   do requestResource r
      finallyProcess m $ releaseResource r
@@ -197,7 +235,16 @@ usingResource r m =
 -- handling, i.e. with help of function 'newProcessIdWithCatch'. Unfortunately,
 -- such processes are slower than those that are created with help of
 -- other function 'newProcessId'.
-usingResourceWithPriority :: PriorityQueueStrategy s q => Resource s q -> Double -> Process a -> Process a
+usingResourceWithPriority :: PriorityQueueStrategy s q
+                             => Resource s q
+                             -- ^ the resource we are going to request for and then
+                             -- release in the end
+                             -> Double
+                             -- ^ the priority
+                             -> Process a
+                             -- ^ the action we are going to apply having the resource
+                             -> Process a
+                             -- ^ the result of the action
 usingResourceWithPriority r priority m =
   do requestResourceWithPriority r priority
      finallyProcess m $ releaseResource r
@@ -208,8 +255,16 @@ usingResourceWithPriority r priority m =
 -- handling, i.e. with help of function 'newProcessIdWithCatch'. Unfortunately,
 -- such processes are slower than those that are created with help of
 -- other function 'newProcessId'.
-usingResourceWithDynamicPriority ::
-  DynamicPriorityQueueStrategy s q => Resource s q -> Event Double -> Process a -> Process a
+usingResourceWithDynamicPriority :: DynamicPriorityQueueStrategy s q
+                                    => Resource s q
+                                    -- ^ the resource we are going to request for and then
+                                    -- release in the end
+                                    -> Event Double
+                                    -- ^ the dynamic priority
+                                    -> Process a
+                                    -- ^ the action we are going to apply having the resource
+                                    -> Process a
+                                    -- ^ the result of the action
 usingResourceWithDynamicPriority r priority m =
   do requestResourceWithDynamicPriority r priority
      finallyProcess m $ releaseResource r
