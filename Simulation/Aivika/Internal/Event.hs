@@ -85,11 +85,19 @@ instance MonadIO Event where
 
 instance SimulationLift Event where
   liftSimulation = liftES
+
+instance DynamicsLift Event where
+  liftDynamics = liftDS
     
 liftES :: Simulation a -> Event a
 {-# INLINE liftES #-}
 liftES (Simulation m) =
   Event $ \p -> m $ pointRun p
+
+liftDS :: Dynamics a -> Event a
+{-# INLINE liftDS #-}
+liftDS (Dynamics m) =
+  Event m
 
 -- | A type class to lift the 'Event' computation to other monads.
 class Monad m => EventLift m where
