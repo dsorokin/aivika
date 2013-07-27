@@ -29,6 +29,7 @@ module Simulation.Aivika.Process
         newProcessId,
         newProcessIdWithCatch,
         processId,
+        processIdWithCatch,
         holdProcess,
         interruptProcess,
         processInterrupted,

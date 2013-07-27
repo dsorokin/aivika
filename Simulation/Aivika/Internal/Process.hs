@@ -29,6 +29,7 @@ module Simulation.Aivika.Internal.Process
         enqueueProcessWithStopTime,
         newProcessId,
         newProcessIdWithCatch,
+        processIdWithCatch,
         holdProcess,
         interruptProcess,
         processInterrupted,
@@ -236,6 +237,11 @@ newProcessIdWithCatch =
                         processInterruptRef  = i,
                         processInterruptCont = z, 
                         processInterruptVersion = v }
+
+-- | Test whether the process identifier was created with support
+-- of the exception handling.
+processIdWithCatch :: ProcessId -> Bool
+processIdWithCatch = processCatchFlag
 
 -- | Cancel a process with the specified identifier.
 cancelProcess :: ProcessId -> Event ()
