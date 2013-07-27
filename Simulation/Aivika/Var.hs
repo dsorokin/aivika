@@ -46,7 +46,7 @@ data Var a =
         varYS    :: V.Vector a,
         varChangedSource :: SignalSource a }
      
--- | Create a new variable bound to the specified event queue.
+-- | Create a new variable.
 newVar :: a -> Simulation (Var a)
 newVar a =
   Simulation $ \r ->
@@ -59,8 +59,7 @@ newVar a =
                   varYS = ys, 
                   varChangedSource = s }
 
--- | Read the value of a variable, forcing the bound event queue to raise 
--- the events in case of need.
+-- | Read the value of a variable.
 --
 -- It is safe to run the resulting computation with help of the 'runEvent'
 -- function using modes 'IncludingCurrentEventsOrFromPast' and
@@ -104,8 +103,7 @@ writeVar v a =
                     V.appendVector ys $! a
      invokeEvent p $ triggerSignal s a
 
--- | Mutate the contents of the variable, forcing the bound event queue to
--- raise all pending events in case of need.
+-- | Mutate the contents of the variable.
 modifyVar :: Var a -> (a -> a) -> Event ()
 modifyVar v f =
   Event $ \p ->
