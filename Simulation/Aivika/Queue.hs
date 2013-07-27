@@ -9,8 +9,8 @@
 --
 -- This module defines a queue that can use the specified strategies. So, having only
 -- the 'FCFS', 'LCFS', 'SIRO' and 'StaticPriorities' strategies, you can build
--- 4 x 3 x 4 = 48 different types of the queue, each of them will have its own
--- behavior (below @StaticPriorities@ can be used for input and output only).
+-- 4 x 4 x 4 = 64 different types of the queue, each of them will have its own
+-- behaviour.
 --
 module Simulation.Aivika.Queue
        (Queue,
@@ -24,13 +24,18 @@ module Simulation.Aivika.Queue
         enqueuedButLost,
         newQueue,
         dequeue,
-        dequeueWithPriority,
+        dequeueWithOutputPriority,
         tryDequeue,
         enqueue,
-        enqueueWithPriority,
+        enqueueWithInputPriority,
+        enqueueWithStoringPriority,
+        enqueueWithInputStoringPriorities,
         tryEnqueue,
+        tryEnqueueWithStoringPriority,
         enqueueOrLost,
-        enqueueOrLost_) where
+        enqueueOrLost_,
+        enqueueWithStoringPriorityOrLost,
+        enqueueWithStoringPriorityOrLost_) where
 
 import Data.IORef
 
@@ -141,17 +146,17 @@ dequeue q =
        triggerSignal (dequeuedSource q) a
      return a
   
--- | Dequeue with the priority suspending the process if the queue is empty.
-dequeueWithPriority :: (DequeueStrategy si qi,
-                        DequeueStrategy sm qm,
-                        PriorityQueueStrategy so qo po)
-                       => Queue si qi sm qm so qo a
-                       -- ^ the queue
-                       -> po
-                       -- ^ the priority
-                       -> Process a
-                       -- ^ the dequeued value
-dequeueWithPriority q priority =
+-- | Dequeue with the output priority suspending the process if the queue is empty.
+dequeueWithOutputPriority :: (DequeueStrategy si qi,
+                              DequeueStrategy sm qm,
+                              PriorityQueueStrategy so qo po)
+                             => Queue si qi sm qm so qo a
+                             -- ^ the queue
+                             -> po
+                             -- ^ the priority for output
+                             -> Process a
+                             -- ^ the dequeued value
+dequeueWithOutputPriority q priority =
   do requestResourceWithPriority (queueOutputRes q) priority
      a <- liftEvent $
           strategyDequeue (queueMemoryStrategy q) (queueMemory q)
@@ -193,21 +198,61 @@ enqueue q a =
      liftEvent $
        triggerSignal (enqueuedSource q) a
      
--- | Enqueue with the priority the item suspending the process if the queue is full.  
-enqueueWithPriority :: (PriorityQueueStrategy si qi pi,
-                        EnqueueStrategy sm qm,
-                        DequeueStrategy so qo)
-                       => Queue si qi sm qm so qo a
-                       -- ^ the queue
-                       -> pi
-                       -- ^ the priority
-                       -> a
-                       -- ^ the item to enqueue
-                       -> Process ()
-enqueueWithPriority q priority a =
+-- | Enqueue with the input priority the item suspending the process if the queue is full.  
+enqueueWithInputPriority :: (PriorityQueueStrategy si qi pi,
+                             EnqueueStrategy sm qm,
+                             DequeueStrategy so qo)
+                            => Queue si qi sm qm so qo a
+                            -- ^ the queue
+                            -> pi
+                            -- ^ the priority for input
+                            -> a
+                            -- ^ the item to enqueue
+                            -> Process ()
+enqueueWithInputPriority q priority a =
   do requestResourceWithPriority (queueInputRes q) priority
      liftEvent $
        strategyEnqueue (queueMemoryStrategy q) (queueMemory q) a
+     releaseResource (queueOutputRes q)
+     liftEvent $
+       triggerSignal (enqueuedSource q) a
+     
+-- | Enqueue with the storing priority the item suspending the process if the queue is full.  
+enqueueWithStoringPriority :: (EnqueueStrategy si qi,
+                               PriorityQueueStrategy sm qm pm,
+                               DequeueStrategy so qo)
+                              => Queue si qi sm qm so qo a
+                              -- ^ the queue
+                              -> pm
+                              -- ^ the priority for storing
+                              -> a
+                              -- ^ the item to enqueue
+                              -> Process ()
+enqueueWithStoringPriority q priority a =
+  do requestResource (queueInputRes q)
+     liftEvent $
+       strategyEnqueueWithPriority (queueMemoryStrategy q) (queueMemory q) priority a
+     releaseResource (queueOutputRes q)
+     liftEvent $
+       triggerSignal (enqueuedSource q) a
+     
+-- | Enqueue with the input and storing priorities the item suspending the process if the queue is full.  
+enqueueWithInputStoringPriorities :: (PriorityQueueStrategy si qi pi,
+                                      PriorityQueueStrategy sm qm pm,
+                                      DequeueStrategy so qo)
+                                     => Queue si qi sm qm so qo a
+                                     -- ^ the queue
+                                     -> pi
+                                     -- ^ the priority for input
+                                     -> pm
+                                     -- ^ the priority for storing
+                                     -> a
+                                     -- ^ the item to enqueue
+                                     -> Process ()
+enqueueWithInputStoringPriorities q pi pm a =
+  do requestResourceWithPriority (queueInputRes q) pi
+     liftEvent $
+       strategyEnqueueWithPriority (queueMemoryStrategy q) (queueMemory q) pm a
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -224,6 +269,25 @@ tryEnqueue q a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x 
        then do strategyEnqueue (queueMemoryStrategy q) (queueMemory q) a
+               releaseResourceWithinEvent (queueOutputRes q)
+               triggerSignal (enqueuedSource q) a
+               return True
+       else return False
+
+-- | Try to enqueue with the storing priority the item. Return 'False' in the monad if the queue is full.
+tryEnqueueWithStoringPriority :: (PriorityQueueStrategy sm qm pm,
+                                  DequeueStrategy so qo)
+                                 => Queue si qi sm qm so qo a
+                                 -- ^ the queue
+                                 -> pm
+                                 -- ^ the priority for storing
+                                 -> a
+                                 -- ^ the item which we try to enqueue
+                                 -> Event Bool
+tryEnqueueWithStoringPriority q pm a =
+  do x <- tryRequestResourceWithinEvent (queueInputRes q)
+     if x 
+       then do strategyEnqueueWithPriority (queueMemoryStrategy q) (queueMemory q) pm a
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True
@@ -249,6 +313,28 @@ enqueueOrLost q a =
                triggerSignal (enqueuedButLostSource q) a
                return False
 
+-- | Try to enqueue with the storing priority the item. If the queue is full then the item will be lost
+-- and 'False' will be returned.
+enqueueWithStoringPriorityOrLost :: (PriorityQueueStrategy sm qm pm,
+                                     DequeueStrategy so qo)
+                                    => Queue si qi sm qm so qo a
+                                    -- ^ the queue
+                                    -> pm
+                                    -- ^ the priority for storing
+                                    -> a
+                                    -- ^ the item which we try to enqueue
+                                    -> Event Bool
+enqueueWithStoringPriorityOrLost q pm a =
+  do x <- tryRequestResourceWithinEvent (queueInputRes q)
+     if x
+       then do strategyEnqueueWithPriority (queueMemoryStrategy q) (queueMemory q) pm a
+               releaseResourceWithinEvent (queueOutputRes q)
+               triggerSignal (enqueuedSource q) a
+               return True
+       else do liftIO $ modifyIORef (queueLostCountRef q) $ (+) 1
+               triggerSignal (enqueuedButLostSource q) a
+               return False
+
 -- | Try to enqueue the item. If the queue is full then the item will be lost.
 enqueueOrLost_ :: (EnqueueStrategy sm qm,
                    DequeueStrategy so qo)
@@ -261,13 +347,28 @@ enqueueOrLost_ q a =
   do x <- enqueueOrLost q a
      return ()
 
+-- | Try to enqueue with the storing priority the item. If the queue is full then the item will be lost.
+enqueueWithStoringPriorityOrLost_ :: (PriorityQueueStrategy sm qm pm,
+                                      DequeueStrategy so qo)
+                                     => Queue si qi sm qm so qo a
+                                     -- ^ the queue
+                                     -> pm
+                                     -- ^ the priority for storing
+                                     -> a
+                                     -- ^ the item which we try to enqueue
+                                     -> Event ()
+enqueueWithStoringPriorityOrLost_ q pm a =
+  do x <- enqueueWithStoringPriorityOrLost q pm a
+     return ()
+
 -- | Return a signal that notifies when any item is enqueued.
 enqueued :: Queue si qi sm qm so qo a -> Signal a
 enqueued q = publishSignal (enqueuedSource q)
 
 -- | Return a signal which notifies that the item was lost when 
 -- attempting to add it to the full queue with help of
--- 'enqueueOrLost' or 'enqueueOrLost_'.
+-- 'enqueueOrLost', 'enqueueOrLost_' or similar functions that imply
+-- that the element can be lost.
 enqueuedButLost :: Queue si qi sm qm so qo a -> Signal a
 enqueuedButLost q = publishSignal (enqueuedButLostSource q)
 
