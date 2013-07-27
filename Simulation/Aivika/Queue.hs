@@ -16,6 +16,9 @@ module Simulation.Aivika.Queue
        (Queue,
         queueNull,
         queueFull,
+        queueInputStrategy,
+        queueStoringStrategy,
+        queueOutputStrategy,
         queueMaxCount,
         queueCount,
         queueLostCount,
@@ -59,10 +62,13 @@ data Queue si qi sm qm so qo a =
   Queue { queueMaxCount :: Int,
           -- ^ The maximum available number of items.
           queueInputStrategy :: si,
-          queueMemoryStrategy :: sm,
+          -- ^ The strategy applied to the input (enqueuing) process.
+          queueStoringStrategy :: sm,
+          -- ^ The strategy applied when storing (in memory) items in the queue.
           queueOutputStrategy :: so,
+          -- ^ The strategy applied to the output (dequeuing) process.
           queueInputRes :: Resource si qi,
-          queueMemory :: qm a,
+          queueStore :: qm a,
           queueOutputRes :: Resource so qo,
           queueCountRef :: IORef Int,
           queueLostCountRef :: IORef Int,
@@ -94,10 +100,10 @@ newQueue si sm so count =
      s3 <- newSignalSource
      return Queue { queueMaxCount = count,
                     queueInputStrategy = si,
-                    queueMemoryStrategy = sm,
+                    queueStoringStrategy = sm,
                     queueOutputStrategy = so,
                     queueInputRes = ri,
-                    queueMemory = qm,
+                    queueStore = qm,
                     queueOutputRes = ro,
                     queueCountRef = i,
                     queueLostCountRef = l,
@@ -140,7 +146,7 @@ dequeue :: (DequeueStrategy si qi,
 dequeue q =
   do requestResource (queueOutputRes q)
      a <- liftEvent $
-          strategyDequeue (queueMemoryStrategy q) (queueMemory q)
+          strategyDequeue (queueStoringStrategy q) (queueStore q)
      releaseResource (queueInputRes q)
      liftEvent $
        triggerSignal (dequeuedSource q) a
@@ -159,7 +165,7 @@ dequeueWithOutputPriority :: (DequeueStrategy si qi,
 dequeueWithOutputPriority q priority =
   do requestResourceWithPriority (queueOutputRes q) priority
      a <- liftEvent $
-          strategyDequeue (queueMemoryStrategy q) (queueMemory q)
+          strategyDequeue (queueStoringStrategy q) (queueStore q)
      releaseResource (queueInputRes q)
      liftEvent $
        triggerSignal (dequeuedSource q) a
@@ -175,7 +181,7 @@ tryDequeue :: (DequeueStrategy si qi,
 tryDequeue q =
   do x <- tryRequestResourceWithinEvent (queueOutputRes q)
      if x 
-       then do a <- strategyDequeue (queueMemoryStrategy q) (queueMemory q)
+       then do a <- strategyDequeue (queueStoringStrategy q) (queueStore q)
                releaseResourceWithinEvent (queueInputRes q)
                triggerSignal (dequeuedSource q) a
                return $ Just a
@@ -193,7 +199,7 @@ enqueue :: (EnqueueStrategy si qi,
 enqueue q a =
   do requestResource (queueInputRes q)
      liftEvent $
-       strategyEnqueue (queueMemoryStrategy q) (queueMemory q) a
+       strategyEnqueue (queueStoringStrategy q) (queueStore q) a
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -212,7 +218,7 @@ enqueueWithInputPriority :: (PriorityQueueStrategy si qi pi,
 enqueueWithInputPriority q priority a =
   do requestResourceWithPriority (queueInputRes q) priority
      liftEvent $
-       strategyEnqueue (queueMemoryStrategy q) (queueMemory q) a
+       strategyEnqueue (queueStoringStrategy q) (queueStore q) a
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -231,7 +237,7 @@ enqueueWithStoringPriority :: (EnqueueStrategy si qi,
 enqueueWithStoringPriority q priority a =
   do requestResource (queueInputRes q)
      liftEvent $
-       strategyEnqueueWithPriority (queueMemoryStrategy q) (queueMemory q) priority a
+       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) priority a
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -252,7 +258,7 @@ enqueueWithInputStoringPriorities :: (PriorityQueueStrategy si qi pi,
 enqueueWithInputStoringPriorities q pi pm a =
   do requestResourceWithPriority (queueInputRes q) pi
      liftEvent $
-       strategyEnqueueWithPriority (queueMemoryStrategy q) (queueMemory q) pm a
+       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm a
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -268,7 +274,7 @@ tryEnqueue :: (EnqueueStrategy sm qm,
 tryEnqueue q a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x 
-       then do strategyEnqueue (queueMemoryStrategy q) (queueMemory q) a
+       then do strategyEnqueue (queueStoringStrategy q) (queueStore q) a
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True
@@ -287,7 +293,7 @@ tryEnqueueWithStoringPriority :: (PriorityQueueStrategy sm qm pm,
 tryEnqueueWithStoringPriority q pm a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x 
-       then do strategyEnqueueWithPriority (queueMemoryStrategy q) (queueMemory q) pm a
+       then do strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm a
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True
@@ -305,7 +311,7 @@ enqueueOrLost :: (EnqueueStrategy sm qm,
 enqueueOrLost q a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x
-       then do strategyEnqueue (queueMemoryStrategy q) (queueMemory q) a
+       then do strategyEnqueue (queueStoringStrategy q) (queueStore q) a
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True
@@ -327,7 +333,7 @@ enqueueWithStoringPriorityOrLost :: (PriorityQueueStrategy sm qm pm,
 enqueueWithStoringPriorityOrLost q pm a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x
-       then do strategyEnqueueWithPriority (queueMemoryStrategy q) (queueMemory q) pm a
+       then do strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm a
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True

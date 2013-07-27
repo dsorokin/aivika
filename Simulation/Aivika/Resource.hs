@@ -14,6 +14,7 @@ module Simulation.Aivika.Resource
        (Resource,
         newResource,
         newResourceWithCount,
+        resourceStrategy,
         resourceMaxCount,
         resourceCount,
         requestResource,
@@ -39,6 +40,7 @@ import Simulation.Aivika.QueueStrategy
 -- | Represents a limited resource.
 data Resource s q = 
   Resource { resourceStrategy :: s,
+             -- ^ Return the strategy applied for queuing the requests.
              resourceMaxCount :: Int,
              -- ^ Return the maximum count of the resource.
              resourceCountRef :: IORef Int, 
