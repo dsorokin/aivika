@@ -30,7 +30,7 @@ import Simulation.Aivika.Dynamics.Memo
 -- | Like the standard 'foldl1' function but applied to values in 
 -- the integration time points. The accumulator values are transformed
 -- according to the first argument, which should be either function 
--- 'memo0Dynamics' or 'umemo0Dynamics'.
+-- 'memo0Dynamics' or its unboxed version.
 foldDynamics1 :: (Dynamics a -> Simulation (Dynamics a))
                  -> (a -> a -> a) 
                  -> Dynamics a 
@@ -56,7 +56,7 @@ foldDynamics1 tr f (Dynamics m) =
 -- | Like the standard 'foldl' function but applied to values in 
 -- the integration time points. The accumulator values are transformed
 -- according to the first argument, which should be either function
--- 'memo0Dynamics' or 'umemo0Dynamics'.
+-- 'memo0Dynamics' or its unboxed version.
 foldDynamics :: (Dynamics a -> Simulation (Dynamics a))
                 -> (a -> b -> a) 
                 -> a
