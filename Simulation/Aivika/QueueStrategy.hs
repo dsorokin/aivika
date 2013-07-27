@@ -16,6 +16,7 @@ module Simulation.Aivika.QueueStrategy
         DequeueStrategy(..),
         EnqueueStrategy(..),
         PriorityQueueStrategy(..),
+        DynamicPriorityQueueStrategy(..),
         FCFS(..),
         LCFS(..),
         SIRO(..),
@@ -56,6 +57,12 @@ class DequeueStrategy s q => PriorityQueueStrategy s q | s -> q where
 
   -- | Enqueue an element with the specified priority.
   strategyEnqueueWithPriority :: s -> q i -> Double -> i -> Event ()
+
+-- | It defines a strategy when we can enqueue an element with the dynamic priority.
+class DequeueStrategy s q => DynamicPriorityQueueStrategy s q | s -> q where
+
+  -- | Enqueue an element with the specified priority.
+  strategyEnqueueWithDynamicPriority :: s -> q i -> Event Double -> i -> Event ()
 
 -- | Strategy: First Come - First Served (FCFS).
 data FCFS = FCFS

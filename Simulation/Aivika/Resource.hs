@@ -18,11 +18,13 @@ module Simulation.Aivika.Resource
         resourceCount,
         requestResource,
         requestResourceWithPriority,
+        requestResourceWithDynamicPriority,
         tryRequestResourceWithinEvent,
         releaseResource,
         releaseResourceWithinEvent,
         usingResource,
-        usingResourceWithPriority) where
+        usingResourceWithPriority,
+        usingResourceWithDynamicPriority) where
 
 import Data.IORef
 import Control.Monad
@@ -114,6 +116,23 @@ requestResourceWithPriority r priority =
                a' `seq` writeIORef (resourceCountRef r) a'
                invokeEvent p $ resumeCont c ()
 
+-- | Request with the dynamic priority for the resource decreasing its count
+-- in case of success, otherwise suspending the discontinuous process
+-- until some other process releases the resource.
+requestResourceWithDynamicPriority ::
+  DynamicPriorityQueueStrategy s q => Resource s q -> Event Double -> Process ()
+requestResourceWithDynamicPriority r priority =
+  Process $ \pid ->
+  Cont $ \c ->
+  Event $ \p ->
+  do a <- readIORef (resourceCountRef r)
+     if a == 0 
+       then invokeEvent p $
+            strategyEnqueueWithDynamicPriority (resourceStrategy r) (resourceWaitList r) priority c
+       else do let a' = a - 1
+               a' `seq` writeIORef (resourceCountRef r) a'
+               invokeEvent p $ resumeCont c ()
+
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
 releaseResource :: DequeueStrategy s q => Resource s q -> Process ()
@@ -181,4 +200,16 @@ usingResource r m =
 usingResourceWithPriority :: PriorityQueueStrategy s q => Resource s q -> Double -> Process a -> Process a
 usingResourceWithPriority r priority m =
   do requestResourceWithPriority r priority
+     finallyProcess m $ releaseResource r
+
+-- | Acquire the resource with the dynamic priority, perform some action and
+-- safely release the resource in the end, even if the 'IOException' was raised
+-- within the action. The process identifier must be created with support of exception 
+-- handling, i.e. with help of function 'newProcessIdWithCatch'. Unfortunately,
+-- such processes are slower than those that are created with help of
+-- other function 'newProcessId'.
+usingResourceWithDynamicPriority ::
+  DynamicPriorityQueueStrategy s q => Resource s q -> Event Double -> Process a -> Process a
+usingResourceWithDynamicPriority r priority m =
+  do requestResourceWithDynamicPriority r priority
      finallyProcess m $ releaseResource r
