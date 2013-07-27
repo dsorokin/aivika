@@ -1,5 +1,5 @@
 name:            aivika
-version:         0.6.2
+version:         0.7
 synopsis:        A multi-paradigm simulation library
 description:
     Aivika is a multi-paradigm simulation library which has 
@@ -58,7 +58,7 @@ description:
     All three libraries were tested on Linux, Windows and OS X.
     .
     Please read the PDF document An Introduction to 
-    Aivika Simulation Library [3] for more details. 
+    Aivika Simulation Library [3] for more details (a little outdated). 
     This document is included in the distributive of Aivika but 
     you can usually find a more recent version by the link provided.
     .
@@ -81,9 +81,7 @@ tested-with:     GHC == 7.6.3
 
 extra-source-files:  examples/BassDiffusion.hs
                      examples/ChemicalReaction.hs
-                     examples/ChemicalReactionRec.hs
                      examples/FishBank.hs
-                     examples/FishBankRec.hs
                      examples/MachRep1.hs
                      examples/MachRep1EventDriven.hs
                      examples/MachRep1TimeDriven.hs
@@ -98,39 +96,43 @@ data-files:          doc/aivika.pdf
 
 library
 
-    exposed-modules: Simulation.Aivika.Dynamics
-                     Simulation.Aivika.Dynamics.Agent
-                     Simulation.Aivika.Dynamics.Base
-                     Simulation.Aivika.Dynamics.Cont
-                     Simulation.Aivika.Dynamics.EventQueue
-                     Simulation.Aivika.Dynamics.Parameter
-                     Simulation.Aivika.Dynamics.Process
+    exposed-modules: Simulation.Aivika.Agent
+                     Simulation.Aivika.Cont
+                     Simulation.Aivika.DoubleLinkedList
+                     Simulation.Aivika.Dynamics
+                     Simulation.Aivika.Dynamics.Fold
+                     Simulation.Aivika.Dynamics.Interpolate
+                     Simulation.Aivika.Dynamics.Memo
+                     Simulation.Aivika.Dynamics.Memo.Unboxed
                      Simulation.Aivika.Dynamics.Random
-                     Simulation.Aivika.Dynamics.Ref
-                     Simulation.Aivika.Dynamics.Resource
-                     Simulation.Aivika.Dynamics.Simulation
-                     Simulation.Aivika.Dynamics.SystemDynamics
-                     Simulation.Aivika.Dynamics.UVar
-                     Simulation.Aivika.Dynamics.Var
-                     Simulation.Aivika.Dynamics.FIFO
-                     Simulation.Aivika.Dynamics.LIFO
-                     Simulation.Aivika.Dynamics.Buffer
-                     Simulation.Aivika.Dynamics.Signal
-                     Simulation.Aivika.Statistics
+                     Simulation.Aivika.Event
+                     Simulation.Aivika.Parameter
+                     Simulation.Aivika.Parameter.Random
                      Simulation.Aivika.PriorityQueue
+                     Simulation.Aivika.Process
                      Simulation.Aivika.Queue
-
-    other-modules:   Simulation.Aivika.Dynamics.Internal.Dynamics
-                     Simulation.Aivika.Dynamics.Internal.Simulation
-                     Simulation.Aivika.Dynamics.Internal.Cont
-                     Simulation.Aivika.Dynamics.Internal.Process
-                     Simulation.Aivika.Dynamics.Internal.Time
-                     Simulation.Aivika.Dynamics.Internal.Memo
-                     Simulation.Aivika.Dynamics.Internal.Interpolate
-                     Simulation.Aivika.Dynamics.Internal.Fold
-                     Simulation.Aivika.Dynamics.Internal.Signal
+                     Simulation.Aivika.QueueStrategy
+                     Simulation.Aivika.Random
+                     Simulation.Aivika.Ref
+                     Simulation.Aivika.Resource
+                     Simulation.Aivika.Signal
+                     Simulation.Aivika.Simulation
+                     Simulation.Aivika.Specs
+                     Simulation.Aivika.Statistics
+                     Simulation.Aivika.SystemDynamics
+                     Simulation.Aivika.Unboxed
+                     Simulation.Aivika.Var
+                     Simulation.Aivika.Var.Unboxed
                      Simulation.Aivika.Vector
-                     Simulation.Aivika.UVector
+                     Simulation.Aivika.Vector.Unboxed
+
+    other-modules:   Simulation.Aivika.Internal.Cont
+                     Simulation.Aivika.Internal.Dynamics
+                     Simulation.Aivika.Internal.Event
+                     Simulation.Aivika.Internal.Process
+                     Simulation.Aivika.Internal.Signal
+                     Simulation.Aivika.Internal.Simulation
+                     Simulation.Aivika.Internal.Specs
                      
     build-depends:   base >= 4.5.0.0 && < 6,
                      mtl >= 2.1.1,
