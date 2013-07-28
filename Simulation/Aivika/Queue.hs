@@ -23,9 +23,11 @@ module Simulation.Aivika.Queue
         queueCount,
         queueLostCount,
         queueInputCount,
+        queueStoredCount,
         queueOutputCount,
         queueLoadFactor,
         queueInputRate,
+        queueStoredRate,
         queueOutputRate,
         queueWaitTime,
         queueTotalWaitTime,
@@ -88,6 +90,7 @@ data Queue si qi sm qm so qo a =
           queueCountRef :: IORef Int,
           queueLostCountRef :: IORef Int,
           queueInputCountRef :: IORef Int,
+          queueStoredCountRef :: IORef Int,
           queueOutputCountRef :: IORef Int,
           queueWaitTimeRef :: IORef (SamplingStats Double),
           queueTotalWaitTimeRef :: IORef (SamplingStats Double),
@@ -128,6 +131,7 @@ newQueue si sm so count =
   do i  <- liftIO $ newIORef 0
      l  <- liftIO $ newIORef 0
      ci <- liftIO $ newIORef 0
+     cm <- liftIO $ newIORef 0
      co <- liftIO $ newIORef 0
      ri <- newResourceWithCount si count count
      qm <- newStrategyQueue sm
@@ -151,6 +155,7 @@ newQueue si sm so count =
                     queueCountRef = i,
                     queueLostCountRef = l,
                     queueInputCountRef = ci,
+                    queueStoredCountRef = cm,
                     queueOutputCountRef = co,
                     queueWaitTimeRef = w,
                     queueTotalWaitTimeRef = wt,
@@ -204,6 +209,15 @@ queueInputCount q =
                     mapSignalM (const read) (enqueueInitiated q)
                 }
       
+-- | Return the total number of input items that were stored.
+queueStoredCount :: Queue si qi sm qm so qo a -> Observable Int
+queueStoredCount q =
+  let read = Event $ \p -> readIORef (queueStoredCountRef q)
+  in Observable { readObservable   = read,
+                  observableSignal =
+                    mapSignalM (const read) (enqueueStored q)
+                }
+      
 -- | Return the total number of output items that were dequeued.
 queueOutputCount :: Queue si qi sm qm so qo a -> Observable Int
 queueOutputCount q =
@@ -233,6 +247,15 @@ queueInputRate :: Queue si qi sm qm so qo a -> Event Double
 queueInputRate q =
   Event $ \p ->
   do x <- readIORef (queueInputCountRef q)
+     t <- invokeDynamics p $ time
+     return (fromIntegral x / t)
+      
+-- | Return the rate of the items that were stored: how many items
+-- per time.
+queueStoredRate :: Queue si qi sm qm so qo a -> Event Double
+queueStoredRate q =
+  Event $ \p ->
+  do x <- readIORef (queueStoredCountRef q)
      t <- invokeDynamics p $ time
      return (fromIntegral x / t)
       
@@ -574,6 +597,7 @@ enqueueStore q i =
      invokeEvent p $
        strategyEnqueue (queueStoringStrategy q) (queueStore q) i'
      modifyIORef (queueCountRef q) (+ 1)
+     modifyIORef (queueStoredCountRef q) (+ 1)
      invokeEvent p $
        enqueueStat q i'
      invokeEvent p $
@@ -598,6 +622,7 @@ enqueueStoreWithPriority q pm i =
      invokeEvent p $
        strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i'
      modifyIORef (queueCountRef q) (+ 1)
+     modifyIORef (queueStoredCountRef q) (+ 1)
      invokeEvent p $
        enqueueStat q i'
      invokeEvent p $
