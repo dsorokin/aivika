@@ -46,6 +46,7 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Internal.Simulation
+import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Process
 import Simulation.Aivika.Internal.Signal
@@ -68,13 +69,21 @@ data Queue si qi sm qm so qo a =
           queueOutputStrategy :: so,
           -- ^ The strategy applied to the output (dequeuing) process.
           queueInputRes :: Resource si qi,
-          queueStore :: qm a,
+          queueStore :: qm (QueueItem a),
           queueOutputRes :: Resource so qo,
           queueCountRef :: IORef Int,
           queueLostCountRef :: IORef Int,
           enqueuedSource :: SignalSource a,
           enqueuedButLostSource :: SignalSource a,
           dequeuedSource :: SignalSource a }
+
+-- | Stores the item and a time of its enqueuing. 
+data QueueItem a =
+  QueueItem { itemValue :: a,
+              -- ^ Return the item value.
+              itemInputTime :: Double
+              -- ^ Return the time of enqueuing the item.
+            }
   
 -- | Create a new queue with the specified strategies and maximum available number of items.  
 newQueue :: (QueueStrategy si qi,
@@ -145,12 +154,12 @@ dequeue :: (DequeueStrategy si qi,
            -- ^ the dequeued value
 dequeue q =
   do requestResource (queueOutputRes q)
-     a <- liftEvent $
+     i <- liftEvent $
           strategyDequeue (queueStoringStrategy q) (queueStore q)
      releaseResource (queueInputRes q)
      liftEvent $
-       triggerSignal (dequeuedSource q) a
-     return a
+       triggerSignal (dequeuedSource q) (itemValue i)
+     return (itemValue i)
   
 -- | Dequeue with the output priority suspending the process if the queue is empty.
 dequeueWithOutputPriority :: (DequeueStrategy si qi,
@@ -164,12 +173,12 @@ dequeueWithOutputPriority :: (DequeueStrategy si qi,
                              -- ^ the dequeued value
 dequeueWithOutputPriority q priority =
   do requestResourceWithPriority (queueOutputRes q) priority
-     a <- liftEvent $
+     i <- liftEvent $
           strategyDequeue (queueStoringStrategy q) (queueStore q)
      releaseResource (queueInputRes q)
      liftEvent $
-       triggerSignal (dequeuedSource q) a
-     return a
+       triggerSignal (dequeuedSource q) (itemValue i)
+     return (itemValue i)
   
 -- | Try to dequeue from the queue immediately.  
 tryDequeue :: (DequeueStrategy si qi,
@@ -181,10 +190,10 @@ tryDequeue :: (DequeueStrategy si qi,
 tryDequeue q =
   do x <- tryRequestResourceWithinEvent (queueOutputRes q)
      if x 
-       then do a <- strategyDequeue (queueStoringStrategy q) (queueStore q)
+       then do i <- strategyDequeue (queueStoringStrategy q) (queueStore q)
                releaseResourceWithinEvent (queueInputRes q)
-               triggerSignal (dequeuedSource q) a
-               return $ Just a
+               triggerSignal (dequeuedSource q) (itemValue i)
+               return $ Just (itemValue i)
        else return Nothing
 
 -- | Enqueue the item suspending the process if the queue is full.  
@@ -197,9 +206,12 @@ enqueue :: (EnqueueStrategy si qi,
            -- ^ the item to enqueue
            -> Process ()
 enqueue q a =
-  do requestResource (queueInputRes q)
+  do t <- liftDynamics time
+     let i = QueueItem { itemValue = a,
+                         itemInputTime = t }
+     requestResource (queueInputRes q)
      liftEvent $
-       strategyEnqueue (queueStoringStrategy q) (queueStore q) a
+       strategyEnqueue (queueStoringStrategy q) (queueStore q) i
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -216,9 +228,12 @@ enqueueWithInputPriority :: (PriorityQueueStrategy si qi pi,
                             -- ^ the item to enqueue
                             -> Process ()
 enqueueWithInputPriority q priority a =
-  do requestResourceWithPriority (queueInputRes q) priority
+  do t <- liftDynamics time
+     let i = QueueItem { itemValue = a,
+                         itemInputTime = t }
+     requestResourceWithPriority (queueInputRes q) priority
      liftEvent $
-       strategyEnqueue (queueStoringStrategy q) (queueStore q) a
+       strategyEnqueue (queueStoringStrategy q) (queueStore q) i
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -235,9 +250,12 @@ enqueueWithStoringPriority :: (EnqueueStrategy si qi,
                               -- ^ the item to enqueue
                               -> Process ()
 enqueueWithStoringPriority q priority a =
-  do requestResource (queueInputRes q)
+  do t <- liftDynamics time
+     let i = QueueItem { itemValue = a,
+                         itemInputTime = t }
+     requestResource (queueInputRes q)
      liftEvent $
-       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) priority a
+       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) priority i
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -256,9 +274,12 @@ enqueueWithInputStoringPriorities :: (PriorityQueueStrategy si qi pi,
                                      -- ^ the item to enqueue
                                      -> Process ()
 enqueueWithInputStoringPriorities q pi pm a =
-  do requestResourceWithPriority (queueInputRes q) pi
+  do t <- liftDynamics time
+     let i = QueueItem { itemValue = a,
+                         itemInputTime = t }
+     requestResourceWithPriority (queueInputRes q) pi
      liftEvent $
-       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm a
+       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -274,7 +295,10 @@ tryEnqueue :: (EnqueueStrategy sm qm,
 tryEnqueue q a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x 
-       then do strategyEnqueue (queueStoringStrategy q) (queueStore q) a
+       then do t <- liftDynamics time
+               let i = QueueItem { itemValue = a,
+                                   itemInputTime = t }
+               strategyEnqueue (queueStoringStrategy q) (queueStore q) i
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True
@@ -293,7 +317,10 @@ tryEnqueueWithStoringPriority :: (PriorityQueueStrategy sm qm pm,
 tryEnqueueWithStoringPriority q pm a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x 
-       then do strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm a
+       then do t <- liftDynamics time
+               let i = QueueItem { itemValue = a,
+                                   itemInputTime = t }
+               strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True
@@ -311,7 +338,10 @@ enqueueOrLost :: (EnqueueStrategy sm qm,
 enqueueOrLost q a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x
-       then do strategyEnqueue (queueStoringStrategy q) (queueStore q) a
+       then do t <- liftDynamics time
+               let i = QueueItem { itemValue = a,
+                                   itemInputTime = t }
+               strategyEnqueue (queueStoringStrategy q) (queueStore q) i
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True
@@ -333,7 +363,10 @@ enqueueWithStoringPriorityOrLost :: (PriorityQueueStrategy sm qm pm,
 enqueueWithStoringPriorityOrLost q pm a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x
-       then do strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm a
+       then do t <- liftDynamics time
+               let i = QueueItem { itemValue = a,
+                                   itemInputTime = t }
+               strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True
