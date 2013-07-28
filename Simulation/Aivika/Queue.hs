@@ -282,7 +282,7 @@ dequeueWithOutputPriority q po =
   
 -- | Try to dequeue from the queue immediately.
 --
--- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- Use carefully as it can decrease the statistics for 'queueWaitTime', 'queueTotalWaitTime' and
 -- 'queueOutputWaitTime', which results can become non-representative in such a case.
 tryDequeue :: (DequeueStrategy si qi,
                DequeueStrategy sm qm)
@@ -363,7 +363,7 @@ enqueueWithInputStoringPriorities q pi pm a =
      
 -- | Try to enqueue the item. Return 'False' in the monad if the queue is full.
 --
--- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- Use carefully as it can decrease the statistics for 'queueTotalWaitTime' and
 -- 'queueInputWaitTime', which can become non-representative in such a case.
 tryEnqueue :: (EnqueueStrategy sm qm,
                DequeueStrategy so qo)
@@ -382,7 +382,7 @@ tryEnqueue q a =
 -- | Try to enqueue with the storing priority the item. Return 'False' in
 -- the monad if the queue is full.
 --
--- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- Use carefully as it can decrease the statistics for 'queueTotalWaitTime' and
 -- 'queueInputWaitTime', which can become non-representative in such a case.
 tryEnqueueWithStoringPriority :: (PriorityQueueStrategy sm qm pm,
                                   DequeueStrategy so qo)
@@ -403,7 +403,7 @@ tryEnqueueWithStoringPriority q pm a =
 -- | Try to enqueue the item. If the queue is full then the item will be lost
 -- and 'False' will be returned.
 --
--- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- Use carefully as it can decrease the statistics for 'queueTotalWaitTime' and
 -- 'queueInputWaitTime', which can become non-representative in such a case.
 enqueueOrLost :: (EnqueueStrategy sm qm,
                   DequeueStrategy so qo)
@@ -423,7 +423,7 @@ enqueueOrLost q a =
 -- | Try to enqueue with the storing priority the item. If the queue is full
 -- then the item will be lost and 'False' will be returned.
 --
--- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- Use carefully as it can decrease the statistics for 'queueTotalWaitTime' and
 -- 'queueInputWaitTime', which can become non-representative in such a case.
 enqueueWithStoringPriorityOrLost :: (PriorityQueueStrategy sm qm pm,
                                      DequeueStrategy so qo)
@@ -444,7 +444,7 @@ enqueueWithStoringPriorityOrLost q pm a =
 
 -- | Try to enqueue the item. If the queue is full then the item will be lost.
 --
--- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- Use carefully as it can decrease the statistics for 'queueTotalWaitTime' and
 -- 'queueInputWaitTime', which can become non-representative in such a case.
 enqueueOrLost_ :: (EnqueueStrategy sm qm,
                    DequeueStrategy so qo)
@@ -460,7 +460,7 @@ enqueueOrLost_ q a =
 -- | Try to enqueue with the storing priority the item. If the queue is full
 -- then the item will be lost.
 --
--- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- Use carefully as it can decrease the statistics for 'queueTotalWaitTime' and
 -- 'queueInputWaitTime', which can become non-representative in such a case.
 enqueueWithStoringPriorityOrLost_ :: (PriorityQueueStrategy sm qm pm,
                                       DequeueStrategy so qo)
