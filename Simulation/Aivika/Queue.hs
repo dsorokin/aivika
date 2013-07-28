@@ -73,6 +73,8 @@ data Queue si qi sm qm so qo a =
           queueOutputRes :: Resource so qo,
           queueCountRef :: IORef Int,
           queueLostCountRef :: IORef Int,
+          queueInputCountRef :: IORef Int,
+          queueOutputCountRef :: IORef Int,
           enqueuedSource :: SignalSource a,
           enqueuedButLostSource :: SignalSource a,
           dequeuedSource :: SignalSource a }
@@ -101,6 +103,8 @@ newQueue :: (QueueStrategy si qi,
 newQueue si sm so count =
   do i  <- liftIO $ newIORef 0
      l  <- liftIO $ newIORef 0
+     ci <- liftIO $ newIORef 0
+     co <- liftIO $ newIORef 0
      ri <- newResourceWithCount si count count
      qm <- newStrategyQueue sm
      ro <- newResourceWithCount so count 0
@@ -116,6 +120,8 @@ newQueue si sm so count =
                     queueOutputRes = ro,
                     queueCountRef = i,
                     queueLostCountRef = l,
+                    queueInputCountRef = ci,
+                    queueOutputCountRef = co,
                     enqueuedSource = s1,
                     enqueuedButLostSource = s2,
                     dequeuedSource = s3 }
@@ -156,6 +162,7 @@ dequeue q =
   do requestResource (queueOutputRes q)
      i <- liftEvent $
           strategyDequeue (queueStoringStrategy q) (queueStore q)
+     liftIO $ modifyIORef (queueOutputCountRef q) (+ 1)
      releaseResource (queueInputRes q)
      liftEvent $
        triggerSignal (dequeuedSource q) (itemValue i)
@@ -175,6 +182,7 @@ dequeueWithOutputPriority q priority =
   do requestResourceWithPriority (queueOutputRes q) priority
      i <- liftEvent $
           strategyDequeue (queueStoringStrategy q) (queueStore q)
+     liftIO $ modifyIORef (queueOutputCountRef q) (+ 1)
      releaseResource (queueInputRes q)
      liftEvent $
        triggerSignal (dequeuedSource q) (itemValue i)
@@ -191,6 +199,7 @@ tryDequeue q =
   do x <- tryRequestResourceWithinEvent (queueOutputRes q)
      if x 
        then do i <- strategyDequeue (queueStoringStrategy q) (queueStore q)
+               liftIO $ modifyIORef (queueOutputCountRef q) (+ 1)
                releaseResourceWithinEvent (queueInputRes q)
                triggerSignal (dequeuedSource q) (itemValue i)
                return $ Just (itemValue i)
@@ -212,6 +221,7 @@ enqueue q a =
      requestResource (queueInputRes q)
      liftEvent $
        strategyEnqueue (queueStoringStrategy q) (queueStore q) i
+     liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -234,6 +244,7 @@ enqueueWithInputPriority q priority a =
      requestResourceWithPriority (queueInputRes q) priority
      liftEvent $
        strategyEnqueue (queueStoringStrategy q) (queueStore q) i
+     liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -256,6 +267,7 @@ enqueueWithStoringPriority q priority a =
      requestResource (queueInputRes q)
      liftEvent $
        strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) priority i
+     liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -280,6 +292,7 @@ enqueueWithInputStoringPriorities q pi pm a =
      requestResourceWithPriority (queueInputRes q) pi
      liftEvent $
        strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
+     liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
      releaseResource (queueOutputRes q)
      liftEvent $
        triggerSignal (enqueuedSource q) a
@@ -299,6 +312,7 @@ tryEnqueue q a =
                let i = QueueItem { itemValue = a,
                                    itemInputTime = t }
                strategyEnqueue (queueStoringStrategy q) (queueStore q) i
+               liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True
@@ -321,6 +335,7 @@ tryEnqueueWithStoringPriority q pm a =
                let i = QueueItem { itemValue = a,
                                    itemInputTime = t }
                strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
+               liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True
@@ -342,6 +357,7 @@ enqueueOrLost q a =
                let i = QueueItem { itemValue = a,
                                    itemInputTime = t }
                strategyEnqueue (queueStoringStrategy q) (queueStore q) i
+               liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True
@@ -367,6 +383,7 @@ enqueueWithStoringPriorityOrLost q pm a =
                let i = QueueItem { itemValue = a,
                                    itemInputTime = t }
                strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
+               liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
                releaseResourceWithinEvent (queueOutputRes q)
                triggerSignal (enqueuedSource q) a
                return True
