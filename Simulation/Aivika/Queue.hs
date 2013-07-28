@@ -22,6 +22,8 @@ module Simulation.Aivika.Queue
         queueMaxCount,
         queueCount,
         queueLostCount,
+        queueInputCount,
+        queueOutputCount,
         enqueued,
         dequeued,
         enqueuedButLost,
@@ -149,6 +151,16 @@ queueCount q =
 queueLostCount :: Queue si qi sm qm so qo a -> Event Int
 queueLostCount q =
   Event $ \p -> readIORef (queueLostCountRef q)
+
+-- | Return the total number of input items that were enqueued.
+queueInputCount :: Queue si qi sm qm so qo a -> Event Int
+queueInputCount q =
+  Event $ \p -> readIORef (queueInputCountRef q)
+  
+-- | Return the total number of output items that were dequeued.
+queueOutputCount :: Queue si qi sm qm so qo a -> Event Int
+queueOutputCount q =
+  Event $ \p -> readIORef (queueOutputCountRef q)
   
 -- | Dequeue suspending the process if the queue is empty.
 dequeue :: (DequeueStrategy si qi,
@@ -160,13 +172,7 @@ dequeue :: (DequeueStrategy si qi,
            -- ^ the dequeued value
 dequeue q =
   do requestResource (queueOutputRes q)
-     i <- liftEvent $
-          strategyDequeue (queueStoringStrategy q) (queueStore q)
-     liftIO $ modifyIORef (queueOutputCountRef q) (+ 1)
-     releaseResource (queueInputRes q)
-     liftEvent $
-       triggerSignal (dequeuedSource q) (itemValue i)
-     return (itemValue i)
+     liftEvent $ dequeueOutput q
   
 -- | Dequeue with the output priority suspending the process if the queue is empty.
 dequeueWithOutputPriority :: (DequeueStrategy si qi,
@@ -178,15 +184,9 @@ dequeueWithOutputPriority :: (DequeueStrategy si qi,
                              -- ^ the priority for output
                              -> Process a
                              -- ^ the dequeued value
-dequeueWithOutputPriority q priority =
-  do requestResourceWithPriority (queueOutputRes q) priority
-     i <- liftEvent $
-          strategyDequeue (queueStoringStrategy q) (queueStore q)
-     liftIO $ modifyIORef (queueOutputCountRef q) (+ 1)
-     releaseResource (queueInputRes q)
-     liftEvent $
-       triggerSignal (dequeuedSource q) (itemValue i)
-     return (itemValue i)
+dequeueWithOutputPriority q po =
+  do requestResourceWithPriority (queueOutputRes q) po
+     liftEvent $ dequeueOutput q
   
 -- | Try to dequeue from the queue immediately.  
 tryDequeue :: (DequeueStrategy si qi,
@@ -198,11 +198,7 @@ tryDequeue :: (DequeueStrategy si qi,
 tryDequeue q =
   do x <- tryRequestResourceWithinEvent (queueOutputRes q)
      if x 
-       then do i <- strategyDequeue (queueStoringStrategy q) (queueStore q)
-               liftIO $ modifyIORef (queueOutputCountRef q) (+ 1)
-               releaseResourceWithinEvent (queueInputRes q)
-               triggerSignal (dequeuedSource q) (itemValue i)
-               return $ Just (itemValue i)
+       then fmap Just $ dequeueOutput q
        else return Nothing
 
 -- | Enqueue the item suspending the process if the queue is full.  
@@ -215,16 +211,9 @@ enqueue :: (EnqueueStrategy si qi,
            -- ^ the item to enqueue
            -> Process ()
 enqueue q a =
-  do t <- liftDynamics time
-     let i = QueueItem { itemValue = a,
-                         itemInputTime = t }
+  do i <- liftEvent $ enqueueAccept q a
      requestResource (queueInputRes q)
-     liftEvent $
-       strategyEnqueue (queueStoringStrategy q) (queueStore q) i
-     liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
-     releaseResource (queueOutputRes q)
-     liftEvent $
-       triggerSignal (enqueuedSource q) a
+     liftEvent $ enqueueStore q i
      
 -- | Enqueue with the input priority the item suspending the process if the queue is full.  
 enqueueWithInputPriority :: (PriorityQueueStrategy si qi pi,
@@ -237,17 +226,10 @@ enqueueWithInputPriority :: (PriorityQueueStrategy si qi pi,
                             -> a
                             -- ^ the item to enqueue
                             -> Process ()
-enqueueWithInputPriority q priority a =
-  do t <- liftDynamics time
-     let i = QueueItem { itemValue = a,
-                         itemInputTime = t }
-     requestResourceWithPriority (queueInputRes q) priority
-     liftEvent $
-       strategyEnqueue (queueStoringStrategy q) (queueStore q) i
-     liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
-     releaseResource (queueOutputRes q)
-     liftEvent $
-       triggerSignal (enqueuedSource q) a
+enqueueWithInputPriority q pi a =
+  do i <- liftEvent $ enqueueAccept q a
+     requestResourceWithPriority (queueInputRes q) pi
+     liftEvent $ enqueueStore q i
      
 -- | Enqueue with the storing priority the item suspending the process if the queue is full.  
 enqueueWithStoringPriority :: (EnqueueStrategy si qi,
@@ -260,17 +242,10 @@ enqueueWithStoringPriority :: (EnqueueStrategy si qi,
                               -> a
                               -- ^ the item to enqueue
                               -> Process ()
-enqueueWithStoringPriority q priority a =
-  do t <- liftDynamics time
-     let i = QueueItem { itemValue = a,
-                         itemInputTime = t }
+enqueueWithStoringPriority q pm a =
+  do i <- liftEvent $ enqueueAccept q a
      requestResource (queueInputRes q)
-     liftEvent $
-       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) priority i
-     liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
-     releaseResource (queueOutputRes q)
-     liftEvent $
-       triggerSignal (enqueuedSource q) a
+     liftEvent $ enqueueStoreWithPriority q pm i
      
 -- | Enqueue with the input and storing priorities the item suspending the process if the queue is full.  
 enqueueWithInputStoringPriorities :: (PriorityQueueStrategy si qi pi,
@@ -286,16 +261,9 @@ enqueueWithInputStoringPriorities :: (PriorityQueueStrategy si qi pi,
                                      -- ^ the item to enqueue
                                      -> Process ()
 enqueueWithInputStoringPriorities q pi pm a =
-  do t <- liftDynamics time
-     let i = QueueItem { itemValue = a,
-                         itemInputTime = t }
+  do i <- liftEvent $ enqueueAccept q a
      requestResourceWithPriority (queueInputRes q) pi
-     liftEvent $
-       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
-     liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
-     releaseResource (queueOutputRes q)
-     liftEvent $
-       triggerSignal (enqueuedSource q) a
+     liftEvent $ enqueueStoreWithPriority q pm i
      
 -- | Try to enqueue the item. Return 'False' in the monad if the queue is full.
 tryEnqueue :: (EnqueueStrategy sm qm,
@@ -308,13 +276,7 @@ tryEnqueue :: (EnqueueStrategy sm qm,
 tryEnqueue q a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x 
-       then do t <- liftDynamics time
-               let i = QueueItem { itemValue = a,
-                                   itemInputTime = t }
-               strategyEnqueue (queueStoringStrategy q) (queueStore q) i
-               liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
-               releaseResourceWithinEvent (queueOutputRes q)
-               triggerSignal (enqueuedSource q) a
+       then do enqueueAccept q a >>= enqueueStore q
                return True
        else return False
 
@@ -331,13 +293,7 @@ tryEnqueueWithStoringPriority :: (PriorityQueueStrategy sm qm pm,
 tryEnqueueWithStoringPriority q pm a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x 
-       then do t <- liftDynamics time
-               let i = QueueItem { itemValue = a,
-                                   itemInputTime = t }
-               strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
-               liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
-               releaseResourceWithinEvent (queueOutputRes q)
-               triggerSignal (enqueuedSource q) a
+       then do enqueueAccept q a >>= enqueueStoreWithPriority q pm
                return True
        else return False
 
@@ -353,16 +309,9 @@ enqueueOrLost :: (EnqueueStrategy sm qm,
 enqueueOrLost q a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x
-       then do t <- liftDynamics time
-               let i = QueueItem { itemValue = a,
-                                   itemInputTime = t }
-               strategyEnqueue (queueStoringStrategy q) (queueStore q) i
-               liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
-               releaseResourceWithinEvent (queueOutputRes q)
-               triggerSignal (enqueuedSource q) a
+       then do enqueueAccept q a >>= enqueueStore q
                return True
-       else do liftIO $ modifyIORef (queueLostCountRef q) $ (+) 1
-               triggerSignal (enqueuedButLostSource q) a
+       else do enqueueDeny q a
                return False
 
 -- | Try to enqueue with the storing priority the item. If the queue is full then the item will be lost
@@ -379,16 +328,9 @@ enqueueWithStoringPriorityOrLost :: (PriorityQueueStrategy sm qm pm,
 enqueueWithStoringPriorityOrLost q pm a =
   do x <- tryRequestResourceWithinEvent (queueInputRes q)
      if x
-       then do t <- liftDynamics time
-               let i = QueueItem { itemValue = a,
-                                   itemInputTime = t }
-               strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
-               liftIO $ modifyIORef (queueInputCountRef q) (+ 1)
-               releaseResourceWithinEvent (queueOutputRes q)
-               triggerSignal (enqueuedSource q) a
+       then do enqueueAccept q a >>= enqueueStoreWithPriority q pm
                return True
-       else do liftIO $ modifyIORef (queueLostCountRef q) $ (+) 1
-               triggerSignal (enqueuedButLostSource q) a
+       else do enqueueDeny q a
                return False
 
 -- | Try to enqueue the item. If the queue is full then the item will be lost.
@@ -431,3 +373,84 @@ enqueuedButLost q = publishSignal (enqueuedButLostSource q)
 -- | Return a signal that notifies when any item is dequeued.
 dequeued :: Queue si qi sm qm so qo a -> Signal a
 dequeued q = publishSignal (dequeuedSource q)
+
+-- | Accept an item for further enqueuing.
+enqueueAccept :: Queue si qi sm qm so qo a
+                 -- ^ the queue
+                 -> a
+                 -- ^ the item to be enqueued
+                 -> Event (QueueItem a)
+enqueueAccept q a =
+  Event $ \p ->
+  do t <- invokeDynamics p time
+     modifyIORef (queueInputCountRef q) (+ 1)
+     return QueueItem { itemValue = a,
+                        itemInputTime = t }
+
+-- | Store the item.
+enqueueStore :: (EnqueueStrategy sm qm,
+                 DequeueStrategy so qo)
+                => Queue si qi sm qm so qo a
+                -- ^ the queue
+                -> QueueItem a
+                -- ^ the item to be stored
+                -> Event ()
+enqueueStore q i =
+  Event $ \p ->
+  do invokeEvent p $
+       strategyEnqueue (queueStoringStrategy q) (queueStore q) i
+     modifyIORef (queueCountRef q) (+ 1)
+     invokeEvent p $
+       releaseResourceWithinEvent (queueOutputRes q)
+     invokeEvent p $
+       triggerSignal (enqueuedSource q) (itemValue i)
+
+-- | Store with the priority the item.
+enqueueStoreWithPriority :: (PriorityQueueStrategy sm qm pm,
+                             DequeueStrategy so qo)
+                            => Queue si qi sm qm so qo a
+                            -- ^ the queue
+                            -> pm
+                            -- ^ the priority for storing
+                            -> QueueItem a
+                            -- ^ the item to be enqueued
+                            -> Event ()
+enqueueStoreWithPriority q pm i =
+  Event $ \p ->
+  do invokeEvent p $
+       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
+     modifyIORef (queueCountRef q) (+ 1)
+     invokeEvent p $
+       releaseResourceWithinEvent (queueOutputRes q)
+     invokeEvent p $
+       triggerSignal (enqueuedSource q) (itemValue i)
+
+-- | Deny the enqueuing
+enqueueDeny :: Queue si qi sm qm so qo a
+               -- ^ the queue
+               -> a
+               -- ^ the item to be denied
+               -> Event ()
+enqueueDeny q a =
+  Event $ \p ->
+  do modifyIORef (queueLostCountRef q) $ (+) 1
+     invokeEvent p $ triggerSignal (enqueuedButLostSource q) a
+
+-- | Dequeue the output.  
+dequeueOutput :: (DequeueStrategy si qi,
+                  DequeueStrategy sm qm)
+                 => Queue si qi sm qm so qo a
+                 -- ^ the queue
+                 -> Event a
+                 -- ^ the dequeued value
+dequeueOutput q =
+  Event $ \p ->
+  do i <- invokeEvent p $
+          strategyDequeue (queueStoringStrategy q) (queueStore q)
+     modifyIORef (queueCountRef q) ((-) 1)
+     modifyIORef (queueOutputCountRef q) (+ 1)
+     invokeEvent p $
+       releaseResourceWithinEvent (queueInputRes q)
+     invokeEvent p $
+       triggerSignal (dequeuedSource q) (itemValue i)
+     return $ itemValue i
