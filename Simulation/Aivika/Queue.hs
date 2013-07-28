@@ -204,21 +204,33 @@ queueOutputCount q =
 
 -- | Return the wait time from the time at which every item was enqueued to
 -- the time at which it was dequeued.
-queueWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
+queueWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
 queueWaitTime q =
-  Event $ \p -> readIORef (queueWaitTimeRef q)
-  
+  let read = Event $ \p -> readIORef (queueWaitTimeRef q)
+  in Observable { readObservable   = read,
+                  observableSignal =
+                    mapSignalM (const read) (dequeueExtracted q)
+                }
+      
 -- | Return the input wait time from the time at which every item was enqueued
 -- to the time at which it was stored in the queue.
-queueInputWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
+queueInputWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
 queueInputWaitTime q =
-  Event $ \p -> readIORef (queueInputWaitTimeRef q)
-  
+  let read = Event $ \p -> readIORef (queueInputWaitTimeRef q)
+  in Observable { readObservable   = read,
+                  observableSignal =
+                    mapSignalM (const read) (enqueueStored q)
+                }
+      
 -- | Return the output wait time from the time at which every item was requested
 -- for dequeuing to the time at which it was actually dequeued.
-queueOutputWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
+queueOutputWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
 queueOutputWaitTime q =
-  Event $ \p -> readIORef (queueOutputWaitTimeRef q)
+  let read = Event $ \p -> readIORef (queueOutputWaitTimeRef q)
+  in Observable { readObservable   = read,
+                  observableSignal =
+                    mapSignalM (const read) (dequeueExtracted q)
+                }
   
 -- | Dequeue suspending the process if the queue is empty.
 dequeue :: (DequeueStrategy si qi,
@@ -231,7 +243,7 @@ dequeue :: (DequeueStrategy si qi,
 dequeue q =
   do t <- liftEvent $ dequeueRequest q
      requestResource (queueOutputRes q)
-     liftEvent $ dequeueExtract q
+     liftEvent $ dequeueExtract q t
   
 -- | Dequeue with the output priority suspending the process if the queue is empty.
 dequeueWithOutputPriority :: (DequeueStrategy si qi,
@@ -246,9 +258,12 @@ dequeueWithOutputPriority :: (DequeueStrategy si qi,
 dequeueWithOutputPriority q po =
   do t <- liftEvent $ dequeueRequest q
      requestResourceWithPriority (queueOutputRes q) po
-     liftEvent $ dequeueExtract q
+     liftEvent $ dequeueExtract q t
   
 -- | Try to dequeue from the queue immediately.
+--
+-- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- 'queueOutputWaitTime', which results can become non-representative in such a case.
 tryDequeue :: (DequeueStrategy si qi,
                DequeueStrategy sm qm)
               => Queue si qi sm qm so qo a
@@ -259,7 +274,7 @@ tryDequeue q =
   do x <- tryRequestResourceWithinEvent (queueOutputRes q)
      if x 
        then do t <- dequeueRequest q
-               fmap Just $ dequeueExtract q
+               fmap Just $ dequeueExtract q t
        else return Nothing
 
 -- | Enqueue the item suspending the process if the queue is full.  
@@ -327,6 +342,9 @@ enqueueWithInputStoringPriorities q pi pm a =
      liftEvent $ enqueueStoreWithPriority q pm i
      
 -- | Try to enqueue the item. Return 'False' in the monad if the queue is full.
+--
+-- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- 'queueInputWaitTime', which can become non-representative in such a case.
 tryEnqueue :: (EnqueueStrategy sm qm,
                DequeueStrategy so qo)
               => Queue si qi sm qm so qo a
@@ -341,7 +359,11 @@ tryEnqueue q a =
                return True
        else return False
 
--- | Try to enqueue with the storing priority the item. Return 'False' in the monad if the queue is full.
+-- | Try to enqueue with the storing priority the item. Return 'False' in
+-- the monad if the queue is full.
+--
+-- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- 'queueInputWaitTime', which can become non-representative in such a case.
 tryEnqueueWithStoringPriority :: (PriorityQueueStrategy sm qm pm,
                                   DequeueStrategy so qo)
                                  => Queue si qi sm qm so qo a
@@ -360,6 +382,9 @@ tryEnqueueWithStoringPriority q pm a =
 
 -- | Try to enqueue the item. If the queue is full then the item will be lost
 -- and 'False' will be returned.
+--
+-- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- 'queueInputWaitTime', which can become non-representative in such a case.
 enqueueOrLost :: (EnqueueStrategy sm qm,
                   DequeueStrategy so qo)
                  => Queue si qi sm qm so qo a
@@ -375,8 +400,11 @@ enqueueOrLost q a =
        else do enqueueDeny q a
                return False
 
--- | Try to enqueue with the storing priority the item. If the queue is full then the item will be lost
--- and 'False' will be returned.
+-- | Try to enqueue with the storing priority the item. If the queue is full
+-- then the item will be lost and 'False' will be returned.
+--
+-- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- 'queueInputWaitTime', which can become non-representative in such a case.
 enqueueWithStoringPriorityOrLost :: (PriorityQueueStrategy sm qm pm,
                                      DequeueStrategy so qo)
                                     => Queue si qi sm qm so qo a
@@ -395,6 +423,9 @@ enqueueWithStoringPriorityOrLost q pm a =
                return False
 
 -- | Try to enqueue the item. If the queue is full then the item will be lost.
+--
+-- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- 'queueInputWaitTime', which can become non-representative in such a case.
 enqueueOrLost_ :: (EnqueueStrategy sm qm,
                    DequeueStrategy so qo)
                   => Queue si qi sm qm so qo a
@@ -406,7 +437,11 @@ enqueueOrLost_ q a =
   do x <- enqueueOrLost q a
      return ()
 
--- | Try to enqueue with the storing priority the item. If the queue is full then the item will be lost.
+-- | Try to enqueue with the storing priority the item. If the queue is full
+-- then the item will be lost.
+--
+-- Use carefully as it decreases the statistics for 'queueWaitTime' and
+-- 'queueInputWaitTime', which can become non-representative in such a case.
 enqueueWithStoringPriorityOrLost_ :: (PriorityQueueStrategy sm qm pm,
                                       DequeueStrategy so qo)
                                      => Queue si qi sm qm so qo a
@@ -481,6 +516,8 @@ enqueueStore q i =
        strategyEnqueue (queueStoringStrategy q) (queueStore q) i
      modifyIORef (queueCountRef q) (+ 1)
      invokeEvent p $
+       enqueueStat q i
+     invokeEvent p $
        releaseResourceWithinEvent (queueOutputRes q)
      invokeEvent p $
        triggerSignal (enqueueStoredSource q) (itemValue i)
@@ -500,6 +537,8 @@ enqueueStoreWithPriority q pm i =
   do invokeEvent p $
        strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
      modifyIORef (queueCountRef q) (+ 1)
+     invokeEvent p $
+       enqueueStat q i
      invokeEvent p $
        releaseResourceWithinEvent (queueOutputRes q)
      invokeEvent p $
@@ -548,14 +587,18 @@ dequeueExtract :: (DequeueStrategy si qi,
                    DequeueStrategy sm qm)
                   => Queue si qi sm qm so qo a
                   -- ^ the queue
+                  -> Double
+                  -- ^ the time of the dequeuing request
                   -> Event a
                   -- ^ the dequeued value
-dequeueExtract q =
+dequeueExtract q t' =
   Event $ \p ->
   do i <- invokeEvent p $
           strategyDequeue (queueStoringStrategy q) (queueStore q)
      modifyIORef (queueCountRef q) ((-) 1)
      modifyIORef (queueOutputCountRef q) (+ 1)
+     invokeEvent p $
+       dequeueStat q t' i
      invokeEvent p $
        releaseResourceWithinEvent (queueInputRes q)
      invokeEvent p $
