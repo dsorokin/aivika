@@ -24,7 +24,7 @@ module Simulation.Aivika.Queue
         queueLostCount,
         queueInputCount,
         queueOutputCount,
-        queueWaitTime,
+        queueTotalWaitTime,
         queueInputWaitTime,
         queueOutputWaitTime,
         newQueue,
@@ -85,7 +85,7 @@ data Queue si qi sm qm so qo a =
           queueLostCountRef :: IORef Int,
           queueInputCountRef :: IORef Int,
           queueOutputCountRef :: IORef Int,
-          queueWaitTimeRef :: IORef (SamplingStats Double),
+          queueTotalWaitTimeRef :: IORef (SamplingStats Double),
           queueInputWaitTimeRef :: IORef (SamplingStats Double),
           queueOutputWaitTimeRef :: IORef (SamplingStats Double),
           enqueueInitiatedSource :: SignalSource a,
@@ -123,7 +123,7 @@ newQueue si sm so count =
      ri <- newResourceWithCount si count count
      qm <- newStrategyQueue sm
      ro <- newResourceWithCount so count 0
-     w  <- liftIO $ newIORef mempty
+     wt <- liftIO $ newIORef mempty
      wi <- liftIO $ newIORef mempty
      wo <- liftIO $ newIORef mempty 
      s1 <- newSignalSource
@@ -142,7 +142,7 @@ newQueue si sm so count =
                     queueLostCountRef = l,
                     queueInputCountRef = ci,
                     queueOutputCountRef = co,
-                    queueWaitTimeRef = w,
+                    queueTotalWaitTimeRef = wt,
                     queueInputWaitTimeRef = wi,
                     queueOutputWaitTimeRef = wo,
                     enqueueInitiatedSource = s1,
@@ -202,17 +202,17 @@ queueOutputCount q =
                     mapSignalM (const read) (dequeueExtracted q)
                 }
 
--- | Return the wait time from the time at which every item was enqueued to
+-- | Return the total wait time from the time at which the item was enqueued to
 -- the time at which it was dequeued.
-queueWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
-queueWaitTime q =
-  let read = Event $ \p -> readIORef (queueWaitTimeRef q)
+queueTotalWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
+queueTotalWaitTime q =
+  let read = Event $ \p -> readIORef (queueTotalWaitTimeRef q)
   in Observable { readObservable   = read,
                   observableSignal =
                     mapSignalM (const read) (dequeueExtracted q)
                 }
       
--- | Return the input wait time from the time at which every item was enqueued
+-- | Return the input wait time from the time at which the item was enqueued
 -- to the time at which it was stored in the queue.
 queueInputWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
 queueInputWaitTime q =
@@ -222,7 +222,7 @@ queueInputWaitTime q =
                     mapSignalM (const read) (enqueueStored q)
                 }
       
--- | Return the output wait time from the time at which every item was requested
+-- | Return the output wait time from the time at which the item was requested
 -- for dequeuing to the time at which it was actually dequeued.
 queueOutputWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
 queueOutputWaitTime q =
@@ -623,6 +623,6 @@ dequeueStat q t' i =
          dt' = t - t'
      modifyIORef (queueOutputWaitTimeRef q) $
        addSamplingStats dt'
-     modifyIORef (queueWaitTimeRef q) $
+     modifyIORef (queueTotalWaitTimeRef q) $
        addSamplingStats dt
 
