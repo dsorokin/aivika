@@ -24,6 +24,7 @@ module Simulation.Aivika.Queue
         queueLostCount,
         queueInputCount,
         queueOutputCount,
+        queueWaitTime,
         queueTotalWaitTime,
         queueInputWaitTime,
         queueOutputWaitTime,
@@ -85,6 +86,7 @@ data Queue si qi sm qm so qo a =
           queueLostCountRef :: IORef Int,
           queueInputCountRef :: IORef Int,
           queueOutputCountRef :: IORef Int,
+          queueWaitTimeRef :: IORef (SamplingStats Double),
           queueTotalWaitTimeRef :: IORef (SamplingStats Double),
           queueInputWaitTimeRef :: IORef (SamplingStats Double),
           queueOutputWaitTimeRef :: IORef (SamplingStats Double),
@@ -98,8 +100,12 @@ data Queue si qi sm qm so qo a =
 data QueueItem a =
   QueueItem { itemValue :: a,
               -- ^ Return the item value.
-              itemInputTime :: Double
+              itemInputTime :: Double,
               -- ^ Return the time of enqueuing the item.
+              itemStoringTime :: Double
+              -- ^ Return the time of storing in the queue, or
+              -- @itemInputTime@ before the actual storing when
+              -- the item was just enqueued.
             }
   
 -- | Create a new queue with the specified strategies and maximum available number of items.  
@@ -123,6 +129,7 @@ newQueue si sm so count =
      ri <- newResourceWithCount si count count
      qm <- newStrategyQueue sm
      ro <- newResourceWithCount so count 0
+     w  <- liftIO $ newIORef mempty
      wt <- liftIO $ newIORef mempty
      wi <- liftIO $ newIORef mempty
      wo <- liftIO $ newIORef mempty 
@@ -142,6 +149,7 @@ newQueue si sm so count =
                     queueLostCountRef = l,
                     queueInputCountRef = ci,
                     queueOutputCountRef = co,
+                    queueWaitTimeRef = w,
                     queueTotalWaitTimeRef = wt,
                     queueInputWaitTimeRef = wi,
                     queueOutputWaitTimeRef = wo,
@@ -202,8 +210,20 @@ queueOutputCount q =
                     mapSignalM (const read) (dequeueExtracted q)
                 }
 
+-- | Return the wait time from the time at which the item was stored in the queue to
+-- the time at which it was dequeued.
+queueWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
+queueWaitTime q =
+  let read = Event $ \p -> readIORef (queueWaitTimeRef q)
+  in Observable { readObservable   = read,
+                  observableSignal =
+                    mapSignalM (const read) (dequeueExtracted q)
+                }
+      
 -- | Return the total wait time from the time at which the item was enqueued to
 -- the time at which it was dequeued.
+--
+-- In some sense, @queueTotalWaitTime == queueInputWaitTime + queueWaitTime@.
 queueTotalWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
 queueTotalWaitTime q =
   let read = Event $ \p -> readIORef (queueTotalWaitTimeRef q)
@@ -500,7 +520,9 @@ enqueueInitiate q a =
      invokeEvent p $
        triggerSignal (enqueueInitiatedSource q) a
      return QueueItem { itemValue = a,
-                        itemInputTime = t }
+                        itemInputTime = t,
+                        itemStoringTime = t  -- it will be updated soon
+                      }
 
 -- | Store the item.
 enqueueStore :: (EnqueueStrategy sm qm,
@@ -512,15 +534,17 @@ enqueueStore :: (EnqueueStrategy sm qm,
                 -> Event ()
 enqueueStore q i =
   Event $ \p ->
-  do invokeEvent p $
-       strategyEnqueue (queueStoringStrategy q) (queueStore q) i
+  do t <- invokeDynamics p time
+     let i' = i { itemStoringTime = t }  -- now we have the actual time of storing
+     invokeEvent p $
+       strategyEnqueue (queueStoringStrategy q) (queueStore q) i'
      modifyIORef (queueCountRef q) (+ 1)
      invokeEvent p $
-       enqueueStat q i
+       enqueueStat q i'
      invokeEvent p $
        releaseResourceWithinEvent (queueOutputRes q)
      invokeEvent p $
-       triggerSignal (enqueueStoredSource q) (itemValue i)
+       triggerSignal (enqueueStoredSource q) (itemValue i')
 
 -- | Store with the priority the item.
 enqueueStoreWithPriority :: (PriorityQueueStrategy sm qm pm,
@@ -534,15 +558,17 @@ enqueueStoreWithPriority :: (PriorityQueueStrategy sm qm pm,
                             -> Event ()
 enqueueStoreWithPriority q pm i =
   Event $ \p ->
-  do invokeEvent p $
-       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
+  do t <- invokeDynamics p time
+     let i' = i { itemStoringTime = t }  -- now we have the actual time of storing
+     invokeEvent p $
+       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i'
      modifyIORef (queueCountRef q) (+ 1)
      invokeEvent p $
-       enqueueStat q i
+       enqueueStat q i'
      invokeEvent p $
        releaseResourceWithinEvent (queueOutputRes q)
      invokeEvent p $
-       triggerSignal (enqueueStoredSource q) (itemValue i)
+       triggerSignal (enqueueStoredSource q) (itemValue i')
 
 -- | Deny the enqueuing.
 enqueueDeny :: Queue si qi sm qm so qo a
@@ -566,10 +592,9 @@ enqueueStat :: Queue si qi sm qm so qo a
 enqueueStat q i =
   Event $ \p ->
   do let t0 = itemInputTime i
-     t <- invokeDynamics p time
-     let dt = t - t0
+         t1 = itemStoringTime i
      modifyIORef (queueInputWaitTimeRef q) $
-       addSamplingStats dt
+       addSamplingStats (t1 - t0)
 
 -- | Accept the dequeuing request and return the current simulation time.
 dequeueRequest :: Queue si qi sm qm so qo a
@@ -618,11 +643,12 @@ dequeueStat :: Queue si qi sm qm so qo a
 dequeueStat q t' i =
   Event $ \p ->
   do let t0 = itemInputTime i
+         t1 = itemStoringTime i
      t <- invokeDynamics p time
-     let dt  = t - t0
-         dt' = t - t'
      modifyIORef (queueOutputWaitTimeRef q) $
-       addSamplingStats dt'
+       addSamplingStats (t - t')
      modifyIORef (queueTotalWaitTimeRef q) $
-       addSamplingStats dt
+       addSamplingStats (t - t0)
+     modifyIORef (queueWaitTimeRef q) $
+       addSamplingStats (t - t1)
 
