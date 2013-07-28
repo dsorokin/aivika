@@ -24,6 +24,9 @@ module Simulation.Aivika.Queue
         queueLostCount,
         queueInputCount,
         queueOutputCount,
+        queueLoadFactor,
+        queueInputRate,
+        queueOutputRate,
         queueWaitTime,
         queueTotalWaitTime,
         queueInputWaitTime,
@@ -210,6 +213,38 @@ queueOutputCount q =
                     mapSignalM (const read) (dequeueExtracted q)
                 }
 
+-- | Return the load factor: the queue size divided by its maximum size.
+queueLoadFactor :: Queue si qi sm qm so qo a -> Observable Double
+queueLoadFactor q =
+  let read =
+        Event $ \p ->
+        do x <- readIORef (queueCountRef q)
+           let y = queueMaxCount q
+           return (fromIntegral x / fromIntegral y)
+  in Observable { readObservable   = read,
+                  observableSignal =
+                    mapSignalM (const read) (enqueueStored q) <>
+                    mapSignalM (const read) (dequeueExtracted q)
+                }
+      
+-- | Return the rate of the input items that were enqueued: how many items
+-- per time.
+queueInputRate :: Queue si qi sm qm so qo a -> Event Double
+queueInputRate q =
+  Event $ \p ->
+  do x <- readIORef (queueInputCountRef q)
+     t <- invokeDynamics p $ time
+     return (fromIntegral x / t)
+      
+-- | Return the rate of the output items that were dequeued: how many items
+-- per time.
+queueOutputRate :: Queue si qi sm qm so qo a -> Event Double
+queueOutputRate q =
+  Event $ \p ->
+  do x <- readIORef (queueOutputCountRef q)
+     t <- invokeDynamics p $ time
+     return (fromIntegral x / t)
+      
 -- | Return the wait time from the time at which the item was stored in the queue to
 -- the time at which it was dequeued.
 queueWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
