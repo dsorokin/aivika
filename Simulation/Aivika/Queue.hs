@@ -58,6 +58,7 @@ import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Process
 import Simulation.Aivika.Internal.Signal
+import Simulation.Aivika.Internal.Observable
 import Simulation.Aivika.Signal
 import Simulation.Aivika.Resource
 import Simulation.Aivika.QueueStrategy
@@ -165,24 +166,41 @@ queueFull q =
      return (n == queueMaxCount q)
 
 -- | Return the queue size.
-queueCount :: Queue si qi sm qm so qo a -> Event Int
+queueCount :: Queue si qi sm qm so qo a -> Observable Int
 queueCount q =
-  Event $ \p -> readIORef (queueCountRef q)
+  let read = Event $ \p -> readIORef (queueCountRef q)
+  in Observable { readObservable   = read,
+                  observableSignal =
+                    mapSignalM (const read) (enqueueStored q) <>
+                    mapSignalM (const read) (dequeueExtracted q)
+                }
   
 -- | Return the number of lost items.
-queueLostCount :: Queue si qi sm qm so qo a -> Event Int
+queueLostCount :: Queue si qi sm qm so qo a -> Observable Int
 queueLostCount q =
-  Event $ \p -> readIORef (queueLostCountRef q)
+  let read = Event $ \p -> readIORef (queueLostCountRef q)
+  in Observable { readObservable   = read,
+                  observableSignal =
+                    mapSignalM (const read) (enqueueLost q)
+                }
 
 -- | Return the total number of input items that were enqueued.
-queueInputCount :: Queue si qi sm qm so qo a -> Event Int
+queueInputCount :: Queue si qi sm qm so qo a -> Observable Int
 queueInputCount q =
-  Event $ \p -> readIORef (queueInputCountRef q)
-  
+  let read = Event $ \p -> readIORef (queueInputCountRef q)
+  in Observable { readObservable   = read,
+                  observableSignal =
+                    mapSignalM (const read) (enqueueInitiated q)
+                }
+      
 -- | Return the total number of output items that were dequeued.
-queueOutputCount :: Queue si qi sm qm so qo a -> Event Int
+queueOutputCount :: Queue si qi sm qm so qo a -> Observable Int
 queueOutputCount q =
-  Event $ \p -> readIORef (queueOutputCountRef q)
+  let read = Event $ \p -> readIORef (queueOutputCountRef q)
+  in Observable { readObservable   = read,
+                  observableSignal =
+                    mapSignalM (const read) (dequeueExtracted q)
+                }
 
 -- | Return the wait time from the time at which every item was enqueued to
 -- the time at which it was dequeued.
