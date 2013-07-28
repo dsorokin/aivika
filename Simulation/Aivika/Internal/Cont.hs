@@ -49,6 +49,7 @@ data ContParams a =
 data ContParamsAux =
   ContParamsAux { contECont :: IOException -> Event (),
                   contCCont :: () -> Event (),
+                  contCancelRef   :: IORef Bool,
                   contCancelToken :: IORef Bool,
                   contCatchFlag   :: Bool }
 
@@ -79,6 +80,7 @@ cancelCont :: Point -> ContParams a -> IO ()
 {-# NOINLINE cancelCont #-}
 cancelCont p c =
   do writeIORef (contCancelToken $ contAux c) False
+     writeIORef (contCancelRef $ contAux c) True
      invokeEvent p $ (contCCont $ contAux c) ()
 
 returnC :: a -> Cont a
@@ -227,15 +229,18 @@ runCont :: Cont a
            -> (() -> Event ())
            -- ^ the branch for cancellation
            -> IORef Bool
+           -- ^ the cancellation reference
+           -> IORef Bool
            -- ^ the cancellation token
            -> Bool
            -- ^ whether to support the exception catching
            -> Event ()
-runCont (Cont m) cont econt ccont cancelToken catchFlag = 
+runCont (Cont m) cont econt ccont cancelRef cancelToken catchFlag = 
   m ContParams { contCont = cont,
                  contAux  = 
                    ContParamsAux { contECont = econt,
                                    contCCont = ccont,
+                                   contCancelRef   = cancelRef,
                                    contCancelToken = cancelToken, 
                                    contCatchFlag = catchFlag } }
 

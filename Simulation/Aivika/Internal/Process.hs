@@ -153,7 +153,8 @@ reactivateProcess pid =
 -- the 'enqueueProcess' function.
 runProcess :: ProcessId -> Process () -> Event ()
 runProcess pid p =
-  runCont m cont econt ccont (processCancelToken pid) (processCatchFlag pid)
+  runCont m cont econt ccont
+  (processCancelRef pid) (processCancelToken pid) (processCatchFlag pid)
     where cont  = return
           econt = throwEvent
           ccont = return
