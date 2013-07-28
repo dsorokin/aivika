@@ -110,6 +110,7 @@ library
                      Simulation.Aivika.Dynamics.Memo.Unboxed
                      Simulation.Aivika.Dynamics.Random
                      Simulation.Aivika.Event
+                     Simulation.Aivika.Observable
                      Simulation.Aivika.Parameter
                      Simulation.Aivika.Parameter.Random
                      Simulation.Aivika.PriorityQueue
@@ -133,6 +134,7 @@ library
     other-modules:   Simulation.Aivika.Internal.Cont
                      Simulation.Aivika.Internal.Dynamics
                      Simulation.Aivika.Internal.Event
+                     Simulation.Aivika.Internal.Observable
                      Simulation.Aivika.Internal.Process
                      Simulation.Aivika.Internal.Signal
                      Simulation.Aivika.Internal.Simulation
