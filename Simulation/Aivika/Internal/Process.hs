@@ -151,25 +151,31 @@ reactivateProcess pid =
          do writeIORef x Nothing
             invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
 
+-- | Prepare the processes identifier for running.
+processIdPrepare :: ProcessId -> Event ()
+processIdPrepare pid =
+  Event $ \p ->
+  do y <- readIORef (processStarted pid)
+     when y $ 
+       error $
+       "Another process with the specified identifier " ++
+       "has been started already: processIdPrepare"
+     let signal = (contCancellationInitiating $ processCancel pid)
+     invokeEvent p $
+       handleSignal_ signal $ \_ -> interruptProcess pid
+
 -- | Start immediately the process with the specified identifier.
 --            
 -- To run the process at the specified time, you can use
 -- the 'enqueueProcess' function.
 runProcess :: ProcessId -> Process () -> Event ()
 runProcess pid p =
-  do handleSignal_ (contCancellationInitiating $ processCancel pid) $ \() ->
-       interruptProcess pid
+  do processIdPrepare pid
      runCont m cont econt ccont (processCancel pid) (processCatchFlag pid)
        where cont  = return
              econt = throwEvent
              ccont = return
-             m = do y <- liftIO $ readIORef (processStarted pid)
-                    if y 
-                      then error $
-                           "Another process with this identifier " ++
-                           "has been started already: runProcess"
-                      else liftIO $ writeIORef (processStarted pid) True
-                    invokeProcess pid p
+             m = invokeProcess pid p
 
 -- | Start the process in the start time immediately.
 runProcessInStartTime :: EventProcessing -> ProcessId -> Process () -> Simulation ()
@@ -378,12 +384,4 @@ processParallelCreateIds xs =
 processParallelPrepare :: [(ProcessId, Process a)] -> Event ()
 processParallelPrepare xs =
   Event $ \p ->
-  forM_ xs $ \ (pid, _) ->
-  do y <- readIORef (processStarted pid)
-     when y $ 
-       error $
-       "Another process with one of the identifiers " ++
-       "has been started already: processParallelPrepare"
-     let signal = (contCancellationInitiating $ processCancel pid)
-     invokeEvent p $
-       handleSignal_ signal $ \_ -> interruptProcess pid
+  forM_ xs $ invokeEvent p . processIdPrepare . fst
