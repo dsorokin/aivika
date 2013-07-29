@@ -18,13 +18,11 @@ module Simulation.Aivika.Statistics
         returnSamplingStats,
         listSamplingStats,
         fromIntSamplingStats,
-        showSamplingStats,
         TimingStats(..),
         TimingData(..),
         timingStatsDeviation,
         returnTimingStats,
-        fromIntTimingStats,
-        showTimingStats) where 
+        fromIntTimingStats) where 
 
 import Data.Monoid
 
@@ -54,7 +52,7 @@ data SamplingStats a =
                   samplingStatsMean2 :: !Double 
                   -- ^ The average square value.
                 }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
            
 -- | Specifies data type from which values we can gather the statistics.           
 class SamplingData a where           
@@ -182,24 +180,17 @@ fromIntSamplingStats stats =
   stats { samplingStatsMin = fromIntegral $ samplingStatsMin stats,
           samplingStatsMax = fromIntegral $ samplingStatsMax stats }
 
--- | Show the summary of the statistics with the specified indent.       
-showSamplingStats :: (Show a) => SamplingStats a -> Int -> ShowS
-showSamplingStats stats indent =
-  let tab = replicate indent ' '
-  in showString tab .
-     showString "count     = " . shows (samplingStatsCount stats) . 
-     showString "\n" . 
-     showString tab .
-     showString "mean      = " . shows (samplingStatsMean stats) . 
-     showString "\n" . 
-     showString tab .
-     showString "deviation = " . shows (samplingStatsDeviation stats) . 
-     showString "\n" .
-     showString tab .
-     showString "minimum   = " . shows (samplingStatsMin stats) . 
-     showString "\n" .
-     showString tab .
-     showString "maximum   = " . shows (samplingStatsMax stats)
+-- | Show the summary of the statistics.       
+showSamplingStats :: (Show a) => SamplingStats a -> ShowS
+showSamplingStats stats =
+  showString "count = " . shows (samplingStatsCount stats) . 
+  showString ", mean = " . shows (samplingStatsMean stats) . 
+  showString ", std = " . shows (samplingStatsDeviation stats) . 
+  showString ", min = " . shows (samplingStatsMin stats) . 
+  showString ", max = " . shows (samplingStatsMax stats)
+
+instance Show a => Show (SamplingStats a) where
+  showsPrec prec = showSamplingStats
      
 -- | This is the timing statistics where data are bound to the time.
 data TimingStats a =
@@ -221,7 +212,7 @@ data TimingStats a =
                 -- ^ Return the sum of values.
                 timingStatsSum2      :: !Double 
                 -- ^ Return the sum of square values.
-                } deriving (Eq, Ord, Show)
+                } deriving (Eq, Ord)
                            
 -- | Defines the data type from which values we can gather the timing statistics.
 class TimingData a where                           
@@ -248,8 +239,8 @@ instance TimingData Double where
                   timingStatsMaxTime   = (-1) / 0,
                   timingStatsStartTime = 1 / 0,
                   timingStatsLastTime  = (-1) / 0,
-                  timingStatsSum       = 0,
-                  timingStatsSum2      = 0 }
+                  timingStatsSum       = 0 / 0,
+                  timingStatsSum2      = 0 / 0 }
     
   addTimingStats      = addTimingStatsGeneric
   timingStatsMean     = timingStatsMeanGeneric
@@ -265,8 +256,8 @@ instance TimingData Int where
                   timingStatsMaxTime   = (-1) / 0,
                   timingStatsStartTime = 1 / 0,
                   timingStatsLastTime  = (-1) / 0,
-                  timingStatsSum       = 0,
-                  timingStatsSum2      = 0 }
+                  timingStatsSum       = 0 / 0,
+                  timingStatsSum2      = 0 / 0 }
     
   addTimingStats      = addTimingStatsGeneric
   timingStatsMean     = timingStatsMeanGeneric
@@ -312,22 +303,26 @@ addTimingStatsGeneric t a stats
           sumX2  = sumX2' + (t - t') * x * x
       
 timingStatsMeanGeneric :: ConvertableToDouble a => TimingStats a -> Double
-timingStatsMeanGeneric stats 
-  | t1 > t0   = sumX / (t1 - t0)
-  | otherwise = minX
-    where t0   = timingStatsStartTime stats
-          t1   = timingStatsLastTime stats
-          sumX = timingStatsSum stats
-          minX = convertToDouble $ timingStatsMin stats
+timingStatsMeanGeneric stats
+  | count == 0 = 0 / 0
+  | t1 > t0    = sumX / (t1 - t0)
+  | otherwise  = minX
+    where t0    = timingStatsStartTime stats
+          t1    = timingStatsLastTime stats
+          sumX  = timingStatsSum stats
+          minX  = convertToDouble $ timingStatsMin stats
+          count = timingStatsCount stats
   
 timingStatsMean2Generic :: ConvertableToDouble a => TimingStats a -> Double
 timingStatsMean2Generic stats
-  | t1 > t0   = sumX2 / (t1 - t0)
-  | otherwise = minX * minX
+  | count == 0 = 0 / 0
+  | t1 > t0    = sumX2 / (t1 - t0)
+  | otherwise  = minX * minX
     where t0    = timingStatsStartTime stats
           t1    = timingStatsLastTime stats
           sumX2 = timingStatsSum2 stats
           minX  = convertToDouble $ timingStatsMin stats
+          count = timingStatsCount stats
 
 timingStatsVarianceGeneric :: ConvertableToDouble a => TimingStats a -> Double
 timingStatsVarianceGeneric stats = ex2 - ex * ex
@@ -348,28 +343,19 @@ fromIntTimingStats stats =
   stats { timingStatsMin = fromIntegral $ timingStatsMin stats,
           timingStatsMax = fromIntegral $ timingStatsMax stats }
 
--- | Show the summary of the statistics with the specified indent.       
-showTimingStats :: (Show a, TimingData a) => TimingStats a -> Int -> ShowS
-showTimingStats stats indent =
-  let tab = replicate indent ' '
-  in showString tab .
-     showString "count     = " . shows (timingStatsCount stats) . 
-     showString "\n" . 
-     showString tab .
-     showString "mean      = " . shows (timingStatsMean stats) . 
-     showString "\n" . 
-     showString tab .
-     showString "deviation = " . shows (timingStatsDeviation stats) . 
-     showString "\n" .
-     showString tab .
-     showString "minimum   = " . shows (timingStatsMin stats) . 
-     showString " at t = " . shows (timingStatsMinTime stats) .
-     showString "\n" .
-     showString tab .
-     showString "maximum   = " . shows (timingStatsMax stats) .
-     showString " at t = " . shows (timingStatsMaxTime stats) .
-     showString "\n" .
-     showString tab .
-     showString "t in [" . shows (timingStatsStartTime stats) .
-     showString ", " . shows (timingStatsLastTime stats) .
-     showString "]"
+-- | Show the summary of the statistics.       
+showTimingStats :: (Show a, TimingData a) => TimingStats a -> ShowS
+showTimingStats stats =
+  showString "count = " . shows (timingStatsCount stats) . 
+  showString ", mean = " . shows (timingStatsMean stats) . 
+  showString ", std = " . shows (timingStatsDeviation stats) . 
+  showString ", min = " . shows (timingStatsMin stats) . 
+  showString " (t = " . shows (timingStatsMinTime stats) .
+  showString "), max = " . shows (timingStatsMax stats) .
+  showString " (t = " . shows (timingStatsMaxTime stats) .
+  showString "), t in [" . shows (timingStatsStartTime stats) .
+  showString ", " . shows (timingStatsLastTime stats) .
+  showString "]"
+
+instance (Show a, TimingData a) => Show (TimingStats a) where
+  showsPrec prec = showTimingStats
