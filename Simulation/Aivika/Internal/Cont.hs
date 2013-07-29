@@ -89,11 +89,16 @@ contCancellationDeactivate x =
 contCancellationBind :: ContCancellation -> [ContCancellation] -> Event (Event ())
 contCancellationBind x ys =
   Event $ \p ->
-  do hs <- forM ys $ \y ->
+  do hs1 <- forM ys $ \y ->
        invokeEvent p $
        handleSignal (contCancellationInitiating x) $ \_ ->
        contCancellationInitiate y
-     return $ sequence_ hs
+     hs2 <- forM ys $ \y ->
+       invokeEvent p $
+       handleSignal (contCancellationInitiating y) $ \_ ->
+       contCancellationInitiate x
+     return $ do sequence_ hs1
+                 sequence_ hs2
 
 -- | Initiate the cancellation.
 contCancellationInitiate :: ContCancellation -> Event ()
@@ -459,8 +464,7 @@ parallelCont xs =
                   ccont e =
                     Event $ \p ->
                     do modifyIORef counter (+ 1)
-                       invokeEvent p $
-                         contCancellationInitiate (contCancel $ contAux c)
+                       -- the main computation was automatically canceled
                        invokeEvent p propagate
               forM_ (zip [1..n] xs) $ \(i, (x, cancelToken, catchFlag)) ->
                 invokeEvent p $
@@ -521,8 +525,7 @@ parallelCont_ xs =
                   ccont e =
                     Event $ \p ->
                     do modifyIORef counter (+ 1)
-                       invokeEvent p $
-                         contCancellationInitiate (contCancel $ contAux c)
+                       -- the main computation was automatically canceled
                        invokeEvent p propagate
               forM_ (zip [1..n] xs) $ \(i, (x, cancelToken, catchFlag)) ->
                 invokeEvent p $
