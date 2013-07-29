@@ -87,16 +87,16 @@ class DequeueStrategy s q => PriorityQueueStrategy s q p | s -> q, s -> p where
                                  -- ^ the action of enqueuing
 
 -- | Strategy: First Come - First Served (FCFS).
-data FCFS = FCFS
+data FCFS = FCFS deriving (Eq, Ord, Show)
 
 -- | Strategy: Last Come - First Served (LCFS)
-data LCFS = LCFS
+data LCFS = LCFS deriving (Eq, Ord, Show)
 
 -- | Strategy: Service in Random Order (SIRO).
-data SIRO = SIRO
+data SIRO = SIRO deriving (Eq, Ord, Show)
 
 -- | Strategy: Static Priorities. It uses the priority queue.
-data StaticPriorities = StaticPriorities
+data StaticPriorities = StaticPriorities deriving (Eq, Ord, Show)
 
 instance QueueStrategy FCFS DoubleLinkedList where
 
