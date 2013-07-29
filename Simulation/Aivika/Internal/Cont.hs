@@ -22,8 +22,8 @@ module Simulation.Aivika.Internal.Cont
         contCancellationBind,
         invokeCont,
         runCont,
-        parallelCont,
-        parallelCont_,
+        contParallel,
+        contParallel_,
         catchCont,
         finallyCont,
         throwCont,
@@ -413,16 +413,16 @@ contCanceled c = contCancelFlag $ contAux c
 -- to the current computation as well (if the exception handling is
 -- supported).
 --
--- Here word "parallel" literally means that the computations are
+-- Here word @parallel@ literally means that the computations are
 -- actually executed on a single operating system thread but
 -- they are processed simultaneously by the event queue.
-parallelCont :: [(Cont a, ContCancellation, Bool)]
+contParallel :: [(Cont a, ContCancellation, Bool)]
                 -- ^ the list of:
                 -- the nested computation,
                 -- the cancellation token,
                 -- the catch flag
                 -> Cont [a]
-parallelCont xs =
+contParallel xs =
   Cont $ \c ->
   Event $ \p ->
   do let n = length xs
@@ -476,16 +476,16 @@ parallelCont xs =
             then invokeEvent p $ contCont c []
             else worker
 
--- | A partial case of 'parallelCont' when we are not interested in
+-- | A partial case of 'contParallel' when we are not interested in
 -- the results but we are interested in the actions to be peformed by
 -- the nested computations.
-parallelCont_ :: [(Cont a, ContCancellation, Bool)]
+contParallel_ :: [(Cont a, ContCancellation, Bool)]
                  -- ^ the list of:
                  -- the nested computation,
                  -- the cancellation token,
                  -- the catch flag
                  -> Cont ()
-parallelCont_ xs =
+contParallel_ xs =
   Cont $ \c ->
   Event $ \p ->
   do let n = length xs

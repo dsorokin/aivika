@@ -38,6 +38,10 @@ module Simulation.Aivika.Process
         reactivateProcess,
         cancelProcess,
         processCanceled,
+        processParallel,
+        processParallelUsingIds,
+        processParallel_,
+        processParallelUsingIds_,
         catchProcess,
         finallyProcess,
         throwProcess) where

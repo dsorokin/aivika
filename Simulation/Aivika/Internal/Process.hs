@@ -39,6 +39,10 @@ module Simulation.Aivika.Internal.Process
         processId,
         cancelProcess,
         processCanceled,
+        processParallel,
+        processParallelUsingIds,
+        processParallel_,
+        processParallelUsingIds_,
         catchProcess,
         finallyProcess,
         throwProcess) where
@@ -320,3 +324,66 @@ finallyProcess (Process m) (Process m') =
 throwProcess :: IOException -> Process a
 throwProcess = liftIO . throw
 
+-- | Execute the specified computations in parallel within
+-- the current computation and return their results. The cancellation
+-- of any of the nested computations affects the current computation.
+-- The exception raised in any of the nested computations is propogated
+-- to the current computation as well (if the exception handling is
+-- supported).
+--
+-- Here word @parallel@ literally means that the computations are
+-- actually executed on a single operating system thread but
+-- they are processed simultaneously by the event queue.
+--
+-- It generates new process identifiers with the same
+-- 'processIdWithCatch' flag that the current computation has.
+processParallel :: [Process a] -> Process [a]
+processParallel xs =
+  processParallelCreateIds xs >>= processParallelUsingIds 
+
+-- | Like 'processParallel' but allows specifying the process identifiers.
+processParallelUsingIds :: [(ProcessId, Process a)] -> Process [a]
+processParallelUsingIds xs =
+  Process $ \pid ->
+  do liftEvent $ processParallelPrepare xs
+     contParallel $
+       flip map xs $ \(pid, m) ->
+       (invokeProcess pid m, processCancel pid, processIdWithCatch pid)
+
+-- | Like 'processParallel' but ignores the result.
+processParallel_ :: [Process a] -> Process ()
+processParallel_ xs =
+  processParallelCreateIds xs >>= processParallelUsingIds_ 
+
+-- | Like 'processParallel_' but allows specifying the process identifiers.
+processParallelUsingIds_ :: [(ProcessId, Process a)] -> Process ()
+processParallelUsingIds_ xs =
+  Process $ \pid ->
+  do liftEvent $ processParallelPrepare xs
+     contParallel_ $
+       flip map xs $ \(pid, m) ->
+       (invokeProcess pid m, processCancel pid, processIdWithCatch pid)
+
+-- | Create the new process identifiers.
+processParallelCreateIds :: [Process a] -> Process [(ProcessId, Process a)]
+processParallelCreateIds xs =
+  do pid  <- processId
+     pids <- liftSimulation $ forM xs $ \x ->
+       if processIdWithCatch pid
+       then newProcessIdWithCatch
+       else newProcessId
+     return $ zip pids xs
+
+-- | Prepare the processes for parallel execution.
+processParallelPrepare :: [(ProcessId, Process a)] -> Event ()
+processParallelPrepare xs =
+  Event $ \p ->
+  forM_ xs $ \ (pid, _) ->
+  do y <- readIORef (processStarted pid)
+     when y $ 
+       error $
+       "Another process with one of the identifiers " ++
+       "has been started already: processParallelPrepare"
+     let signal = (contCancellationInitiating $ processCancel pid)
+     invokeEvent p $
+       handleSignal_ signal $ \_ -> interruptProcess pid
