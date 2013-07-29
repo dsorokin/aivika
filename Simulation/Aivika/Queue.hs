@@ -185,47 +185,42 @@ queueFull q =
 queueCount :: Queue si qi sm qm so qo a -> Observable Int
 queueCount q =
   let read = Event $ \p -> readIORef (queueCountRef q)
-  in Observable { readObservable   = read,
-                  observableSignal =
-                    mapSignalM (const read) (enqueueStored q) <>
-                    mapSignalM (const read) (dequeueExtracted q)
-                }
+  in Observable { readObservable = read,
+                  observableChanged_ =
+                    mapSignal (const ()) (enqueueStored q) <>
+                    mapSignal (const ()) (dequeueExtracted q) }
   
 -- | Return the number of lost items.
 queueLostCount :: Queue si qi sm qm so qo a -> Observable Int
 queueLostCount q =
   let read = Event $ \p -> readIORef (queueLostCountRef q)
-  in Observable { readObservable   = read,
-                  observableSignal =
-                    mapSignalM (const read) (enqueueLost q)
-                }
+  in Observable { readObservable = read,
+                  observableChanged_ =
+                    mapSignal (const ()) (enqueueLost q) }
 
 -- | Return the total number of input items that were enqueued.
 queueInputCount :: Queue si qi sm qm so qo a -> Observable Int
 queueInputCount q =
   let read = Event $ \p -> readIORef (queueInputCountRef q)
-  in Observable { readObservable   = read,
-                  observableSignal =
-                    mapSignalM (const read) (enqueueInitiated q)
-                }
+  in Observable { readObservable = read,
+                  observableChanged_ =
+                    mapSignal (const ()) (enqueueInitiated q) }
       
 -- | Return the total number of input items that were stored.
 queueStoreCount :: Queue si qi sm qm so qo a -> Observable Int
 queueStoreCount q =
   let read = Event $ \p -> readIORef (queueStoreCountRef q)
-  in Observable { readObservable   = read,
-                  observableSignal =
-                    mapSignalM (const read) (enqueueStored q)
-                }
+  in Observable { readObservable = read,
+                  observableChanged_ =
+                    mapSignal (const ()) (enqueueStored q) }
       
 -- | Return the total number of output items that were dequeued.
 queueOutputCount :: Queue si qi sm qm so qo a -> Observable Int
 queueOutputCount q =
   let read = Event $ \p -> readIORef (queueOutputCountRef q)
-  in Observable { readObservable   = read,
-                  observableSignal =
-                    mapSignalM (const read) (dequeueExtracted q)
-                }
+  in Observable { readObservable = read,
+                  observableChanged_ =
+                    mapSignal (const ()) (dequeueExtracted q) }
 
 -- | Return the load factor: the queue size divided by its maximum size.
 queueLoadFactor :: Queue si qi sm qm so qo a -> Observable Double
@@ -235,11 +230,10 @@ queueLoadFactor q =
         do x <- readIORef (queueCountRef q)
            let y = queueMaxCount q
            return (fromIntegral x / fromIntegral y)
-  in Observable { readObservable   = read,
-                  observableSignal =
-                    mapSignalM (const read) (enqueueStored q) <>
-                    mapSignalM (const read) (dequeueExtracted q)
-                }
+  in Observable { readObservable = read,
+                  observableChanged_ =
+                    mapSignal (const ()) (enqueueStored q) <>
+                    mapSignal (const ()) (dequeueExtracted q) }
       
 -- | Return the rate of the input items that were enqueued: how many items
 -- per time.
@@ -273,10 +267,9 @@ queueOutputRate q =
 queueWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
 queueWaitTime q =
   let read = Event $ \p -> readIORef (queueWaitTimeRef q)
-  in Observable { readObservable   = read,
-                  observableSignal =
-                    mapSignalM (const read) (dequeueExtracted q)
-                }
+  in Observable { readObservable = read,
+                  observableChanged_ =
+                    mapSignal (const ()) (dequeueExtracted q) }
       
 -- | Return the total wait time from the time at which the item was enqueued to
 -- the time at which it was dequeued.
@@ -285,30 +278,27 @@ queueWaitTime q =
 queueTotalWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
 queueTotalWaitTime q =
   let read = Event $ \p -> readIORef (queueTotalWaitTimeRef q)
-  in Observable { readObservable   = read,
-                  observableSignal =
-                    mapSignalM (const read) (dequeueExtracted q)
-                }
+  in Observable { readObservable = read,
+                  observableChanged_ = 
+                    mapSignal (const ()) (dequeueExtracted q) }
       
 -- | Return the input wait time from the time at which the item was enqueued
 -- to the time at which it was stored in the queue.
 queueInputWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
 queueInputWaitTime q =
   let read = Event $ \p -> readIORef (queueInputWaitTimeRef q)
-  in Observable { readObservable   = read,
-                  observableSignal =
-                    mapSignalM (const read) (enqueueStored q)
-                }
+  in Observable { readObservable = read,
+                  observableChanged_ =
+                    mapSignal (const ()) (enqueueStored q) }
       
 -- | Return the output wait time from the time at which the item was requested
 -- for dequeuing to the time at which it was actually dequeued.
 queueOutputWaitTime :: Queue si qi sm qm so qo a -> Observable (SamplingStats Double)
 queueOutputWaitTime q =
   let read = Event $ \p -> readIORef (queueOutputWaitTimeRef q)
-  in Observable { readObservable   = read,
-                  observableSignal =
-                    mapSignalM (const read) (dequeueExtracted q)
-                }
+  in Observable { readObservable = read,
+                  observableChanged_ =
+                    mapSignal (const ()) (dequeueExtracted q) }
   
 -- | Dequeue suspending the process if the queue is empty.
 dequeue :: (DequeueStrategy si qi,

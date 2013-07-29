@@ -12,6 +12,7 @@
 module Simulation.Aivika.Observable
        (Observable,
         readObservable,
-        observableSignal) where
+        observableChanged,
+        observableChanged_) where
 
 import Simulation.Aivika.Internal.Observable

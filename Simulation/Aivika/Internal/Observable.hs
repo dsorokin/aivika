@@ -10,7 +10,10 @@
 -- It defines an observable entity that has a value and signal at
 -- which this value changes.
 module Simulation.Aivika.Internal.Observable
-       (Observable(..)) where
+       (Observable(..),
+        observableChanged) where
+
+import Data.Functor
 
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Signal
@@ -20,6 +23,15 @@ import Simulation.Aivika.Internal.Signal
 data Observable a =
   Observable { readObservable :: Event a,
                -- ^ Return the value of the observable entity.
-               observableSignal :: Signal a
-               -- ^ Return the signal at which the observable entity changes.
+               observableChanged_ :: Signal ()
+               -- ^ Return the signal at which the observable entity changes
+               -- but without the information about the changed value.
              }
+
+-- | Return the signal at which the observable entity changes.
+observableChanged :: Observable a -> Signal a
+observableChanged x = mapSignalM (const $ readObservable x) $ observableChanged_ x
+
+instance Functor Observable where
+  fmap f x = x { readObservable = fmap f (readObservable x) }
+                          
