@@ -156,10 +156,11 @@ processIdPrepare :: ProcessId -> Event ()
 processIdPrepare pid =
   Event $ \p ->
   do y <- readIORef (processStarted pid)
-     when y $ 
-       error $
-       "Another process with the specified identifier " ++
-       "has been started already: processIdPrepare"
+     if y
+       then error $
+            "Another process with the specified identifier " ++
+            "has been started already: processIdPrepare"
+       else writeIORef (processStarted pid) True
      let signal = (contCancellationInitiating $ processCancel pid)
      invokeEvent p $
        handleSignal_ signal $ \_ -> interruptProcess pid
