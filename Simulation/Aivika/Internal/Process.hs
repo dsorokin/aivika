@@ -54,14 +54,14 @@ import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Cont
+import Simulation.Aivika.Internal.Signal
 
 -- | Represents a process identifier.
 data ProcessId = 
   ProcessId { processStarted :: IORef Bool,
               processCatchFlag     :: Bool,
               processReactCont     :: IORef (Maybe (ContParams ())), 
-              processCancelRef     :: IORef Bool, 
-              processCancelToken   :: IORef Bool,
+              processCancel        :: ContCancellation,
               processInterruptRef  :: IORef Bool, 
               processInterruptCont :: IORef (Maybe (ContParams ())), 
               processInterruptVersion :: IORef Int }
@@ -153,18 +153,19 @@ reactivateProcess pid =
 -- the 'enqueueProcess' function.
 runProcess :: ProcessId -> Process () -> Event ()
 runProcess pid p =
-  runCont m cont econt ccont
-  (processCancelRef pid) (processCancelToken pid) (processCatchFlag pid)
-    where cont  = return
-          econt = throwEvent
-          ccont = return
-          m = do y <- liftIO $ readIORef (processStarted pid)
-                 if y 
-                   then error $
-                        "Another process with this identifier " ++
-                        "has been started already: runProcess"
-                   else liftIO $ writeIORef (processStarted pid) True
-                 invokeProcess pid p
+  do handleSignal_ (contCancellationInitiating $ processCancel pid) $ \() ->
+       interruptProcess pid
+     runCont m cont econt ccont (processCancel pid) (processCatchFlag pid)
+       where cont  = return
+             econt = throwEvent
+             ccont = return
+             m = do y <- liftIO $ readIORef (processStarted pid)
+                    if y 
+                      then error $
+                           "Another process with this identifier " ++
+                           "has been started already: runProcess"
+                      else liftIO $ writeIORef (processStarted pid) True
+                    invokeProcess pid p
 
 -- | Start the process in the start time immediately.
 runProcessInStartTime :: EventProcessing -> ProcessId -> Process () -> Simulation ()
@@ -203,16 +204,14 @@ newProcessId :: Simulation ProcessId
 newProcessId =
   do x <- liftIO $ newIORef Nothing
      y <- liftIO $ newIORef False
-     c <- liftIO $ newIORef False
-     t <- liftIO $ newIORef False
+     c <- newContCancellation
      i <- liftIO $ newIORef False
      z <- liftIO $ newIORef Nothing
      v <- liftIO $ newIORef 0
      return ProcessId { processStarted = y,
                         processCatchFlag     = False,
                         processReactCont     = x, 
-                        processCancelRef     = c, 
-                        processCancelToken   = t,
+                        processCancel        = c, 
                         processInterruptRef  = i,
                         processInterruptCont = z, 
                         processInterruptVersion = v }
@@ -225,16 +224,14 @@ newProcessIdWithCatch :: Simulation ProcessId
 newProcessIdWithCatch =
   do x <- liftIO $ newIORef Nothing
      y <- liftIO $ newIORef False
-     c <- liftIO $ newIORef False
-     t <- liftIO $ newIORef False
+     c <- newContCancellation
      i <- liftIO $ newIORef False
      z <- liftIO $ newIORef Nothing
      v <- liftIO $ newIORef 0
      return ProcessId { processStarted = y,
                         processCatchFlag     = True,
                         processReactCont     = x, 
-                        processCancelRef     = c, 
-                        processCancelToken   = t,
+                        processCancel        = c, 
                         processInterruptRef  = i,
                         processInterruptCont = z, 
                         processInterruptVersion = v }
@@ -244,20 +241,13 @@ newProcessIdWithCatch =
 processIdWithCatch :: ProcessId -> Bool
 processIdWithCatch = processCatchFlag
 
--- | Cancel a process with the specified identifier.
+-- | Cancel a process with the specified identifier, interrupting it if needed.
 cancelProcess :: ProcessId -> Event ()
-cancelProcess pid =
-  Event $ \p ->
-  do z <- readIORef (processCancelRef pid) 
-     unless z $
-       do writeIORef (processCancelRef pid) True
-          writeIORef (processCancelToken pid) True
+cancelProcess pid = contCancellationInitiate (processCancel pid)
 
 -- | Test whether the process with the specified identifier was canceled.
 processCanceled :: ProcessId -> Event Bool
-processCanceled pid =
-  Event $ \p ->
-  readIORef (processCancelRef pid)
+processCanceled pid = contCancellationInitiated (processCancel pid)
 
 instance Eq ProcessId where
   x == y = processReactCont x == processReactCont y    -- for the references are unique
