@@ -649,7 +649,7 @@ dequeueExtract q t' =
   Event $ \p ->
   do i <- invokeEvent p $
           strategyDequeue (queueStoringStrategy q) (queueStore q)
-     modifyIORef (queueCountRef q) ((-) 1)
+     modifyIORef (queueCountRef q) (\x -> x - 1)
      modifyIORef (queueOutputCountRef q) (+ 1)
      invokeEvent p $
        dequeueStat q t' i
