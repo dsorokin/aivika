@@ -203,10 +203,7 @@ dequeueWithOutputPriority q po =
      requestResourceWithPriority (queueOutputRes q) po
      liftEvent $ dequeueExtract q t
   
--- | Try to dequeue from the queue immediately.
---
--- Use carefully as it can decrease the statistics for 'queueWaitTime' and
--- 'queueOutputWaitTime', which results can become non-representative in such a case.
+-- | Try to dequeue immediately.
 tryDequeue :: DequeueStrategy sm qm
               => Queue sm qm so qo a
               -- ^ the queue
