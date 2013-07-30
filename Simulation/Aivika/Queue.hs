@@ -133,9 +133,9 @@ newQueue si sm so count =
      ci <- liftIO $ newIORef 0
      cm <- liftIO $ newIORef 0
      co <- liftIO $ newIORef 0
-     ri <- newResourceWithCount si count count
+     ri <- newResourceWithMaxCount si count (Just count)
      qm <- newStrategyQueue sm
-     ro <- newResourceWithCount so count 0
+     ro <- newResourceWithMaxCount so 0 (Just count)
      w  <- liftIO $ newIORef mempty
      wt <- liftIO $ newIORef mempty
      wi <- liftIO $ newIORef mempty

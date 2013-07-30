@@ -7,13 +7,16 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- This module defines a limited resource which can be acquired and 
+-- This module defines the resource which can be acquired and 
 -- then released by the discontinuous process 'Process'.
+-- The resource can be either limited by the upper bound
+-- (run-time check), or it can have no upper bound. The latter
+-- is useful for modeling the infinite queue, for example.
 --
 module Simulation.Aivika.Resource
        (Resource,
         newResource,
-        newResourceWithCount,
+        newResourceWithMaxCount,
         resourceStrategy,
         resourceMaxCount,
         resourceCount,
@@ -37,59 +40,69 @@ import Simulation.Aivika.Internal.Process
 
 import Simulation.Aivika.QueueStrategy
 
--- | Represents a limited resource.
+-- | Represents the resource.
 data Resource s q = 
   Resource { resourceStrategy :: s,
              -- ^ Return the strategy applied for queuing the requests.
-             resourceMaxCount :: Int,
-             -- ^ Return the maximum count of the resource.
+             resourceMaxCount :: Maybe Int,
+             -- ^ Return the maximum count of the resource, where 'Nothing'
+             -- means that the resource has no upper bound.
              resourceCountRef :: IORef Int, 
              resourceWaitList :: q (ContParams ())}
 
 instance Eq (Resource s q) where
   x == y = resourceCountRef x == resourceCountRef y  -- unique references
 
--- | Create a new resource with the specified queue strategy and maximum count.
+-- | Create a new resource with the specified queue strategy and initial count.
+-- The last value becomes the upper bound as well.
 newResource :: QueueStrategy s q
                => s
                -- ^ the strategy for managing the queuing requests
                -> Int
-               -- ^ the maximum count of the resource
+               -- ^ the initial count (and maximal count too) of the resource
                -> Simulation (Resource s q)
-newResource s maxCount =
+newResource s count =
   Simulation $ \r ->
-  do countRef <- newIORef maxCount
+  do when (count < 0) $
+       error $
+       "The resource count cannot be negative: " ++
+       "newResource."
+     countRef <- newIORef count
+     waitList <- invokeSimulation r $ newStrategyQueue s
+     return Resource { resourceStrategy = s,
+                       resourceMaxCount = Just count,
+                       resourceCountRef = countRef,
+                       resourceWaitList = waitList }
+
+-- | Create a new resource with the specified queue strategy, initial and maximum counts,
+-- where 'Nothing' means that the resource has no upper bound.
+newResourceWithMaxCount :: QueueStrategy s q
+                           => s
+                           -- ^ the strategy for managing the queuing requests
+                           -> Int
+                           -- ^ the initial count of the resource
+                           -> Maybe Int
+                           -- ^ the maximum count of the resource, which can be indefinite
+                           -> Simulation (Resource s q)
+newResourceWithMaxCount s count maxCount =
+  Simulation $ \r ->
+  do when (count < 0) $
+       error $
+       "The resource count cannot be negative: " ++
+       "newResourceWithMaxCount."
+     case maxCount of
+       Just maxCount | count > maxCount ->
+         error $
+         "The resource count cannot be greater than " ++
+         "its maximum value: newResourceWithMaxCount."
+       _ ->
+         return ()
+     countRef <- newIORef count
      waitList <- invokeSimulation r $ newStrategyQueue s
      return Resource { resourceStrategy = s,
                        resourceMaxCount = maxCount,
                        resourceCountRef = countRef,
                        resourceWaitList = waitList }
-
--- | Create a new resource with the specified queue strategy, maximum and initial count.
-newResourceWithCount :: QueueStrategy s q
-                        => s
-                        -- ^ the strategy for managing the queuing requests
-                        -> Int
-                        -- ^ the maximum count of the resource
-                        -> Int
-                        -- ^ the initial count of the resource
-                        -> Simulation (Resource s q)
-newResourceWithCount s maxCount count = do
-  when (count < 0) $
-    error $
-    "The resource count cannot be negative: " ++
-    "newResourceWithCount."
-  when (count > maxCount) $
-    error $
-    "The resource count cannot be greater than " ++
-    "its maximum value: newResourceWithCount."
-  Simulation $ \r ->
-    do countRef <- newIORef count
-       waitList <- invokeSimulation r $ newStrategyQueue s
-       return Resource { resourceStrategy = s,
-                         resourceMaxCount = maxCount,
-                         resourceCountRef = countRef,
-                         resourceWaitList = waitList }
 
 -- | Return the current count of the resource.
 resourceCount :: Resource s q -> Event Int
@@ -159,10 +172,13 @@ releaseResourceWithinEvent r =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
      let a' = a + 1
-     when (a' > resourceMaxCount r) $
-       error $
-       "The resource count cannot be greater than " ++
-       "its maximum value: releaseResourceWithinEvent."
+     case resourceMaxCount r of
+       Just maxCount | a' > maxCount ->
+         error $
+         "The resource count cannot be greater than " ++
+         "its maximum value: releaseResourceWithinEvent."
+       _ ->
+         return ()
      f <- invokeEvent p $
           strategyQueueNull (resourceStrategy r) (resourceWaitList r)
      if f 

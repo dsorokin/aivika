@@ -116,6 +116,7 @@ library
                      Simulation.Aivika.PriorityQueue
                      Simulation.Aivika.Process
                      Simulation.Aivika.Queue
+                     Simulation.Aivika.Queue.Infinite
                      Simulation.Aivika.QueueStrategy
                      Simulation.Aivika.Random
                      Simulation.Aivika.Ref
