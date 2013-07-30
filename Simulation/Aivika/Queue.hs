@@ -13,7 +13,16 @@
 -- behaviour.
 --
 module Simulation.Aivika.Queue
-       (Queue,
+       (FCFSQueue,
+        LCFSQueue,
+        SIROQueue,
+        PriorityQueue,
+        Queue,
+        newFCFSQueue,
+        newLCFSQueue,
+        newSIROQueue,
+        newPriorityQueue,
+        newQueue,
         queueNull,
         queueFull,
         queueInputStrategy,
@@ -33,7 +42,6 @@ module Simulation.Aivika.Queue
         queueTotalWaitTime,
         queueInputWaitTime,
         queueOutputWaitTime,
-        newQueue,
         dequeue,
         dequeueWithOutputPriority,
         tryDequeue,
@@ -70,6 +78,29 @@ import Simulation.Aivika.Resource
 import Simulation.Aivika.QueueStrategy
 import Simulation.Aivika.Statistics
 
+import qualified Simulation.Aivika.DoubleLinkedList as DLL 
+import qualified Simulation.Aivika.Vector as V
+import qualified Simulation.Aivika.PriorityQueue as PQ
+
+-- | A type synonym for the ordinary FIFO queue also known as the FCFS
+-- (First Come - First Serviced) queue.
+type FCFSQueue a =
+  Queue FCFS DLL.DoubleLinkedList FCFS DLL.DoubleLinkedList FCFS DLL.DoubleLinkedList a
+
+-- | A type synonym for the ordinary LIFO queue also known as the LCFS
+-- (Last Come - First Serviced) queue.
+type LCFSQueue a =
+  Queue FCFS DLL.DoubleLinkedList LCFS DLL.DoubleLinkedList FCFS DLL.DoubleLinkedList a
+
+-- | A type synonym for the SIRO (Serviced in Random Order) queue.
+type SIROQueue a =
+  Queue FCFS DLL.DoubleLinkedList SIRO V.Vector FCFS DLL.DoubleLinkedList a
+
+-- | A type synonym for the queue with static priorities applied when
+-- storing the elements in the queue.
+type PriorityQueue a =
+  Queue FCFS DLL.DoubleLinkedList StaticPriorities PQ.PriorityQueue FCFS DLL.DoubleLinkedList a
+
 -- | Represents the queue using the specified strategies for input @si@,
 -- internal storing (in memory) @sm@ and output @so@, where @a@ denotes
 -- the type of items stored in the queue. Types @qi@, @qm@ and @qo@ are
@@ -77,7 +108,7 @@ import Simulation.Aivika.Statistics
 -- are dependent types.
 data Queue si qi sm qm so qo a =
   Queue { queueMaxCount :: Int,
-          -- ^ The maximum available number of items.
+          -- ^ The queue capacity.
           queueInputStrategy :: si,
           -- ^ The strategy applied to the input (enqueuing) process.
           queueStoringStrategy :: sm,
@@ -114,7 +145,23 @@ data QueueItem a =
               -- the item was just enqueued.
             }
   
--- | Create a new queue with the specified strategies and maximum available number of items.  
+-- | Create a new FCFS queue with the specified capacity.  
+newFCFSQueue :: Int -> Simulation (FCFSQueue a)  
+newFCFSQueue = newQueue FCFS FCFS FCFS
+  
+-- | Create a new LCFS queue with the specified capacity.  
+newLCFSQueue :: Int -> Simulation (LCFSQueue a)  
+newLCFSQueue = newQueue FCFS LCFS FCFS
+  
+-- | Create a new SIRO queue with the specified capacity.  
+newSIROQueue :: Int -> Simulation (SIROQueue a)  
+newSIROQueue = newQueue FCFS SIRO FCFS
+  
+-- | Create a new priority queue with the specified capacity.  
+newPriorityQueue :: Int -> Simulation (PriorityQueue a)  
+newPriorityQueue = newQueue FCFS StaticPriorities FCFS
+  
+-- | Create a new queue with the specified strategies and capacity.  
 newQueue :: (QueueStrategy si qi,
              QueueStrategy sm qm,
              QueueStrategy so qo) =>
@@ -125,7 +172,7 @@ newQueue :: (QueueStrategy si qi,
             -> so
             -- ^ the strategy applied to the output (dequeuing) process
             -> Int
-            -- ^ the maximum available number of items
+            -- ^ the queue capacity
             -> Simulation (Queue si qi sm qm so qo a)  
 newQueue si sm so count =
   do i  <- liftIO $ newIORef 0

@@ -10,7 +10,16 @@
 -- This module defines an infinite queue that can use the specified strategies.
 --
 module Simulation.Aivika.Queue.Infinite
-       (Queue,
+       (FCFSQueue,
+        LCFSQueue,
+        SIROQueue,
+        PriorityQueue,
+        Queue,
+        newFCFSQueue,
+        newLCFSQueue,
+        newSIROQueue,
+        newPriorityQueue,
+        newQueue,
         queueNull,
         queueStoringStrategy,
         queueOutputStrategy,
@@ -21,7 +30,6 @@ module Simulation.Aivika.Queue.Infinite
         queueOutputRate,
         queueWaitTime,
         queueOutputWaitTime,
-        newQueue,
         dequeue,
         dequeueWithOutputPriority,
         tryDequeue,
@@ -47,6 +55,29 @@ import Simulation.Aivika.Signal
 import Simulation.Aivika.Resource
 import Simulation.Aivika.QueueStrategy
 import Simulation.Aivika.Statistics
+
+import qualified Simulation.Aivika.DoubleLinkedList as DLL 
+import qualified Simulation.Aivika.Vector as V
+import qualified Simulation.Aivika.PriorityQueue as PQ
+
+-- | A type synonym for the ordinary FIFO queue also known as the FCFS
+-- (First Come - First Serviced) queue.
+type FCFSQueue a =
+  Queue FCFS DLL.DoubleLinkedList FCFS DLL.DoubleLinkedList a
+
+-- | A type synonym for the ordinary LIFO queue also known as the LCFS
+-- (Last Come - First Serviced) queue.
+type LCFSQueue a =
+  Queue LCFS DLL.DoubleLinkedList FCFS DLL.DoubleLinkedList a
+
+-- | A type synonym for the SIRO (Serviced in Random Order) queue.
+type SIROQueue a =
+  Queue SIRO V.Vector FCFS DLL.DoubleLinkedList a
+
+-- | A type synonym for the queue with static priorities applied when
+-- storing the elements in the queue.
+type PriorityQueue a =
+  Queue StaticPriorities PQ.PriorityQueue FCFS DLL.DoubleLinkedList a
 
 -- | Represents the infinite queue using the specified strategies for
 -- internal storing (in memory) @sm@ and output @so@, where @a@ denotes
@@ -76,6 +107,22 @@ data QueueItem a =
               itemStoringTime :: Double
               -- ^ Return the time of storing in the queue.
             }
+  
+-- | Create a new infinite FCFS queue.  
+newFCFSQueue :: Simulation (FCFSQueue a)  
+newFCFSQueue = newQueue FCFS FCFS
+  
+-- | Create a new infinite LCFS queue.  
+newLCFSQueue :: Simulation (LCFSQueue a)  
+newLCFSQueue = newQueue LCFS FCFS
+  
+-- | Create a new infinite SIRO queue.  
+newSIROQueue :: Simulation (SIROQueue a)  
+newSIROQueue = newQueue SIRO FCFS
+  
+-- | Create a new infinite priority queue.  
+newPriorityQueue :: Simulation (PriorityQueue a)  
+newPriorityQueue = newQueue StaticPriorities FCFS
   
 -- | Create a new infinite queue with the specified strategies.  
 newQueue :: (QueueStrategy sm qm,

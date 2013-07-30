@@ -14,7 +14,19 @@
 -- is useful for modeling the infinite queue, for example.
 --
 module Simulation.Aivika.Resource
-       (Resource,
+       (FCFSResource,
+        LCFSResource,
+        SIROResource,
+        PriorityResource,
+        Resource,
+        newFCFSResource,
+        newFCFSResourceWithMaxCount,
+        newLCFSResource,
+        newLCFSResourceWithMaxCount,
+        newSIROResource,
+        newSIROResourceWithMaxCount,
+        newPriorityResource,
+        newPriorityResourceWithMaxCount,
         newResource,
         newResourceWithMaxCount,
         resourceStrategy,
@@ -37,10 +49,26 @@ import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Cont
 import Simulation.Aivika.Internal.Process
-
 import Simulation.Aivika.QueueStrategy
 
--- | Represents the resource.
+import qualified Simulation.Aivika.DoubleLinkedList as DLL 
+import qualified Simulation.Aivika.Vector as V
+import qualified Simulation.Aivika.PriorityQueue as PQ
+
+-- | The ordinary FCFS (First Come - First Serviced) resource.
+type FCFSResource = Resource FCFS DLL.DoubleLinkedList
+
+-- | The ordinary LCFS (Last Come - First Serviced) resource.
+type LCFSResource = Resource LCFS DLL.DoubleLinkedList
+
+-- | The SIRO (Serviced in Random Order) resource.
+type SIROResource = Resource SIRO V.Vector
+
+-- | The resource with static priorities.
+type PriorityResource = Resource StaticPriorities PQ.PriorityQueue
+
+-- | Represents the resource with strategy @s@ applied for queuing the requests.
+-- The @q@ type is dependent and it is usually derived automatically.
 data Resource s q = 
   Resource { resourceStrategy :: s,
              -- ^ Return the strategy applied for queuing the requests.
@@ -52,6 +80,70 @@ data Resource s q =
 
 instance Eq (Resource s q) where
   x == y = resourceCountRef x == resourceCountRef y  -- unique references
+
+-- | Create a new FCFS resource with the specified initial count which value becomes
+-- the upper bound as well.
+newFCFSResource :: Int
+                   -- ^ the initial count (and maximal count too) of the resource
+                   -> Simulation FCFSResource
+newFCFSResource = newResource FCFS
+
+-- | Create a new FCFS resource with the specified initial and maximum counts,
+-- where 'Nothing' means that the resource has no upper bound.
+newFCFSResourceWithMaxCount :: Int
+                               -- ^ the initial count of the resource
+                               -> Maybe Int
+                               -- ^ the maximum count of the resource, which can be indefinite
+                               -> Simulation FCFSResource
+newFCFSResourceWithMaxCount = newResourceWithMaxCount FCFS
+
+-- | Create a new LCFS resource with the specified initial count which value becomes
+-- the upper bound as well.
+newLCFSResource :: Int
+                   -- ^ the initial count (and maximal count too) of the resource
+                   -> Simulation LCFSResource
+newLCFSResource = newResource LCFS
+
+-- | Create a new LCFS resource with the specified initial and maximum counts,
+-- where 'Nothing' means that the resource has no upper bound.
+newLCFSResourceWithMaxCount :: Int
+                               -- ^ the initial count of the resource
+                               -> Maybe Int
+                               -- ^ the maximum count of the resource, which can be indefinite
+                               -> Simulation LCFSResource
+newLCFSResourceWithMaxCount = newResourceWithMaxCount LCFS
+
+-- | Create a new SIRO resource with the specified initial count which value becomes
+-- the upper bound as well.
+newSIROResource :: Int
+                   -- ^ the initial count (and maximal count too) of the resource
+                   -> Simulation SIROResource
+newSIROResource = newResource SIRO
+
+-- | Create a new SIRO resource with the specified initial and maximum counts,
+-- where 'Nothing' means that the resource has no upper bound.
+newSIROResourceWithMaxCount :: Int
+                               -- ^ the initial count of the resource
+                               -> Maybe Int
+                               -- ^ the maximum count of the resource, which can be indefinite
+                               -> Simulation SIROResource
+newSIROResourceWithMaxCount = newResourceWithMaxCount SIRO
+
+-- | Create a new priority resource with the specified initial count which value becomes
+-- the upper bound as well.
+newPriorityResource :: Int
+                       -- ^ the initial count (and maximal count too) of the resource
+                       -> Simulation PriorityResource
+newPriorityResource = newResource StaticPriorities
+
+-- | Create a new priority resource with the specified initial and maximum counts,
+-- where 'Nothing' means that the resource has no upper bound.
+newPriorityResourceWithMaxCount :: Int
+                                   -- ^ the initial count of the resource
+                                   -> Maybe Int
+                                   -- ^ the maximum count of the resource, which can be indefinite
+                                   -> Simulation PriorityResource
+newPriorityResourceWithMaxCount = newResourceWithMaxCount StaticPriorities
 
 -- | Create a new resource with the specified queue strategy and initial count.
 -- The last value becomes the upper bound as well.
