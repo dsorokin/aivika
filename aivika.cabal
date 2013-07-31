@@ -1,5 +1,5 @@
 name:            aivika
-version:         0.7.1
+version:         1.0
 synopsis:        A multi-paradigm simulation library
 description:
     Aivika is a multi-paradigm simulation library which has 
@@ -15,7 +15,7 @@ description:
       with an ability to resume, suspend and cancel 
       the discontinuous processes;
     .
-    * allows working with limited resources (you can define your own behaviour
+    * allows working with the resources (you can define your own behaviour
       or use the predefined queue strategies);
     .
     * allows customizing the queues (you can define your own behaviour
@@ -66,6 +66,11 @@ description:
     This document is included in the distributive of Aivika but 
     you can usually find a more recent version by the link provided.
     .
+    License
+    .
+    Aivika is dual licensed under the GPL license version 3 and 
+    a commercial license. See the LICENSE file for details.
+    .
     \[1] <http://hackage.haskell.org/package/aivika-experiment>
     .
     \[2] <http://hackage.haskell.org/package/aivika-experiment-chart>
@@ -73,7 +78,7 @@ description:
     \[3] <https://github.com/dsorokin/aivika/blob/master/doc/aivika.pdf>
     .
 category:        Simulation
-license:         BSD3
+license:         OtherLicense
 license-file:    LICENSE
 copyright:       (c) 2009-2013. David Sorokin <david.sorokin@gmail.com>
 author:          David Sorokin

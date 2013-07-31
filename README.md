@@ -1,5 +1,5 @@
 Aivika -- a multi-paradigm simulation library for 
-the Haskell programming language and licensed under BSD3
+the Haskell programming language
 
 [Aivika] [1] is a multi-paradigm simulation library which has 
 the following features:
@@ -14,7 +14,7 @@ the following features:
   with an ability to resume, suspend and cancel 
   the discontinuous processes;
 
-* allows working with limited resources (you can define your own behaviour
+* allows working with the resources (you can define your own behaviour
   or use the predefined queue strategies);
 
 * allows customizing the queues (you can define your own behaviour
@@ -64,6 +64,11 @@ Please read the PDF document [An Introduction to
 Aivika Simulation Library] [4] for more details. 
 This document is included in the distributive of Aivika 
 but you can usually find a more recent version by the link provided.
+
+License
+
+Aivika is dual licensed under the GPL license version 3 and 
+a commercial license. See the LICENSE file for details.
 
 [1]: http://hackage.haskell.org/package/aivika  "Aivika"
 [2]: http://hackage.haskell.org/package/aivika-experiment  "Aivika Experiment"
