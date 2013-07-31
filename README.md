@@ -39,7 +39,7 @@ the following features:
 * allows gathering statistics in time points;
 
 * hides the technical details in high-level simulation monads
-  (two of them support the recursive do-notation).
+  (three of them support the recursive do-notation).
 
 Aivika itself is a light-weight engine with minimal dependencies. 
 However, it has additional packages [Aivika Experiment] [2] and 
