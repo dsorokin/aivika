@@ -19,6 +19,9 @@ import Simulation.Aivika.Internal.Process
 -- | Represents an infinite stream of data in time.
 data Stream a = Cons (Process (a, Stream a))
 
+instance Functor Stream where
+  fmap = undefined
+
 -- | Zip two streams.
 zipStream :: Stream a -> Stream b -> Stream (a, b)
 zipStream = undefined

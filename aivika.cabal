@@ -120,6 +120,7 @@ library
                      Simulation.Aivika.Parameter.Random
                      Simulation.Aivika.PriorityQueue
                      Simulation.Aivika.Process
+                     Simulation.Aivika.Processor
                      Simulation.Aivika.Queue
                      Simulation.Aivika.Queue.Infinite
                      Simulation.Aivika.QueueStrategy
@@ -130,6 +131,7 @@ library
                      Simulation.Aivika.Simulation
                      Simulation.Aivika.Specs
                      Simulation.Aivika.Statistics
+                     Simulation.Aivika.Stream
                      Simulation.Aivika.SystemDynamics
                      Simulation.Aivika.Unboxed
                      Simulation.Aivika.Var
