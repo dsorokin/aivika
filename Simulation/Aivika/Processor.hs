@@ -18,6 +18,8 @@ module Simulation.Aivika.Processor
         newRoundRobbinProcessor,
         newRoundRobbinProcessorUsingIds) where
 
+import qualified Control.Category as C
+
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Event
@@ -29,6 +31,12 @@ newtype Processor a b =
   Processor { runProcessor :: Stream a -> Stream b
               -- ^ Run the processor.
             }
+
+instance C.Category Processor where
+
+  id  = Processor id
+  
+  Processor x . Processor y = Processor (x . y)
 
 instance SimulationLift (Processor a) where
   liftSimulation = Processor . mapStreamM . const . liftSimulation
