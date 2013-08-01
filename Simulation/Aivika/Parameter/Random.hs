@@ -12,7 +12,10 @@
 
 module Simulation.Aivika.Parameter.Random
        (newRandomParameter,
-        newNormalParameter) where
+        newNormalParameter,
+        newExponentialParameter,
+        newPoissonParameter,
+        newBinomialParameter) where
 
 import System.Random
 
