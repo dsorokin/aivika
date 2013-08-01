@@ -46,7 +46,7 @@ module Simulation.Aivika.Process
         catchProcess,
         finallyProcess,
         throwProcess,
-        zipProcess,
+        zipProcessParallel,
         unzipProcess,
         memoProcess) where
 
@@ -60,9 +60,9 @@ import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Process
 import Simulation.Aivika.Signal
 
--- | Zip two processes waiting for the both.
-zipProcess :: Process a -> Process b -> Process (a, b)
-zipProcess x y =
+-- | Zip two parallel processes waiting for the both.
+zipProcessParallel :: Process a -> Process b -> Process (a, b)
+zipProcessParallel x y =
   do [Left a, Right b] <- processParallel [fmap Left x, fmap Right y]
      return (a, b)
 

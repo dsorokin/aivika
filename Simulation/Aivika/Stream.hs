@@ -11,11 +11,11 @@
 --
 module Simulation.Aivika.Stream
        (Stream(..),
-        zipStream,
+        zipStreamParallel,
         unzipStream,
         mapStream,
         mapStreamM,
-        apStream,
+        apStreamParallel,
         filterStream,
         filterStreamM) where
 
@@ -37,10 +37,10 @@ instance Functor Stream where
 
 -- | Zip two streams trying to get data as soon as possible,
 -- launching the sub-processes in parallel.
-zipStream :: Stream a -> Stream b -> Stream (a, b)
-zipStream (Cons sa) (Cons sb) = Cons y where
-  y = do ((x, xs), (y, ys)) <- zipProcess sa sb
-         return ((x, y), zipStream xs ys)
+zipStreamParallel :: Stream a -> Stream b -> Stream (a, b)
+zipStreamParallel (Cons sa) (Cons sb) = Cons y where
+  y = do ((x, xs), (y, ys)) <- zipProcessParallel sa sb
+         return ((x, y), zipStreamParallel xs ys)
 
 -- | Unzip the stream.
 unzipStream :: Stream (a, b) -> Process (Stream a, Stream b)
@@ -65,10 +65,10 @@ mapStreamM f (Cons x) = Cons y where
 
 -- | Transform the stream trying to get the transformation function as soon as possible
 -- at the same time when requesting the next portion of data.
-apStream :: Process (a -> b) -> Stream a -> Stream b
-apStream f (Cons x) = Cons y where
-  y = do (g, (a, xs)) <- zipProcess f x
-         return (g a, apStream f xs)
+apStreamParallel :: Process (a -> b) -> Stream a -> Stream b
+apStreamParallel f (Cons x) = Cons y where
+  y = do (g, (a, xs)) <- zipProcessParallel f x
+         return (g a, apStreamParallel f xs)
 
 -- | Filter only those data values that satisfy to the specified predicate.
 filterStream :: (a -> Bool) -> Stream a -> Stream a
