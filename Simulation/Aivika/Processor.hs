@@ -57,6 +57,13 @@ instance Arrow Processor where
        let Cons m = zipStreamSeq xs (f ys)
        m
 
+  Processor f *** Processor g =
+    Processor $ \xys ->
+    Cons $
+    do ~(xs, ys) <- unzipStream xys
+       let Cons m = zipStreamParallel (f xs) (g ys)
+       m
+
 instance SimulationLift (Processor a) where
   liftSimulation = Processor . mapStreamM . const . liftSimulation
 
