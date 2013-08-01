@@ -88,7 +88,7 @@ apStreamDataLater f (Cons x) = Cons y where
          return (g a, apStreamDataLater f xs)
 
 -- | Transform the stream trying to get the transformation function as soon as possible
--- at the same time when requesting the next portion of data.
+-- at the same time when requesting for the next portion of data.
 apStreamParallel :: Process (a -> b) -> Stream a -> Stream b
 apStreamParallel f (Cons x) = Cons y where
   y = do (g, (a, xs)) <- zipProcessParallel f x
