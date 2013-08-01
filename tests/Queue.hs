@@ -21,10 +21,7 @@ model :: Simulation ()
 model =
   do q <- newQueue FCFS StaticPriorities FCFS n2
 
-     pid1 <- newProcessId
-     pid2 <- newProcessId
-
-     runProcessInStartTime IncludingCurrentEvents pid1 $
+     runProcessInStartTime IncludingCurrentEvents $
        let loop =
              do liftIO $
                   putStrLn "Preparing to dequeue..."
@@ -35,7 +32,7 @@ model =
                 loop
        in loop
 
-     runProcessInStartTime IncludingCurrentEvents pid2 $
+     runProcessInStartTime IncludingCurrentEvents $
        let loop i =
              do liftIO $
                   do putStr "Preparing to enqueue: "
