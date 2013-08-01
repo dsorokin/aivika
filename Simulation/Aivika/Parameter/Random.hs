@@ -63,7 +63,9 @@ newPoissonParameter mu =
      liftIO $ poissonGen x
 
 -- | Return the binomial random parameter with the specified probability and trials.
-newBinomialParameter :: Simulation Double -> Simulation Int -> IO (Simulation Int)
+newBinomialParameter :: Simulation Double  -- ^ the probability
+                        -> Simulation Int  -- ^ the number of trials
+                        -> IO (Simulation Int)
 newBinomialParameter prob trials =
   memoSimulation $
   do x <- prob

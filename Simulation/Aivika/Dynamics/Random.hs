@@ -65,7 +65,9 @@ newPoissonDynamics mu =
 
 -- | Return in the integration time points the binomial random numbers
 -- with the specified probability and trials.
-newBinomialDynamics :: Dynamics Double -> Dynamics Int -> Simulation (Dynamics Int)
+newBinomialDynamics :: Dynamics Double  -- ^ the probability
+                       -> Dynamics Int  -- ^ the number of trials
+                       -> Simulation (Dynamics Int)
 newBinomialDynamics prob trials =
   memo0Dynamics $ do
     x <- prob
