@@ -28,6 +28,8 @@ newtype Processor a b =
             }
 
 -- | Create a processor that will use the specified process identifier.
+-- It is useful to refer to the underlying 'Process' computation which
+-- can be passivated, interrupted, canceled and so on.
 processorUsingId :: ProcessId -> Processor a b -> Processor a b
 processorUsingId = undefined
 
@@ -36,6 +38,8 @@ processorParallel :: [Processor a b] -> Processor a b
 processorParallel = undefined
 
 -- | Launches the specified processors in parallel using the provided identifiers.
+-- It is useful to refer to the underlying 'Process' computations which can be
+-- passivated, interrupted, canceled and so on.
 processorParallelUsingIds :: [(ProcessId, Processor a b)] -> Processor a b
 processorParallelUsingIds = undefined
 
