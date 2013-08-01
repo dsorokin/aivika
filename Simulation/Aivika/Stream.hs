@@ -11,10 +11,13 @@
 --
 module Simulation.Aivika.Stream
        (Stream(..),
+        zipStreamSeq,
         zipStreamParallel,
         unzipStream,
         mapStream,
         mapStreamM,
+        apStreamDataFirst,
+        apStreamDataLater,
         apStreamParallel,
         filterStream,
         filterStreamM) where
@@ -34,6 +37,13 @@ instance Functor Stream where
   fmap f (Cons s) = Cons y where
     y = do (x, xs) <- s
            return (f x, fmap f xs)
+
+-- | Zip two streams trying to get data sequentially.
+zipStreamSeq :: Stream a -> Stream b -> Stream (a, b)
+zipStreamSeq (Cons sa) (Cons sb) = Cons y where
+  y = do (x, xs) <- sa
+         (y, ys) <- sb
+         return ((x, y), zipStreamSeq xs ys)
 
 -- | Zip two streams trying to get data as soon as possible,
 -- launching the sub-processes in parallel.
@@ -62,6 +72,20 @@ mapStreamM f (Cons x) = Cons y where
   y = do (a, xs) <- x
          b <- f a
          return (b, mapStreamM f xs)
+
+-- | Transform the stream getting the transformation function after data have come.
+apStreamDataFirst :: Process (a -> b) -> Stream a -> Stream b
+apStreamDataFirst f (Cons x) = Cons y where
+  y = do (a, xs) <- x
+         g <- f
+         return (g a, apStreamDataFirst f xs)
+
+-- | Transform the stream getting the transformation function before requesting for data.
+apStreamDataLater :: Process (a -> b) -> Stream a -> Stream b
+apStreamDataLater f (Cons x) = Cons y where
+  y = do g <- f
+         (a, xs) <- x
+         return (g a, apStreamDataLater f xs)
 
 -- | Transform the stream trying to get the transformation function as soon as possible
 -- at the same time when requesting the next portion of data.
