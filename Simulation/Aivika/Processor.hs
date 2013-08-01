@@ -19,6 +19,7 @@ module Simulation.Aivika.Processor
         newRoundRobbinProcessorUsingIds) where
 
 import qualified Control.Category as C
+import Control.Arrow
 
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
@@ -26,7 +27,7 @@ import Simulation.Aivika.Event
 import Simulation.Aivika.Internal.Process
 import Simulation.Aivika.Stream
 
--- | Represents a processor of simulation data (it seems to be an Arrow).
+-- | Represents a processor of simulation data.
 newtype Processor a b =
   Processor { runProcessor :: Stream a -> Stream b
               -- ^ Run the processor.
@@ -35,8 +36,26 @@ newtype Processor a b =
 instance C.Category Processor where
 
   id  = Processor id
-  
+
   Processor x . Processor y = Processor (x . y)
+
+instance Arrow Processor where
+
+  arr = Processor . mapStream
+
+  first (Processor f) =
+    Processor $ \xys ->
+    Cons $
+    do ~(xs, ys) <- unzipStream xys
+       let Cons m = zipStreamSeq (f xs) ys
+       m
+
+  second (Processor f) =
+    Processor $ \xys ->
+    Cons $
+    do ~(xs, ys) <- unzipStream xys
+       let Cons m = zipStreamSeq xs (f ys)
+       m
 
 instance SimulationLift (Processor a) where
   liftSimulation = Processor . mapStreamM . const . liftSimulation
