@@ -11,6 +11,7 @@
 --
 module Simulation.Aivika.Processor
        (Processor(..),
+        simpleProcessor,
         processorUsingId,
         processorParallel,
         processorParallelUsingIds,
@@ -26,6 +27,11 @@ newtype Processor a b =
   Processor { runProcessor :: Stream a -> Stream b
               -- ^ Run the processor.
             }
+
+-- | Create a simple processor by the specified handling function
+-- that runs the discontinuous process for each input value to get the output.
+simpleProcessor :: (a -> Process b) -> Processor a b
+simpleProcessor = Processor . mapStreamM
 
 -- | Create a processor that will use the specified process identifier.
 -- It is useful to refer to the underlying 'Process' computation which

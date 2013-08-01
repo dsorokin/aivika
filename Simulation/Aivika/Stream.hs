@@ -12,7 +12,12 @@
 module Simulation.Aivika.Stream
        (Stream(..),
         zipStream,
-        unzipStream) where
+        unzipStream,
+        mapStream,
+        mapStreamM,
+        apStream,
+        filterStream,
+        filterStreamM) where
 
 import Data.IORef
 import Data.Maybe
@@ -46,3 +51,38 @@ unzipStream (Cons s) =
          ys = xys' >>= \(_, Cons ys) -> ys
      return (Cons $ return (x, Cons xs),
              Cons $ return (y, Cons ys))
+
+-- | Map the stream according the specified function.
+mapStream :: (a -> b) -> Stream a -> Stream b
+mapStream = fmap
+
+-- | Compose the stream.
+mapStreamM :: (a -> Process b) -> Stream a -> Stream b
+mapStreamM f (Cons x) = Cons y where
+  y = do (a, xs) <- x
+         b <- f a
+         return (b, mapStreamM f xs)
+
+-- | Transform the stream trying to get the transformation function as soon as possible
+-- at the same time when requesting the next portion of data.
+apStream :: Process (a -> b) -> Stream a -> Stream b
+apStream f (Cons x) = Cons y where
+  y = do (g, (a, xs)) <- zipProcess f x
+         return (g a, apStream f xs)
+
+-- | Filter only those data values that satisfy to the specified predicate.
+filterStream :: (a -> Bool) -> Stream a -> Stream a
+filterStream p (Cons x) = Cons y where
+  y = do (a, xs) <- x
+         if p a
+           then return (a, filterStream p xs)
+           else let Cons z = filterStream p xs in z
+
+-- | Filter only those data values that satisfy to the specified predicate.
+filterStreamM :: (a -> Process Bool) -> Stream a -> Stream a
+filterStreamM p (Cons x) = Cons y where
+  y = do (a, xs) <- x
+         b <- p a
+         if b
+           then return (a, filterStreamM p xs)
+           else let Cons z = filterStreamM p xs in z
