@@ -13,7 +13,11 @@
 --
 
 module Simulation.Aivika.Dynamics.Random 
-       (newRandomDynamics, newNormalDynamics) where
+       (newRandomDynamics,
+        newNormalDynamics,
+        newExponentialDynamics,
+        newPoissonDynamics,
+        newBinomialDynamics) where
 
 import System.Random
 import Data.IORef
@@ -26,7 +30,7 @@ import Simulation.Aivika.Dynamics.Memo.Unboxed
 
 -- | Return the uniform random numbers in the integration time points.
 newRandomDynamics :: Dynamics Double     -- ^ minimum
-                  -> Dynamics Double  -- ^ maximum
+                  -> Dynamics Double     -- ^ maximum
                   -> Simulation (Dynamics Double)
 newRandomDynamics min max =
   memo0Dynamics $ do
@@ -35,10 +39,35 @@ newRandomDynamics min max =
      
 -- | Return the normal random numbers in the integration time points.
 newNormalDynamics :: Dynamics Double     -- ^ mean
-                  -> Dynamics Double  -- ^ variance
+                  -> Dynamics Double     -- ^ variance
                   -> Simulation (Dynamics Double)
 newNormalDynamics mu nu =
   do g <- liftIO newNormalGen
      memo0Dynamics $ do
        x <- liftIO g
        mu + return x * nu
+
+-- | Return the exponential random numbers in the integration time points
+-- with the specified mean.
+newExponentialDynamics :: Dynamics Double -> Simulation (Dynamics Double)
+newExponentialDynamics mu =
+  memo0Dynamics $ do
+    x <- mu
+    liftIO $ exponentialGen x
+
+-- | Return the Poisson random numbers in the integration time points
+-- with the specified mean.
+newPoissonDynamics :: Dynamics Double -> Simulation (Dynamics Int)
+newPoissonDynamics mu =
+  memo0Dynamics $ do
+    x <- mu
+    liftIO $ poissonGen x
+
+-- | Return in the integration time points the binomial random numbers
+-- with the specified probability and trials.
+newBinomialDynamics :: Dynamics Double -> Dynamics Int -> Simulation (Dynamics Int)
+newBinomialDynamics prob trials =
+  memo0Dynamics $ do
+    x <- prob
+    y <- trials
+    liftIO $ binomialGen x y

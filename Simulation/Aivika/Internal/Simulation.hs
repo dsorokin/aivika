@@ -26,14 +26,20 @@ module Simulation.Aivika.Internal.Simulation
         simulationIndex,
         simulationCount,
         simulationSpecs,
-        simulationEventQueue) where
+        simulationEventQueue,
+        -- * Memoization
+        memoSimulation) where
 
 import qualified Control.Exception as C
 import Control.Exception (IOException, throw, finally)
+import Control.Concurrent.MVar
 
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+
+import Data.IORef
+import qualified Data.Map as M
 
 import Simulation.Aivika.Internal.Specs
 
@@ -191,3 +197,26 @@ instance MonadFix Simulation where
   mfix f = 
     Simulation $ \r ->
     do { rec { a <- invokeSimulation r (f a) }; return a }  
+
+-- | Memoize the 'Simulation' computation, always returning the same value
+-- within a simulation run. However, the value will be recalculated for other
+-- simulation runs. Also it is thread-safe when different simulation runs
+-- are executed in parallel on physically different operating system threads.
+memoSimulation :: Simulation a -> IO (Simulation a)
+memoSimulation x = 
+  do lock <- newMVar ()
+     dict <- newIORef M.empty
+     return $ Simulation $ \r ->
+       do let i = runIndex r
+          m <- readIORef dict
+          if M.member i m
+            then do let Just v = M.lookup i m
+                    return v
+            else withMVar lock $ 
+                 \() -> do { m <- readIORef dict;
+                             if M.member i m
+                             then do let Just v = M.lookup i m
+                                     return v
+                             else do v <- invokeSimulation r x
+                                     writeIORef dict $ M.insert i v m
+                                     return v }

@@ -22,6 +22,8 @@ module Simulation.Aivika.Simulation
         -- * Utilities
         simulationIndex,
         simulationCount,
-        simulationSpecs) where
+        simulationSpecs,
+        -- * Memoization
+        memoSimulation) where
 
 import Simulation.Aivika.Internal.Simulation

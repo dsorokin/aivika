@@ -16,6 +16,8 @@ module Simulation.Aivika.Parameter.Random
 
 import System.Random
 
+import Control.Monad.Trans
+
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Random
 import Simulation.Aivika.Parameter
@@ -27,8 +29,9 @@ newRandomParameter :: Simulation Double     -- ^ minimum
                       -> Simulation Double  -- ^ maximum
                       -> IO (Simulation Double)
 newRandomParameter min max =
-  do x <- newParameter $ getStdRandom random
-     return $ min + x * (max - min)
+  memoSimulation $
+  do x <- liftIO $ getStdRandom random
+     min + return x * (max - min)
 
 -- | Create a new random parameter distributed normally.
 -- The value doesn't change within the simulation run but
@@ -37,5 +40,29 @@ newNormalParameter :: Simulation Double     -- ^ mean
                       -> Simulation Double  -- ^ variance
                       -> IO (Simulation Double)
 newNormalParameter mu nu =
-  do x <- newNormalGen >>= newParameter
-     return $ mu + x * nu
+  do g <- newNormalGen
+     memoSimulation $
+       do x <- liftIO g
+          mu + return x * nu
+
+-- | Return the exponential random parameter with the specified mean.
+newExponentialParameter :: Simulation Double -> IO (Simulation Double)
+newExponentialParameter mu =
+  memoSimulation $
+  do x <- mu
+     liftIO $ exponentialGen x
+
+-- | Return the Poisson random parameter with the specified mean.
+newPoissonParameter :: Simulation Double -> IO (Simulation Int)
+newPoissonParameter mu =
+  memoSimulation $
+  do x <- mu
+     liftIO $ poissonGen x
+
+-- | Return the binomial random parameter with the specified probability and trials.
+newBinomialParameter :: Simulation Double -> Simulation Int -> IO (Simulation Int)
+newBinomialParameter prob trials =
+  memoSimulation $
+  do x <- prob
+     y <- trials
+     liftIO $ binomialGen x y
