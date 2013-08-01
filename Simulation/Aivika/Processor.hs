@@ -19,6 +19,8 @@ module Simulation.Aivika.Processor
         newRoundRobbinProcessorUsingIds) where
 
 import Simulation.Aivika.Simulation
+import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Event
 import Simulation.Aivika.Internal.Process
 import Simulation.Aivika.Stream
 
@@ -27,6 +29,18 @@ newtype Processor a b =
   Processor { runProcessor :: Stream a -> Stream b
               -- ^ Run the processor.
             }
+
+instance SimulationLift (Processor a) where
+  liftSimulation = Processor . mapStreamM . const . liftSimulation
+
+instance DynamicsLift (Processor a) where
+  liftDynamics = Processor . mapStreamM . const . liftDynamics
+
+instance EventLift (Processor a) where
+  liftEvent = Processor . mapStreamM . const . liftEvent
+
+instance ProcessLift (Processor a) where
+  liftProcess = Processor . mapStreamM . const    -- data first!
 
 -- | Create a simple processor by the specified handling function
 -- that runs the discontinuous process for each input value to get the output.
