@@ -18,21 +18,35 @@
 -- A value of the 'ProcessId' type is just an identifier of such a process.
 --
 module Simulation.Aivika.Internal.Process
-       (ProcessId,
+       (-- * Process Monad
+        ProcessId,
         Process(..),
         ProcessLift(..),
         invokeProcess,
+        -- * Running Process
         runProcess,
+        runProcessUsingId,
         runProcessInStartTime,
+        runProcessInStartTimeUsingId,
         runProcessInStopTime,
+        runProcessInStopTimeUsingId,
+        -- * Forking Process
+        forkProcess,
+        forkProcessUsingId,
+        -- * Enqueuing Process
         enqueueProcess,
+        enqueueProcessUsingId,
         enqueueProcessWithStartTime,
+        enqueueProcessWithStartTimeUsingId,
         enqueueProcessWithStopTime,
+        enqueueProcessWithStopTimeUsingId,
+        -- * Creating Process Identifier
         newProcessId,
         newProcessIdWithCatch,
         processId,
         processIdWithCatch,
         processUsingId,
+        -- * Holding, Interrupting, Passivating and Canceling Process
         holdProcess,
         interruptProcess,
         processInterrupted,
@@ -41,10 +55,12 @@ module Simulation.Aivika.Internal.Process
         reactivateProcess,
         cancelProcess,
         processCanceled,
+        -- * Parallelizing Processes
         processParallel,
         processParallelUsingIds,
         processParallel_,
         processParallelUsingIds_,
+        -- * Exception Handling
         catchProcess,
         finallyProcess,
         throwProcess) where
@@ -176,12 +192,21 @@ processIdPrepare pid =
      invokeEvent p $
        handleSignal_ signal $ \_ -> interruptProcess pid
 
--- | Start immediately the process with the specified identifier.
+-- | Start immediately the process.
 --            
 -- To run the process at the specified time, you can use
 -- the 'enqueueProcess' function.
-runProcess :: ProcessId -> Process () -> Event ()
-runProcess pid p =
+runProcess :: Process () -> Event ()
+runProcess p =
+  do pid <- liftSimulation newProcessId
+     runProcessUsingId pid p
+             
+-- | Start immediately the process with the specified identifier.
+--            
+-- To run the process at the specified time, you can use
+-- the 'enqueueProcessUsingId' function.
+runProcessUsingId :: ProcessId -> Process () -> Event ()
+runProcessUsingId pid p =
   do processIdPrepare pid
      runCont m cont econt ccont (processCancel pid) (processCatchFlag pid)
        where cont  = return
@@ -190,32 +215,70 @@ runProcess pid p =
              m = invokeProcess pid p
 
 -- | Start the process in the start time immediately.
-runProcessInStartTime :: EventProcessing -> ProcessId -> Process () -> Simulation ()
-runProcessInStartTime processing pid p =
-  runEventInStartTime processing $ runProcess pid p
+runProcessInStartTime :: EventProcessing -> Process () -> Simulation ()
+runProcessInStartTime processing p =
+  runEventInStartTime processing $ runProcess p
+
+-- | Start the process in the start time immediately using the specified identifier.
+runProcessInStartTimeUsingId :: EventProcessing -> ProcessId -> Process () -> Simulation ()
+runProcessInStartTimeUsingId processing pid p =
+  runEventInStartTime processing $ runProcessUsingId pid p
 
 -- | Start the process in the stop time immediately.
-runProcessInStopTime :: EventProcessing -> ProcessId -> Process () -> Simulation ()
-runProcessInStopTime processing pid p =
-  runEventInStopTime processing $ runProcess pid p
+runProcessInStopTime :: EventProcessing -> Process () -> Simulation ()
+runProcessInStopTime processing p =
+  runEventInStopTime processing $ runProcess p
+
+-- | Start the process in the stop time immediately using the specified identifier.
+runProcessInStopTimeUsingId :: EventProcessing -> ProcessId -> Process () -> Simulation ()
+runProcessInStopTimeUsingId processing pid p =
+  runEventInStopTime processing $ runProcessUsingId pid p
+
+-- | Fork the process in parallel.
+forkProcess :: Process () -> Event ()
+forkProcess p =
+  enqueueEventWithCurrentTime $ runProcess p
+
+-- | Fork the process in parallel using the specified identifier.
+forkProcessUsingId :: ProcessId -> Process () -> Event ()
+forkProcessUsingId pid p =
+  enqueueEventWithCurrentTime $ runProcessUsingId pid p
 
 -- | Enqueue the process that will be then started at the specified time
 -- from the event queue.
-enqueueProcess :: Double -> ProcessId -> Process () -> Event ()
-enqueueProcess t pid p =
-  enqueueEvent t $ runProcess pid p
+enqueueProcess :: Double -> Process () -> Event ()
+enqueueProcess t p =
+  enqueueEvent t $ runProcess p
+
+-- | Enqueue the process that will be then started at the specified time
+-- from the event queue.
+enqueueProcessUsingId :: Double -> ProcessId -> Process () -> Event ()
+enqueueProcessUsingId t pid p =
+  enqueueEvent t $ runProcessUsingId pid p
 
 -- | Enqueue the process that will be then started in the start time
 -- from the event queue.
-enqueueProcessWithStartTime :: ProcessId -> Process () -> Event ()
-enqueueProcessWithStartTime pid p =
-  enqueueEventWithStartTime $ runProcess pid p
+enqueueProcessWithStartTime :: Process () -> Event ()
+enqueueProcessWithStartTime p =
+  enqueueEventWithStartTime $ runProcess p
+
+-- | Enqueue the process that will be then started in the start time
+-- from the event queue.
+enqueueProcessWithStartTimeUsingId :: ProcessId -> Process () -> Event ()
+enqueueProcessWithStartTimeUsingId pid p =
+  enqueueEventWithStartTime $ runProcessUsingId pid p
 
 -- | Enqueue the process that will be then started in the stop time
 -- from the event queue.
 enqueueProcessWithStopTime :: ProcessId -> Process () -> Event ()
 enqueueProcessWithStopTime pid p =
-  enqueueEventWithStopTime $ runProcess pid p
+  enqueueEventWithStopTime $ runProcess p
+
+-- | Enqueue the process that will be then started in the stop time
+-- from the event queue.
+enqueueProcessWithStopTimeUsingId :: ProcessId -> Process () -> Event ()
+enqueueProcessWithStopTimeUsingId pid p =
+  enqueueEventWithStopTime $ runProcessUsingId pid p
 
 -- | Return the current process identifier.
 processId :: Process ProcessId

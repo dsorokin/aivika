@@ -18,20 +18,34 @@
 -- A value of the 'ProcessId' type is just an identifier of such a process.
 --
 module Simulation.Aivika.Process
-       (ProcessId,
+       (-- * Process Monad
+        ProcessId,
         Process,
         ProcessLift(..),
+        -- * Running Process
         runProcess,
+        runProcessUsingId,
         runProcessInStartTime,
+        runProcessInStartTimeUsingId,
         runProcessInStopTime,
+        runProcessInStopTimeUsingId,
+        -- * Forking Process
+        forkProcess,
+        forkProcessUsingId,
+        -- * Enqueuing Process
         enqueueProcess,
+        enqueueProcessUsingId,
         enqueueProcessWithStartTime,
+        enqueueProcessWithStartTimeUsingId,
         enqueueProcessWithStopTime,
+        enqueueProcessWithStopTimeUsingId,
+        -- * Creating Process Identifier
         newProcessId,
         newProcessIdWithCatch,
         processId,
         processIdWithCatch,
         processUsingId,
+        -- * Holding, Interrupting, Passivating and Canceling Process
         holdProcess,
         interruptProcess,
         processInterrupted,
@@ -40,13 +54,16 @@ module Simulation.Aivika.Process
         reactivateProcess,
         cancelProcess,
         processCanceled,
+        -- * Parallelizing Processes
         processParallel,
         processParallelUsingIds,
         processParallel_,
         processParallelUsingIds_,
+        -- * Exception Handling
         catchProcess,
         finallyProcess,
         throwProcess,
+        -- * Utilities
         zipProcessParallel,
         unzipProcess,
         memoProcess) where
