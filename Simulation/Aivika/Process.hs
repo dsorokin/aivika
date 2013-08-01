@@ -41,9 +41,7 @@ module Simulation.Aivika.Process
         enqueueProcessWithStopTimeUsingId,
         -- * Creating Process Identifier
         newProcessId,
-        newProcessIdWithCatch,
         processId,
-        processIdWithCatch,
         processUsingId,
         -- * Holding, Interrupting, Passivating and Canceling Process
         holdProcess,

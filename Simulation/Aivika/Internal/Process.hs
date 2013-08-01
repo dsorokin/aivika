@@ -42,9 +42,7 @@ module Simulation.Aivika.Internal.Process
         enqueueProcessWithStopTimeUsingId,
         -- * Creating Process Identifier
         newProcessId,
-        newProcessIdWithCatch,
         processId,
-        processIdWithCatch,
         processUsingId,
         -- * Holding, Interrupting, Passivating and Canceling Process
         holdProcess,
@@ -81,7 +79,6 @@ import Simulation.Aivika.Internal.Signal
 -- | Represents a process identifier.
 data ProcessId = 
   ProcessId { processStarted :: IORef Bool,
-              processCatchFlag     :: Bool,
               processReactCont     :: IORef (Maybe (ContParams ())), 
               processCancel        :: ContCancellation,
               processInterruptRef  :: IORef Bool, 
@@ -208,7 +205,7 @@ runProcess p =
 runProcessUsingId :: ProcessId -> Process () -> Event ()
 runProcessUsingId pid p =
   do processIdPrepare pid
-     runCont m cont econt ccont (processCancel pid) (processCatchFlag pid)
+     runCont m cont econt ccont (processCancel pid) False
        where cont  = return
              econt = throwEvent
              ccont = return
@@ -284,7 +281,7 @@ enqueueProcessWithStopTimeUsingId pid p =
 processId :: Process ProcessId
 processId = Process return
 
--- | Create a new process identifier without exception handling.
+-- | Create a new process identifier.
 newProcessId :: Simulation ProcessId
 newProcessId =
   do x <- liftIO $ newIORef Nothing
@@ -294,37 +291,11 @@ newProcessId =
      z <- liftIO $ newIORef Nothing
      v <- liftIO $ newIORef 0
      return ProcessId { processStarted = y,
-                        processCatchFlag     = False,
                         processReactCont     = x, 
                         processCancel        = c, 
                         processInterruptRef  = i,
                         processInterruptCont = z, 
                         processInterruptVersion = v }
-
--- | Create a new process identifier with capabilities of catching 
--- the 'IOError' exceptions and finalizing the computation. 
--- The corresponded process will be slower than that one
--- which identifier is created with help of 'newProcessId'.
-newProcessIdWithCatch :: Simulation ProcessId
-newProcessIdWithCatch =
-  do x <- liftIO $ newIORef Nothing
-     y <- liftIO $ newIORef False
-     c <- newContCancellation
-     i <- liftIO $ newIORef False
-     z <- liftIO $ newIORef Nothing
-     v <- liftIO $ newIORef 0
-     return ProcessId { processStarted = y,
-                        processCatchFlag     = True,
-                        processReactCont     = x, 
-                        processCancel        = c, 
-                        processInterruptRef  = i,
-                        processInterruptCont = z, 
-                        processInterruptVersion = v }
-
--- | Test whether the process identifier was created with support
--- of the exception handling.
-processIdWithCatch :: ProcessId -> Bool
-processIdWithCatch = processCatchFlag
 
 -- | Cancel a process with the specified identifier, interrupting it if needed.
 cancelProcess :: ProcessId -> Event ()
@@ -429,7 +400,7 @@ processParallelUsingIds xs =
   do liftEvent $ processParallelPrepare xs
      contParallel $
        flip map xs $ \(pid, m) ->
-       (invokeProcess pid m, processCancel pid, processIdWithCatch pid)
+       (invokeProcess pid m, processCancel pid)
 
 -- | Like 'processParallel' but ignores the result.
 processParallel_ :: [Process a] -> Process ()
@@ -443,16 +414,13 @@ processParallelUsingIds_ xs =
   do liftEvent $ processParallelPrepare xs
      contParallel_ $
        flip map xs $ \(pid, m) ->
-       (invokeProcess pid m, processCancel pid, processIdWithCatch pid)
+       (invokeProcess pid m, processCancel pid)
 
 -- | Create the new process identifiers.
 processParallelCreateIds :: [Process a] -> Process [(ProcessId, Process a)]
 processParallelCreateIds xs =
   do pid  <- processId
-     pids <- liftSimulation $ forM xs $ \x ->
-       if processIdWithCatch pid
-       then newProcessIdWithCatch
-       else newProcessId
+     pids <- liftSimulation $ forM xs $ const newProcessId
      return $ zip pids xs
 
 -- | Prepare the processes for parallel execution.
@@ -466,4 +434,4 @@ processUsingId :: ProcessId -> Process a -> Process a
 processUsingId pid x =
   Process $ \pid' ->
   do liftEvent $ processIdPrepare pid
-     rerunCont (invokeProcess pid x) (processCancel pid) (processIdWithCatch pid)
+     rerunCont (invokeProcess pid x) (processCancel pid)

@@ -301,10 +301,6 @@ tryRequestResourceWithinEvent r =
                
 -- | Acquire the resource, perform some action and safely release the resource               
 -- in the end, even if the 'IOException' was raised within the action. 
--- The process identifier must be created with support of exception 
--- handling, i.e. with help of function 'newProcessIdWithCatch'. Unfortunately,
--- such processes are slower than those that are created with help of
--- other function 'newProcessId'.
 usingResource :: EnqueueStrategy s q
                  => Resource s q
                  -- ^ the resource we are going to request for and then release in the end
@@ -318,10 +314,7 @@ usingResource r m =
 
 -- | Acquire the resource with the specified priority, perform some action and
 -- safely release the resource in the end, even if the 'IOException' was raised
--- within the action. The process identifier must be created with support of exception 
--- handling, i.e. with help of function 'newProcessIdWithCatch'. Unfortunately,
--- such processes are slower than those that are created with help of
--- other function 'newProcessId'.
+-- within the action.
 usingResourceWithPriority :: PriorityQueueStrategy s q p
                              => Resource s q
                              -- ^ the resource we are going to request for and then

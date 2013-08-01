@@ -286,7 +286,7 @@ throwCont :: IOException -> Cont a
 throwCont e = liftIO $ throw e
 
 -- | Run the 'Cont' computation with the specified cancelation token 
--- and flag indicating whether to catch exceptions.
+-- and flag indicating whether to catch exceptions from the beginning.
 runCont :: Cont a
            -- ^ the computation to run
            -> (a -> Event ())
@@ -298,7 +298,7 @@ runCont :: Cont a
            -> ContCancellation
            -- ^ the cancellation token
            -> Bool
-           -- ^ whether to support the exception catching
+           -- ^ whether to support the exception handling from the beginning
            -> Event ()
 runCont (Cont m) cont econt ccont cancelToken catchFlag = 
   m ContParams { contCont = cont,
@@ -409,11 +409,10 @@ contCanceled c = contCancelFlag $ contAux c
 -- Here word @parallel@ literally means that the computations are
 -- actually executed on a single operating system thread but
 -- they are processed simultaneously by the event queue.
-contParallel :: [(Cont a, ContCancellation, Bool)]
+contParallel :: [(Cont a, ContCancellation)]
                 -- ^ the list of:
                 -- the nested computation,
-                -- the cancellation token,
-                -- the catch flag
+                -- the cancellation token
                 -> Cont [a]
 contParallel xs =
   Cont $ \c ->
@@ -425,7 +424,7 @@ contParallel xs =
               catchRef  <- newIORef Nothing
               hs <- invokeEvent p $
                     contCancellationBind (contCancel $ contAux c) $
-                    flip map xs $ \(_, token, _) -> token
+                    map snd xs
               let propagate =
                     Event $ \p ->
                     do n' <- readIORef counter
@@ -459,9 +458,9 @@ contParallel xs =
                     do modifyIORef counter (+ 1)
                        -- the main computation was automatically canceled
                        invokeEvent p propagate
-              forM_ (zip [1..n] xs) $ \(i, (x, cancelToken, catchFlag)) ->
+              forM_ (zip [1..n] xs) $ \(i, (x, cancelToken)) ->
                 invokeEvent p $
-                runCont x (cont i) econt ccont cancelToken (catchFlag || (contCatchFlag $ contAux c))
+                runCont x (cont i) econt ccont cancelToken (contCatchFlag $ contAux c)
      z <- contCanceled c
      if z
        then cancelCont p c
@@ -472,11 +471,10 @@ contParallel xs =
 -- | A partial case of 'contParallel' when we are not interested in
 -- the results but we are interested in the actions to be peformed by
 -- the nested computations.
-contParallel_ :: [(Cont a, ContCancellation, Bool)]
+contParallel_ :: [(Cont a, ContCancellation)]
                  -- ^ the list of:
                  -- the nested computation,
-                 -- the cancellation token,
-                 -- the catch flag
+                 -- the cancellation token
                  -> Cont ()
 contParallel_ xs =
   Cont $ \c ->
@@ -487,7 +485,7 @@ contParallel_ xs =
               catchRef  <- newIORef Nothing
               hs <- invokeEvent p $
                     contCancellationBind (contCancel $ contAux c) $
-                    flip map xs $ \(_, token, _) -> token
+                    map snd xs
               let propagate =
                     Event $ \p ->
                     do n' <- readIORef counter
@@ -520,9 +518,9 @@ contParallel_ xs =
                     do modifyIORef counter (+ 1)
                        -- the main computation was automatically canceled
                        invokeEvent p propagate
-              forM_ (zip [1..n] xs) $ \(i, (x, cancelToken, catchFlag)) ->
+              forM_ (zip [1..n] xs) $ \(i, (x, cancelToken)) ->
                 invokeEvent p $
-                runCont x (cont i) econt ccont cancelToken (catchFlag || (contCatchFlag $ contAux c))
+                runCont x (cont i) econt ccont cancelToken (contCatchFlag $ contAux c)
      z <- contCanceled c
      if z
        then cancelCont p c
@@ -530,9 +528,9 @@ contParallel_ xs =
             then invokeEvent p $ contCont c ()
             else worker
 
--- | Rerun the 'Cont' computation with the specified cancellation token and catch flag.
-rerunCont :: Cont a -> ContCancellation -> Bool -> Cont a
-rerunCont x cancelToken catchFlag =
+-- | Rerun the 'Cont' computation with the specified cancellation token.
+rerunCont :: Cont a -> ContCancellation -> Cont a
+rerunCont x cancelToken =
   Cont $ \c ->
   Event $ \p ->
   do let worker =
@@ -551,7 +549,7 @@ rerunCont x cancelToken catchFlag =
                     do invokeEvent p hs  -- unbind the cancellation token
                        cancelCont p c
               invokeEvent p $
-                runCont x cont econt ccont cancelToken (catchFlag || (contCatchFlag $ contAux c))
+                runCont x cont econt ccont cancelToken (contCatchFlag $ contAux c)
      z <- contCanceled c
      if z
        then cancelCont p c
