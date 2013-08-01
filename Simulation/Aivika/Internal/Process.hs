@@ -403,4 +403,4 @@ processUsingId :: ProcessId -> Process a -> Process a
 processUsingId pid x =
   Process $ \pid' ->
   do liftEvent $ processIdPrepare pid
-     invokeProcess pid x
+     rerunCont (invokeProcess pid x) (processCancel pid) (processIdWithCatch pid)
