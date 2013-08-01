@@ -229,12 +229,8 @@ callWithCatch k a c =
 -- | Exception handling within 'Cont' computations.
 catchCont :: Cont a -> (IOException -> Cont a) -> Cont a
 catchCont m h = 
-  Cont $ \c -> 
-  if contCatchFlag . contAux $ c
-  then catchWithCatch m h c
-  else error $
-       "To catch exceptions, the process must be created " ++
-       "with help of newProcessIDWithCatch: catchCont."
+  Cont $ \c ->
+  catchWithCatch m h (c { contAux = (contAux c) { contCatchFlag = True } })
   
 catchWithCatch :: Cont a -> (IOException -> Cont a) -> ContParams a -> Event ()
 catchWithCatch (Cont m) h c =
@@ -251,11 +247,7 @@ catchWithCatch (Cont m) h c =
 finallyCont :: Cont a -> Cont b -> Cont a
 finallyCont m m' = 
   Cont $ \c -> 
-  if contCatchFlag . contAux $ c
-  then finallyWithCatch m m' c
-  else error $
-       "To finalize computation, the process must be created " ++
-       "with help of newProcessIdWithCatch: finallyCont."
+  finallyWithCatch m m' (c { contAux = (contAux c) { contCatchFlag = True } })
   
 finallyWithCatch :: Cont a -> Cont b -> ContParams a -> Event ()               
 finallyWithCatch (Cont m) (Cont m') c =
@@ -469,7 +461,7 @@ contParallel xs =
                        invokeEvent p propagate
               forM_ (zip [1..n] xs) $ \(i, (x, cancelToken, catchFlag)) ->
                 invokeEvent p $
-                runCont x (cont i) econt ccont cancelToken catchFlag
+                runCont x (cont i) econt ccont cancelToken (catchFlag || (contCatchFlag $ contAux c))
      z <- contCanceled c
      if z
        then cancelCont p c
@@ -530,7 +522,7 @@ contParallel_ xs =
                        invokeEvent p propagate
               forM_ (zip [1..n] xs) $ \(i, (x, cancelToken, catchFlag)) ->
                 invokeEvent p $
-                runCont x (cont i) econt ccont cancelToken catchFlag
+                runCont x (cont i) econt ccont cancelToken (catchFlag || (contCatchFlag $ contAux c))
      z <- contCanceled c
      if z
        then cancelCont p c
@@ -559,7 +551,7 @@ rerunCont x cancelToken catchFlag =
                     do invokeEvent p hs  -- unbind the cancellation token
                        cancelCont p c
               invokeEvent p $
-                runCont x cont econt ccont cancelToken catchFlag
+                runCont x cont econt ccont cancelToken (catchFlag || (contCatchFlag $ contAux c))
      z <- contCanceled c
      if z
        then cancelCont p c
