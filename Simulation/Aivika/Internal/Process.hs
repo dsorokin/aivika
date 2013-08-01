@@ -20,6 +20,7 @@
 module Simulation.Aivika.Internal.Process
        (ProcessId,
         Process(..),
+        ProcessLift(..),
         invokeProcess,
         runProcess,
         runProcessInStartTime,
@@ -74,6 +75,15 @@ data ProcessId =
 -- | Specifies a discontinuous process that can suspend at any time
 -- and then resume later.
 newtype Process a = Process (ProcessId -> Cont a)
+
+-- | A type class to lift the 'Process' computation to other computations.
+class ProcessLift m where
+  
+  -- | Lift the specified 'Process' computation to another computation.
+  liftProcess :: Process a -> m a
+
+instance ProcessLift Process where
+  liftProcess = id
 
 -- | Invoke the process computation.
 invokeProcess :: ProcessId -> Process a -> Cont a

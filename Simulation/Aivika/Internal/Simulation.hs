@@ -162,10 +162,10 @@ instance (Floating a) => Floating (Simulation a) where
 instance MonadIO Simulation where
   liftIO m = Simulation $ const m
 
--- | A type class to lift the simulation computations to other monads.
-class Monad m => SimulationLift m where
+-- | A type class to lift the simulation computations to other computations.
+class SimulationLift m where
   
-  -- | Lift the specified 'Simulation' computation to another monad.
+  -- | Lift the specified 'Simulation' computation to another computation.
   liftSimulation :: Simulation a -> m a
 
 instance SimulationLift Simulation where

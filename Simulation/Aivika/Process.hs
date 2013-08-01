@@ -20,6 +20,7 @@
 module Simulation.Aivika.Process
        (ProcessId,
         Process,
+        ProcessLift(..),
         runProcess,
         runProcessInStartTime,
         runProcessInStopTime,

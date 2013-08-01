@@ -99,10 +99,10 @@ liftDS :: Dynamics a -> Event a
 liftDS (Dynamics m) =
   Event m
 
--- | A type class to lift the 'Event' computation to other monads.
-class Monad m => EventLift m where
+-- | A type class to lift the 'Event' computation to other computations.
+class EventLift m where
   
-  -- | Lift the specified 'Event' computation to another monad.
+  -- | Lift the specified 'Event' computation to another computation.
   liftEvent :: Event a -> m a
 
 instance EventLift Event where
