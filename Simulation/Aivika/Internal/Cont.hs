@@ -22,6 +22,7 @@ module Simulation.Aivika.Internal.Cont
         contCancellationBind,
         invokeCont,
         runCont,
+        rerunCont,
         contParallel,
         contParallel_,
         catchCont,
@@ -536,3 +537,30 @@ contParallel_ xs =
        else if n == 0
             then invokeEvent p $ contCont c ()
             else worker
+
+-- | Rerun the 'Cont' computation with the specified cancellation token and catch flag.
+rerunCont :: Cont a -> ContCancellation -> Bool -> Cont a
+rerunCont x cancelToken catchFlag =
+  Cont $ \c ->
+  Event $ \p ->
+  do let worker =
+           do hs <- invokeEvent p $
+                    contCancellationBind (contCancel $ contAux c) [cancelToken]
+              let cont a  =
+                    Event $ \p ->
+                    do invokeEvent p hs  -- unbind the cancellation token
+                       invokeEvent p $ resumeCont c a
+                  econt e =
+                    Event $ \p ->
+                    do invokeEvent p hs  -- unbind the cancellation token
+                       invokeEvent p $ resumeECont c e
+                  ccont e =
+                    Event $ \p ->
+                    do invokeEvent p hs  -- unbind the cancellation token
+                       cancelCont p c
+              invokeEvent p $
+                runCont x cont econt ccont cancelToken catchFlag
+     z <- contCanceled c
+     if z
+       then cancelCont p c
+       else worker
