@@ -29,14 +29,15 @@ module Simulation.Aivika.Internal.Process
         enqueueProcessWithStopTime,
         newProcessId,
         newProcessIdWithCatch,
+        processId,
         processIdWithCatch,
+        processUsingId,
         holdProcess,
         interruptProcess,
         processInterrupted,
         passivateProcess,
         processPassive,
         reactivateProcess,
-        processId,
         cancelProcess,
         processCanceled,
         processParallel,
@@ -386,3 +387,10 @@ processParallelPrepare :: [(ProcessId, Process a)] -> Event ()
 processParallelPrepare xs =
   Event $ \p ->
   forM_ xs $ invokeEvent p . processIdPrepare . fst
+
+-- | Allow calling the process with the specified identifier.
+processUsingId :: ProcessId -> Process a -> Process a
+processUsingId pid x =
+  Process $ \pid' ->
+  do liftEvent $ processIdPrepare pid
+     invokeProcess pid x
