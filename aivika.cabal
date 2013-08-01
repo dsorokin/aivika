@@ -132,6 +132,7 @@ library
                      Simulation.Aivika.Specs
                      Simulation.Aivika.Statistics
                      Simulation.Aivika.Stream
+                     Simulation.Aivika.Stream.Random
                      Simulation.Aivika.SystemDynamics
                      Simulation.Aivika.Unboxed
                      Simulation.Aivika.Var
