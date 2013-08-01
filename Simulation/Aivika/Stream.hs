@@ -35,27 +35,27 @@ data Stream a = Cons (Process (a, Stream a))
 instance Functor Stream where
   
   fmap f (Cons s) = Cons y where
-    y = do (x, xs) <- s
+    y = do ~(x, xs) <- s
            return (f x, fmap f xs)
 
 -- | Zip two streams trying to get data sequentially.
 zipStreamSeq :: Stream a -> Stream b -> Stream (a, b)
 zipStreamSeq (Cons sa) (Cons sb) = Cons y where
-  y = do (x, xs) <- sa
-         (y, ys) <- sb
+  y = do ~(x, xs) <- sa
+         ~(y, ys) <- sb
          return ((x, y), zipStreamSeq xs ys)
 
 -- | Zip two streams trying to get data as soon as possible,
 -- launching the sub-processes in parallel.
 zipStreamParallel :: Stream a -> Stream b -> Stream (a, b)
 zipStreamParallel (Cons sa) (Cons sb) = Cons y where
-  y = do ((x, xs), (y, ys)) <- zipProcessParallel sa sb
+  y = do ~((x, xs), (y, ys)) <- zipProcessParallel sa sb
          return ((x, y), zipStreamParallel xs ys)
 
 -- | Unzip the stream.
 unzipStream :: Stream (a, b) -> Process (Stream a, Stream b)
 unzipStream (Cons s) =
-  do ((x, y), xys) <- s
+  do ~((x, y), xys) <- s
      xys' <- liftSimulation $ memoProcess (unzipStream xys)
      let xs = xys' >>= \(Cons xs, _) -> xs
          ys = xys' >>= \(_, Cons ys) -> ys
@@ -76,7 +76,7 @@ mapStreamM f (Cons x) = Cons y where
 -- | Transform the stream getting the transformation function after data have come.
 apStreamDataFirst :: Process (a -> b) -> Stream a -> Stream b
 apStreamDataFirst f (Cons x) = Cons y where
-  y = do (a, xs) <- x
+  y = do ~(a, xs) <- x
          g <- f
          return (g a, apStreamDataFirst f xs)
 
@@ -84,14 +84,14 @@ apStreamDataFirst f (Cons x) = Cons y where
 apStreamDataLater :: Process (a -> b) -> Stream a -> Stream b
 apStreamDataLater f (Cons x) = Cons y where
   y = do g <- f
-         (a, xs) <- x
+         ~(a, xs) <- x
          return (g a, apStreamDataLater f xs)
 
 -- | Transform the stream trying to get the transformation function as soon as possible
 -- at the same time when requesting for the next portion of data.
 apStreamParallel :: Process (a -> b) -> Stream a -> Stream b
 apStreamParallel f (Cons x) = Cons y where
-  y = do (g, (a, xs)) <- zipProcessParallel f x
+  y = do ~(g, (a, xs)) <- zipProcessParallel f x
          return (g a, apStreamParallel f xs)
 
 -- | Filter only those data values that satisfy to the specified predicate.
