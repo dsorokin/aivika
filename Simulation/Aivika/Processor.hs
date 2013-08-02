@@ -1,4 +1,6 @@
 
+{-# LANGUAGE RecursiveDo #-}
+
 -- |
 -- Module     : Simulation.Aivika.Processor
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
@@ -39,6 +41,12 @@ instance C.Category Processor where
 
   Processor x . Processor y = Processor (x . y)
 
+-- The implementation is based on article
+-- A New Notation for Arrows by Ross Paterson,
+-- although my streams are different and they
+-- already depend on the Process monad,
+-- while the pure streams were considered in the
+-- mentioned article.
 instance Arrow Processor where
 
   arr = Processor . mapStream
@@ -46,23 +54,44 @@ instance Arrow Processor where
   first (Processor f) =
     Processor $ \xys ->
     Cons $
-    do ~(xs, ys) <- unzipStream xys
+    do ~(xs, ys) <- liftSimulation $ unzipStream xys
        let Cons m = zipStreamSeq (f xs) ys
        m
 
   second (Processor f) =
     Processor $ \xys ->
     Cons $
-    do ~(xs, ys) <- unzipStream xys
+    do ~(xs, ys) <- liftSimulation $ unzipStream xys
        let Cons m = zipStreamSeq xs (f ys)
        m
 
   Processor f *** Processor g =
     Processor $ \xys ->
     Cons $
-    do ~(xs, ys) <- unzipStream xys
+    do ~(xs, ys) <- liftSimulation $ unzipStream xys
        let Cons m = zipStreamParallel (f xs) (g ys)
        m
+
+-- The implementation is based on article
+-- A New Notation for Arrows by Ross Paterson,
+-- although my streams are different and they
+-- already depend on the Process monad,
+-- while the pure streams were considered in the
+-- mentioned article.
+instance ArrowLoop Processor where
+
+  loop (Processor f) =
+    Processor $ \xs ->
+    Cons $
+    do Cons zs <- liftSimulation $
+                  simulationLoop (\(xs, ys) ->
+                                   unzipStream $ f $ zipStreamParallel xs ys) xs
+       zs
+
+simulationLoop :: ((b, d) -> Simulation (c, d)) -> b -> Simulation c
+simulationLoop f b =
+  mdo (c, d) <- f (b, d)
+      return c
 
 instance SimulationLift (Processor a) where
   liftSimulation = Processor . mapStreamM . const . liftSimulation

@@ -11,6 +11,7 @@
 --
 module Simulation.Aivika.Stream
        (Stream(..),
+        memoStream,
         zipStreamSeq,
         zipStreamParallel,
         unzipStream,
@@ -38,6 +39,15 @@ instance Functor Stream where
     y = do ~(x, xs) <- s
            return (f x, fmap f xs)
 
+-- | Memoize the stream.
+memoStream :: Stream a -> Simulation (Stream a)
+memoStream (Cons s) =
+  do p <- memoProcess $
+          do ~(x, xs) <- s
+             xs' <- liftSimulation $ memoStream xs
+             return (x, xs')
+     return (Cons p)
+
 -- | Zip two streams trying to get data sequentially.
 zipStreamSeq :: Stream a -> Stream b -> Stream (a, b)
 zipStreamSeq (Cons sa) (Cons sb) = Cons y where
@@ -53,14 +63,12 @@ zipStreamParallel (Cons sa) (Cons sb) = Cons y where
          return ((x, y), zipStreamParallel xs ys)
 
 -- | Unzip the stream.
-unzipStream :: Stream (a, b) -> Process (Stream a, Stream b)
-unzipStream (Cons s) =
-  do ~((x, y), xys) <- s
-     xys' <- liftSimulation $ memoProcess (unzipStream xys)
-     let xs = xys' >>= \(Cons xs, _) -> xs
-         ys = xys' >>= \(_, Cons ys) -> ys
-     return (Cons $ return (x, Cons xs),
-             Cons $ return (y, Cons ys))
+unzipStream :: Stream (a, b) -> Simulation (Stream a, Stream b)
+unzipStream s =
+  do s' <- memoStream s
+     let sa = mapStream fst s'
+         sb = mapStream snd s'
+     return (sa, sb)
 
 -- | Map the stream according the specified function.
 mapStream :: (a -> b) -> Stream a -> Stream b
