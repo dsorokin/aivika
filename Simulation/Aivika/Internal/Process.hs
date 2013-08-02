@@ -458,12 +458,17 @@ processUsingId pid x =
 -- automatically if the current 'Process' computation is canceled
 -- and vice versa. Therefore these two functions have different types.
 childProcess :: Process () -> Process ()
-childProcess = undefined
+childProcess x =
+  do pid <- liftSimulation $ newProcessId
+     childProcessUsingId pid x
 
 -- | Like 'forkProcessUsingId' but now the child process is canceled
 -- automatically if the current 'Process' computation is canceled
 -- and vice versa. Therefore these two functions have different types.
 childProcessUsingId :: ProcessId -> Process () -> Process ()
-childProcessUsingId = undefined
+childProcessUsingId pid x =
+  Process $ \pid' ->
+  do liftEvent $ processIdPrepare pid
+     childCont (invokeProcess pid x) (processCancel pid)
 
 
