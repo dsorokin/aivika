@@ -85,7 +85,7 @@ instance ArrowLoop Processor where
     Cons $
     do Cons zs <- liftSimulation $
                   simulationLoop (\(xs, ys) ->
-                                   unzipStream $ f $ zipStreamParallel xs ys) xs
+                                   unzipStream $ f $ zipStreamSeq xs ys) xs
        zs
 
 simulationLoop :: ((b, d) -> Simulation (c, d)) -> b -> Simulation c
