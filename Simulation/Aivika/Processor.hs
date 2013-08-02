@@ -93,6 +93,22 @@ simulationLoop f b =
   mdo (c, d) <- f (b, d)
       return c
 
+instance ArrowChoice Processor where
+
+  left (Processor f) =
+    Processor $ \xs ->
+    Cons $
+    do ys <- liftSimulation $ memoStream xs
+       let Cons zs = replaceLeftStream ys (f $ leftStream ys)
+       zs
+
+  right (Processor f) =
+    Processor $ \xs ->
+    Cons $
+    do ys <- liftSimulation $ memoStream xs
+       let Cons zs = replaceRightStream ys (f $ rightStream ys)
+       zs
+           
 instance SimulationLift (Processor a) where
   liftSimulation = Processor . mapStreamM . const . liftSimulation
 
