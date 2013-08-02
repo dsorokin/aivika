@@ -122,10 +122,12 @@ simpleProcessor :: (a -> Process b) -> Processor a b
 simpleProcessor = Processor . mapStreamM
 
 -- | Create a processor that will use the specified process identifier.
--- It is useful to refer to the underlying 'Process' computation which
--- can be passivated, interrupted, canceled and so on.
+-- It can be useful to refer to the underlying 'Process' computation which
+-- can be passivated, interrupted, canceled and so on. See also the
+-- 'processUsingId' function.
 processorUsingId :: ProcessId -> Processor a b -> Processor a b
-processorUsingId = undefined
+processorUsingId pid (Processor f) =
+  Processor $ Cons . processUsingId pid . runStream . f
 
 -- | Launches the specified processors in parallel.
 processorParallel :: [Processor a b] -> Processor a b
