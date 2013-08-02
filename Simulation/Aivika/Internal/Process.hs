@@ -199,6 +199,8 @@ runProcess p =
      runProcessUsingId pid p
              
 -- | Start immediately the process with the specified identifier.
+-- It will be more efficient than as you would specify the process identifier
+-- with help of the 'processUsingId' combinator and then would call 'runProcess'.
 --            
 -- To run the process at the specified time, you can use
 -- the 'enqueueProcessUsingId' function.
@@ -231,12 +233,17 @@ runProcessInStopTimeUsingId :: EventProcessing -> ProcessId -> Process () -> Sim
 runProcessInStopTimeUsingId processing pid p =
   runEventInStopTime processing $ runProcessUsingId pid p
 
--- | Fork the process in parallel.
+-- | Fork the process in parallel in the sense that the process will be executed
+-- by the event queue simultaneously on a single operating system thread.
 forkProcess :: Process () -> Event ()
 forkProcess p =
   enqueueEventWithCurrentTime $ runProcess p
 
--- | Fork the process in parallel using the specified identifier.
+-- | Fork the process in parallel using the specified identifier in the sense
+-- that the process will be executed by the event queue simultaneously on a single
+-- operating system thread. Calling this function is more efficient than
+-- as you would specify the process identifier with help of the 'processUsingId'
+-- combinator and then would call 'forkProcess'.
 forkProcessUsingId :: ProcessId -> Process () -> Event ()
 forkProcessUsingId pid p =
   enqueueEventWithCurrentTime $ runProcessUsingId pid p
@@ -380,20 +387,18 @@ throwProcess = liftIO . throw
 -- the current computation and return their results. The cancellation
 -- of any of the nested computations affects the current computation.
 -- The exception raised in any of the nested computations is propogated
--- to the current computation as well (if the exception handling is
--- supported).
+-- to the current computation as well.
 --
 -- Here word @parallel@ literally means that the computations are
 -- actually executed on a single operating system thread but
 -- they are processed simultaneously by the event queue.
---
--- It generates new process identifiers with the same
--- 'processIdWithCatch' flag that the current computation has.
 processParallel :: [Process a] -> Process [a]
 processParallel xs =
   processParallelCreateIds xs >>= processParallelUsingIds 
 
 -- | Like 'processParallel' but allows specifying the process identifiers.
+-- It will be more efficient than as you would specify the process identifiers
+-- with help of the 'processUsingId' combinator and then would call 'processParallel'.
 processParallelUsingIds :: [(ProcessId, Process a)] -> Process [a]
 processParallelUsingIds xs =
   Process $ \pid ->
@@ -407,7 +412,7 @@ processParallel_ :: [Process a] -> Process ()
 processParallel_ xs =
   processParallelCreateIds xs >>= processParallelUsingIds_ 
 
--- | Like 'processParallel_' but allows specifying the process identifiers.
+-- | Like 'processParallelUsingIds' but ignores the result.
 processParallelUsingIds_ :: [(ProcessId, Process a)] -> Process ()
 processParallelUsingIds_ xs =
   Process $ \pid ->
@@ -430,6 +435,13 @@ processParallelPrepare xs =
   forM_ xs $ invokeEvent p . processIdPrepare . fst
 
 -- | Allow calling the process with the specified identifier.
+-- It creates a nested process when canceling any of two, or raising an
+-- @IO@ exception in any of the both, affects the 'Process' computation.
+--
+-- At the same time, the interruption has no such effect as it requires
+-- explicit specifying the 'ProcessId' identifier of the nested process itself,
+-- that is the nested process cannot be interrupted using only the parent
+-- process identifier.
 processUsingId :: ProcessId -> Process a -> Process a
 processUsingId pid x =
   Process $ \pid' ->
