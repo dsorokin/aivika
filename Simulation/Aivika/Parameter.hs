@@ -7,7 +7,9 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- This module defines the parameters of simulation experiments.
+-- This module contains some useful functions to define the parameters of
+-- simulation experiments. The model parameter is just a 'Simulation'
+-- computation and nothing more.
 --
 
 module Simulation.Aivika.Parameter
