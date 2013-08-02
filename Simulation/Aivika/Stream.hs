@@ -35,7 +35,9 @@ import Simulation.Aivika.Process
 
 -- | Represents an infinite stream of data in time,
 -- some kind of the cons cell.
-data Stream a = Cons (Process (a, Stream a))
+newtype Stream a = Cons { runStream :: Process (a, Stream a)
+                          -- ^ Run the stream.
+                        }
 
 instance Functor Stream where
   

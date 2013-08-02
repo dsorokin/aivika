@@ -55,22 +55,19 @@ instance Arrow Processor where
     Processor $ \xys ->
     Cons $
     do ~(xs, ys) <- liftSimulation $ unzipStream xys
-       let Cons m = zipStreamSeq (f xs) ys
-       m
+       runStream $ zipStreamSeq (f xs) ys
 
   second (Processor f) =
     Processor $ \xys ->
     Cons $
     do ~(xs, ys) <- liftSimulation $ unzipStream xys
-       let Cons m = zipStreamSeq xs (f ys)
-       m
+       runStream $ zipStreamSeq xs (f ys)
 
   Processor f *** Processor g =
     Processor $ \xys ->
     Cons $
     do ~(xs, ys) <- liftSimulation $ unzipStream xys
-       let Cons m = zipStreamParallel (f xs) (g ys)
-       m
+       runStream $ zipStreamParallel (f xs) (g ys)
 
 -- The implementation is based on article
 -- A New Notation for Arrows by Ross Paterson,
@@ -99,15 +96,13 @@ instance ArrowChoice Processor where
     Processor $ \xs ->
     Cons $
     do ys <- liftSimulation $ memoStream xs
-       let Cons zs = replaceLeftStream ys (f $ leftStream ys)
-       zs
+       runStream $ replaceLeftStream ys (f $ leftStream ys)
 
   right (Processor f) =
     Processor $ \xs ->
     Cons $
     do ys <- liftSimulation $ memoStream xs
-       let Cons zs = replaceRightStream ys (f $ rightStream ys)
-       zs
+       runStream $ replaceRightStream ys (f $ rightStream ys)
            
 instance SimulationLift (Processor a) where
   liftSimulation = Processor . mapStreamM . const . liftSimulation
