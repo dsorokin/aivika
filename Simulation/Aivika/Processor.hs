@@ -90,6 +90,12 @@ simulationLoop f b =
   mdo (c, d) <- f (b, d)
       return c
 
+-- The implementation is based on article
+-- A New Notation for Arrows by Ross Paterson,
+-- although my streams are different and they
+-- already depend on the Process monad,
+-- while the pure streams were considered in the
+-- mentioned article.
 instance ArrowChoice Processor where
 
   left (Processor f) =
