@@ -26,7 +26,7 @@ newRoundRobbinProcessor :: (a -> (Process Double, Process b))
                            -> Simulation (Processor a b)
 newRoundRobbinProcessor = undefined
 
--- | Create a new Round-Robbin processor that uses the specified processor identifiers.
+-- | Create a new Round-Robbin processor that uses the specified processor identifiers
 -- (not implemented yet).
 newRoundRobbinProcessorUsingIds :: (a -> (ProcessId, Process Double, Process b))
                                    -- ^ A function of input that returns a new
