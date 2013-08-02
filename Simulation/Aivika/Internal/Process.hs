@@ -33,6 +33,8 @@ module Simulation.Aivika.Internal.Process
         -- * Forking Process
         forkProcess,
         forkProcessUsingId,
+        childProcess,
+        childProcessUsingId,
         -- * Enqueuing Process
         enqueueProcess,
         enqueueProcessUsingId,
@@ -451,3 +453,17 @@ processUsingId pid x =
   Process $ \pid' ->
   do liftEvent $ processIdPrepare pid
      rerunCont (invokeProcess pid x) (processCancel pid)
+
+-- | Like 'forkProcess' but now the child process is canceled
+-- automatically if the current 'Process' computation is canceled
+-- and vice versa. Therefore these two functions have different types.
+childProcess :: Process () -> Process ()
+childProcess = undefined
+
+-- | Like 'forkProcessUsingId' but now the child process is canceled
+-- automatically if the current 'Process' computation is canceled
+-- and vice versa. Therefore these two functions have different types.
+childProcessUsingId :: ProcessId -> Process () -> Process ()
+childProcessUsingId = undefined
+
+

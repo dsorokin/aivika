@@ -32,6 +32,8 @@ module Simulation.Aivika.Process
         -- * Forking Process
         forkProcess,
         forkProcessUsingId,
+        childProcess,
+        childProcessUsingId,
         -- * Enqueuing Process
         enqueueProcess,
         enqueueProcessUsingId,
