@@ -23,6 +23,7 @@ module Simulation.Aivika.Internal.Cont
         invokeCont,
         runCont,
         rerunCont,
+        childCont,
         contParallel,
         contParallel_,
         catchCont,
@@ -550,6 +551,34 @@ rerunCont x cancelToken =
                        cancelCont p c
               invokeEvent p $
                 runCont x cont econt ccont cancelToken (contCatchFlag $ contAux c)
+     z <- contCanceled c
+     if z
+       then cancelCont p c
+       else worker
+
+-- | Run the 'Cont' computation in parallel but bind the cancellation tokens.
+childCont :: Cont a -> ContCancellation -> Cont a
+childCont x cancelToken =
+  Cont $ \c ->
+  Event $ \p ->
+  do let worker =
+           do hs <- invokeEvent p $
+                    contCancellationBind (contCancel $ contAux c) [cancelToken]
+              let cont a  =
+                    Event $ \p ->
+                    do invokeEvent p hs  -- unbind the cancellation token
+                       -- do nothing and it will finish the computation
+                  econt e =
+                    Event $ \p ->
+                    do invokeEvent p hs  -- unbind the cancellation token
+                       invokeEvent p $ throwEvent e  -- this is all we can do
+                  ccont e =
+                    Event $ \p ->
+                    do invokeEvent p hs  -- unbind the cancellation token
+                       -- do nothing and it will finish the computation
+              invokeEvent p $
+                enqueueEvent (pointTime p) $
+                runCont x cont econt ccont cancelToken False
      z <- contCanceled c
      if z
        then cancelCont p c
