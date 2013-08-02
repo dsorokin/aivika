@@ -15,6 +15,8 @@ module Simulation.Aivika.Processor
        (Processor(..),
         simpleProcessor,
         processorUsingId,
+        processorParallelFCFS,
+        processorParallelFCFSUsingIds,
         processorParallel,
         processorParallelUsingIds,
         processorPriorityParallel,
@@ -136,10 +138,12 @@ processorUsingId :: ProcessId -> Processor a b -> Processor a b
 processorUsingId pid (Processor f) =
   Processor $ Cons . processUsingId pid . runStream . f
 
--- | Launches the specified processors in parallel.
+-- | Launches the specified processors in parallel consuming the same input
+-- stream and producing a combined output stream.
 --
 -- If you don't know what the enqueue strategies to apply, then
--- you will probably need 'FCFS' for the both parameters.
+-- you will probably need 'FCFS' for the both parameters, or
+-- function 'processorParallelFCFS' that does namely this.
 processorParallel :: (EnqueueStrategy si qi,
                       EnqueueStrategy so qo)
                      => si
@@ -160,7 +164,7 @@ processorParallel si so ps =
          output  = concatStreams so results
      runStream output
 
--- | Launches the specified processors in parallel using priorities for combining output.
+-- | Launches the specified processors in parallel using priorities for combining the output.
 processorPriorityParallel :: (EnqueueStrategy si qi,
                               PriorityQueueStrategy so qo po)
                              => si
@@ -181,12 +185,14 @@ processorPriorityParallel si so ps =
          output  = concatPriorityStreams so results
      runStream output
 
--- | Launches the specified processors in parallel using the provided identifiers.
--- It is useful to refer to the underlying 'Process' computations which can be
--- passivated, interrupted, canceled and so on.
+-- | Launches the specified processors in parallel using the provided identifiers,
+-- consuming the same input stream and producing a combined output stream.
+-- Specifying the process indentifiers is useful to refer to the underlying 'Process'
+-- computations which can be passivated, interrupted, canceled and so on.
 --
 -- If you don't know what the enqueue strategies to apply, then
--- you will probably need 'FCFS' for the both parameters.
+-- you will probably need 'FCFS' for the both parameters, or function
+-- 'processorParallelFCFSUsingIds' that does namely this.
 processorParallelUsingIds :: (EnqueueStrategy si qi,
                               EnqueueStrategy so qo)
                              => si
@@ -213,3 +219,15 @@ processorPriorityParallelUsingIds :: (EnqueueStrategy si qi,
                                      -- ^ the parallelized processor
 processorPriorityParallelUsingIds si so ps = processorPriorityParallel si so ps' where
   ps' = map (\(pid, p) -> processorUsingId pid p) ps
+
+-- | Launches the processors in parallel consuming the same input stream and producing
+-- a combined output stream. This version applies the 'FCFS' strategy both for input
+-- and output, which suits the most part of uses cases.
+processorParallelFCFS :: [Processor a b] -> Processor a b
+processorParallelFCFS = processorParallel FCFS FCFS
+
+-- | Launches the processors in parallel using the specified indentifiers, consuming
+-- the same input stream and producing a combined output stream. This version applies
+-- the 'FCFS' strategy both for input and output, which suits the most part of uses cases.
+processorParallelFCFSUsingIds :: [(ProcessId, Processor a b)] -> Processor a b
+processorParallelFCFSUsingIds = processorParallelUsingIds FCFS FCFS
