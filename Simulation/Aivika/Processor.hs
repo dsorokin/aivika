@@ -17,6 +17,8 @@ module Simulation.Aivika.Processor
         processorUsingId,
         processorParallel,
         processorParallelUsingIds,
+        processorPriorityParallel,
+        processorPriorityParallelUsingIds,
         newRoundRobbinProcessor,
         newRoundRobbinProcessorUsingIds) where
 
@@ -28,6 +30,7 @@ import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Event
 import Simulation.Aivika.Internal.Process
 import Simulation.Aivika.Stream
+import Simulation.Aivika.QueueStrategy
 
 -- | Represents a processor of simulation data.
 newtype Processor a b =
@@ -136,14 +139,82 @@ processorUsingId pid (Processor f) =
   Processor $ Cons . processUsingId pid . runStream . f
 
 -- | Launches the specified processors in parallel.
-processorParallel :: [Processor a b] -> Processor a b
-processorParallel = undefined
+--
+-- If you don't know what the enqueue strategies to apply, then
+-- you will probably need 'FCFS' for the both parameters.
+processorParallel :: (EnqueueStrategy si qi,
+                      EnqueueStrategy so qo)
+                     => si
+                     -- ^ the strategy applied for enqueuing the input data
+                     -> so
+                     -- ^ the strategy applied for enqueuing the output data
+                     -> [Processor a b]
+                     -- ^ the processors to parallelize
+                     -> Processor a b
+                     -- ^ the parallelized processor
+processorParallel si so ps =
+  Processor $ \xs ->
+  Cons $
+  do let n = length ps
+     input <- liftSimulation $ splitStream si n xs
+     let results = flip map (zip input ps) $ \(input, p) ->
+           runProcessor p $ input
+         output  = concatStreams so results
+     runStream output
+
+-- | Launches the specified processors in parallel using priorities for combining output.
+processorPriorityParallel :: (EnqueueStrategy si qi,
+                              PriorityQueueStrategy so qo po)
+                             => si
+                             -- ^ the strategy applied for enqueuing the input data
+                             -> so
+                             -- ^ the strategy applied for enqueuing the output data
+                             -> [Processor a (po, b)]
+                             -- ^ the processors to parallelize
+                             -> Processor a b
+                             -- ^ the parallelized processor
+processorPriorityParallel si so ps =
+  Processor $ \xs ->
+  Cons $
+  do let n = length ps
+     input <- liftSimulation $ splitStream si n xs
+     let results = flip map (zip input ps) $ \(input, p) ->
+           runProcessor p $ input
+         output  = concatPriorityStreams so results
+     runStream output
 
 -- | Launches the specified processors in parallel using the provided identifiers.
 -- It is useful to refer to the underlying 'Process' computations which can be
 -- passivated, interrupted, canceled and so on.
-processorParallelUsingIds :: [(ProcessId, Processor a b)] -> Processor a b
-processorParallelUsingIds = undefined
+--
+-- If you don't know what the enqueue strategies to apply, then
+-- you will probably need 'FCFS' for the both parameters.
+processorParallelUsingIds :: (EnqueueStrategy si qi,
+                              EnqueueStrategy so qo)
+                             => si
+                             -- ^ the strategy applied for enqueuing the input data
+                             -> so
+                             -- ^ the strategy applied for enqueuing the output data
+                             -> [(ProcessId, Processor a b)]
+                             -- ^ the processors to parallelize
+                             -> Processor a b
+                             -- ^ the parallelized processor
+processorParallelUsingIds si so ps = processorParallel si so ps' where
+  ps' = map (\(pid, p) -> processorUsingId pid p) ps
+
+-- | Like 'processorPriorityParallel' but allows specifying the process identifiers.
+processorPriorityParallelUsingIds :: (EnqueueStrategy si qi,
+                                      PriorityQueueStrategy so qo po)
+                                     => si
+                                     -- ^ the strategy applied for enqueuing the input data
+                                     -> so
+                                     -- ^ the strategy applied for enqueuing the output data
+                                     -> [(ProcessId, Processor a (po, b))]
+                                     -- ^ the processors to parallelize
+                                     -> Processor a b
+                                     -- ^ the parallelized processor
+processorPriorityParallelUsingIds si so ps = processorPriorityParallel si so ps' where
+  ps' = map (\(pid, p) -> processorUsingId pid p) ps
 
 -- | Create a new Round-Robbin processor.
 newRoundRobbinProcessor :: (a -> (Process Double, Process b))
