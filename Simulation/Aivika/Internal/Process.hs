@@ -189,7 +189,8 @@ processIdPrepare pid =
      invokeEvent p $
        handleSignal_ signal $ \_ -> interruptProcess pid
 
--- | Start immediately the process.
+-- | Start immediately the process. A new 'ProcessId' identifier will be
+-- assigned to the process.
 --            
 -- To run the process at the specified time, you can use
 -- the 'enqueueProcess' function.
@@ -235,6 +236,7 @@ runProcessInStopTimeUsingId processing pid p =
 
 -- | Fork the process in parallel in the sense that the process will be executed
 -- by the event queue simultaneously on a single operating system thread.
+-- A new 'ProcessId' identifier will be assigned to the forked process.
 forkProcess :: Process () -> Event ()
 forkProcess p =
   enqueueEventWithCurrentTime $ runProcess p
@@ -392,6 +394,8 @@ throwProcess = liftIO . throw
 -- Here word @parallel@ literally means that the computations are
 -- actually executed on a single operating system thread but
 -- they are processed simultaneously by the event queue.
+--
+-- New 'ProcessId' identifiers will be assigned to the started processes.
 processParallel :: [Process a] -> Process [a]
 processParallel xs =
   processParallelCreateIds xs >>= processParallelUsingIds 
