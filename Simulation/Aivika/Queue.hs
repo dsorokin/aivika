@@ -13,16 +13,19 @@
 -- behaviour.
 --
 module Simulation.Aivika.Queue
-       (FCFSQueue,
+       (-- * Queue Types
+        FCFSQueue,
         LCFSQueue,
         SIROQueue,
         PriorityQueue,
         Queue,
+        -- * Creating Queue
         newFCFSQueue,
         newLCFSQueue,
         newSIROQueue,
         newPriorityQueue,
         newQueue,
+        -- * Queue Properties and Activities
         queueNull,
         queueFull,
         queueInputStrategy,
@@ -42,6 +45,7 @@ module Simulation.Aivika.Queue
         queueTotalWaitTime,
         queueInputWaitTime,
         queueOutputWaitTime,
+        -- * Dequeuing and Enqueuing
         dequeue,
         dequeueWithOutputPriority,
         tryDequeue,
@@ -55,6 +59,7 @@ module Simulation.Aivika.Queue
         enqueueOrLost_,
         enqueueWithStoringPriorityOrLost,
         enqueueWithStoringPriorityOrLost_,
+        -- * Signals
         enqueueInitiated,
         enqueueStored,
         enqueueLost,

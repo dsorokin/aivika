@@ -10,16 +10,19 @@
 -- This module defines an infinite queue that can use the specified strategies.
 --
 module Simulation.Aivika.Queue.Infinite
-       (FCFSQueue,
+       (-- * Queue Types
+        FCFSQueue,
         LCFSQueue,
         SIROQueue,
         PriorityQueue,
         Queue,
+        -- * Creating Queue
         newFCFSQueue,
         newLCFSQueue,
         newSIROQueue,
         newPriorityQueue,
         newQueue,
+        -- * Queue Properties and Activities
         queueNull,
         queueStoringStrategy,
         queueOutputStrategy,
@@ -30,11 +33,13 @@ module Simulation.Aivika.Queue.Infinite
         queueOutputRate,
         queueWaitTime,
         queueOutputWaitTime,
+        -- * Dequeuing and Enqueuing
         dequeue,
         dequeueWithOutputPriority,
         tryDequeue,
         enqueue,
         enqueueWithStoringPriority,
+        -- * Signals
         enqueueStored,
         dequeueRequested,
         dequeueExtracted) where
