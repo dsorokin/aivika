@@ -12,10 +12,12 @@
 -- This module defines the queue strategies.
 --
 module Simulation.Aivika.QueueStrategy
-       (QueueStrategy(..),
+       (-- * Strategy Classes
+        QueueStrategy(..),
         DequeueStrategy(..),
         EnqueueStrategy(..),
         PriorityQueueStrategy(..),
+        -- * Strategy Instances
         FCFS(..),
         LCFS(..),
         SIRO(..),
