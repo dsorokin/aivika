@@ -12,9 +12,13 @@
 -- The processor of simulation data.
 --
 module Simulation.Aivika.Processor
-       (Processor(..),
+       (-- * Processor Type
+        Processor(..),
+        -- * Creating Simple Processor
         simpleProcessor,
+        -- * Specifying Identifier
         processorUsingId,
+        -- * Parallelizing Processors
         processorParallel,
         processorParallelUsingIds,
         processorQueuedParallel,
