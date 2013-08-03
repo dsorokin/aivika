@@ -11,13 +11,15 @@
 --
 
 module Simulation.Aivika.Statistics
-       (SamplingStats(..),
+       (-- * Simple Statistics
+        SamplingStats(..),
         SamplingData(..),
         samplingStatsVariance,
         samplingStatsDeviation,
         returnSamplingStats,
         listSamplingStats,
         fromIntSamplingStats,
+        -- * Timing Statistics
         TimingStats(..),
         TimingData(..),
         timingStatsDeviation,
