@@ -12,11 +12,11 @@
 --
 
 module Simulation.Aivika.Stream.Random
-       (newRandomStream,
-        newNormalStream,
-        newExponentialStream,
-        newPoissonStream,
-        newBinomialStream) where
+       (randomStream,
+        normalStream,
+        exponentialStream,
+        poissonStream,
+        binomialStream) where
 
 import System.Random
 
@@ -29,22 +29,22 @@ import Simulation.Aivika.Random
 import Simulation.Aivika.Stream
 
 -- | Create a new stream with delays distributed uniformly.
-newRandomStream :: Dynamics Double     -- ^ the minimum delay
-                   -> Dynamics Double  -- ^ the maximum delay
-                   -> Stream Double    -- ^ the stream of delays
-newRandomStream min max = Cons z where
+randomStream :: Dynamics Double     -- ^ the minimum delay
+                -> Dynamics Double  -- ^ the maximum delay
+                -> Stream Double    -- ^ the stream of delays
+randomStream min max = Cons z where
   z = do x <- liftIO $ getStdRandom random
          min' <- liftDynamics min
          max' <- liftDynamics max
          let delay = min' + x * (max' - min')
          holdProcess delay
-         return (delay, newRandomStream min max)
+         return (delay, randomStream min max)
 
 -- | Create a new stream with delays distributed normally.
-newNormalStream :: Dynamics Double     -- ^ the mean delay
-                   -> Dynamics Double  -- ^ the delay variance
-                   -> Stream Double    -- ^ the stream of delays
-newNormalStream mu nu = Cons z where
+normalStream :: Dynamics Double     -- ^ the mean delay
+                -> Dynamics Double  -- ^ the delay variance
+                -> Stream Double    -- ^ the stream of delays
+normalStream mu nu = Cons z where
   z = do g <- liftIO $ newNormalGen
          let stream =
                do x <- liftIO g
@@ -56,31 +56,31 @@ newNormalStream mu nu = Cons z where
          stream
 
 -- | Return a new stream with delays disibuted exponentially with the specified mean.
-newExponentialStream :: Dynamics Double   -- ^ the mean delay
-                        -> Stream Double  -- ^ the stream of delays
-newExponentialStream mu = Cons z where
+exponentialStream :: Dynamics Double   -- ^ the mean delay
+                     -> Stream Double  -- ^ the stream of delays
+exponentialStream mu = Cons z where
   z = do mu' <- liftDynamics mu
          delay <- liftIO $ exponentialGen mu'
          holdProcess delay
-         return (delay, newExponentialStream mu)
+         return (delay, exponentialStream mu)
 
 -- | Return a new stream with delays having the Poisson distribution with the specified mean.
-newPoissonStream :: Dynamics Double  -- ^ the mean delay
-                    -> Stream Int    -- ^ the stream of delays
-newPoissonStream mu = Cons z where
+poissonStream :: Dynamics Double  -- ^ the mean delay
+                 -> Stream Int    -- ^ the stream of delays
+poissonStream mu = Cons z where
   z = do mu' <- liftDynamics mu
          delay <- liftIO $ poissonGen mu'
          holdProcess $ fromIntegral delay
-         return (delay, newPoissonStream mu)
+         return (delay, poissonStream mu)
 
 -- | Return a new stream with delays having the binomial distribution with the specified
 -- probability and trials.
-newBinomialStream :: Dynamics Double  -- ^ the probability
-                     -> Dynamics Int  -- ^ the number of trials
-                     -> Stream Int    -- ^ the stream of delays
-newBinomialStream prob trials = Cons z where
+binomialStream :: Dynamics Double  -- ^ the probability
+                  -> Dynamics Int  -- ^ the number of trials
+                  -> Stream Int    -- ^ the stream of delays
+binomialStream prob trials = Cons z where
   z = do prob' <- liftDynamics prob
          trials' <- liftDynamics trials
          delay <- liftIO $ binomialGen prob' trials'
          holdProcess $ fromIntegral delay
-         return (delay, newBinomialStream prob trials)
+         return (delay, binomialStream prob trials)
