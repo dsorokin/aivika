@@ -292,8 +292,6 @@ initializeFurnace furnace =
 model :: Simulation ()
 model =
   do furnace <- newFurnace
-     pid1 <- newProcessId
-     pid2 <- newProcessId
   
      -- initialize the furnace and start its iterating in start time
      runEventInStartTime IncludingCurrentEvents $
@@ -301,12 +299,12 @@ model =
           startIteratingFurnace furnace
      
      -- generate randomly new input ingots
-     runProcessInStartTime IncludingCurrentEvents
-       pid1 (inputProcess furnace)
+     runProcessInStartTime IncludingCurrentEvents $
+       inputProcess furnace
 
      -- load permanently the input ingots in the furnace
-     runProcessInStartTime IncludingCurrentEvents
-       pid2 (loadingProcess furnace)
+     runProcessInStartTime IncludingCurrentEvents $
+       loadingProcess furnace
      
      -- run the model in the final time point
      runEventInStopTime IncludingCurrentEvents $

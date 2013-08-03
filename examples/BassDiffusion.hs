@@ -10,6 +10,7 @@ import Simulation.Aivika.Event
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Agent
 import Simulation.Aivika.Ref
+import Simulation.Aivika.Random
 
 n = 500    -- the number of agents
 
@@ -22,11 +23,6 @@ specs = Specs { spcStartTime = 0.0,
                 spcDT = 0.1,
                 spcMethod = RungeKutta4 }
 
-exprnd :: Double -> IO Double
-exprnd lambda =
-  do x <- getStdRandom random
-     return (- log x / lambda)
-     
 boolrnd :: Double -> IO Bool
 boolrnd p =
   do x <- getStdRandom random
@@ -57,14 +53,16 @@ definePerson p ps potentialAdopters adopters =
   do setStateActivation (personPotentialAdopter p) $
        do modifyRef potentialAdopters $ \a -> a + 1
           -- add a timeout
-          t <- liftIO $ exprnd advertisingEffectiveness 
+          t <- liftIO $
+               exponentialGen (1 / advertisingEffectiveness) 
           let st  = personPotentialAdopter p
               st' = personAdopter p
           addTimeout st t $ activateState st'
      setStateActivation (personAdopter p) $ 
        do modifyRef adopters  $ \a -> a + 1
           -- add a timer that works while the state is active
-          let t = liftIO $ exprnd contactRate    -- many times!
+          let t = liftIO $
+                  exponentialGen (1 / contactRate)    -- many times!
           addTimer (personAdopter p) t $
             do i <- liftIO $ getStdRandom $ randomR (1, n)
                let p' = ps ! i

@@ -23,6 +23,8 @@
 import Control.Monad
 import Control.Monad.Trans
 
+import Data.Maybe
+
 import Simulation.Aivika.Specs
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Event
@@ -56,9 +58,9 @@ model =
                 do ackTime <-
                      liftIO $ exponentialGen (1 / ackRate)
                    holdProcess ackTime
-              success <- awaitSignal signal
+              result <- awaitSignal signal
               liftEvent $
-                unless success $
+                when (isNothing result) $
                 modifyRef nTimeOuts $ (+) 1
               node
 

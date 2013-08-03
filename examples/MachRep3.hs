@@ -13,7 +13,6 @@
 -- until both machines are down. We find the proportion of up time. It
 -- should come out to about 0.45.
 
-import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
@@ -25,6 +24,7 @@ import Simulation.Aivika.Ref
 import Simulation.Aivika.QueueStrategy
 import Simulation.Aivika.Resource
 import Simulation.Aivika.Process
+import Simulation.Aivika.Random
 
 upRate = 1.0 / 1.0       -- reciprocal of mean up time
 repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
@@ -33,11 +33,6 @@ specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 1000.0,
                 spcDT = 1.0,
                 spcMethod = RungeKutta4 }
-        
-exprnd :: Double -> IO Double
-exprnd lambda =
-  do x <- getStdRandom random
-     return (- log x / lambda)
      
 model :: Simulation Double
 model =
@@ -55,7 +50,8 @@ model =
      let machine :: ProcessId -> Process ()
          machine pid =
            do startUpTime <- liftDynamics time
-              upTime <- liftIO $ exprnd upRate
+              upTime <-
+                liftIO $ exponentialGen (1 / upRate)
               holdProcess upTime
               finishUpTime <- liftDynamics time
               liftEvent $ modifyRef totalUpTime 
@@ -71,17 +67,18 @@ model =
                           reactivateProcess pid
               
               requestResource repairPerson
-              repairTime <- liftIO $ exprnd repairRate
+              repairTime <-
+                liftIO $ exponentialGen (1 / repairRate)
               holdProcess repairTime
               liftEvent $ modifyRef nUp $ \a -> a + 1
               releaseResource repairPerson
               
               machine pid
 
-     runProcessInStartTime IncludingCurrentEvents
+     runProcessInStartTimeUsingId IncludingCurrentEvents
        pid1 (machine pid2)
 
-     runProcessInStartTime IncludingCurrentEvents
+     runProcessInStartTimeUsingId IncludingCurrentEvents
        pid2 (machine pid1)
 
      runEventInStopTime IncludingCurrentEvents $
