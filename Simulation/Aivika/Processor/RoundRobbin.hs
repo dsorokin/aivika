@@ -10,29 +10,27 @@
 -- The module defines the Round-Robbin processor.
 --
 module Simulation.Aivika.Processor.RoundRobbin
-       (newRoundRobbinProcessor,
-        newRoundRobbinProcessorUsingIds) where
+       (roundRobbinProcessor,
+        roundRobbinProcessorUsingIds) where
 
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Process
 import Simulation.Aivika.Processor
+import Simulation.Aivika.Stream
 
--- | Create a new Round-Robbin processor
+-- | Represents the Round-Robbin processor that tries to perform the task within
+-- the specified timeout. If the task times out, then it is canceled and returned
+-- to the processor again; otherwise, the successful result is redirected to output.
 -- (not implemented yet).
-newRoundRobbinProcessor :: (a -> (Process Double, Process b))
-                           -- ^ A function of input that returns the timeout
-                           -- and process which should be performed within
-                           -- the specified timeout.
-                           -> Simulation (Processor a b)
-newRoundRobbinProcessor = undefined
+roundRobbinProcessor :: Processor (Double, Process a) a
+roundRobbinProcessor =
+  Processor $
+  runProcessor roundRobbinProcessorUsingIds . mapStreamM f where
+    f (timeout, p) =
+      do pid <- liftSimulation newProcessId
+         return (pid, timeout, p)
 
--- | Create a new Round-Robbin processor that uses the specified processor identifiers
+-- | Like 'roundRobbinProcessor' but allows specifying the process identifiers.
 -- (not implemented yet).
-newRoundRobbinProcessorUsingIds :: (a -> (ProcessId, Process Double, Process b))
-                                   -- ^ A function of input that returns a new
-                                   -- process identifier, the timeout
-                                   -- and the process itself which will be launched
-                                   -- with the specified identifier and which should
-                                   -- be performed within the specified timeout.
-                                   -> Simulation (Processor a b)
-newRoundRobbinProcessorUsingIds = undefined
+roundRobbinProcessorUsingIds :: Processor (ProcessId, Double, Process a) a
+roundRobbinProcessorUsingIds = undefined
