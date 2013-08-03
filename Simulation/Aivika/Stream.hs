@@ -258,14 +258,13 @@ splitStreamQueuing s n x =
 splitStreamPrioritising :: PriorityQueueStrategy s q p
                            => s
                            -- ^ the strategy applied for enqueuing the output requests
-                           -> Int
-                           -- ^ the number of output streams
+                           -> [Stream p]
+                           -- ^ the streams of priorities
                            -> Stream a
                            -- ^ the input stream
-                           -> Simulation [Stream p -> Stream a]
-                           -- ^ the splitted output streams as functions of streams
-                           -- providing with the priorities
-splitStreamPrioritising s n x =
+                           -> Simulation [Stream a]
+                           -- ^ the splitted output streams
+splitStreamPrioritising s ps x =
   do ref <- liftIO $ newIORef x
      res <- newResource s 1
      let stream (Cons p) = Cons z where
@@ -276,7 +275,7 @@ splitStreamPrioritising s n x =
                           liftIO $ writeIORef ref xs
                           return a
                   return (a, stream ps)
-     return [stream | i <- [1..n]]
+     return $ map stream ps
 
 -- | Concatenate the input streams applying the 'FCFS' strategy and
 -- producing one output stream.
