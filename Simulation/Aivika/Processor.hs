@@ -18,6 +18,8 @@ module Simulation.Aivika.Processor
         simpleProcessor,
         -- * Specifying Identifier
         processorUsingId,
+        -- * Creating Queue Processor
+        queueProcessor,
         -- * Parallelizing Processors
         processorParallel,
         processorParallelUsingIds,
@@ -235,3 +237,24 @@ processorParallel = processorQueuedParallel FCFS FCFS
 -- the 'FCFS' strategy both for input and output, which suits the most part of uses cases.
 processorParallelUsingIds :: [(ProcessId, Processor a b)] -> Processor a b
 processorParallelUsingIds = processorQueuedParallelUsingIds FCFS FCFS
+
+-- | Create a processor that usually redirects an input to the queue in one
+-- infinite process and then extracts data from it in another process by demand.
+--
+-- The standard use case is as follows:
+--
+-- @
+--   do q <- newFCFSQueue capacity
+--      let p :: Processor Int Int
+--          p =
+--            queueProcessor
+--            (consumeStream $ enqueue q)
+--            (repeatProcess $ dequeue q)
+--      ...
+-- @
+queueProcessor :: (Stream a -> Process ()) -> Stream b -> Processor a b
+queueProcessor consume input =
+  Processor $ \xs ->
+  Cons $
+  do childProcess (consume xs)
+     runStream input
