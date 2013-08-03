@@ -17,6 +17,9 @@
 --
 -- A value of the 'ProcessId' type is just an identifier of such a process.
 --
+-- The characteristic property of the @Process@ type is function 'holdProcess'
+-- that suspends the current process for the specified time interval.
+--
 module Simulation.Aivika.Process
        (-- * Process Monad
         ProcessId,
