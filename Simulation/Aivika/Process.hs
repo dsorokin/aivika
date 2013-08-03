@@ -123,14 +123,15 @@ memoProcess x =
 
 -- | Run the process in parallel and return a signal. If the process will
 -- finish successfully within the specified timeout then the signal will
--- send 'True'; otherwise, it will cancel the process and send signal 'False'.
-timeoutProcess :: Double -> Process () -> Event (Signal Bool)
+-- send the computed value; otherwise, it will cancel the process and send
+-- signal 'Nothing'.
+timeoutProcess :: Double -> Process a -> Event (Signal (Maybe a))
 timeoutProcess timeout p =
   do pid <- liftSimulation newProcessId
      timeoutProcessUsingId timeout pid p
 
 -- | Like 'timeoutProcess' but allows specifying the process identifier.
-timeoutProcessUsingId :: Double -> ProcessId -> Process () -> Event (Signal Bool)
+timeoutProcessUsingId :: Double -> ProcessId -> Process a -> Event (Signal (Maybe a))
 timeoutProcessUsingId timeout pid p =
   do s <- liftSimulation newSignalSource
      timeoutPid <- liftSimulation newProcessId
@@ -138,10 +139,10 @@ timeoutProcessUsingId timeout pid p =
        do holdProcess timeout
           liftEvent $
             do cancelProcess pid
-               triggerSignal s False
+               triggerSignal s Nothing
      forkProcessUsingId pid $
-       do p
+       do a <- p
           liftEvent $
             do cancelProcess timeoutPid
-               triggerSignal s True
+               triggerSignal s (Just a)
      return $ publishSignal s

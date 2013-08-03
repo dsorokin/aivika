@@ -14,15 +14,17 @@ module Simulation.Aivika.Processor.RoundRobbin
         roundRobbinProcessorUsingIds) where
 
 import Simulation.Aivika.Simulation
+import Simulation.Aivika.Event
+import Simulation.Aivika.Signal
 import Simulation.Aivika.Process
 import Simulation.Aivika.Processor
 import Simulation.Aivika.Stream
+import Simulation.Aivika.Queue.Infinite
 
 -- | Represents the Round-Robbin processor that tries to perform the task within
 -- the specified timeout. If the task times out, then it is canceled and returned
 -- to the processor again; otherwise, the successful result is redirected to output.
--- (not implemented yet).
-roundRobbinProcessor :: Processor (Double, Process a) a
+roundRobbinProcessor :: Processor (Event Double, Process a) a
 roundRobbinProcessor =
   Processor $
   runProcessor roundRobbinProcessorUsingIds . mapStreamM f where
@@ -31,6 +33,24 @@ roundRobbinProcessor =
          return (pid, timeout, p)
 
 -- | Like 'roundRobbinProcessor' but allows specifying the process identifiers.
--- (not implemented yet).
-roundRobbinProcessorUsingIds :: Processor (ProcessId, Double, Process a) a
-roundRobbinProcessorUsingIds = undefined
+roundRobbinProcessorUsingIds :: Processor (ProcessId, Event Double, Process a) a
+roundRobbinProcessorUsingIds =
+  Processor $ \xs ->
+  Cons $
+  do q <- liftSimulation newFCFSQueue
+     let process =
+           do t@(pid, timeout, p) <- dequeue q
+              signal <- liftEvent $
+                        do x <- timeout
+                           timeoutProcessUsingId x pid p
+              result <- awaitSignal signal
+              case result of
+                Just a  -> return a
+                Nothing ->
+                  do liftEvent $ enqueue q t 
+                     process
+         processor =
+           queueProcessor
+           (consumeStream $ liftEvent . enqueue q)
+           (repeatProcess process)
+     runStream $ runProcessor processor xs
