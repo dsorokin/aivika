@@ -14,11 +14,13 @@
 -- is useful for modeling the infinite queue, for example.
 --
 module Simulation.Aivika.Resource
-       (FCFSResource,
+       (-- * Resource Types
+        FCFSResource,
         LCFSResource,
         SIROResource,
         PriorityResource,
         Resource,
+        -- * Creating Resource
         newFCFSResource,
         newFCFSResourceWithMaxCount,
         newLCFSResource,
@@ -29,9 +31,11 @@ module Simulation.Aivika.Resource
         newPriorityResourceWithMaxCount,
         newResource,
         newResourceWithMaxCount,
+        -- * Resource Properties
         resourceStrategy,
         resourceMaxCount,
         resourceCount,
+        -- * Requesting for and Releasing Resource
         requestResource,
         requestResourceWithPriority,
         tryRequestResourceWithinEvent,
@@ -43,6 +47,7 @@ module Simulation.Aivika.Resource
 import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
+import Control.Exception
 
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
