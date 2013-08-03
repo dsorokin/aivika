@@ -22,6 +22,7 @@ module Simulation.Aivika.Stream
         concatPriorityStreams,
         splitStream,
         splitStreamQueuing,
+        splitStreamPrioritising,
         -- * Memoizing, Zipping and Uzipping Stream
         memoStream,
         zipStreamSeq,
@@ -230,6 +231,31 @@ splitStreamQueuing s n x =
               liftIO $ writeIORef ref xs
               return a
      return $ map (\i -> repeatProcess reader) [1..n]
+
+-- | Split the input stream into the specified number of output streams
+-- prioritising them.
+splitStreamPrioritising :: PriorityQueueStrategy s q p
+                           => s
+                           -- ^ the strategy applied for enqueuing the output requests
+                           -> Int
+                           -- ^ the number of output streams
+                           -> Stream a
+                           -- ^ the input stream
+                           -> Simulation [Stream p -> Stream a]
+                           -- ^ the splitted output streams as functions of streams
+                           -- providing with the priorities
+splitStreamPrioritising s n x =
+  do ref <- liftIO $ newIORef x
+     res <- newResource s 1
+     let stream (Cons p) = Cons z where
+           z = do (p', ps) <- p
+                  a <- usingResourceWithPriority res p' $
+                       do p <- liftIO $ readIORef ref
+                          (a, xs) <- runStream p
+                          liftIO $ writeIORef ref xs
+                          return a
+                  return (a, stream ps)
+     return [stream | i <- [1..n]]
 
 -- | Concatenate the input streams applying the 'FCFS' strategy and
 -- producing one output stream.
