@@ -16,7 +16,6 @@
 -- We find the proportion of messages which timeout. The output should
 -- be about 0.61.
 
-import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
@@ -26,6 +25,7 @@ import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Event
 import Simulation.Aivika.Ref
 import Simulation.Aivika.Process
+import Simulation.Aivika.Random
 
 ackRate = 1.0 / 1.0  -- reciprocal of the acknowledge mean time
 toPeriod = 0.5       -- timeout period
@@ -34,11 +34,6 @@ specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 10000.0,
                 spcDT = 1.0,
                 spcMethod = RungeKutta4 }
-        
-exprnd :: Double -> IO Double
-exprnd lambda =
-  do x <- getStdRandom random
-     return (- log x / lambda)
      
 model :: Simulation Double
 model =
@@ -47,7 +42,7 @@ model =
      
      -- number of timeouts which have occured
      nTimeOuts <- newRef 0
-     
+
      nodePid <- newProcessId
      
      let node :: Process ()
@@ -56,9 +51,10 @@ model =
               -- create the process ID
               timeoutPid <- liftSimulation newProcessId
               -- set up the timeout
-              liftEvent $ runProcess timeoutPid timeout
+              liftEvent $ runProcessUsingId timeoutPid timeout
               -- wait for ACK, but could be timeout
-              ackTime <- liftIO $ exprnd ackRate 
+              ackTime <-
+                liftIO $ exponentialGen (1 / ackRate) 
               holdProcess ackTime
               liftEvent $
                 do interrupted <- processInterrupted nodePid
@@ -72,7 +68,7 @@ model =
            do holdProcess toPeriod
               liftEvent $ interruptProcess nodePid
 
-     runProcessInStartTime IncludingCurrentEvents
+     runProcessInStartTimeUsingId IncludingCurrentEvents
        nodePid node 
      
      runEventInStopTime IncludingCurrentEvents $

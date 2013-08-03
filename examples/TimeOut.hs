@@ -18,16 +18,16 @@
 -- We find the proportion of messages which timeout. The output should
 -- be about 0.61.
 
-import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Specs
 import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Event
 import Simulation.Aivika.Ref
 import Simulation.Aivika.Process
+import Simulation.Aivika.Signal
+import Simulation.Aivika.Random
 
 ackRate = 1.0 / 1.0  -- reciprocal of the acknowledge mean time
 toPeriod = 0.5       -- timeout period
@@ -37,11 +37,6 @@ specs = Specs { spcStartTime = 0.0,
                 spcDT = 1.0,
                 spcMethod = RungeKutta4 }
         
-exprnd :: Double -> IO Double
-exprnd lambda =
-  do x <- getStdRandom random
-     return (- log x / lambda)
-     
 model :: Simulation Double
 model =
   do -- number of messages sent
@@ -50,49 +45,23 @@ model =
      -- number of timeouts which have occured
      nTimeOuts <- newRef 0
      
-     -- reactivatedCode will 1 if timeout occurred, 
-     -- 2 ACK if received
-     reactivatedCode <- newRef 0
-     
-     nodePid <- newProcessId
-     
      let node :: Process ()
          node =
            do liftEvent $ modifyRef nMsgs $ (+) 1
-              -- create process IDs
-              timeoutPid <- liftSimulation newProcessId
-              ackPid <- liftSimulation newProcessId
-              -- set up the timeout
-              liftEvent $ runProcess timeoutPid (timeout ackPid)
-              -- set up the message send/ACK
-              liftEvent $ runProcess ackPid (acknowledge timeoutPid)
-              passivateProcess
+              signal <-
+                liftEvent $
+                timeoutProcess toPeriod $
+                do ackTime <-
+                     liftIO $ exponentialGen (1 / ackRate)
+                   holdProcess ackTime
+              success <- awaitSignal signal
               liftEvent $
-                do code <- readRef reactivatedCode
-                   when (code == 1) $
-                     modifyRef nTimeOuts $ (+) 1
-                   writeRef reactivatedCode 0
+                unless success $
+                modifyRef nTimeOuts $ (+) 1
               node
-              
-         timeout :: ProcessId -> Process ()
-         timeout ackPid =
-           do holdProcess toPeriod
-              liftEvent $
-                do writeRef reactivatedCode 1
-                   reactivateProcess nodePid
-                   cancelProcess ackPid
-         
-         acknowledge :: ProcessId -> Process ()
-         acknowledge timeoutPid =
-           do ackTime <- liftIO $ exprnd ackRate
-              holdProcess ackTime
-              liftEvent $
-                do writeRef reactivatedCode 2
-                   reactivateProcess nodePid
-                   cancelProcess timeoutPid
 
      runProcessInStartTime IncludingCurrentEvents
-       nodePid node
+       node
      
      runEventInStopTime IncludingCurrentEvents $
        do x <- readRef nTimeOuts
