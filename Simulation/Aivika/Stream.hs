@@ -12,14 +12,14 @@
 module Simulation.Aivika.Stream
        (Stream(..),
         emptyStream,
-        mergeStreamsFCFS,
         mergeStreams,
+        mergeQueuedStreams,
         mergePriorityStreams,
-        concatStreamsFCFS,
         concatStreams,
+        concatQueuedStreams,
         concatPriorityStreams,
-        splitStreamFCFS,
         splitStream,
+        splitStreamQueuing,
         memoStream,
         zipStreamSeq,
         zipStreamParallel,
@@ -65,9 +65,9 @@ instance Monoid (Stream a) where
 
   mempty  = emptyStream
 
-  mappend = mergeStreams FCFS
+  mappend = mergeStreams
 
-  mconcat = concatStreams FCFS
+  mconcat = concatStreams
 
 -- | Memoize the stream.
 memoStream :: Stream a -> Simulation (Stream a)
@@ -195,24 +195,24 @@ replaceRightStream (Cons sab) (ys0 @ (Cons sc)) = Cons z where
 
 -- | Split the input stream into the specified number of output streams
 -- after applying the 'FCFS' strategy for enqueuing the output requests.
-splitStreamFCFS :: Int -> Stream a -> Simulation [Stream a]
-splitStreamFCFS = splitStream FCFS
+splitStream :: Int -> Stream a -> Simulation [Stream a]
+splitStream = splitStreamQueuing FCFS
 
 -- | Split the input stream into the specified number of output streams.
 --
 -- If you don't know what the strategy to apply, then you probably
--- need the 'FCFS' strategy, or function 'splitStreamFCFS' that
+-- need the 'FCFS' strategy, or function 'splitStream' that
 -- does namely this.
-splitStream :: EnqueueStrategy s q
-               => s
-               -- ^ the strategy applied for enqueuing the output requests
-               -> Int
-               -- ^ the number of output streams
-               -> Stream a
-               -- ^ the input stream
-               -> Simulation [Stream a]
-               -- ^ the splitted output streams
-splitStream s n x =
+splitStreamQueuing :: EnqueueStrategy s q
+                      => s
+                      -- ^ the strategy applied for enqueuing the output requests
+                      -> Int
+                      -- ^ the number of output streams
+                      -> Stream a
+                      -- ^ the input stream
+                      -> Simulation [Stream a]
+                      -- ^ the splitted output streams
+splitStreamQueuing s n x =
   do ref <- liftIO $ newIORef x
      res <- newResource s 1
      let reader =
@@ -225,22 +225,22 @@ splitStream s n x =
 
 -- | Concatenate the input streams applying the 'FCFS' strategy and
 -- producing one output stream.
-concatStreamsFCFS :: [Stream a] -> Stream a
-concatStreamsFCFS = concatStreams FCFS
+concatStreams :: [Stream a] -> Stream a
+concatStreams = concatQueuedStreams FCFS
 
 -- | Concatenate the input streams producing one output stream.
 --
 -- If you don't know what the strategy to apply, then you probably
--- need the 'FCFS' strategy, or function 'concatStreamsFCFS' that
+-- need the 'FCFS' strategy, or function 'concatStreams' that
 -- does namely this.
-concatStreams :: EnqueueStrategy s q
-                 => s
-                 -- ^ the strategy applied for enqueuing the input data
-                 -> [Stream a]
-                 -- ^ the input stream
-                 -> Stream a
-                 -- ^ the combined output stream
-concatStreams s streams = Cons z where
+concatQueuedStreams :: EnqueueStrategy s q
+                       => s
+                       -- ^ the strategy applied for enqueuing the input data
+                       -> [Stream a]
+                       -- ^ the input stream
+                       -> Stream a
+                       -- ^ the combined output stream
+concatQueuedStreams s streams = Cons z where
   z = do reading <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
          writing <- liftSimulation $ newResourceWithMaxCount s 1 (Just 1)
          ref <- liftIO $ newIORef Nothing
@@ -287,24 +287,24 @@ concatPriorityStreams s streams = Cons z where
          runStream $ repeatProcess reader
 
 -- | Merge two streams applying the 'FCFS' strategy for enqueuing the input data.
-mergeStreamsFCFS :: Stream a -> Stream a -> Stream a
-mergeStreamsFCFS = mergeStreams FCFS
+mergeStreams :: Stream a -> Stream a -> Stream a
+mergeStreams = mergeQueuedStreams FCFS
 
 -- | Merge two streams.
 --
 -- If you don't know what the strategy to apply, then you probably
--- need the 'FCFS' strategy, or function 'mergeStreamsFCFS' that
+-- need the 'FCFS' strategy, or function 'mergeStreams' that
 -- does namely this.
-mergeStreams :: EnqueueStrategy s q
-                => s
-                -- ^ the strategy applied for enqueuing the input data
-                -> Stream a
-                -- ^ the fist input stream
-                -> Stream a
-                -- ^ the second input stream
-                -> Stream a
-                -- ^ the output combined stream
-mergeStreams s x y = concatStreams s [x, y]
+mergeQueuedStreams :: EnqueueStrategy s q
+                      => s
+                      -- ^ the strategy applied for enqueuing the input data
+                      -> Stream a
+                      -- ^ the fist input stream
+                      -> Stream a
+                      -- ^ the second input stream
+                      -> Stream a
+                      -- ^ the output combined stream
+mergeQueuedStreams s x y = concatQueuedStreams s [x, y]
 
 -- | Merge two priority streams.
 mergePriorityStreams :: PriorityQueueStrategy s q p

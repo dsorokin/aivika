@@ -15,10 +15,10 @@ module Simulation.Aivika.Processor
        (Processor(..),
         simpleProcessor,
         processorUsingId,
-        processorParallelFCFS,
-        processorParallelFCFSUsingIds,
         processorParallel,
         processorParallelUsingIds,
+        processorQueuedParallel,
+        processorQueuedParallelUsingIds,
         processorPriorityParallel,
         processorPriorityParallelUsingIds) where
 
@@ -143,25 +143,25 @@ processorUsingId pid (Processor f) =
 --
 -- If you don't know what the enqueue strategies to apply, then
 -- you will probably need 'FCFS' for the both parameters, or
--- function 'processorParallelFCFS' that does namely this.
-processorParallel :: (EnqueueStrategy si qi,
-                      EnqueueStrategy so qo)
-                     => si
-                     -- ^ the strategy applied for enqueuing the input data
-                     -> so
-                     -- ^ the strategy applied for enqueuing the output data
-                     -> [Processor a b]
-                     -- ^ the processors to parallelize
-                     -> Processor a b
-                     -- ^ the parallelized processor
-processorParallel si so ps =
+-- function 'processorParallel' that does namely this.
+processorQueuedParallel :: (EnqueueStrategy si qi,
+                            EnqueueStrategy so qo)
+                           => si
+                           -- ^ the strategy applied for enqueuing the input data
+                           -> so
+                           -- ^ the strategy applied for enqueuing the output data
+                           -> [Processor a b]
+                           -- ^ the processors to parallelize
+                           -> Processor a b
+                           -- ^ the parallelized processor
+processorQueuedParallel si so ps =
   Processor $ \xs ->
   Cons $
   do let n = length ps
-     input <- liftSimulation $ splitStream si n xs
+     input <- liftSimulation $ splitStreamQueuing si n xs
      let results = flip map (zip input ps) $ \(input, p) ->
            runProcessor p $ input
-         output  = concatStreams so results
+         output  = concatQueuedStreams so results
      runStream output
 
 -- | Launches the specified processors in parallel using priorities for combining the output.
@@ -179,7 +179,7 @@ processorPriorityParallel si so ps =
   Processor $ \xs ->
   Cons $
   do let n = length ps
-     input <- liftSimulation $ splitStream si n xs
+     input <- liftSimulation $ splitStreamQueuing si n xs
      let results = flip map (zip input ps) $ \(input, p) ->
            runProcessor p $ input
          output  = concatPriorityStreams so results
@@ -192,18 +192,18 @@ processorPriorityParallel si so ps =
 --
 -- If you don't know what the enqueue strategies to apply, then
 -- you will probably need 'FCFS' for the both parameters, or function
--- 'processorParallelFCFSUsingIds' that does namely this.
-processorParallelUsingIds :: (EnqueueStrategy si qi,
-                              EnqueueStrategy so qo)
-                             => si
-                             -- ^ the strategy applied for enqueuing the input data
-                             -> so
-                             -- ^ the strategy applied for enqueuing the output data
-                             -> [(ProcessId, Processor a b)]
-                             -- ^ the processors to parallelize
-                             -> Processor a b
-                             -- ^ the parallelized processor
-processorParallelUsingIds si so ps = processorParallel si so ps' where
+-- 'processorParallelUsingIds' that does namely this.
+processorQueuedParallelUsingIds :: (EnqueueStrategy si qi,
+                                    EnqueueStrategy so qo)
+                                   => si
+                                   -- ^ the strategy applied for enqueuing the input data
+                                   -> so
+                                   -- ^ the strategy applied for enqueuing the output data
+                                   -> [(ProcessId, Processor a b)]
+                                   -- ^ the processors to parallelize
+                                   -> Processor a b
+                                   -- ^ the parallelized processor
+processorQueuedParallelUsingIds si so ps = processorQueuedParallel si so ps' where
   ps' = map (\(pid, p) -> processorUsingId pid p) ps
 
 -- | Like 'processorPriorityParallel' but allows specifying the process identifiers.
@@ -223,11 +223,11 @@ processorPriorityParallelUsingIds si so ps = processorPriorityParallel si so ps'
 -- | Launches the processors in parallel consuming the same input stream and producing
 -- a combined output stream. This version applies the 'FCFS' strategy both for input
 -- and output, which suits the most part of uses cases.
-processorParallelFCFS :: [Processor a b] -> Processor a b
-processorParallelFCFS = processorParallel FCFS FCFS
+processorParallel :: [Processor a b] -> Processor a b
+processorParallel = processorQueuedParallel FCFS FCFS
 
 -- | Launches the processors in parallel using the specified indentifiers, consuming
 -- the same input stream and producing a combined output stream. This version applies
 -- the 'FCFS' strategy both for input and output, which suits the most part of uses cases.
-processorParallelFCFSUsingIds :: [(ProcessId, Processor a b)] -> Processor a b
-processorParallelFCFSUsingIds = processorParallelUsingIds FCFS FCFS
+processorParallelUsingIds :: [(ProcessId, Processor a b)] -> Processor a b
+processorParallelUsingIds = processorQueuedParallelUsingIds FCFS FCFS
