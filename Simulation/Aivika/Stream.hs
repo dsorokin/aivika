@@ -10,7 +10,9 @@
 -- The infinite stream of data in time.
 --
 module Simulation.Aivika.Stream
-       (Stream(..),
+       (-- * Stream Type
+        Stream(..),
+        -- * Merging and Splitting Stream
         emptyStream,
         mergeStreams,
         mergeQueuedStreams,
@@ -20,10 +22,12 @@ module Simulation.Aivika.Stream
         concatPriorityStreams,
         splitStream,
         splitStreamQueuing,
+        -- * Memoizing, Zipping and Uzipping Stream
         memoStream,
         zipStreamSeq,
         zipStreamParallel,
         unzipStream,
+        -- * Useful Combinators
         repeatProcess,
         mapStream,
         mapStreamM,
@@ -32,6 +36,7 @@ module Simulation.Aivika.Stream
         apStreamParallel,
         filterStream,
         filterStreamM,
+        -- * Utilities
         leftStream,
         rightStream,
         replaceLeftStream,
@@ -69,7 +74,8 @@ instance Monoid (Stream a) where
 
   mconcat = concatStreams
 
--- | Memoize the stream.
+-- | Memoize the stream so that it would always return the same data
+-- within the simulation run.
 memoStream :: Stream a -> Simulation (Stream a)
 memoStream (Cons s) =
   do p <- memoProcess $
