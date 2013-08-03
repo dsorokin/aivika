@@ -7,9 +7,11 @@
 -- The model description is as follows.
 --
 -- Introductory example to illustrate the modeling of "competing
--- events" such as timeouts, especially using the cancelProcess function. A
--- network node sends a message but also sets a timeout period; if the
--- node times out, it assumes the message it had sent was lost, and it
+-- events" such as timeouts, especially using the timeoutProcess and
+-- awaitSignal function. A network node starts a process within
+-- the specified timeout and receives a signal that notifies whether
+-- the process has finished successfully within the timeout; if the node
+-- times out, it assumes the message it had sent was lost, and it
 -- will send again. The time to get an acknowledgement for a message is
 -- exponentially distributed with mean 1.0, and the timeout period is
 -- 0.5. Immediately after receiving an acknowledgement, the node sends
@@ -26,6 +28,7 @@ import Simulation.Aivika.Simulation
 import Simulation.Aivika.Event
 import Simulation.Aivika.Ref
 import Simulation.Aivika.Process
+import Simulation.Aivika.Signal
 import Simulation.Aivika.Random
 
 ackRate = 1.0 / 1.0  -- reciprocal of the acknowledge mean time
@@ -35,7 +38,7 @@ specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 10000.0,
                 spcDT = 1.0,
                 spcMethod = RungeKutta4 }
-     
+        
 model :: Simulation Double
 model =
   do -- number of messages sent
@@ -44,49 +47,23 @@ model =
      -- number of timeouts which have occured
      nTimeOuts <- newRef 0
      
-     -- reactivatedCode will 1 if timeout occurred, 
-     -- 2 ACK if received
-     reactivatedCode <- newRef 0
-     
-     nodePid <- newProcessId
-     
      let node :: Process ()
          node =
            do liftEvent $ modifyRef nMsgs $ (+) 1
-              -- create process IDs
-              timeoutPid <- liftSimulation newProcessId
-              ackPid <- liftSimulation newProcessId
-              -- set up the timeout
-              liftEvent $ runProcessUsingId timeoutPid (timeout ackPid)
-              -- set up the message send/ACK
-              liftEvent $ runProcessUsingId ackPid (acknowledge timeoutPid)
-              passivateProcess
+              signal <-
+                liftEvent $
+                timeoutProcess toPeriod $
+                do ackTime <-
+                     liftIO $ exponentialGen (1 / ackRate)
+                   holdProcess ackTime
+              success <- awaitSignal signal
               liftEvent $
-                do code <- readRef reactivatedCode
-                   when (code == 1) $
-                     modifyRef nTimeOuts $ (+) 1
-                   writeRef reactivatedCode 0
+                unless success $
+                modifyRef nTimeOuts $ (+) 1
               node
-              
-         timeout :: ProcessId -> Process ()
-         timeout ackPid =
-           do holdProcess toPeriod
-              liftEvent $
-                do writeRef reactivatedCode 1
-                   reactivateProcess nodePid
-                   cancelProcess ackPid
-         
-         acknowledge :: ProcessId -> Process ()
-         acknowledge timeoutPid =
-           do ackTime <- liftIO $ exponentialGen (1 / ackRate)
-              holdProcess ackTime
-              liftEvent $
-                do writeRef reactivatedCode 2
-                   reactivateProcess nodePid
-                   cancelProcess timeoutPid
 
-     runProcessInStartTimeUsingId IncludingCurrentEvents
-       nodePid node
+     runProcessInStartTime IncludingCurrentEvents
+       node
      
      runEventInStopTime IncludingCurrentEvents $
        do x <- readRef nTimeOuts
