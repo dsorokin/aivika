@@ -28,7 +28,9 @@ module Simulation.Aivika.Processor
         processorPrioritisingOutputParallel,
         processorPrioritisingOutputParallelUsingIds,
         processorPrioritisingInputParallel,
-        processorPrioritisingInputParallelUsingIds) where
+        processorPrioritisingInputParallelUsingIds,
+        processorPrioritisingInputOutputParallel,
+        processorPrioritisingInputOutputParallelUsingIds) where
 
 import qualified Control.Category as C
 import Control.Arrow
@@ -215,6 +217,29 @@ processorPrioritisingInputParallel si so ps =
          output  = concatQueuedStreams so results
      runStream output
 
+-- | Launches the specified processors in parallel using priorities for consuming
+-- the input and combining the output.
+processorPrioritisingInputOutputParallel :: (PriorityQueueStrategy si qi pi,
+                                             PriorityQueueStrategy so qo po)
+                                            => si
+                                            -- ^ the strategy applied for enqueuing the input data
+                                            -> so
+                                            -- ^ the strategy applied for enqueuing the output data
+                                            -> [(Stream pi, Processor a (po, b))]
+                                            -- ^ the streams of input priorities and the processors
+                                            -- to parallelize
+                                            -> Processor a b
+                                            -- ^ the parallelized processor
+processorPrioritisingInputOutputParallel si so ps =
+  Processor $ \xs ->
+  Cons $
+  do let n = length ps
+     input <- liftSimulation $ splitStreamPrioritising si n xs
+     let results = flip map (zip input ps) $ \(input, (priority, p)) ->
+           runProcessor p $ input priority
+         output  = concatPriorityStreams so results
+     runStream output
+
 -- | Launches the specified processors in parallel using the provided identifiers,
 -- consuming the same input stream and producing a combined output stream.
 -- Specifying the process indentifiers is useful to refer to the underlying 'Process'
@@ -265,6 +290,24 @@ processorPrioritisingInputParallelUsingIds :: (PriorityQueueStrategy si qi pi,
                                               -- ^ the parallelized processor
 processorPrioritisingInputParallelUsingIds si so ps =
   processorPrioritisingInputParallel si so ps' where
+    ps' = map (\(pid, pi, p) -> (pi, processorUsingId pid p)) ps
+
+-- | Like 'processorPrioritisingInputOutputParallel' but allows specifying the process identifiers.
+processorPrioritisingInputOutputParallelUsingIds :: (PriorityQueueStrategy si qi pi,
+                                                     PriorityQueueStrategy so qo po)
+                                                    => si
+                                                    -- ^ the strategy applied for enqueuing
+                                                    -- the input data
+                                                    -> so
+                                                    -- ^ the strategy applied for enqueuing
+                                                    -- the output data
+                                                    -> [(ProcessId, Stream pi, Processor a (po, b))]
+                                                    -- ^ the streams of input priorities and
+                                                    -- the processors to parallelize
+                                                    -> Processor a b
+                                                    -- ^ the parallelized processor
+processorPrioritisingInputOutputParallelUsingIds si so ps =
+  processorPrioritisingInputOutputParallel si so ps' where
     ps' = map (\(pid, pi, p) -> (pi, processorUsingId pid p)) ps
 
 -- | Launches the processors in parallel consuming the same input stream and producing
