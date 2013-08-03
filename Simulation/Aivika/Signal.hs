@@ -13,13 +13,16 @@
 -- the handlers. 
 --
 module Simulation.Aivika.Signal
-       (Signal(..),
+       (-- * Handling and Triggering Signal
+        Signal(..),
         handleSignal_,
         SignalSource,
         newSignalSource,
         publishSignal,
         triggerSignal,
+        -- * Awaiting for Signal
         awaitSignal,
+        -- * Useful Combinators
         mapSignal,
         mapSignalM,
         apSignal,
@@ -30,10 +33,12 @@ module Simulation.Aivika.Signal
         merge3Signals,
         merge4Signals,
         merge5Signals,
+        -- * Creating Signal in Time Points
         newSignalInTimes,
         newSignalInIntegTimes,
         newSignalInStartTime,
         newSignalInStopTime,
+        -- * Signal History
         SignalHistory,
         signalHistorySignal,
         newSignalHistory,
