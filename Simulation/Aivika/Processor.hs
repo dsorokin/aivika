@@ -255,8 +255,12 @@ processorParallelUsingIds = processorQueuedParallelUsingIds FCFS FCFS
 --
 -- The priority queues can be treated in the same manner additionally using
 -- the 'mapStreamM', 'zipStreamSeq' or 'zipStreamParallel' combinators
--- to include the stream or even streams of priorities in the resulting computation. 
-queueProcessor :: (Stream a -> Process ()) -> Stream b -> Processor a b
+-- to include the stream or several streams of priorities in the resulting computation. 
+queueProcessor :: (Stream a -> Process ())
+                  -- ^ a separate process to consume the input 
+                  -> Stream b
+                  -- ^ the resulting stream of data
+                  -> Processor a b
 queueProcessor consume input =
   Processor $ \xs ->
   Cons $
