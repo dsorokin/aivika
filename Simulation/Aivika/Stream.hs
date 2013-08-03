@@ -27,6 +27,8 @@ module Simulation.Aivika.Stream
         zipStreamSeq,
         zipStreamParallel,
         unzipStream,
+        -- * Sinking Stream
+        sinkStream,
         -- * Useful Combinators
         repeatProcess,
         mapStream,
@@ -333,3 +335,13 @@ emptyStream = Cons z where
          -- although it can be still canceled
          processUsingId pid passivateProcess
          error "It should never happen: emptyStream."
+
+-- | Sink the stream. It returns a process that infinitely reads data
+-- from the stream. The resulting computation can be a moving force
+-- to simulate the whole system of the interconnected streams and
+-- processors.
+sinkStream :: Stream a -> Process ()
+sinkStream s = p s where
+  p (Cons s) = do (a, xs) <- s
+                  p xs
+  
