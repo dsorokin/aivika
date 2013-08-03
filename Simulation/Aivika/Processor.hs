@@ -261,8 +261,8 @@ queueProcessor :: (Stream a -> Process ())
                   -> Stream b
                   -- ^ the resulting stream of data
                   -> Processor a b
-queueProcessor consume input =
+queueProcessor consume output =
   Processor $ \xs ->
   Cons $
   do childProcess (consume xs)
-     runStream input
+     runStream output
