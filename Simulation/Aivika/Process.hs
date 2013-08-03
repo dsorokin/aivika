@@ -34,6 +34,9 @@ module Simulation.Aivika.Process
         forkProcessUsingId,
         childProcess,
         childProcessUsingId,
+        -- * Process Timeout
+        timeoutProcess,
+        timeoutProcessUsingId,
         -- * Enqueuing Process
         enqueueProcess,
         enqueueProcessUsingId,
@@ -66,6 +69,7 @@ module Simulation.Aivika.Process
         -- * Utilities
         zipProcessParallel,
         unzipProcess,
+        -- * Memoizing Process
         memoProcess) where
 
 import Data.IORef
@@ -92,7 +96,8 @@ unzipProcess xy =
   do xy' <- memoProcess xy
      return (fmap fst xy', fmap snd xy')
 
--- | Memoize the process always returning the same value.
+-- | Memoize the process so that it would always return the same value
+-- within the simulation run.
 memoProcess :: Process a -> Simulation (Process a)
 memoProcess x =
   do started  <- liftIO $ newIORef False
@@ -115,3 +120,28 @@ memoProcess x =
                         liftIO $ writeIORef value (Just a)
                         liftEvent $ triggerSignal computed ()
                         return a
+
+-- | Run the process in parallel and return a signal. If the process will
+-- finish successfully within the specified timeout then the signal will
+-- send 'True'; otherwise, it will cancel the process and send signal 'False'.
+timeoutProcess :: Double -> Process () -> Event (Signal Bool)
+timeoutProcess timeout p =
+  do pid <- liftSimulation newProcessId
+     timeoutProcessUsingId timeout pid p
+
+-- | Like 'timeoutProcess' but allows specifying the process identifier.
+timeoutProcessUsingId :: Double -> ProcessId -> Process () -> Event (Signal Bool)
+timeoutProcessUsingId timeout pid p =
+  do s <- liftSimulation newSignalSource
+     timeoutPid <- liftSimulation newProcessId
+     forkProcessUsingId timeoutPid $
+       do holdProcess timeout
+          liftEvent $
+            do cancelProcess pid
+               triggerSignal s False
+     forkProcessUsingId pid $
+       do p
+          liftEvent $
+            do cancelProcess timeoutPid
+               triggerSignal s True
+     return $ publishSignal s
