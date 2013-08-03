@@ -30,7 +30,8 @@ module Simulation.Aivika.Stream
         unzipStream,
         streamSeq,
         streamParallel,
-        -- * Sinking Stream
+        -- * Consuming and Sinking Stream
+        consumeStream,
         sinkStream,
         -- * Useful Combinators
         repeatProcess,
@@ -381,6 +382,16 @@ emptyStream = Cons z where
          -- although it can be still canceled
          processUsingId pid passivateProcess
          error "It should never happen: emptyStream."
+
+-- | Consume the stream. It returns a process that infinitely reads data
+-- from the stream and then redirects them to the provided function.
+-- It is useful for modeling the process of enqueuing data in the queue
+-- from the input stream.
+consumeStream :: (a -> Process ()) -> Stream a -> Process ()
+consumeStream f s = p s where
+  p (Cons s) = do (a, xs) <- s
+                  f a
+                  p xs
 
 -- | Sink the stream. It returns a process that infinitely reads data
 -- from the stream. The resulting computation can be a moving force
