@@ -31,6 +31,7 @@ module Simulation.Aivika.Internal.Signal
 
 import Data.IORef
 import Data.Monoid
+import Data.List
 
 import Control.Monad
 import Control.Monad.Trans
@@ -60,14 +61,15 @@ data Signal a =
   
 -- | The queue of signal handlers.
 data SignalHandlerQueue a =
-  SignalHandlerQueue { queueStart :: IORef (Maybe (SignalHandler a)),
-                       queueEnd   :: IORef (Maybe (SignalHandler a)) }
+  SignalHandlerQueue { queueList :: IORef [SignalHandler a] }
   
 -- | It contains the information about the disposable queue handler.
 data SignalHandler a =
   SignalHandler { handlerComp :: a -> Event (),
-                  handlerPrev :: IORef (Maybe (SignalHandler a)),
-                  handlerNext :: IORef (Maybe (SignalHandler a)) }
+                  handlerRef  :: IORef () }
+
+instance Eq (SignalHandler a) where
+  x == y = (handlerRef x) == (handlerRef y)
 
 -- | Subscribe the handler to the specified signal.
 -- To subscribe the disposable handlers, use function 'handleSignal'.
@@ -80,10 +82,8 @@ handleSignal_ signal h =
 newSignalSource :: Simulation (SignalSource a)
 newSignalSource =
   Simulation $ \r ->
-  do start <- newIORef Nothing
-     end <- newIORef Nothing
-     let queue  = SignalHandlerQueue { queueStart = start,
-                                       queueEnd   = end }
+  do list <- newIORef []
+     let queue  = SignalHandlerQueue { queueList = list }
          signal = Signal { handleSignal = handle }
          source = SignalSource { publishSignal = signal, 
                                  triggerSignal = trigger }
@@ -93,73 +93,32 @@ newSignalSource =
               return $
                 Event $ \p -> dequeueSignalHandler queue x
          trigger a =
-           Event $ \p ->
-           let h = queueStart queue
-           in triggerSignalHandlers h a p
+           Event $ \p -> triggerSignalHandlers queue a p
      return source
 
 -- | Trigger all next signal handlers.
-triggerSignalHandlers :: IORef (Maybe (SignalHandler a)) -> a -> Point -> IO ()
+triggerSignalHandlers :: SignalHandlerQueue a -> a -> Point -> IO ()
 {-# INLINE triggerSignalHandlers #-}
-triggerSignalHandlers r a p =
-  do x <- readIORef r
-     case x of
-       Nothing -> return ()
-       Just h ->
-         do invokeEvent p $ handlerComp h a
-            triggerSignalHandlers (handlerNext h) a p
+triggerSignalHandlers q a p =
+  do hs <- readIORef (queueList q)
+     forM_ hs $ \h ->
+       invokeEvent p $ handlerComp h a
             
 -- | Enqueue the handler and return its representative in the queue.            
 enqueueSignalHandler :: SignalHandlerQueue a -> (a -> Event ()) -> IO (SignalHandler a)
+{-# INLINE enqueueSignalHandler #-}
 enqueueSignalHandler q h = 
-  do tail <- readIORef (queueEnd q)
-     case tail of
-       Nothing ->
-         do prev <- newIORef Nothing
-            next <- newIORef Nothing
-            let handler = SignalHandler { handlerComp = h,
-                                          handlerPrev = prev,
-                                          handlerNext = next }
-            writeIORef (queueStart q) (Just handler)
-            writeIORef (queueEnd q) (Just handler)
-            return handler
-       Just x ->
-         do prev <- newIORef tail
-            next <- newIORef Nothing
-            let handler = SignalHandler { handlerComp = h,
-                                          handlerPrev = prev,
-                                          handlerNext = next }
-            writeIORef (handlerNext x) (Just handler)
-            writeIORef (queueEnd q) (Just handler)
-            return handler
+  do r <- newIORef ()
+     let handler = SignalHandler { handlerComp = h,
+                                   handlerRef  = r }
+     modifyIORef (queueList q) (handler :)
+     return handler
 
 -- | Dequeue the handler representative.
 dequeueSignalHandler :: SignalHandlerQueue a -> SignalHandler a -> IO ()
+{-# INLINE dequeueSignalHandler #-}
 dequeueSignalHandler q h = 
-  do prev <- readIORef (handlerPrev h)
-     case prev of
-       Nothing ->
-         do next <- readIORef (handlerNext h)
-            case next of
-              Nothing ->
-                do writeIORef (queueStart q) Nothing
-                   writeIORef (queueEnd q) Nothing
-              Just y ->
-                do writeIORef (handlerPrev y) Nothing
-                   writeIORef (handlerNext h) Nothing
-                   writeIORef (queueStart q) next
-       Just x ->
-         do next <- readIORef (handlerNext h)
-            case next of
-              Nothing ->
-                do writeIORef (handlerPrev h) Nothing
-                   writeIORef (handlerNext x) Nothing
-                   writeIORef (queueEnd q) prev
-              Just y ->
-                do writeIORef (handlerPrev h) Nothing
-                   writeIORef (handlerNext h) Nothing
-                   writeIORef (handlerPrev y) prev
-                   writeIORef (handlerNext x) next
+  modifyIORef (queueList q) (delete h)
 
 instance Functor Signal where
   fmap = mapSignal
