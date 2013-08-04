@@ -82,6 +82,12 @@ instance Arrow Processor where
     do ~(xs, ys) <- liftSimulation $ unzipStream xys
        runStream $ zipStreamParallel (f xs) (g ys)
 
+-- N.B.
+-- Very probably, Processor is not ArrowLoop,
+-- which would be natural as Process is not MonadFix,
+-- for the discontinuous process is not irreversible
+-- and the time flows in one direction only.
+--
 -- -- The implementation is based on article
 -- -- A New Notation for Arrows by Ross Paterson,
 -- -- although my streams are different and they
