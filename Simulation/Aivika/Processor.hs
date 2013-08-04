@@ -82,21 +82,21 @@ instance Arrow Processor where
     do ~(xs, ys) <- liftSimulation $ unzipStream xys
        runStream $ zipStreamParallel (f xs) (g ys)
 
--- The implementation is based on article
--- A New Notation for Arrows by Ross Paterson,
--- although my streams are different and they
--- already depend on the Process monad,
--- while the pure streams were considered in the
--- mentioned article.
-instance ArrowLoop Processor where
-
-  loop (Processor f) =
-    Processor $ \xs ->
-    Cons $
-    do Cons zs <- liftSimulation $
-                  simulationLoop (\(xs, ys) ->
-                                   unzipStream $ f $ zipStreamSeq xs ys) xs
-       zs
+-- -- The implementation is based on article
+-- -- A New Notation for Arrows by Ross Paterson,
+-- -- although my streams are different and they
+-- -- already depend on the Process monad,
+-- -- while the pure streams were considered in the
+-- -- mentioned article.
+-- instance ArrowLoop Processor where
+-- 
+--   loop (Processor f) =
+--     Processor $ \xs ->
+--     Cons $
+--     do Cons zs <- liftSimulation $
+--                   simulationLoop (\(xs, ys) ->
+--                                    unzipStream $ f $ zipStreamSeq xs ys) xs
+--        zs
 
 simulationLoop :: ((b, d) -> Simulation (c, d)) -> b -> Simulation c
 simulationLoop f b =
