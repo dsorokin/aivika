@@ -67,20 +67,20 @@ instance Arrow Processor where
   first (Processor f) =
     Processor $ \xys ->
     Cons $
-    do ~(xs, ys) <- liftSimulation $ unzipStream xys
+    do (xs, ys) <- liftSimulation $ unzipStream xys
        runStream $ zipStreamSeq (f xs) ys
 
   second (Processor f) =
     Processor $ \xys ->
     Cons $
-    do ~(xs, ys) <- liftSimulation $ unzipStream xys
+    do (xs, ys) <- liftSimulation $ unzipStream xys
        runStream $ zipStreamSeq xs (f ys)
 
   Processor f *** Processor g =
     Processor $ \xys ->
     Cons $
-    do ~(xs, ys) <- liftSimulation $ unzipStream xys
-       runStream $ zipStreamParallel (f xs) (g ys)
+    do (xs, ys) <- liftSimulation $ unzipStream xys
+       runStream $ zipStreamSeq (f xs) (g ys)
 
 -- N.B.
 -- Very probably, Processor is not ArrowLoop,
