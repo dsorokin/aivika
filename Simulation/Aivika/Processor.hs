@@ -14,6 +14,7 @@ module Simulation.Aivika.Processor
         Processor(..),
         -- * Creating Simple Processor
         simpleProcessor,
+        statefulProcessor,
         -- * Specifying Identifier
         processorUsingId,
         -- * Creating Queue Processor
@@ -155,6 +156,16 @@ instance ProcessLift (Processor a) where
 -- that runs the discontinuous process for each input value to get the output.
 simpleProcessor :: (a -> Process b) -> Processor a b
 simpleProcessor = Processor . mapStreamM
+
+-- | Like 'simpleProcessor' but allows creating a processor that has a state
+-- which is passed in to every new iteration.
+statefulProcessor :: s -> ((s, a) -> Process (s, b)) -> Processor a b
+statefulProcessor s f =
+  Processor $ \xs -> Cons $ loop s xs where
+    loop s xs =
+      do (a, xs') <- runStream xs
+         (s', b) <- f (s, a)
+         return (b, Cons $ loop s' xs')
 
 -- | Create a processor that will use the specified process identifier.
 -- It can be useful to refer to the underlying 'Process' computation which
