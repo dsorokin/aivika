@@ -128,7 +128,19 @@ instance ArrowChoice Processor where
     Cons $
     do ys <- liftSimulation $ memoStream xs
        runStream $ replaceRightStream ys (f $ rightStream ys)
-           
+
+instance ArrowZero Processor where
+
+  zeroArrow = Processor $ const emptyStream
+
+instance ArrowPlus Processor where
+
+  (Processor f) <+> (Processor g) =
+    Processor $ \xs ->
+    Cons $
+    do [xs1, xs2] <- liftSimulation $ splitStream 2 xs
+       runStream $ mergeStreams (f xs1) (g xs2)
+              
 instance SimulationLift (Processor a) where
   liftSimulation = Processor . mapStreamM . const . liftSimulation
 
