@@ -46,7 +46,8 @@ module Simulation.Aivika.Stream
         leftStream,
         rightStream,
         replaceLeftStream,
-        replaceRightStream) where
+        replaceRightStream,
+        partitionEitherStream) where
 
 import Data.IORef
 import Data.Maybe
@@ -222,6 +223,12 @@ replaceRightStream (Cons sab) (ys0 @ (Cons sc)) = Cons z where
                 return (Right b, replaceRightStream xs ys)
            Left a ->
              return (Left a, replaceRightStream xs ys0)
+
+-- | Partition the stream of 'Either' values into two streams.
+partitionEitherStream :: Stream (Either a b) -> Simulation (Stream a, Stream b)
+partitionEitherStream s =
+  do s' <- memoStream s
+     return (leftStream s', rightStream s')
 
 -- | Split the input stream into the specified number of output streams
 -- after applying the 'FCFS' strategy for enqueuing the output requests.
