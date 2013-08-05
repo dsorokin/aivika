@@ -80,7 +80,7 @@ poissonGen mu =
            | prob <= prod = return acc
            | otherwise    = loop
                             (prob - prod)
-                            (prod * mu / fromIntegral acc)
+                            (prod * mu / fromIntegral (acc + 1))
                             (acc + 1)
      loop prob0 (exp (- mu)) 0
 
