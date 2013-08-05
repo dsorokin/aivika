@@ -1,6 +1,4 @@
 
-{-# LANGUAGE RecursiveDo #-}
-
 -- |
 -- Module     : Simulation.Aivika.Processor
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
@@ -103,11 +101,11 @@ instance Arrow Processor where
 --                   simulationLoop (\(xs, ys) ->
 --                                    unzipStream $ f $ zipStreamSeq xs ys) xs
 --        zs
-
-simulationLoop :: ((b, d) -> Simulation (c, d)) -> b -> Simulation c
-simulationLoop f b =
-  mdo (c, d) <- f (b, d)
-      return c
+-- 
+-- simulationLoop :: ((b, d) -> Simulation (c, d)) -> b -> Simulation c
+-- simulationLoop f b =
+--   mdo (c, d) <- f (b, d)
+--       return c
 
 -- The implementation is based on article
 -- A New Notation for Arrows by Ross Paterson,
