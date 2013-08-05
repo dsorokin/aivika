@@ -408,8 +408,8 @@ queueProcessorLoop :: (Stream a -> Stream c -> Process ())
                       -> Stream d
                       -- ^ the stream of data that may become results
                       -> Processor d (Either c b)
-                      -- ^ decide what values of type @c@ should be redirected
-                      -- to the queue again
+                      -- ^ processs and then decide what values of type @c@
+                      -- should be redirected to the queue again
                       -> Processor a b
 queueProcessorLoop consume preoutput filter =
   Processor $ \xs ->
