@@ -10,7 +10,7 @@
 -- Below are defined some random functions.
 --
 module Simulation.Aivika.Random 
-       (randomGen,
+       (uniformGen,
         newNormalGen,
         exponentialGen,
         poissonGen,
@@ -20,12 +20,12 @@ import System.Random
 import Data.IORef
 
 -- | Generate the uniform random number with the specified minimum and maximum.
-randomGen :: Double
-             -- ^ minimum
-             -> Double
-             -- ^ maximum
-             -> IO Double
-randomGen min max =
+uniformGen :: Double
+              -- ^ minimum
+              -> Double
+              -- ^ maximum
+              -> IO Double
+uniformGen min max =
   do x <- getStdRandom random
      return $ min + x * (max - min)
 

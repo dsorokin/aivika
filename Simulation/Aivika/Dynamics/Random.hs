@@ -13,7 +13,7 @@
 --
 
 module Simulation.Aivika.Dynamics.Random 
-       (newRandomDynamics,
+       (newUniformDynamics,
         newNormalDynamics,
         newExponentialDynamics,
         newPoissonDynamics,
@@ -29,10 +29,10 @@ import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Memo.Unboxed
 
 -- | Return the uniform random numbers in the integration time points.
-newRandomDynamics :: Dynamics Double     -- ^ minimum
-                  -> Dynamics Double     -- ^ maximum
-                  -> Simulation (Dynamics Double)
-newRandomDynamics min max =
+newUniformDynamics :: Dynamics Double     -- ^ minimum
+                   -> Dynamics Double     -- ^ maximum
+                   -> Simulation (Dynamics Double)
+newUniformDynamics min max =
   memo0Dynamics $ do
     x <- liftIO $ getStdRandom random
     min + return x * (max - min)

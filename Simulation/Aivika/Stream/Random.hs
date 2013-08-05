@@ -12,7 +12,7 @@
 --
 
 module Simulation.Aivika.Stream.Random
-       (randomStream,
+       (uniformStream,
         normalStream,
         exponentialStream,
         poissonStream,
@@ -29,16 +29,16 @@ import Simulation.Aivika.Random
 import Simulation.Aivika.Stream
 
 -- | Create a new stream with delays distributed uniformly.
-randomStream :: Dynamics Double     -- ^ the minimum delay
-                -> Dynamics Double  -- ^ the maximum delay
-                -> Stream Double    -- ^ the stream of delays
-randomStream min max = Cons z where
+uniformStream :: Dynamics Double     -- ^ the minimum delay
+                 -> Dynamics Double  -- ^ the maximum delay
+                 -> Stream Double    -- ^ the stream of delays
+uniformStream min max = Cons z where
   z = do x <- liftIO $ getStdRandom random
          min' <- liftDynamics min
          max' <- liftDynamics max
          let delay = min' + x * (max' - min')
          holdProcess delay
-         return (delay, randomStream min max)
+         return (delay, uniformStream min max)
 
 -- | Create a new stream with delays distributed normally.
 normalStream :: Dynamics Double     -- ^ the mean delay
