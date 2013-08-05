@@ -139,18 +139,20 @@ instance ArrowPlus Processor where
     Cons $
     do [xs1, xs2] <- liftSimulation $ splitStream 2 xs
        runStream $ mergeStreams (f xs1) (g xs2)
-              
-instance SimulationLift (Processor a) where
-  liftSimulation = Processor . mapStreamM . const . liftSimulation
 
-instance DynamicsLift (Processor a) where
-  liftDynamics = Processor . mapStreamM . const . liftDynamics
-
-instance EventLift (Processor a) where
-  liftEvent = Processor . mapStreamM . const . liftEvent
-
-instance ProcessLift (Processor a) where
-  liftProcess = Processor . mapStreamM . const    -- data first!
+-- These instances are meaningless:
+-- 
+-- instance SimulationLift (Processor a) where
+--   liftSimulation = Processor . mapStreamM . const . liftSimulation
+-- 
+-- instance DynamicsLift (Processor a) where
+--   liftDynamics = Processor . mapStreamM . const . liftDynamics
+-- 
+-- instance EventLift (Processor a) where
+--   liftEvent = Processor . mapStreamM . const . liftEvent
+-- 
+-- instance ProcessLift (Processor a) where
+--   liftProcess = Processor . mapStreamM . const    -- data first!
 
 -- | Create a simple processor by the specified handling function
 -- that runs the discontinuous process for each input value to get the output.
