@@ -10,7 +10,8 @@
 -- Below are defined some random functions.
 --
 module Simulation.Aivika.Random 
-       (newNormalGen,
+       (randomGen,
+        newNormalGen,
         exponentialGen,
         poissonGen,
         binomialGen) where
@@ -18,7 +19,17 @@ module Simulation.Aivika.Random
 import System.Random
 import Data.IORef
 
--- | Createa a normal random number generator with mean 0 and variance 1.
+-- | Generate the uniform random number with the specified minimum and maximum.
+randomGen :: Double
+             -- ^ minimum
+             -> Double
+             -- ^ maximum
+             -> IO Double
+randomGen min max =
+  do x <- getStdRandom random
+     return $ min + x * (max - min)
+
+-- | Create a normal random number generator with mean 0 and variance 1.
 newNormalGen :: IO (IO Double)
 newNormalGen =
   do nextRef <- newIORef 0.0
