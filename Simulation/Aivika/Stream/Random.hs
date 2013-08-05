@@ -16,7 +16,8 @@ module Simulation.Aivika.Stream.Random
         normalStream,
         exponentialStream,
         poissonStream,
-        binomialStream) where
+        binomialStream,
+        delayStream) where
 
 import System.Random
 
@@ -84,3 +85,14 @@ binomialStream prob trials = Cons z where
          delay <- liftIO $ binomialGen prob' trials'
          holdProcess $ fromIntegral delay
          return (delay, binomialStream prob trials)
+
+-- | Create a new stream with the specified delays. This function is useful
+-- if you want to create a random stream, which is not defined in this module.
+-- So, you can lift any 'IO' computation to the 'Dynamics' computation, for example,
+-- such a generation of the random number, which will be repeated again and again.
+delayStream :: Dynamics Double   -- ^ the delay
+               -> Stream Double  -- ^ the stream of delays applied
+delayStream x = Cons z where
+  z = do delay <- liftDynamics x
+         holdProcess delay
+         return (delay, delayStream x)
