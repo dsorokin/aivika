@@ -19,6 +19,7 @@ module Simulation.Aivika.Processor
         processorUsingId,
         -- * Creating Queue Processor
         queueProcessor,
+        queueProcessorLoop,
         -- * Parallelizing Processors
         processorParallel,
         processorParallelUsingIds,
@@ -376,4 +377,46 @@ queueProcessor consume output =
   Processor $ \xs ->
   Cons $
   do childProcess (consume xs)
+     runStream output
+
+-- | Like 'queueProcessor' but allows creating a loop when some items
+-- can be returned to the queue to be processed again.
+--
+-- A typical use case is as follows:
+--
+-- @
+--   do let capacity = 10
+--      q <- newFCFSQueue capacity
+--      let p :: Processor d (Either c b)
+--          p = ...  -- process and decide what to do
+--          qp = queueProcessorLoop
+--               (\\a c -> consumeStream (enqueue q) $
+--                        mergeStreams a c)
+--               (repeatProcess $ dequeue q)
+--               p
+-- @
+--
+-- Note that we can decide in what order the two streams are handled when
+-- consuming data.
+--
+-- The priority queues are processed in the same manner, although it may
+-- require more glueing code.
+queueProcessorLoop :: (Stream a -> Stream c -> Process ())
+                      -- ^ consume two streams: the input values of type @a@
+                      -- and the values of type @c@ redirected to the queue
+                      -- by loop
+                      -> Stream d
+                      -- ^ the stream of data that may become results
+                      -> Processor d (Either c b)
+                      -- ^ decide what values of type @c@ should be redirected
+                      -- to the queue again
+                      -> Processor a b
+queueProcessorLoop consume preoutput filter =
+  Processor $ \xs ->
+  Cons $
+  do (reverted, output) <-
+       liftSimulation $
+       partitionEitherStream $
+       runProcessor filter preoutput
+     childProcess (consume xs reverted)
      runStream output
