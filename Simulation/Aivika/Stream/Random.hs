@@ -90,9 +90,9 @@ binomialStream prob trials = Cons z where
 -- if you want to create a random stream, which is not defined in this module.
 -- So, you can lift any 'IO' computation to the 'Dynamics' computation, for example,
 -- such a generation of the random number, which will be repeated again and again.
-delayStream :: Dynamics Double   -- ^ the delay
-               -> Stream Double  -- ^ the stream of delays applied
+delayStream :: Dynamics (a, Double)  -- ^ the value and its delay
+               -> Stream a           -- ^ the stream of values delayed in time
 delayStream x = Cons z where
-  z = do delay <- liftDynamics x
+  z = do (a, delay) <- liftDynamics x
          holdProcess delay
-         return (delay, delayStream x)
+         return (a, delayStream x)
