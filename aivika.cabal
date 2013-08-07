@@ -140,6 +140,7 @@ library
                      Simulation.Aivika.Var.Unboxed
                      Simulation.Aivika.Vector
                      Simulation.Aivika.Vector.Unboxed
+                     Simulation.Aivika.Worker
 
     other-modules:   Simulation.Aivika.Internal.Cont
                      Simulation.Aivika.Internal.Dynamics
