@@ -193,19 +193,19 @@ bindWithoutCatch (Cont m) k c =
             let cont a = invokeCont c (k a)
             in c { contCont = cont }
 
--- It is not tail recursive!
-bindWithCatch :: Cont a -> (a -> Cont b) -> ContParams b -> Event ()
-{-# NOINLINE bindWithCatch #-}
-bindWithCatch (Cont m) k c = 
-  Event $ \p ->
-  do z <- contCanceled c
-     if z 
-       then cancelCont p c
-       else invokeEvent p $ m $ 
-            let cont a = catchEvent 
-                         (invokeCont c (k a))
-                         (contECont $ contAux c)
-            in c { contCont = cont }
+-- -- It is not tail recursive!
+-- bindWithCatch :: Cont a -> (a -> Cont b) -> ContParams b -> Event ()
+-- {-# NOINLINE bindWithCatch #-}
+-- bindWithCatch (Cont m) k c = 
+--   Event $ \p ->
+--   do z <- contCanceled c
+--      if z 
+--        then cancelCont p c
+--        else invokeEvent p $ m $ 
+--             let cont a = catchEvent 
+--                          (invokeCont c (k a))
+--                          (contECont $ contAux c)
+--             in c { contCont = cont }
 
 -- Like "bindWithoutCatch (return a) k"
 callWithoutCatch :: (a -> Cont b) -> a -> ContParams b -> Event ()
@@ -216,16 +216,16 @@ callWithoutCatch k a c =
        then cancelCont p c
        else invokeEvent p $ invokeCont c (k a)
 
--- Like "bindWithCatch (return a) k" but it is not tail recursive!
-callWithCatch :: (a -> Cont b) -> a -> ContParams b -> Event ()
-callWithCatch k a c =
-  Event $ \p ->
-  do z <- contCanceled c
-     if z 
-       then cancelCont p c
-       else invokeEvent p $ catchEvent 
-            (invokeCont c (k a))
-            (contECont $ contAux c)
+-- -- Like "bindWithCatch (return a) k" but it is not tail recursive!
+-- callWithCatch :: (a -> Cont b) -> a -> ContParams b -> Event ()
+-- callWithCatch k a c =
+--   Event $ \p ->
+--   do z <- contCanceled c
+--      if z 
+--        then cancelCont p c
+--        else invokeEvent p $ catchEvent 
+--             (invokeCont c (k a))
+--             (contECont $ contAux c)
 
 -- | Exception handling within 'Cont' computations.
 catchCont :: Cont a -> (IOException -> Cont a) -> Cont a
