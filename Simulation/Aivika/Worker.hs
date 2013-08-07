@@ -9,7 +9,23 @@
 --
 -- It defines the data structure that models the worker.
 module Simulation.Aivika.Worker
-       (Worker) where
+       (-- * Worker
+        Worker,
+        newWorker,
+        newWorkerUsingId,
+        -- * Worker's Processor
+        workerProcessor,
+        -- * Worker Properties and Activities
+        workerTotalFreeTime,
+        workerTotalEffortTime,
+        workerTotalTimeInLock,
+        workerFreeTime,
+        workerEffortTime,
+        workerTimeInLock,
+        -- * Signals
+        workerReleased,
+        workerLoaded,
+        workerProduced) where
 
 import Data.IORef
 import Control.Monad.Trans
@@ -53,13 +69,14 @@ data Worker a b =
            -- proceeding to the first task.
          }
 
--- | Create a new worker that can produce @b@ by the input @a@.
+-- | Create a new worker that can produce output @b@ by the input @a@.
 newWorker :: (a -> Process b) -> Simulation (Worker a b)
 newWorker produce =
   do pid <- newProcessId
      newWorkerUsingId pid produce
 
--- | Create with the specified identifier a new worker that can produce @b@ by the input @a@.
+-- | Create with the specified identifier a new worker that can produce
+-- output @b@ by the input @a@.
 newWorkerUsingId :: ProcessId -> (a -> Process b) -> Simulation (Worker a b)
 newWorkerUsingId pid produce =
   do r1 <- liftIO $ newIORef 0
@@ -147,7 +164,7 @@ workerTotalEffortTime w =
                   observableChanged_ =
                     mapSignal (const ()) (workerProduced w) }
 
--- | Return the counted total effort time that the worker spent on all tasks.
+-- | Return the counted total time that the worker spent on all tasks.
 workerTotalTimeInLock :: Worker a b -> Observable Double
 workerTotalTimeInLock w =
   let read = Event $ \p -> readIORef (workerTotalTimeInLockRef w)
