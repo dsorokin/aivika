@@ -13,6 +13,7 @@ module Simulation.Aivika.Worker
         Worker,
         newWorker,
         newWorkerUsingId,
+        workerProcessId,
         -- * Worker's Processor
         workerProcessor,
         -- * Worker Properties and Activities
@@ -101,6 +102,11 @@ newWorkerUsingId pid produce =
                      workerReleasedSource = s3 }
 
 -- | Return a processor by the specified worker.
+--
+-- You cannot use more than one processor for each worker. The worker is bound up
+-- with the process identifier, which is either specified explicitly or generated
+-- when creating a worker. This identifier cannot be used twice when running
+-- the processor; otherwise, a run time error will be raised.
 workerProcessor :: Worker a b -> Processor a b
 workerProcessor w =
   Processor $ \xs ->
