@@ -26,6 +26,8 @@ module Simulation.Aivika.Worker
         workerFreeTimeFactor,
         workerEffortTimeFactor,
         workerTimeInLockFactor,
+        -- * Summary
+        workerSummary,
         -- * Signals
         workerReleased,
         workerLoaded,
@@ -316,3 +318,57 @@ workerProduced = publishSignal . workerProducedSource
 -- proceeding to the first task.
 workerReleased :: Worker a b -> Signal ()
 workerReleased = publishSignal . workerReleasedSource
+
+-- | Return the summary for the worker with desciption of its
+-- properties and activities using the specified indent.
+workerSummary :: Worker a b -> Int -> Observable ShowS
+workerSummary w indent =
+  let read =
+        Event $ \p ->
+        do tx1 <- readIORef (workerTotalFreeTimeRef w)
+           tx2 <- readIORef (workerTotalEffortTimeRef w)
+           tx3 <- readIORef (workerTotalTimeInLockRef w)
+           let xf1 = tx1 / (tx1 + tx2 + tx3)
+               xf2 = tx2 / (tx1 + tx2 + tx3)
+               xf3 = tx3 / (tx1 + tx2 + tx3)
+           xs1 <- readIORef (workerFreeTimeRef w)
+           xs2 <- readIORef (workerEffortTimeRef w)
+           xs3 <- readIORef (workerTimeInLockRef w)
+           let tab = replicate indent ' '
+           return $
+             showString tab .
+             showString "total free time = " . shows tx1 .
+             showString "\n" .
+             showString tab .
+             showString "total effort time = " . shows tx2 .
+             showString "\n" .
+             showString tab .
+             showString "total time in the lock = " . shows tx3 .
+             showString "\n\n" .
+             showString tab .
+             showString "free time factor (from 0 to 1) = " . shows xf1 .
+             showString "\n" .
+             showString tab .
+             showString "effort time factor (from 0 to 1) = " . shows xf2 .
+             showString "\n" .
+             showString tab .
+             showString "factor for the time spent in lock (from 0 to 1) = " . shows xf3 .
+             showString "\n\n" .
+             showString tab .
+             showString "free time:" .
+             showString tab .
+             samplingStatsSummary xs1 (2 + indent) .
+             showString "\n\n" .
+             showString tab .
+             showString "effort time: " .
+             samplingStatsSummary xs2 (2 + indent) .
+             showString "\n\n" .
+             showString tab .
+             showString "time spent in the lock:" .
+             samplingStatsSummary xs3 (2 + indent)
+      signal =
+        mapSignal (const ()) (workerLoaded w) <>
+        mapSignal (const ()) (workerProduced w) <>
+        workerReleased w
+  in Observable { readObservable = read,
+                  observableChanged_ = signal }
