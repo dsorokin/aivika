@@ -197,8 +197,8 @@ instance Show a => Show (SamplingStats a) where
   showsPrec prec = showSamplingStats
 
 -- | Show the summary of the statistics using the specified indent.       
-samplingStatsSummary :: (Show a) => Int -> SamplingStats a -> ShowS
-samplingStatsSummary indent stats =
+samplingStatsSummary :: (Show a) => SamplingStats a -> Int -> ShowS
+samplingStatsSummary stats indent =
   let tab = replicate indent ' '
   in showString tab .
      showString "count = " . shows (samplingStatsCount stats) .
@@ -384,8 +384,8 @@ instance (Show a, TimingData a) => Show (TimingStats a) where
   showsPrec prec = showTimingStats
 
 -- | Show the summary of the statistics using the specified indent.       
-timingStatsSummary :: (Show a, TimingData a) => Int -> TimingStats a -> ShowS
-timingStatsSummary indent stats =
+timingStatsSummary :: (Show a, TimingData a) => TimingStats a -> Int -> ShowS
+timingStatsSummary stats indent =
   let tab = replicate indent ' '
   in showString tab .
      showString "count = " . shows (timingStatsCount stats) . 
