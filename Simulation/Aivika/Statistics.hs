@@ -16,6 +16,7 @@ module Simulation.Aivika.Statistics
         SamplingData(..),
         samplingStatsVariance,
         samplingStatsDeviation,
+        samplingStatsSummary,
         returnSamplingStats,
         listSamplingStats,
         fromIntSamplingStats,
@@ -23,6 +24,7 @@ module Simulation.Aivika.Statistics
         TimingStats(..),
         TimingData(..),
         timingStatsDeviation,
+        timingStatsSummary,
         returnTimingStats,
         fromIntTimingStats) where 
 
@@ -193,6 +195,25 @@ showSamplingStats stats =
 
 instance Show a => Show (SamplingStats a) where
   showsPrec prec = showSamplingStats
+
+-- | Show the summary of the statistics using the specified indent.       
+samplingStatsSummary :: (Show a) => Int -> SamplingStats a -> ShowS
+samplingStatsSummary indent stats =
+  let tab = replicate indent ' '
+  in showString tab .
+     showString "count = " . shows (samplingStatsCount stats) .
+     showString "\n" .
+     showString tab .
+     showString "mean = " . shows (samplingStatsMean stats) . 
+     showString "\n" .
+     showString tab .
+     showString "std = " . shows (samplingStatsDeviation stats) . 
+     showString "\n" .
+     showString tab .
+     showString "min = " . shows (samplingStatsMin stats) . 
+     showString "\n" .
+     showString tab .
+     showString "max = " . shows (samplingStatsMax stats)
      
 -- | This is the timing statistics where data are bound to the time.
 data TimingStats a =
@@ -361,3 +382,29 @@ showTimingStats stats =
 
 instance (Show a, TimingData a) => Show (TimingStats a) where
   showsPrec prec = showTimingStats
+
+-- | Show the summary of the statistics using the specified indent.       
+timingStatsSummary :: (Show a, TimingData a) => Int -> TimingStats a -> ShowS
+timingStatsSummary indent stats =
+  let tab = replicate indent ' '
+  in showString tab .
+     showString "count = " . shows (timingStatsCount stats) . 
+     showString "\n" .
+     showString tab .
+     showString "mean = " . shows (timingStatsMean stats) . 
+     showString "\n" .
+     showString tab .
+     showString "std = " . shows (timingStatsDeviation stats) . 
+     showString "\n" .
+     showString tab .
+     showString "min = " . shows (timingStatsMin stats) . 
+     showString " (t = " . shows (timingStatsMinTime stats) .
+     showString ")\n" .
+     showString tab .
+     showString "max = " . shows (timingStatsMax stats) .
+     showString " (t = " . shows (timingStatsMaxTime stats) .
+     showString ")\n" .
+     showString tab .
+     showString "t in [" . shows (timingStatsStartTime stats) .
+     showString ", " . shows (timingStatsLastTime stats) .
+     showString "]"
