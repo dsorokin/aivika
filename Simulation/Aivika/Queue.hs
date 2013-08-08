@@ -61,6 +61,9 @@ module Simulation.Aivika.Queue
         enqueueWithStoringPriorityOrLost_,
         -- * Awaiting
         waitWhileFullQueue,
+        -- * Processing Queue
+        queueProcessor,
+        queueProcessorLoop,
         -- * Signals
         enqueueInitiated,
         enqueueStored,
@@ -84,6 +87,8 @@ import Simulation.Aivika.Signal
 import Simulation.Aivika.Resource
 import Simulation.Aivika.QueueStrategy
 import Simulation.Aivika.Statistics
+import Simulation.Aivika.Stream
+import Simulation.Aivika.Processor
 
 import qualified Simulation.Aivika.DoubleLinkedList as DLL 
 import qualified Simulation.Aivika.Vector as V
@@ -743,3 +748,75 @@ waitWhileFullQueue q =
        do awaitSignal (dequeueExtracted q)
           waitWhileFullQueue q
 
+-- | Return a processor for the queue that does not use priorities.
+--
+-- The function has the following definition:
+--
+-- @
+-- queueProcessor q =
+--   let consume a =
+--         enqueue q a >> waitWhileFullQueue q
+--   in bufferProcessor
+--      (consumeStream consume)
+--      (repeatProcess $ dequeue q)
+-- @
+--
+-- In the same manner you can create a processor for the priority queue applying
+-- the 'bufferProcessor' function, only it will require more glueing code using
+-- the 'mapStreamM', 'zipStreamSeq' or 'zipStreamParallel' combinators
+-- to include the stream or several streams of priorities in the resulting computation.
+-- The number of possible combinations is quite great, therefore there are no
+-- predefined processors for the priority queues but such functions can be easily
+-- created. The current function is just the most common use case.
+queueProcessor :: (EnqueueStrategy si qi,
+                   EnqueueStrategy sm qm,
+                   EnqueueStrategy so qo)
+                  => Queue si qi sm qm so qo a
+                  -- ^ the queue that is used for storing items
+                  -> Processor a a
+                  -- ^ the buffer processor that uses the queue to store the items
+queueProcessor q =
+  let consume a =
+        enqueue q a >> waitWhileFullQueue q
+  in bufferProcessor
+     (consumeStream consume)
+     (repeatProcess $ dequeue q)
+
+-- | Like 'queueProcessor' but allows creating a loop when some items
+-- can be returned for processing them again.
+--
+-- The function calls 'bufferProcessorLoop' and it has the following definition:
+--
+-- @
+-- queueProcessorLoop q =
+--   let consume a =
+--         enqueue q a >> waitWhileFullQueue q
+--   in bufferProcessorLoop
+--      (\\as cs ->
+--        consumeStream consume $
+--        mergeStreams as cs)
+--      (repeatProcess $ dequeue q)
+-- @
+--
+-- Note that here stream @as@ is considered first, while stream @cs@ is considered
+-- last when consuming data. You can redefine it if needed.
+--
+-- Finally, the priority queues can be treated in the same manner. Only it will require
+-- more glueing code.
+queueProcessorLoop :: (EnqueueStrategy si qi,
+                       EnqueueStrategy sm qm,
+                       EnqueueStrategy so qo)
+                      => Queue si qi sm qm so qo a
+                      -- ^ the queue that is used for storing items
+                      -> Processor a (Either a b)
+                      -- ^ processs and then decide what values of type @a@
+                      -- should be redirected to the queue again
+                      -> Processor a b
+queueProcessorLoop q =
+  let consume a =
+        enqueue q a >> waitWhileFullQueue q
+  in bufferProcessorLoop
+     (\as cs ->
+       consumeStream consume $
+       mergeStreams as cs)
+     (repeatProcess $ dequeue q)

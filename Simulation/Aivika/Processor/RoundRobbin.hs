@@ -50,7 +50,7 @@ roundRobbinProcessorUsingIds =
                   do liftEvent $ enqueue q t 
                      process
          processor =
-           queueProcessor
+           bufferProcessor
            (consumeStream $ liftEvent . enqueue q)
            (repeatProcess process)
      runStream $ runProcessor processor xs
