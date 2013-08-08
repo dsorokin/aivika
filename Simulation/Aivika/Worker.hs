@@ -103,7 +103,7 @@ newWorkerUsingId pid produce =
 
 -- | Return a processor by the specified worker.
 --
--- You cannot use more than one processor for each worker. The worker is bound up
+-- You cannot use more than one processor for the worker. The worker is bound up
 -- with the process identifier, which is either specified explicitly or generated
 -- when creating a worker. This identifier cannot be used twice when running
 -- the processor; otherwise, a run time error will be raised.
@@ -113,33 +113,35 @@ workerProcessor w =
   Cons $
   do loadingRes   <- liftSimulation $ newFCFSResourceWithMaxCount 1 (Just 1)
      producingRes <- liftSimulation $ newFCFSResourceWithMaxCount 0 (Just 1)
-     production <- liftIO $ newIORef Nothing
+     production   <- liftIO $ newIORef Nothing
      let worker t' xs =
            do requestResource loadingRes
               t0 <- liftDynamics time
-              liftIO $
-                do modifyIORef (workerTotalTimeInLockRef w) (+ (t0 - t'))
-                   modifyIORef (workerTimeInLockRef w) $
-                     addSamplingStats (t0 - t')
               liftEvent $
-                triggerSignal (workerReleasedSource w) ()
+                do liftIO $
+                     do modifyIORef (workerTotalTimeInLockRef w) (+ (t0 - t'))
+                        modifyIORef (workerTimeInLockRef w) $
+                          addSamplingStats (t0 - t')
+                   triggerSignal (workerReleasedSource w) ()
+              -- get input
               (a, xs') <- runStream xs
               t1 <- liftDynamics time
-              liftIO $
-                do modifyIORef (workerTotalFreeTimeRef w) (+ (t1 - t0))
-                   modifyIORef (workerFreeTimeRef w) $
-                     addSamplingStats (t1 - t0)
               liftEvent $
-                triggerSignal (workerLoadedSource w) a
+                do liftIO $
+                     do modifyIORef (workerTotalFreeTimeRef w) (+ (t1 - t0))
+                        modifyIORef (workerFreeTimeRef w) $
+                          addSamplingStats (t1 - t0)
+                   triggerSignal (workerLoadedSource w) a
+              -- produce
               b <- workerProduce w a
-              liftIO $ writeIORef production (Just b)
               t2 <- liftDynamics time
-              liftIO $
-                do modifyIORef (workerTotalEffortTimeRef w) (+ (t2 - t1))
-                   modifyIORef (workerEffortTimeRef w) $
-                     addSamplingStats (t2 - t1)
               liftEvent $
-                do releaseResourceWithinEvent producingRes
+                do liftIO $
+                     do writeIORef production (Just b)
+                        modifyIORef (workerTotalEffortTimeRef w) (+ (t2 - t1))
+                        modifyIORef (workerEffortTimeRef w) $
+                          addSamplingStats (t2 - t1)
+                   releaseResourceWithinEvent producingRes
                    triggerSignal (workerProducedSource w) (a, b)
               worker t2 xs'
          writer =
@@ -149,9 +151,8 @@ workerProcessor w =
               liftIO $ writeIORef production Nothing
               releaseResource loadingRes
               return (b, writer)
-     liftEvent $
-       do t' <- liftDynamics time
-          runProcessUsingId (workerProcessId w) $ worker t' xs
+     t' <- liftDynamics time
+     childProcessUsingId (workerProcessId w) $ worker t' xs
      runStream writer
 
 -- | Return the counted total free time for the worker.
@@ -175,8 +176,7 @@ workerTotalTimeInLock :: Worker a b -> Observable Double
 workerTotalTimeInLock w =
   let read = Event $ \p -> readIORef (workerTotalTimeInLockRef w)
   in Observable { readObservable = read,
-                  observableChanged_ =
-                    mapSignal (const ()) (workerReleased w) }
+                  observableChanged_ = workerReleased w }
 
 -- | Return the statistics of the free time for the worker.
 workerFreeTime :: Worker a b -> Observable (SamplingStats Double)
@@ -199,8 +199,7 @@ workerTimeInLock :: Worker a b -> Observable (SamplingStats Double)
 workerTimeInLock w =
   let read = Event $ \p -> readIORef (workerTimeInLockRef w)
   in Observable { readObservable = read,
-                  observableChanged_ =
-                    mapSignal (const ()) (workerReleased w) }
+                  observableChanged_ = workerReleased w }
 
 -- | Raised when the worker is loaded with a new task.
 workerLoaded :: Worker a b -> Signal a
