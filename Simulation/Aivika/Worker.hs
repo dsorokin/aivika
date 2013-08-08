@@ -355,16 +355,15 @@ workerSummary w indent =
              showString "factor for the time spent in lock (from 0 to 1) = " . shows xf3 .
              showString "\n\n" .
              showString tab .
-             showString "free time:" .
-             showString tab .
+             showString "free time:\n\n" .
              samplingStatsSummary xs1 (2 + indent) .
              showString "\n\n" .
              showString tab .
-             showString "effort time: " .
+             showString "effort time:\n\n" .
              samplingStatsSummary xs2 (2 + indent) .
              showString "\n\n" .
              showString tab .
-             showString "time spent in the lock:" .
+             showString "time spent in the lock:\n\n" .
              samplingStatsSummary xs3 (2 + indent)
       signal =
         mapSignal (const ()) (workerLoaded w) <>
