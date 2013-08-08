@@ -23,12 +23,16 @@ module Simulation.Aivika.Worker
         workerFreeTime,
         workerEffortTime,
         workerTimeInLock,
+        workerFreeTimeFactor,
+        workerEffortTimeFactor,
+        workerTimeInLockFactor,
         -- * Signals
         workerReleased,
         workerLoaded,
         workerProduced) where
 
 import Data.IORef
+import Data.Monoid
 import Control.Monad.Trans
 
 import Simulation.Aivika.Simulation
@@ -218,6 +222,86 @@ workerTimeInLock w =
   let read = Event $ \p -> readIORef (workerTimeInLockRef w)
   in Observable { readObservable = read,
                   observableChanged_ = workerReleased w }
+
+-- | It returns the factor changing from 0 to 1, which estimates how often
+-- the worker was free awaiting for the next task and was not locking
+-- at the same time.
+--
+-- This factor is calculated as
+--
+-- @
+--   totalFreeTime \/ (totalFreeTime + totalEfforTime + totalTimeInLock)
+-- @
+--
+-- As before in this module, the value returned changes discretely and
+-- it is usually delayed relative to the current simulation time.
+workerFreeTimeFactor :: Worker a b -> Observable Double
+workerFreeTimeFactor w =
+  let read =
+        Event $ \p ->
+        do x1 <- readIORef (workerTotalFreeTimeRef w)
+           x2 <- readIORef (workerTotalEffortTimeRef w)
+           x3 <- readIORef (workerTotalTimeInLockRef w)
+           return (x1 / (x1 + x2 + x3))
+      signal =
+        mapSignal (const ()) (workerLoaded w) <>
+        mapSignal (const ()) (workerProduced w) <>
+        workerReleased w
+  in Observable { readObservable = read,
+                  observableChanged_ = signal }
+
+-- | It returns the factor changing from 0 to 1, which estimates how often
+-- the worker was busy with direct doing his/her work.
+--
+-- This factor is calculated as
+--
+-- @
+--   totalEffortTime \/ (totalFreeTime + totalEfforTime + totalTimeInLock)
+-- @
+--
+-- As before in this module, the value returned changes discretely and
+-- it is usually delayed relative to the current simulation time.
+workerEffortTimeFactor :: Worker a b -> Observable Double
+workerEffortTimeFactor w =
+  let read =
+        Event $ \p ->
+        do x1 <- readIORef (workerTotalFreeTimeRef w)
+           x2 <- readIORef (workerTotalEffortTimeRef w)
+           x3 <- readIORef (workerTotalTimeInLockRef w)
+           return (x2 / (x1 + x2 + x3))
+      signal =
+        mapSignal (const ()) (workerLoaded w) <>
+        mapSignal (const ()) (workerProduced w) <>
+        workerReleased w
+  in Observable { readObservable = read,
+                  observableChanged_ = signal }
+
+-- | It returns the factor changing from 0 to 1, which estimates how often
+-- the worker was locked right after he finished his/her task but not was able
+-- to pass the production for the further processing.
+--
+-- This factor is calculated as
+--
+-- @
+--   totalTimeInLock \/ (totalFreeTime + totalEfforTime + totalTimeInLock)
+-- @
+--
+-- As before in this module, the value returned changes discretely and
+-- it is usually delayed relative to the current simulation time.
+workerTimeInLockFactor :: Worker a b -> Observable Double
+workerTimeInLockFactor w =
+  let read =
+        Event $ \p ->
+        do x1 <- readIORef (workerTotalFreeTimeRef w)
+           x2 <- readIORef (workerTotalEffortTimeRef w)
+           x3 <- readIORef (workerTotalTimeInLockRef w)
+           return (x3 / (x1 + x2 + x3))
+      signal =
+        mapSignal (const ()) (workerLoaded w) <>
+        mapSignal (const ()) (workerProduced w) <>
+        workerReleased w
+  in Observable { readObservable = read,
+                  observableChanged_ = signal }
 
 -- | Raised when the worker is loaded with a new task.
 workerLoaded :: Worker a b -> Signal a
