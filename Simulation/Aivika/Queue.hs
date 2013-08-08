@@ -59,6 +59,8 @@ module Simulation.Aivika.Queue
         enqueueOrLost_,
         enqueueWithStoringPriorityOrLost,
         enqueueWithStoringPriorityOrLost_,
+        -- * Awaiting
+        waitWhileFullQueue,
         -- * Signals
         enqueueInitiated,
         enqueueStored,
@@ -732,4 +734,12 @@ dequeueStat q t' i =
        addSamplingStats (t - t0)
      modifyIORef (queueWaitTimeRef q) $
        addSamplingStats (t - t1)
+
+-- | Wait while the queue is full.
+waitWhileFullQueue :: Queue si qi sm qm so qo a -> Process ()
+waitWhileFullQueue q =
+  do x <- liftEvent (queueFull q)
+     when x $
+       do awaitSignal (dequeueExtracted q)
+          waitWhileFullQueue q
 
