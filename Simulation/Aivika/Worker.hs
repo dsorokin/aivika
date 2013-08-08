@@ -26,7 +26,7 @@ module Simulation.Aivika.Worker
         workerFreeTimeFactor,
         workerEffortTimeFactor,
         workerTimeInLockFactor,
-        -- * Summary
+        -- * Worker's Summary
         workerSummary,
         -- * Signals
         workerReleased,
