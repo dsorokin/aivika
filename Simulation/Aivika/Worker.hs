@@ -156,6 +156,9 @@ workerProcessor w =
      runStream writer
 
 -- | Return the counted total free time for the worker.
+--
+-- The value returned changes discretely and it is usually delayed relative
+-- to the current simulation time.
 workerTotalFreeTime :: Worker a b -> Observable Double
 workerTotalFreeTime w =
   let read = Event $ \p -> readIORef (workerTotalFreeTimeRef w)
@@ -164,6 +167,9 @@ workerTotalFreeTime w =
                     mapSignal (const ()) (workerLoaded w) }
 
 -- | Return the counted total effort time that the worker spent on all tasks.
+--
+-- The value returned changes discretely and it is usually delayed relative
+-- to the current simulation time.
 workerTotalEffortTime :: Worker a b -> Observable Double
 workerTotalEffortTime w =
   let read = Event $ \p -> readIORef (workerTotalEffortTimeRef w)
@@ -172,6 +178,9 @@ workerTotalEffortTime w =
                     mapSignal (const ()) (workerProduced w) }
 
 -- | Return the counted total time that the worker spent on all tasks.
+--
+-- The value returned changes discretely and it is usually delayed relative
+-- to the current simulation time.
 workerTotalTimeInLock :: Worker a b -> Observable Double
 workerTotalTimeInLock w =
   let read = Event $ \p -> readIORef (workerTotalTimeInLockRef w)
@@ -179,6 +188,9 @@ workerTotalTimeInLock w =
                   observableChanged_ = workerReleased w }
 
 -- | Return the statistics of the free time for the worker.
+--
+-- The value returned changes discretely and it is usually delayed relative
+-- to the current simulation time.
 workerFreeTime :: Worker a b -> Observable (SamplingStats Double)
 workerFreeTime w =
   let read = Event $ \p -> readIORef (workerFreeTimeRef w)
@@ -187,6 +199,9 @@ workerFreeTime w =
                     mapSignal (const ()) (workerLoaded w) }
 
 -- | Return the statistics of the effort time that the worker spent on the task.
+--
+-- The value returned changes discretely and it is usually delayed relative
+-- to the current simulation time.
 workerEffortTime :: Worker a b -> Observable (SamplingStats Double)
 workerEffortTime w =
   let read = Event $ \p -> readIORef (workerEffortTimeRef w)
@@ -195,6 +210,9 @@ workerEffortTime w =
                     mapSignal (const ()) (workerProduced w) }
 
 -- | Return the statistics of the time that the worker spent awaiting in the lock state.
+--
+-- The value returned changes discretely and it is usually delayed relative
+-- to the current simulation time.
 workerTimeInLock :: Worker a b -> Observable (SamplingStats Double)
 workerTimeInLock w =
   let read = Event $ \p -> readIORef (workerTimeInLockRef w)
