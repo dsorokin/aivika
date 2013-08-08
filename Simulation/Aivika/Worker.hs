@@ -177,7 +177,7 @@ workerTotalEffortTime w =
                   observableChanged_ =
                     mapSignal (const ()) (workerProduced w) }
 
--- | Return the counted total time that the worker spent on all tasks.
+-- | Return the counted total time that the worker spent awaiting in the lock state.
 --
 -- The value returned changes discretely and it is usually delayed relative
 -- to the current simulation time.
