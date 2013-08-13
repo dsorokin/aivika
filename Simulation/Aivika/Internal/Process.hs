@@ -154,7 +154,7 @@ passivateProcess =
      a <- readIORef x
      case a of
        Nothing -> writeIORef x $ Just c
-       Just _  -> error "Cannot passivate the process twice: passivate"
+       Just _  -> error "Cannot passivate the process twice: passivateProcess"
 
 -- | Test whether the process with the specified identifier is passivated.
 processPassive :: ProcessId -> Event Bool
