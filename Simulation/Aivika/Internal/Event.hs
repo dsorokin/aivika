@@ -308,7 +308,7 @@ enqueueEventWithStopTime e =
 enqueueEventWithCurrentTime :: Event () -> Event ()
 enqueueEventWithCurrentTime e =
   Event $ \p ->
-  invokeEvent p $ enqueueEvent (pointTime p) e
+  invokeEvent p $ enqueueEventWithPoints [p] e
 
 -- | It allows cancelling the event.
 data EventCancellation =
