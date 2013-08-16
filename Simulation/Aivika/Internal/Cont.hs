@@ -604,6 +604,10 @@ contAwait signal =
                            Just x ->
                              do invokeEvent p x
                                 case a of
-                                  Left e -> cancelCont p c
-                                  Right a -> invokeEvent p $ resumeCont c a
+                                  Left e ->
+                                    invokeEvent p $
+                                    enqueueEventWithCurrentTime $
+                                    Event $ \p -> cancelCont p c
+                                  Right a ->
+                                    invokeEvent p $ resumeCont c a
      writeIORef r $ Just h          
