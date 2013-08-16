@@ -81,7 +81,7 @@ data Resource s q =
              -- ^ Return the maximum count of the resource, where 'Nothing'
              -- means that the resource has no upper bound.
              resourceCountRef :: IORef Int, 
-             resourceWaitList :: q (ContParams ())}
+             resourceWaitList :: q (Event (Maybe (ContParams ()))) }
 
 instance Eq (Resource s q) where
   x == y = resourceCountRef x == resourceCountRef y  -- unique references
@@ -219,8 +219,9 @@ requestResource r =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
      if a == 0 
-       then invokeEvent p $
-            strategyEnqueue (resourceStrategy r) (resourceWaitList r) c
+       then do c <- invokeEvent p $ contFreeze c
+               invokeEvent p $
+                 strategyEnqueue (resourceStrategy r) (resourceWaitList r) c
        else do let a' = a - 1
                a' `seq` writeIORef (resourceCountRef r) a'
                invokeEvent p $ resumeCont c ()
@@ -240,8 +241,9 @@ requestResourceWithPriority r priority =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
      if a == 0 
-       then invokeEvent p $
-            strategyEnqueueWithPriority (resourceStrategy r) (resourceWaitList r) priority c
+       then do c <- invokeEvent p $ contFreeze c
+               invokeEvent p $
+                 strategyEnqueueWithPriority (resourceStrategy r) (resourceWaitList r) priority c
        else do let a' = a - 1
                a' `seq` writeIORef (resourceCountRef r) a'
                invokeEvent p $ resumeCont c ()
@@ -282,13 +284,12 @@ releaseResourceWithinEvent r =
        then a' `seq` writeIORef (resourceCountRef r) a'
        else do c <- invokeEvent p $
                     strategyDequeue (resourceStrategy r) (resourceWaitList r)
-               invokeEvent p $ enqueueEvent (pointTime p) $
-                 Event $ \p ->
-                 do z <- contCanceled c
-                    if z
-                      then do invokeEvent p $ releaseResourceWithinEvent r
-                              invokeEvent p $ resumeCont c ()
-                      else invokeEvent p $ resumeCont c ()
+               c <- invokeEvent p c
+               case c of
+                 Nothing ->
+                   invokeEvent p $ releaseResourceWithinEvent r
+                 Just c  ->
+                   invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
 
 -- | Try to request for the resource decreasing its count in case of success
 -- and returning 'True' in the 'Event' monad; otherwise, returning 'False'.
