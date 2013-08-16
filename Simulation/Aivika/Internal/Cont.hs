@@ -557,7 +557,7 @@ rerunCont x cancelToken =
        else worker
 
 -- | Run the 'Cont' computation in parallel but bind the cancellation tokens.
-childCont :: Cont a -> ContCancellation -> Cont a
+childCont :: Cont a -> ContCancellation -> Cont ()
 childCont x cancelToken =
   Cont $ \c ->
   Event $ \p ->
