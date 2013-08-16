@@ -31,6 +31,7 @@ module Simulation.Aivika.Internal.Cont
         throwCont,
         resumeCont,
         contCanceled,
+        contFreeze,
         contAwait) where
 
 import Data.IORef
@@ -586,16 +587,50 @@ childCont x cancelToken =
        then cancelCont p c
        else worker
 
+-- | Freeze the computation parameters temporarily.
+contFreeze :: ContParams a -> Event (Event (Maybe (ContParams a)))
+contFreeze c =
+  Event $ \p ->
+  do rh <- newIORef Nothing
+     rc <- newIORef $ Just c
+     h <- invokeEvent p $
+          handleSignal (contCancellationInitiating $
+                        contCancel $
+                        contAux c) $ \a ->
+          Event $ \p ->
+          do h <- readIORef rh
+             case h of
+               Nothing ->
+                 error "The handler was lost: contFreeze."
+               Just h ->
+                 do invokeEvent p h
+                    c <- readIORef rc
+                    case c of
+                      Nothing -> return ()
+                      Just c  ->
+                        do writeIORef rc Nothing
+                           invokeEvent p $
+                             enqueueEvent (pointTime p) $
+                             Event $ \p ->
+                             do z <- contCanceled c
+                                when z $ cancelCont p c
+     writeIORef rh (Just h)
+     return $
+       Event $ \p ->
+       do invokeEvent p h
+          c <- readIORef rc
+          writeIORef rc Nothing
+          return c
+     
 -- | Await the signal.
 contAwait :: Signal a -> Cont a
 contAwait signal =
   Cont $ \c ->
   Event $ \p ->
-  do r <- newIORef Nothing
-     let s = fmap Left (contCancellationInitiating $ contCancel $ contAux c) <>
-             fmap Right signal
+  do c <- invokeEvent p $ contFreeze c
+     r <- newIORef Nothing
      h <- invokeEvent p $
-          handleSignal s $ 
+          handleSignal signal $ 
           \a -> Event $ 
                 \p -> do x <- readIORef r
                          case x of
@@ -603,11 +638,9 @@ contAwait signal =
                              error "The signal was lost: awaitSignal."
                            Just x ->
                              do invokeEvent p x
-                                case a of
-                                  Left e ->
-                                    invokeEvent p $
-                                    enqueueEventWithCurrentTime $
-                                    Event $ \p -> cancelCont p c
-                                  Right a ->
+                                c <- invokeEvent p c
+                                case c of
+                                  Nothing -> return ()
+                                  Just c  ->
                                     invokeEvent p $ resumeCont c a
      writeIORef r $ Just h          
