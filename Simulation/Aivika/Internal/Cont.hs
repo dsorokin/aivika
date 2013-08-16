@@ -30,11 +30,13 @@ module Simulation.Aivika.Internal.Cont
         finallyCont,
         throwCont,
         resumeCont,
-        contCanceled) where
+        contCanceled,
+        contAwait) where
 
 import Data.IORef
 import Data.Array
 import Data.Array.IO.Safe
+import Data.Monoid
 
 import qualified Control.Exception as C
 import Control.Exception (IOException, throw)
@@ -583,3 +585,25 @@ childCont x cancelToken =
      if z
        then cancelCont p c
        else worker
+
+-- | Await the signal.
+contAwait :: Signal a -> Cont a
+contAwait signal =
+  Cont $ \c ->
+  Event $ \p ->
+  do r <- newIORef Nothing
+     let s = fmap Left (contCancellationInitiating $ contCancel $ contAux c) <>
+             fmap Right signal
+     h <- invokeEvent p $
+          handleSignal s $ 
+          \a -> Event $ 
+                \p -> do x <- readIORef r
+                         case x of
+                           Nothing ->
+                             error "The signal was lost: awaitSignal."
+                           Just x ->
+                             do invokeEvent p x
+                                case a of
+                                  Left e -> cancelCont p c
+                                  Right a -> invokeEvent p $ resumeCont c a
+     writeIORef r $ Just h          

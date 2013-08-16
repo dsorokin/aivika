@@ -63,21 +63,7 @@ import qualified Simulation.Aivika.Vector.Unboxed as UV
 -- | Await the signal.
 awaitSignal :: Signal a -> Process a
 awaitSignal signal =
-  Process $ \pid ->
-  Cont $ \c ->
-  Event $ \p ->
-  do r <- newIORef Nothing
-     h <- invokeEvent p $
-          handleSignal signal $ 
-          \a -> Event $ 
-                \p -> do x <- readIORef r
-                         case x of
-                           Nothing ->
-                             error "The signal was lost: awaitSignal."
-                           Just x ->
-                             do invokeEvent p x
-                                invokeEvent p $ resumeCont c a
-     writeIORef r $ Just h
+  Process $ \pid -> contAwait signal
           
 -- | Represents the history of the signal values.
 data SignalHistory a =
