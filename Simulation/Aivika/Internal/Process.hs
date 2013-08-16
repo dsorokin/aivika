@@ -189,7 +189,9 @@ processIdPrepare pid =
        else writeIORef (processStarted pid) True
      let signal = (contCancellationInitiating $ processCancel pid)
      invokeEvent p $
-       handleSignal_ signal $ \_ -> interruptProcess pid
+       handleSignal_ signal $ \_ ->
+       do interruptProcess pid
+          reactivateProcess pid
 
 -- | Start immediately the process. A new 'ProcessId' identifier will be
 -- assigned to the process.
