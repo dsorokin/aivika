@@ -402,7 +402,7 @@ throwProcess = liftIO . throw
 -- New 'ProcessId' identifiers will be assigned to the started processes.
 processParallel :: [Process a] -> Process [a]
 processParallel xs =
-  processParallelCreateIds xs >>= processParallelUsingIds 
+  liftSimulation (processParallelCreateIds xs) >>= processParallelUsingIds 
 
 -- | Like 'processParallel' but allows specifying the process identifiers.
 -- It will be more efficient than as you would specify the process identifiers
@@ -418,7 +418,7 @@ processParallelUsingIds xs =
 -- | Like 'processParallel' but ignores the result.
 processParallel_ :: [Process a] -> Process ()
 processParallel_ xs =
-  processParallelCreateIds xs >>= processParallelUsingIds_ 
+  liftSimulation (processParallelCreateIds xs) >>= processParallelUsingIds_ 
 
 -- | Like 'processParallelUsingIds' but ignores the result.
 processParallelUsingIds_ :: [(ProcessId, Process a)] -> Process ()
@@ -430,10 +430,9 @@ processParallelUsingIds_ xs =
        (invokeProcess pid m, processCancel pid)
 
 -- | Create the new process identifiers.
-processParallelCreateIds :: [Process a] -> Process [(ProcessId, Process a)]
+processParallelCreateIds :: [Process a] -> Simulation [(ProcessId, Process a)]
 processParallelCreateIds xs =
-  do pid  <- processId
-     pids <- liftSimulation $ forM xs $ const newProcessId
+  do pids <- liftSimulation $ forM xs $ const newProcessId
      return $ zip pids xs
 
 -- | Prepare the processes for parallel execution.
