@@ -260,8 +260,8 @@ splitStreamQueuing s n x =
               return a
      return $ map (\i -> repeatProcess reader) [1..n]
 
--- | Split the input stream into the specified number of output streams
--- prioritising them.
+-- | Split the input stream into a list of output streams
+-- using the specified priorities.
 splitStreamPrioritising :: PriorityQueueStrategy s q p
                            => s
                            -- ^ the strategy applied for enqueuing the output requests
