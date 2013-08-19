@@ -60,11 +60,6 @@ module Simulation.Aivika.Process
         reactivateProcess,
         cancelProcess,
         processCanceled,
-        -- * Futures
-        futureProcess,
-        futureProcessUsingId,
-        futureChildProcess,
-        futureChildProcessUsingId,
         -- * Parallelizing Processes
         processParallel,
         processParallelUsingIds,
@@ -154,36 +149,3 @@ timeoutProcessUsingId timeout pid p =
             do cancelProcess timeoutPid
                triggerSignal s (Just a)
      return $ publishSignal s
-
--- | Run the process in parallel and return immediately a signal which will notify
--- about the result.
-futureProcess :: Process a -> Event (Signal a)
-futureProcess p =
-  do pid <- liftSimulation newProcessId
-     futureProcessUsingId pid p
-
--- | Like 'futureProcess' but allows specifying the process identifier.
-futureProcessUsingId :: ProcessId -> Process a -> Event (Signal a)
-futureProcessUsingId pid p =
-  do s <- liftSimulation newSignalSource
-     forkProcessUsingId pid $
-       do a <- p
-          liftEvent $ triggerSignal s a
-     return $ publishSignal s
-
--- | Run the child process in parallel and return immediately a signal which will notify
--- about the result. The child process is always canceled together with the current 'Process'
--- computation if such a cancellation takes place.
-futureChildProcess :: Process a -> Process (Signal a)
-futureChildProcess p =
-  do pid <- liftSimulation newProcessId
-     futureChildProcessUsingId pid p
-
--- | Like 'futureChildProcess' but allows specifying the process identifier.
-futureChildProcessUsingId :: ProcessId -> Process a -> Process (Signal a)
-futureChildProcessUsingId pid p =
-  do s <- liftSimulation newSignalSource
-     childProcessUsingId pid $
-       do a <- p
-          liftEvent $ triggerSignal s a
-     return $ publishSignal s     

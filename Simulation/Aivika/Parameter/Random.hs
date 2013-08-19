@@ -21,53 +21,52 @@ import System.Random
 
 import Control.Monad.Trans
 
-import Simulation.Aivika.Simulation
 import Simulation.Aivika.Random
 import Simulation.Aivika.Parameter
 
 -- | Create a new random parameter distributed uniformly.
 -- The value doesn't change within the simulation run but
 -- then the value is recalculated for each new run.
-newRandomParameter :: Simulation Double     -- ^ minimum
-                      -> Simulation Double  -- ^ maximum
-                      -> IO (Simulation Double)
+newRandomParameter :: Parameter Double     -- ^ minimum
+                      -> Parameter Double  -- ^ maximum
+                      -> IO (Parameter Double)
 newRandomParameter min max =
-  memoSimulation $
+  memoParameter $
   do x <- liftIO $ getStdRandom random
      min + return x * (max - min)
 
 -- | Create a new random parameter distributed normally.
 -- The value doesn't change within the simulation run but
 -- then the value is recalculated for each new run.
-newNormalParameter :: Simulation Double     -- ^ mean
-                      -> Simulation Double  -- ^ variance
-                      -> IO (Simulation Double)
+newNormalParameter :: Parameter Double     -- ^ mean
+                      -> Parameter Double  -- ^ variance
+                      -> IO (Parameter Double)
 newNormalParameter mu nu =
   do g <- newNormalGen
-     memoSimulation $
+     memoParameter $
        do x <- liftIO g
           mu + return x * nu
 
 -- | Return the exponential random parameter with the specified mean.
-newExponentialParameter :: Simulation Double -> IO (Simulation Double)
+newExponentialParameter :: Parameter Double -> IO (Parameter Double)
 newExponentialParameter mu =
-  memoSimulation $
+  memoParameter $
   do x <- mu
      liftIO $ exponentialGen x
 
 -- | Return the Poisson random parameter with the specified mean.
-newPoissonParameter :: Simulation Double -> IO (Simulation Int)
+newPoissonParameter :: Parameter Double -> IO (Parameter Int)
 newPoissonParameter mu =
-  memoSimulation $
+  memoParameter $
   do x <- mu
      liftIO $ poissonGen x
 
 -- | Return the binomial random parameter with the specified probability and trials.
-newBinomialParameter :: Simulation Double  -- ^ the probability
-                        -> Simulation Int  -- ^ the number of trials
-                        -> IO (Simulation Int)
+newBinomialParameter :: Parameter Double  -- ^ the probability
+                        -> Parameter Int  -- ^ the number of trials
+                        -> IO (Parameter Int)
 newBinomialParameter prob trials =
-  memoSimulation $
+  memoParameter $
   do x <- prob
      y <- trials
      liftIO $ binomialGen x y

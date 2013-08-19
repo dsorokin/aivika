@@ -42,7 +42,12 @@ module Simulation.Aivika.Signal
         SignalHistory,
         signalHistorySignal,
         newSignalHistory,
-        readSignalHistory) where
+        readSignalHistory,
+        -- * Signalable Computations
+        Signalable,
+        readSignalable,
+        signalableChanged,
+        signalableChanged_) where
 
 import Data.IORef
 import Data.Array

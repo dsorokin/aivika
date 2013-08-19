@@ -72,6 +72,7 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Parameter
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
@@ -328,6 +329,9 @@ instance Monad Process where
 instance Functor Process where
   fmap = liftM
 
+instance ParameterLift Process where
+  liftParameter = liftPP
+
 instance SimulationLift Process where
   liftSimulation = liftSP
   
@@ -351,6 +355,10 @@ bindP (Process m) k =
   do a <- m pid
      let Process m' = k a
      m' pid
+
+liftPP :: Parameter a -> Process a
+{-# INLINE liftPP #-}
+liftPP m = Process $ \pid -> liftParameter m
 
 liftSP :: Simulation a -> Process a
 {-# INLINE liftSP #-}

@@ -46,6 +46,7 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Parameter
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
@@ -136,6 +137,9 @@ data ContParamsAux =
 instance Monad Cont where
   return  = returnC
   m >>= k = bindC m k
+
+instance ParameterLift Cont where
+  liftParameter = liftPC
 
 instance SimulationLift Cont where
   liftSimulation = liftSC
@@ -312,6 +316,15 @@ runCont (Cont m) cont econt ccont cancelToken catchFlag =
                                    contCancel     = cancelToken,
                                    contCancelFlag = contCancellationActivated cancelToken, 
                                    contCatchFlag  = catchFlag } }
+
+-- | Lift the 'Parameter' computation.
+liftPC :: Parameter a -> Cont a
+liftPC (Parameter m) = 
+  Cont $ \c ->
+  Event $ \p ->
+  if contCatchFlag . contAux $ c
+  then liftIOWithCatch (m $ pointRun p) p c
+  else liftIOWithoutCatch (m $ pointRun p) p c
 
 -- | Lift the 'Simulation' computation.
 liftSC :: Simulation a -> Cont a

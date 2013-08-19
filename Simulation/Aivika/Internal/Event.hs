@@ -49,6 +49,7 @@ import Control.Monad.Fix
 import qualified Simulation.Aivika.PriorityQueue as PQ
 
 import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Parameter
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 
@@ -83,11 +84,19 @@ liftME f (Event x) =
 instance MonadIO Event where
   liftIO m = Event $ const m
 
+instance ParameterLift Event where
+  liftParameter = liftPS
+
 instance SimulationLift Event where
   liftSimulation = liftES
 
 instance DynamicsLift Event where
   liftDynamics = liftDS
+    
+liftPS :: Parameter a -> Event a
+{-# INLINE liftPS #-}
+liftPS (Parameter m) =
+  Event $ \p -> m $ pointRun p
     
 liftES :: Simulation a -> Event a
 {-# INLINE liftES #-}

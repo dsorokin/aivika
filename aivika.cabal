@@ -115,15 +115,10 @@ library
                      Simulation.Aivika.Dynamics.Memo.Unboxed
                      Simulation.Aivika.Dynamics.Random
                      Simulation.Aivika.Event
-                     Simulation.Aivika.Observable
                      Simulation.Aivika.Parameter
                      Simulation.Aivika.Parameter.Random
                      Simulation.Aivika.PriorityQueue
                      Simulation.Aivika.Process
-                     Simulation.Aivika.Processor
-                     Simulation.Aivika.Processor.RoundRobbin
-                     Simulation.Aivika.Queue
-                     Simulation.Aivika.Queue.Infinite
                      Simulation.Aivika.QueueStrategy
                      Simulation.Aivika.Random
                      Simulation.Aivika.Ref
@@ -132,20 +127,17 @@ library
                      Simulation.Aivika.Simulation
                      Simulation.Aivika.Specs
                      Simulation.Aivika.Statistics
-                     Simulation.Aivika.Stream
-                     Simulation.Aivika.Stream.Random
                      Simulation.Aivika.SystemDynamics
                      Simulation.Aivika.Unboxed
                      Simulation.Aivika.Var
                      Simulation.Aivika.Var.Unboxed
                      Simulation.Aivika.Vector
                      Simulation.Aivika.Vector.Unboxed
-                     Simulation.Aivika.Worker
 
     other-modules:   Simulation.Aivika.Internal.Cont
                      Simulation.Aivika.Internal.Dynamics
                      Simulation.Aivika.Internal.Event
-                     Simulation.Aivika.Internal.Observable
+                     Simulation.Aivika.Internal.Parameter
                      Simulation.Aivika.Internal.Process
                      Simulation.Aivika.Internal.Signal
                      Simulation.Aivika.Internal.Simulation

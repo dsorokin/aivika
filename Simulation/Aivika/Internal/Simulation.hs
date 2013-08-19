@@ -9,7 +9,8 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- The module defines the 'Simulation' monad that represents a simulation run.
+-- The module defines the 'Simulation' monad that represents a computation
+-- within the simulation run.
 -- 
 module Simulation.Aivika.Internal.Simulation
        (-- * Simulation
@@ -23,37 +24,24 @@ module Simulation.Aivika.Internal.Simulation
         finallySimulation,
         throwSimulation,
         -- * Utilities
-        simulationIndex,
-        simulationCount,
-        simulationSpecs,
         simulationEventQueue,
         -- * Memoization
         memoSimulation) where
 
 import qualified Control.Exception as C
 import Control.Exception (IOException, throw, finally)
-import Control.Concurrent.MVar
 
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
 
 import Data.IORef
-import qualified Data.Map as M
 
 import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Parameter
 
--- | A value in the 'Simulation' monad represents something that
--- doesn't change within the simulation run but may change for
--- other runs.
---
--- This monad is ideal for representing the external
--- parameters for the model, when the Monte-Carlo simulation
--- is used. Also this monad is useful for defining some
--- actions that should occur only once within the simulation run,
--- for example, setting of the integral with help of recursive
--- equations.
---
+-- | A value in the 'Simulation' monad represents a computation
+-- within the simulation run.
 newtype Simulation a = Simulation (Run -> IO a)
 
 instance Monad Simulation where
@@ -91,18 +79,6 @@ runSimulations (Simulation m) sc runs = map f [1 .. runs]
                          runCount = runs,
                          runEventQueue = q }
 
--- | Return the run index for the current simulation.
-simulationIndex :: Simulation Int
-simulationIndex = Simulation $ return . runIndex
-
--- | Return the number of simulations currently run.
-simulationCount :: Simulation Int
-simulationCount = Simulation $ return . runCount
-
--- | Return the simulation specs.
-simulationSpecs :: Simulation Specs
-simulationSpecs = Simulation $ return . runSpecs
-
 -- | Return the event queue.
 simulationEventQueue :: Simulation EventQueue
 simulationEventQueue = Simulation $ return . runEventQueue
@@ -110,54 +86,10 @@ simulationEventQueue = Simulation $ return . runEventQueue
 instance Functor Simulation where
   fmap = liftMS
 
-instance Eq (Simulation a) where
-  x == y = error "Can't compare simulation runs." 
-
-instance Show (Simulation a) where
-  showsPrec _ x = showString "<< Simulation >>"
-
 liftMS :: (a -> b) -> Simulation a -> Simulation b
 {-# INLINE liftMS #-}
 liftMS f (Simulation x) =
   Simulation $ \r -> do { a <- x r; return $ f a }
-
-liftM2S :: (a -> b -> c) -> Simulation a -> Simulation b -> Simulation c
-{-# INLINE liftM2S #-}
-liftM2S f (Simulation x) (Simulation y) =
-  Simulation $ \r -> do { a <- x r; b <- y r; return $ f a b }
-
-instance (Num a) => Num (Simulation a) where
-  x + y = liftM2S (+) x y
-  x - y = liftM2S (-) x y
-  x * y = liftM2S (*) x y
-  negate = liftMS negate
-  abs = liftMS abs
-  signum = liftMS signum
-  fromInteger i = return $ fromInteger i
-
-instance (Fractional a) => Fractional (Simulation a) where
-  x / y = liftM2S (/) x y
-  recip = liftMS recip
-  fromRational t = return $ fromRational t
-
-instance (Floating a) => Floating (Simulation a) where
-  pi = return pi
-  exp = liftMS exp
-  log = liftMS log
-  sqrt = liftMS sqrt
-  x ** y = liftM2S (**) x y
-  sin = liftMS sin
-  cos = liftMS cos
-  tan = liftMS tan
-  asin = liftMS asin
-  acos = liftMS acos
-  atan = liftMS atan
-  sinh = liftMS sinh
-  cosh = liftMS cosh
-  tanh = liftMS tanh
-  asinh = liftMS asinh
-  acosh = liftMS acosh
-  atanh = liftMS atanh
 
 instance MonadIO Simulation where
   liftIO m = Simulation $ const m
@@ -170,6 +102,14 @@ class SimulationLift m where
 
 instance SimulationLift Simulation where
   liftSimulation = id
+
+instance ParameterLift Simulation where
+  liftParameter = liftPS
+
+liftPS :: Parameter a -> Simulation a
+{-# INLINE liftPS #-}
+liftPS (Parameter x) =
+  Simulation x
     
 -- | Exception handling within 'Simulation' computations.
 catchSimulation :: Simulation a -> (IOException -> Simulation a) -> Simulation a
@@ -199,24 +139,15 @@ instance MonadFix Simulation where
     do { rec { a <- invokeSimulation r (f a) }; return a }  
 
 -- | Memoize the 'Simulation' computation, always returning the same value
--- within a simulation run. However, the value will be recalculated for other
--- simulation runs. Also it is thread-safe when different simulation runs
--- are executed in parallel on physically different operating system threads.
-memoSimulation :: Simulation a -> IO (Simulation a)
-memoSimulation x = 
-  do lock <- newMVar ()
-     dict <- newIORef M.empty
+-- within a simulation run.
+memoSimulation :: Simulation a -> Simulation (Simulation a)
+memoSimulation m =
+  do ref <- liftIO $ newIORef Nothing
      return $ Simulation $ \r ->
-       do let i = runIndex r
-          m <- readIORef dict
-          if M.member i m
-            then do let Just v = M.lookup i m
-                    return v
-            else withMVar lock $ 
-                 \() -> do { m <- readIORef dict;
-                             if M.member i m
-                             then do let Just v = M.lookup i m
-                                     return v
-                             else do v <- invokeSimulation r x
-                                     writeIORef dict $ M.insert i v m
-                                     return v }
+       do x <- readIORef ref
+          case x of
+            Just v -> return v
+            Nothing ->
+              do v <- invokeSimulation r m
+                 writeIORef ref (Just v)
+                 return v

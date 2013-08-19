@@ -19,10 +19,6 @@ module Simulation.Aivika.Simulation
         catchSimulation,
         finallySimulation,
         throwSimulation,
-        -- * Utilities
-        simulationIndex,
-        simulationCount,
-        simulationSpecs,
         -- * Memoization
         memoSimulation) where
 

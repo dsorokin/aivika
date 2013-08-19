@@ -27,7 +27,9 @@ module Simulation.Aivika.Internal.Signal
         merge2Signals,
         merge3Signals,
         merge4Signals,
-        merge5Signals) where
+        merge5Signals,
+        Signalable(..),
+        signalableChanged) where
 
 import Data.IORef
 import Data.Monoid
@@ -217,3 +219,20 @@ apSignal f m =
 emptySignal :: Signal a
 emptySignal =
   Signal { handleSignal = \h -> return $ return () }
+
+-- | Describes a computation that also signals when changing its value.
+data Signalable a =
+  Signalable { readSignalable :: Event a,
+               -- ^ Return a computation of the value.
+               signalableChanged_ :: Signal ()
+               -- ^ Return a signal notifying that the value has changed
+               -- but without providing the information about the changed value.
+             }
+
+-- | Return a signale notifying that the value has changed.
+signalableChanged :: Signalable a -> Signal a
+signalableChanged x = mapSignalM (const $ readSignalable x) $ signalableChanged_ x
+
+instance Functor Signalable where
+  fmap f x = x { readSignalable = fmap f (readSignalable x) }
+                          
