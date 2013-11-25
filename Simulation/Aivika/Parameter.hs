@@ -1,7 +1,7 @@
 -- |
 -- Module     : Simulation.Aivika.Parameter
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -20,13 +20,16 @@ module Simulation.Aivika.Parameter
         finallyParameter,
         throwParameter,
         -- * Predefined Parameters
-        parameterIndex,
-        parameterCount,
-        parameterSpecs,
+        simulationIndex,
+        simulationCount,
+        simulationSpecs,
+        generatorParameter,
+        starttime,
+        stoptime,
+        dt,
         -- * Memoization
         memoParameter,
         -- * Utilities
-        newTableParameter,
-        newIndexedParameter) where
+        tableParameter) where
 
 import Simulation.Aivika.Internal.Parameter

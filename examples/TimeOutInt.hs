@@ -19,13 +19,7 @@
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Event
-import Simulation.Aivika.Ref
-import Simulation.Aivika.Process
-import Simulation.Aivika.Random
+import Simulation.Aivika
 
 ackRate = 1.0 / 1.0  -- reciprocal of the acknowledge mean time
 toPeriod = 0.5       -- timeout period
@@ -33,7 +27,8 @@ toPeriod = 0.5       -- timeout period
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 10000.0,
                 spcDT = 1.0,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
      
 model :: Simulation Double
 model =
@@ -54,13 +49,14 @@ model =
               liftEvent $ runProcessUsingId timeoutPid timeout
               -- wait for ACK, but could be timeout
               ackTime <-
-                liftIO $ exponentialGen (1 / ackRate) 
+                liftParameter $
+                randomExponential (1 / ackRate)
               holdProcess ackTime
               liftEvent $
                 do interrupted <- processInterrupted nodePid
                    if interrupted
                      then modifyRef nTimeOuts $ (+) 1
-                     else cancelProcess timeoutPid
+                     else cancelProcessUsingId timeoutPid
               node
               
          timeout :: Process ()
@@ -68,10 +64,10 @@ model =
            do holdProcess toPeriod
               liftEvent $ interruptProcess nodePid
 
-     runProcessInStartTimeUsingId IncludingCurrentEvents
+     initProcessUsingId IncludingCurrentEvents
        nodePid node 
      
-     runEventInStopTime IncludingCurrentEvents $
+     finalEvent IncludingCurrentEvents $
        do x <- readRef nTimeOuts
           y <- readRef nMsgs
           return $ x / y

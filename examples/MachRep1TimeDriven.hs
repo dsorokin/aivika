@@ -17,20 +17,16 @@
 
 import Control.Monad.Trans
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Event
-import Simulation.Aivika.Ref
-import Simulation.Aivika.Random
+import Simulation.Aivika
 
-upRate = 1.0 / 1.0       -- reciprocal of mean up time
-repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
+meanUpTime = 1.0
+meanRepairTime = 0.5
 
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 1000.0,
                 spcDT = 0.05,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
         
 model :: Simulation Double
 model =
@@ -64,13 +60,13 @@ model =
                             -- the machine is broken
                             startUpTime' <- readRef startUpTime
                             finishUpTime' <- liftDynamics time
-                            dt' <- liftDynamics dt
+                            dt' <- liftParameter dt
                             modifyRef totalUpTime $ 
                               \a -> a +
                               (finishUpTime' - startUpTime')
-                            repairTime' <- 
-                              liftIO $
-                              exponentialGen (1 / repairRate)
+                            repairTime' <-
+                              liftParameter $
+                              randomExponential meanRepairTime
                             writeRef repairNum $
                               round (repairTime' / dt')
                               
@@ -78,19 +74,19 @@ model =
                          do writeRef repairNum (-1)
                             -- the machine is repaired
                             t'  <- liftDynamics time
-                            dt' <- liftDynamics dt
+                            dt' <- liftParameter dt
                             writeRef startUpTime t'
-                            upTime' <- 
-                              liftIO $
-                              exponentialGen (1 / upRate)
+                            upTime' <-
+                              liftParameter $
+                              randomExponential meanUpTime
                             writeRef upNum $
                               round (upTime' / dt')
                               
-                       result | upNum' > 0     = untilBroken
+                       result | upNum' > 0      = untilBroken
                               | upNum' == 0     = broken
-                              | repairNum' > 0 = untilRepaired
+                              | repairNum' > 0  = untilRepaired
                               | repairNum' == 0 = repaired
-                              | otherwise      = repaired 
+                              | otherwise       = repaired 
                    result
                             
      -- create two machines with type Event ()
@@ -98,16 +94,16 @@ model =
      m2 <- machine
 
      -- start the time-driven simulation of the machines
-     runEventInStartTime IncludingCurrentEvents $
+     initEvent IncludingCurrentEvents $
        -- in the integration time points
        enqueueEventWithIntegTimes $
        do m1
           m2
 
      -- return the result in the stop time
-     runEventInStopTime IncludingCurrentEvents $
+     finalEvent IncludingCurrentEvents $
        do x <- readRef totalUpTime
-          y <- liftDynamics stoptime
+          y <- liftParameter stoptime
           return $ x / (2 * y)
   
 main = runSimulation model specs >>= print

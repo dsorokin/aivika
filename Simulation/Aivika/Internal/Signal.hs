@@ -2,7 +2,7 @@
 -- |
 -- Module     : Simulation.Aivika.Internal.Signal
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -14,10 +14,14 @@
 --
 
 module Simulation.Aivika.Internal.Signal
-       (Signal(..),
-        SignalSource(..),
-        newSignalSource,
+       (-- * Handling and Triggering Signal
+        Signal(..),
         handleSignal_,
+        SignalSource,
+        newSignalSource,
+        publishSignal,
+        triggerSignal,
+        -- * Useful Combinators
         mapSignal,
         mapSignalM,
         apSignal,
@@ -28,19 +32,37 @@ module Simulation.Aivika.Internal.Signal
         merge3Signals,
         merge4Signals,
         merge5Signals,
+        -- * Creating Signal in Time Points
+        newSignalInTimes,
+        newSignalInIntegTimes,
+        newInitSignal,
+        newFinalSignal,
+        -- * Signal History
+        SignalHistory,
+        signalHistorySignal,
+        newSignalHistory,
+        readSignalHistory,
+        -- * Signalable Computations
         Signalable(..),
-        signalableChanged) where
+        signalableChanged,
+        emptySignalable,
+        appendSignalable) where
 
 import Data.IORef
 import Data.Monoid
 import Data.List
+import Data.Array
 
 import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Parameter
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Event
+
+import qualified Simulation.Aivika.Vector as V
+import qualified Simulation.Aivika.Vector.Unboxed as UV
 
 -- | The signal source that can publish its signal.
 data SignalSource a =
@@ -219,6 +241,70 @@ apSignal f m =
 emptySignal :: Signal a
 emptySignal =
   Signal { handleSignal = \h -> return $ return () }
+                                    
+-- | Represents the history of the signal values.
+data SignalHistory a =
+  SignalHistory { signalHistorySignal :: Signal a,  
+                  -- ^ The signal for which the history is created.
+                  signalHistoryTimes  :: UV.Vector Double,
+                  signalHistoryValues :: V.Vector a }
+
+-- | Create a history of the signal values.
+newSignalHistory :: Signal a -> Event (SignalHistory a)
+newSignalHistory signal =
+  do ts <- liftIO UV.newVector
+     xs <- liftIO V.newVector
+     handleSignal_ signal $ \a ->
+       Event $ \p ->
+       do liftIO $ UV.appendVector ts (pointTime p)
+          liftIO $ V.appendVector xs a
+     return SignalHistory { signalHistorySignal = signal,
+                            signalHistoryTimes  = ts,
+                            signalHistoryValues = xs }
+       
+-- | Read the history of signal values.
+readSignalHistory :: SignalHistory a -> Event (Array Int Double, Array Int a)
+readSignalHistory history =
+  do xs <- liftIO $ UV.freezeVector (signalHistoryTimes history)
+     ys <- liftIO $ V.freezeVector (signalHistoryValues history)
+     return (xs, ys)     
+     
+-- | Trigger the signal with the current time.
+triggerSignalWithCurrentTime :: SignalSource Double -> Event ()
+triggerSignalWithCurrentTime s =
+  Event $ \p -> invokeEvent p $ triggerSignal s (pointTime p)
+
+-- | Return a signal that is triggered in the specified time points.
+newSignalInTimes :: [Double] -> Event (Signal Double)
+newSignalInTimes xs =
+  do s <- liftSimulation newSignalSource
+     enqueueEventWithTimes xs $ triggerSignalWithCurrentTime s
+     return $ publishSignal s
+       
+-- | Return a signal that is triggered in the integration time points.
+-- It should be called with help of 'runEventInStartTime'.
+newSignalInIntegTimes :: Event (Signal Double)
+newSignalInIntegTimes =
+  do s <- liftSimulation newSignalSource
+     enqueueEventWithIntegTimes $ triggerSignalWithCurrentTime s
+     return $ publishSignal s
+     
+-- | Return a signal that is triggered in the start time.
+-- It should be called with help of 'runEventInStartTime'.
+newInitSignal :: Event (Signal Double)
+newInitSignal =
+  do s <- liftSimulation newSignalSource
+     t <- liftParameter starttime
+     enqueueEvent t $ triggerSignalWithCurrentTime s
+     return $ publishSignal s
+
+-- | Return a signal that is triggered in the final time.
+newFinalSignal :: Event (Signal Double)
+newFinalSignal =
+  do s <- liftSimulation newSignalSource
+     t <- liftParameter stoptime
+     enqueueEvent t $ triggerSignalWithCurrentTime s
+     return $ publishSignal s
 
 -- | Describes a computation that also signals when changing its value.
 data Signalable a =
@@ -235,4 +321,20 @@ signalableChanged x = mapSignalM (const $ readSignalable x) $ signalableChanged_
 
 instance Functor Signalable where
   fmap f x = x { readSignalable = fmap f (readSignalable x) }
-                          
+
+instance Monoid a => Monoid (Signalable a) where
+
+  mempty = emptySignalable
+  mappend = appendSignalable
+
+-- | Return an identity.
+emptySignalable :: Monoid a => Signalable a
+emptySignalable =
+  Signalable { readSignalable = return mempty,
+               signalableChanged_ = mempty }
+
+-- | An associative operation.
+appendSignalable :: Monoid a => Signalable a -> Signalable a -> Signalable a
+appendSignalable m1 m2 =
+  Signalable { readSignalable = liftM2 (<>) (readSignalable m1) (readSignalable m2),
+               signalableChanged_ = (signalableChanged_ m1) <> (signalableChanged_ m2) }

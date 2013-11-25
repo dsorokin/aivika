@@ -2,7 +2,7 @@
 -- |
 -- Module     : Simulation.Aivika.Parameter.Random
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -11,62 +11,130 @@
 --
 
 module Simulation.Aivika.Parameter.Random
-       (newRandomParameter,
-        newNormalParameter,
-        newExponentialParameter,
-        newPoissonParameter,
-        newBinomialParameter) where
+       (randomUniform,
+        randomNormal,
+        randomExponential,
+        randomErlang,
+        randomPoisson,
+        randomBinomial) where
 
 import System.Random
 
 import Control.Monad.Trans
 
-import Simulation.Aivika.Random
-import Simulation.Aivika.Parameter
+import Simulation.Aivika.Generator
+import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Parameter
 
--- | Create a new random parameter distributed uniformly.
--- The value doesn't change within the simulation run but
--- then the value is recalculated for each new run.
-newRandomParameter :: Parameter Double     -- ^ minimum
-                      -> Parameter Double  -- ^ maximum
-                      -> IO (Parameter Double)
-newRandomParameter min max =
-  memoParameter $
-  do x <- liftIO $ getStdRandom random
-     min + return x * (max - min)
+-- | Computation that generates a new random number distributed uniformly.
+--
+-- To create a parameter that would return the same value within the simulation run,
+-- you should memoize the computation, which is important for the Monte-Carlo simulation.
+--
+-- To create a random function that would return the same values in the integration
+-- time points within the simulation run, you should either lift the computation to
+-- the @Dynamics@ computation and then memoize it too but using the corresponded
+-- function for that computation, or just take the predefined function that does
+-- namely this.
+randomUniform :: Double     -- ^ minimum
+                 -> Double  -- ^ maximum
+                 -> Parameter Double
+randomUniform min max =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generatorUniform g min max
 
--- | Create a new random parameter distributed normally.
--- The value doesn't change within the simulation run but
--- then the value is recalculated for each new run.
-newNormalParameter :: Parameter Double     -- ^ mean
-                      -> Parameter Double  -- ^ variance
-                      -> IO (Parameter Double)
-newNormalParameter mu nu =
-  do g <- newNormalGen
-     memoParameter $
-       do x <- liftIO g
-          mu + return x * nu
+-- | Computation that generates a new random number distributed normally.
+--
+-- To create a parameter that would return the same value within the simulation run,
+-- you should memoize the computation, which is important for the Monte-Carlo simulation.
+--
+-- To create a random function that would return the same values in the integration
+-- time points within the simulation run, you should either lift the computation to
+-- the @Dynamics@ computation and then memoize it too but using the corresponded
+-- function for that computation, or just take the predefined function that does
+-- namely this.
+randomNormal :: Double     -- ^ mean
+                -> Double  -- ^ deviation
+                -> Parameter Double
+randomNormal mu nu =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generatorNormal g mu nu
 
--- | Return the exponential random parameter with the specified mean.
-newExponentialParameter :: Parameter Double -> IO (Parameter Double)
-newExponentialParameter mu =
-  memoParameter $
-  do x <- mu
-     liftIO $ exponentialGen x
+-- | Computation that returns a new exponential random number with the specified mean
+-- (the reciprocal of the rate).
+--
+-- To create a parameter that would return the same value within the simulation run,
+-- you should memoize the computation, which is important for the Monte-Carlo simulation.
+--
+-- To create a random function that would return the same values in the integration
+-- time points within the simulation run, you should either lift the computation to
+-- the @Dynamics@ computation and then memoize it too but using the corresponded
+-- function for that computation, or just take the predefined function that does
+-- namely this.
+randomExponential :: Double
+                     -- ^ the mean (the reciprocal of the rate)
+                     -> Parameter Double
+randomExponential mu =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generatorExponential g mu
 
--- | Return the Poisson random parameter with the specified mean.
-newPoissonParameter :: Parameter Double -> IO (Parameter Int)
-newPoissonParameter mu =
-  memoParameter $
-  do x <- mu
-     liftIO $ poissonGen x
+-- | Computation that returns a new Erlang random number with the specified scale
+-- (the reciprocal of the rate) and integer shape.
+--
+-- To create a parameter that would return the same value within the simulation run,
+-- you should memoize the computation, which is important for the Monte-Carlo simulation.
+--
+-- To create a random function that would return the same values in the integration
+-- time points within the simulation run, you should either lift the computation to
+-- the @Dynamics@ computation and then memoize it too but using the corresponded
+-- function for that computation, or just take the predefined function that does
+-- namely this.
+randomErlang :: Double
+                -- ^ the scale (the reciprocal of the rate)
+                -> Int
+                -- ^ the shape
+                -> Parameter Double
+randomErlang beta m =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generatorErlang g beta m
 
--- | Return the binomial random parameter with the specified probability and trials.
-newBinomialParameter :: Parameter Double  -- ^ the probability
-                        -> Parameter Int  -- ^ the number of trials
-                        -> IO (Parameter Int)
-newBinomialParameter prob trials =
-  memoParameter $
-  do x <- prob
-     y <- trials
-     liftIO $ binomialGen x y
+-- | Computation that returns a new Poisson random number with the specified mean.
+--
+-- To create a parameter that would return the same value within the simulation run,
+-- you should memoize the computation, which is important for the Monte-Carlo simulation.
+--
+-- To create a random function that would return the same values in the integration
+-- time points within the simulation run, you should either lift the computation to
+-- the @Dynamics@ computation and then memoize it too but using the corresponded
+-- function for that computation, or just take the predefined function that does
+-- namely this.
+randomPoisson :: Double
+                 -- ^ the mean
+                 -> Parameter Int
+randomPoisson mu =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generatorPoisson g mu
+
+-- | Computation that returns a new binomial random number with the specified
+-- probability and trials.
+--
+-- To create a parameter that would return the same value within the simulation run,
+-- you should memoize the computation, which is important for the Monte-Carlo simulation.
+--
+-- To create a random function that would return the same values in the integration
+-- time points within the simulation run, you should either lift the computation to
+-- the @Dynamics@ computation and then memoize it too but using the corresponded
+-- function for that computation, or just take the predefined function that does
+-- namely this.
+randomBinomial :: Double  -- ^ the probability
+                  -> Int  -- ^ the number of trials
+                  -> Parameter Int
+randomBinomial prob trials =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generatorBinomial g prob trials

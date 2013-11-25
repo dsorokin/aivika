@@ -4,7 +4,7 @@
 -- |
 -- Module     : Simulation.Aivika.SystemDynamics
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -40,12 +40,17 @@ module Simulation.Aivika.SystemDynamics
         forecast,
         trend,
         -- * Difference Equations
-        sumDynamics,
+        diffsum,
         -- * Table Functions
         lookupDynamics,
         lookupStepwiseDynamics,
         -- * Discrete Functions
         delay,
+        delayI,
+        step,
+        pulse,
+        pulseP,
+        ramp,
         -- * Financial Functions
         npv,
         npve) where
@@ -57,11 +62,15 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Parameter
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Interpolate
-import Simulation.Aivika.Dynamics.Memo.Unboxed
 import Simulation.Aivika.Unboxed
+import Simulation.Aivika.Table
+
+import qualified Simulation.Aivika.Dynamics.Memo as M
+import qualified Simulation.Aivika.Dynamics.Memo.Unboxed as MU
 
 --
 -- Equality and Ordering
@@ -246,7 +255,7 @@ integ :: Dynamics Double                  -- ^ the derivative
          -> Dynamics Double               -- ^ the initial value
          -> Simulation (Dynamics Double)  -- ^ the integral
 integ diff i =
-  mdo y <- memoDynamics z
+  mdo y <- MU.memoDynamics z
       z <- Simulation $ \r ->
         case spcMethod (runSpecs r) of
           Euler -> return $ Dynamics $ integEuler diff i y
@@ -460,14 +469,14 @@ trend x at i =
 -- the difference is used instead of derivative.
 --
 -- As usual, to create a loopback, you should use the recursive do-notation.
-sumDynamics :: (Num a, Unboxed a)
-               => Dynamics a               -- ^ the difference
-               -> Dynamics a               -- ^ the initial value
-               -> Simulation (Dynamics a)  -- ^ the sum
-sumDynamics (Dynamics diff) (Dynamics i) =
-  mdo y <- memoDynamics z
-      z <- Simulation $ \r ->
-        return $ Dynamics $ \p ->
+diffsum :: (Num a, Unboxed a)
+           => Dynamics a               -- ^ the difference
+           -> Dynamics a               -- ^ the initial value
+           -> Simulation (Dynamics a)  -- ^ the sum
+diffsum (Dynamics diff) (Dynamics i) =
+  mdo y <-
+        MU.memo0Dynamics $
+        Dynamics $ \p ->
         case pointIteration p of
           0 -> i p
           n -> do 
@@ -490,67 +499,55 @@ sumDynamics (Dynamics diff) (Dynamics i) =
 -- | Lookup @x@ in a table of pairs @(x, y)@ using linear interpolation.
 lookupDynamics :: Dynamics Double -> Array Int (Double, Double) -> Dynamics Double
 lookupDynamics (Dynamics m) tbl =
-  Dynamics (\p -> do a <- m p; return $ find first last a) where
-    (first, last) = bounds tbl
-    find left right x =
-      if left > right then
-        error "Incorrect index: table"
-      else
-        let index = (left + 1 + right) `div` 2
-            x1    = fst $ tbl ! index
-        in if x1 <= x then 
-             let y | index < right = find index right x
-                   | right == last  = snd $ tbl ! right
-                   | otherwise     = 
-                     let x2 = fst $ tbl ! (index + 1)
-                         y1 = snd $ tbl ! index
-                         y2 = snd $ tbl ! (index + 1)
-                     in y1 + (y2 - y1) * (x - x1) / (x2 - x1) 
-             in y
-           else
-             let y | left < index = find left (index - 1) x
-                   | left == first = snd $ tbl ! left
-                   | otherwise    = error "Incorrect index: table"
-             in y
+  Dynamics $ \p ->
+  do a <- m p
+     return $ tableLookup a tbl
 
 -- | Lookup @x@ in a table of pairs @(x, y)@ using stepwise function.
-lookupStepwiseDynamics :: Dynamics Double
-                          -> Array Int (Double, Double)
-                          -> Dynamics Double
+lookupStepwiseDynamics :: Dynamics Double -> Array Int (Double, Double) -> Dynamics Double
 lookupStepwiseDynamics (Dynamics m) tbl =
-  Dynamics (\p -> do a <- m p; return $ find first last a) where
-    (first, last) = bounds tbl
-    find left right x =
-      if left > right then
-        error "Incorrect index: table"
-      else
-        let index = (left + 1 + right) `div` 2
-            x1    = fst $ tbl ! index
-        in if x1 <= x then 
-             let y | index < right = find index right x
-                   | right == last  = snd $ tbl ! right
-                   | otherwise     = snd $ tbl ! right
-             in y
-           else
-             let y | left < index = find left (index - 1) x
-                   | left == first = snd $ tbl ! left
-                   | otherwise    = error "Incorrect index: table"
-             in y
+  Dynamics $ \p ->
+  do a <- m p
+     return $ tableLookupStepwise a tbl
 
 --
 -- Discrete Functions
 --
 
--- | Return the delayed value.
---
--- If you want to apply the result recursively in some loopback then you
--- should use one of the memoization functions such as 'memoDynamics'
--- and 'memo0Dynamics'.    
+-- | Return the delayed value using the specified lag time.
 delay :: Dynamics a          -- ^ the value to delay
          -> Dynamics Double  -- ^ the lag time
-         -> Dynamics a       -- ^ the initial value
          -> Dynamics a       -- ^ the delayed value
-delay (Dynamics x) (Dynamics d) (Dynamics i) = Dynamics r 
+delay (Dynamics x) (Dynamics d) = discreteDynamics $ Dynamics r 
+  where
+    r p = do 
+      let t  = pointTime p
+          sc = pointSpecs p
+          n  = pointIteration p
+      a <- d p
+      let t' = t - a
+          n' = fromIntegral $ floor $ (t' - spcStartTime sc) / spcDT sc
+          y | n' < 0    = x $ p { pointTime = spcStartTime sc,
+                                  pointIteration = 0, 
+                                  pointPhase = 0 }
+            | n' < n    = x $ p { pointTime = t',
+                                  pointIteration = n',
+                                  pointPhase = -1 }
+            | n' > n    = error $
+                          "Cannot return the future data: delay. " ++
+                          "The lag time cannot be negative."
+            | otherwise = error $
+                          "Cannot return the current data: delay. " ++
+                          "The lag time is too small."
+      y
+
+-- | Return the delayed value using the specified lag time and initial value.
+-- Because of the latter, it allows creating a loop back.
+delayI :: Dynamics a          -- ^ the value to delay
+          -> Dynamics Double  -- ^ the lag time
+          -> Dynamics a       -- ^ the initial value
+          -> Simulation (Dynamics a)    -- ^ the delayed value
+delayI (Dynamics x) (Dynamics d) (Dynamics i) = M.memo0Dynamics $ Dynamics r 
   where
     r p = do 
       let t  = pointTime p
@@ -584,9 +581,10 @@ delay (Dynamics x) (Dynamics d) (Dynamics i) = Dynamics r
 --
 -- @
 -- npv stream rate init factor =
---   mdo df <- integ (- df * rate) 1
+--   mdo let dt' = liftParameter dt
+--       df <- integ (- df * rate) 1
 --       accum <- integ (stream * df) init
---       return $ (accum + dt * stream * df) * factor
+--       return $ (accum + dt' * stream * df) * factor
 -- @
 npv :: Dynamics Double                  -- ^ the stream
        -> Dynamics Double               -- ^ the discount rate
@@ -594,9 +592,10 @@ npv :: Dynamics Double                  -- ^ the stream
        -> Dynamics Double               -- ^ factor
        -> Simulation (Dynamics Double)  -- ^ the Net Present Value (NPV)
 npv stream rate init factor =
-  mdo df <- integ (- df * rate) 1
+  mdo let dt' = liftParameter dt
+      df <- integ (- df * rate) 1
       accum <- integ (stream * df) init
-      return $ (accum + dt * stream * df) * factor
+      return $ (accum + dt' * stream * df) * factor
 
 -- | Return the Net Present Value End of period (NPVE) of the stream computed
 -- using the specified discount rate, the initial value and some factor.
@@ -605,9 +604,10 @@ npv stream rate init factor =
 --
 -- @
 -- npve stream rate init factor =
---   mdo df <- integ (- df * rate \/ (1 + rate * dt)) (1 \/ (1 + rate * dt))
+--   mdo let dt' = liftParameter dt
+--       df <- integ (- df * rate \/ (1 + rate * dt')) (1 \/ (1 + rate * dt'))
 --       accum <- integ (stream * df) init
---       return $ (accum + dt * stream * df) * factor
+--       return $ (accum + dt' * stream * df) * factor
 -- @
 npve :: Dynamics Double                  -- ^ the stream
         -> Dynamics Double               -- ^ the discount rate
@@ -615,6 +615,94 @@ npve :: Dynamics Double                  -- ^ the stream
         -> Dynamics Double               -- ^ factor
         -> Simulation (Dynamics Double)  -- ^ the Net Present Value End (NPVE)
 npve stream rate init factor =
-  mdo df <- integ (- df * rate / (1 + rate * dt)) (1 / (1 + rate * dt))
+  mdo let dt' = liftParameter dt
+      df <- integ (- df * rate / (1 + rate * dt')) (1 / (1 + rate * dt'))
       accum <- integ (stream * df) init
-      return $ (accum + dt * stream * df) * factor
+      return $ (accum + dt' * stream * df) * factor
+
+-- | Computation that returns 0 until the step time and then returns the specified height.
+step :: Dynamics Double
+        -- ^ the height
+        -> Dynamics Double
+        -- ^ the step time
+        -> Dynamics Double
+step h st =
+  discreteDynamics $
+  Dynamics $ \p ->
+  do let sc = pointSpecs p
+         t  = pointTime p
+     st' <- invokeDynamics p st
+     let t' = t + spcDT sc / 2
+     if st' < t'
+       then invokeDynamics p h
+       else return 0
+
+-- | Computation that returns 1, starting at the time start, and lasting for the interval
+-- width; 0 is returned at all other times.
+pulse :: Dynamics Double
+         -- ^ the time start
+         -> Dynamics Double
+         -- ^ the interval width
+         -> Dynamics Double
+pulse st w =
+  discreteDynamics $
+  Dynamics $ \p ->
+  do let sc = pointSpecs p
+         t  = pointTime p
+     st' <- invokeDynamics p st
+     let t' = t + spcDT sc / 2
+     if st' < t'
+       then do w' <- invokeDynamics p w
+               return $ if t' < st' + w' then 1 else 0
+       else return 0
+
+-- | Computation that returns 1, starting at the time start, and lasting for the interval
+-- width and then repeats this pattern with the specified period; 0 is returned at all
+-- other times.
+pulseP :: Dynamics Double
+          -- ^ the time start
+          -> Dynamics Double
+          -- ^ the interval width
+          -> Dynamics Double
+          -- ^ the time period
+          -> Dynamics Double
+pulseP st w period =
+  discreteDynamics $
+  Dynamics $ \p ->
+  do let sc = pointSpecs p
+         t  = pointTime p
+     p'  <- invokeDynamics p period
+     st' <- invokeDynamics p st
+     let y' = if (p' > 0) && (t > st')
+              then fromIntegral (floor $ (t - st') / p') * p'
+              else 0
+     let st' = st' + y'
+     let t' = t + spcDT sc / 2
+     if st' < t'
+       then do w' <- invokeDynamics p w
+               return $ if t' < st' + w' then 1 else 0
+       else return 0
+
+-- | Computation that returns 0 until the specified time start and then
+-- slopes upward until the end time and then holds constant.
+ramp :: Dynamics Double
+        -- ^ the slope parameter
+        -> Dynamics Double
+        -- ^ the time start
+        -> Dynamics Double
+        -- ^ the end time
+        -> Dynamics Double
+ramp slope st e =
+  discreteDynamics $
+  Dynamics $ \p ->
+  do let sc = pointSpecs p
+         t  = pointTime p
+     st' <- invokeDynamics p st
+     if st' < t
+       then do slope' <- invokeDynamics p slope
+               e' <- invokeDynamics p e
+               if t < e'
+                 then return $ slope' * (t - st')
+                 else return $ slope' * (e' - st')
+       else return 0
+        

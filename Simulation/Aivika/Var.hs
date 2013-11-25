@@ -2,7 +2,7 @@
 -- |
 -- Module     : Simulation.Aivika.Var
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -121,18 +121,11 @@ modifyVar v f =
                     let b = f a
                     V.writeVector ys i $! b
                     invokeEvent p $ triggerSignal s b
-            else do i <- UV.vectorBinarySearch xs t
-                    if i >= 0
-                      then do a <- V.readVector ys i
-                              let b = f a
-                              UV.appendVector xs t
-                              V.appendVector ys $! b
-                              invokeEvent p $ triggerSignal s b
-                      else do a <- V.readVector ys $ - (i + 1) - 1
-                              let b = f a
-                              UV.appendVector xs t
-                              V.appendVector ys $! b
-                              invokeEvent p $ triggerSignal s b
+            else do a <- V.readVector ys i
+                    let b = f a
+                    UV.appendVector xs t
+                    V.appendVector ys $! b
+                    invokeEvent p $ triggerSignal s b
 
 -- | Freeze the variable and return in arrays the time points and corresponded 
 -- values when the variable had changed in different time points: (1) the last

@@ -2,74 +2,108 @@
 -- |
 -- Module     : Simulation.Aivika.Dynamics.Random
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- Below are defined random functions that return the 'Dynamics' computations. 
--- The values are initially defined in the integration time points and then
--- they are passed in to the 'memo0Dynamics' function to memoize and then interpolate.
+-- This module defines the random parameters of simulation experiments.
 --
 
-module Simulation.Aivika.Dynamics.Random 
-       (newUniformDynamics,
-        newNormalDynamics,
-        newExponentialDynamics,
-        newPoissonDynamics,
-        newBinomialDynamics) where
+module Simulation.Aivika.Dynamics.Random
+       (memoRandomUniformDynamics,
+        memoRandomNormalDynamics,
+        memoRandomExponentialDynamics,
+        memoRandomErlangDynamics,
+        memoRandomPoissonDynamics,
+        memoRandomBinomialDynamics) where
 
 import System.Random
-import Data.IORef
+
 import Control.Monad.Trans
 
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Random
-import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Generator
+import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Parameter
+import Simulation.Aivika.Internal.Simulation
+import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Memo.Unboxed
 
--- | Return the uniform random numbers in the integration time points.
-newUniformDynamics :: Dynamics Double     -- ^ minimum
-                   -> Dynamics Double     -- ^ maximum
-                   -> Simulation (Dynamics Double)
-newUniformDynamics min max =
-  memo0Dynamics $ do
-    x <- liftIO $ getStdRandom random
-    min + return x * (max - min)
-     
--- | Return the normal random numbers in the integration time points.
-newNormalDynamics :: Dynamics Double     -- ^ mean
-                  -> Dynamics Double     -- ^ variance
-                  -> Simulation (Dynamics Double)
-newNormalDynamics mu nu =
-  do g <- liftIO newNormalGen
-     memo0Dynamics $ do
-       x <- liftIO g
-       mu + return x * nu
+-- | Computation that generates random numbers distributed uniformly and
+-- memoizes them in the integration time points.
+memoRandomUniformDynamics :: Dynamics Double     -- ^ minimum
+                             -> Dynamics Double  -- ^ maximum
+                             -> Simulation (Dynamics Double)
+memoRandomUniformDynamics min max =
+  memo0Dynamics $
+  Dynamics $ \p ->
+  do let g = runGenerator $ pointRun p
+     min' <- invokeDynamics p min
+     max' <- invokeDynamics p max
+     generatorUniform g min' max'
 
--- | Return the exponential random numbers in the integration time points
--- with the specified mean.
-newExponentialDynamics :: Dynamics Double -> Simulation (Dynamics Double)
-newExponentialDynamics mu =
-  memo0Dynamics $ do
-    x <- mu
-    liftIO $ exponentialGen x
+-- | Computation that generates random numbers distributed normally and
+-- memoizes them in the integration time points.
+memoRandomNormalDynamics :: Dynamics Double     -- ^ mean
+                            -> Dynamics Double  -- ^ deviation
+                            -> Simulation (Dynamics Double)
+memoRandomNormalDynamics mu nu =
+  memo0Dynamics $
+  Dynamics $ \p ->
+  do let g = runGenerator $ pointRun p
+     mu' <- invokeDynamics p mu
+     nu' <- invokeDynamics p nu
+     generatorNormal g mu' nu'
 
--- | Return the Poisson random numbers in the integration time points
--- with the specified mean.
-newPoissonDynamics :: Dynamics Double -> Simulation (Dynamics Int)
-newPoissonDynamics mu =
-  memo0Dynamics $ do
-    x <- mu
-    liftIO $ poissonGen x
+-- | Computation that generates exponential random numbers with the specified mean
+-- (the reciprocal of the rate) and memoizes them in the integration time points.
+memoRandomExponentialDynamics :: Dynamics Double
+                                 -- ^ the mean (the reciprocal of the rate)
+                                 -> Simulation (Dynamics Double)
+memoRandomExponentialDynamics mu =
+  memo0Dynamics $
+  Dynamics $ \p ->
+  do let g = runGenerator $ pointRun p
+     mu' <- invokeDynamics p mu
+     generatorExponential g mu'
 
--- | Return in the integration time points the binomial random numbers
--- with the specified probability and trials.
-newBinomialDynamics :: Dynamics Double  -- ^ the probability
-                       -> Dynamics Int  -- ^ the number of trials
-                       -> Simulation (Dynamics Int)
-newBinomialDynamics prob trials =
-  memo0Dynamics $ do
-    x <- prob
-    y <- trials
-    liftIO $ binomialGen x y
+-- | Computation that generates the Erlang random numbers with the specified scale
+-- (the reciprocal of the rate) and integer shape but memoizes them in the integration
+-- time points.
+memoRandomErlangDynamics :: Dynamics Double
+                            -- ^ the scale (the reciprocal of the rate)
+                            -> Dynamics Int
+                            -- ^ the shape
+                            -> Simulation (Dynamics Double)
+memoRandomErlangDynamics beta m =
+  memo0Dynamics $
+  Dynamics $ \p ->
+  do let g = runGenerator $ pointRun p
+     beta' <- invokeDynamics p beta
+     m' <- invokeDynamics p m
+     generatorErlang g beta' m'
+
+-- | Computation that generats the Poisson random numbers with the specified mean
+-- and memoizes them in the integration time points.
+memoRandomPoissonDynamics :: Dynamics Double
+                             -- ^ the mean
+                             -> Simulation (Dynamics Int)
+memoRandomPoissonDynamics mu =
+  memo0Dynamics $
+  Dynamics $ \p ->
+  do let g = runGenerator $ pointRun p
+     mu' <- invokeDynamics p mu
+     generatorPoisson g mu'
+
+-- | Computation that generates binomial random numbers with the specified
+-- probability and trials but memoizes them in the integration time points.
+memoRandomBinomialDynamics :: Dynamics Double  -- ^ the probability
+                              -> Dynamics Int  -- ^ the number of trials
+                              -> Simulation (Dynamics Int)
+memoRandomBinomialDynamics prob trials =
+  memo0Dynamics $
+  Dynamics $ \p ->
+  do let g = runGenerator $ pointRun p
+     prob' <- invokeDynamics p prob
+     trials' <- invokeDynamics p trials
+     generatorBinomial g prob' trials'

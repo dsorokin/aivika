@@ -4,7 +4,7 @@
 -- |
 -- Module     : Simulation.Aivika.Internal.Dynamics
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -16,8 +16,8 @@ module Simulation.Aivika.Internal.Dynamics
         Dynamics(..),
         DynamicsLift(..),
         invokeDynamics,
-        runDynamicsInStartTime,
-        runDynamicsInStopTime,
+        initDynamics,
+        finalDynamics,
         runDynamicsInIntegTimes,
         runDynamicsInTime,
         runDynamicsInTimes,
@@ -25,10 +25,7 @@ module Simulation.Aivika.Internal.Dynamics
         catchDynamics,
         finallyDynamics,
         throwDynamics,
-        -- * Time parameters
-        starttime,
-        stoptime,
-        dt,
+        -- * Simulation Time
         time,
         isTimeInteg,
         integIteration,
@@ -42,6 +39,7 @@ import Control.Monad.Trans
 import Control.Monad.Fix
 
 import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Parameter
 import Simulation.Aivika.Internal.Simulation
 
 -- | A value in the 'Dynamics' monad represents a polymorphic time varying function.
@@ -64,13 +62,13 @@ bindD (Dynamics m) k =
      m' p
 
 -- | Run the 'Dynamics' computation in the initial time point.
-runDynamicsInStartTime :: Dynamics a -> Simulation a
-runDynamicsInStartTime (Dynamics m) =
+initDynamics :: Dynamics a -> Simulation a
+initDynamics (Dynamics m) =
   Simulation $ m . integStartPoint
 
 -- | Run the 'Dynamics' computation in the final time point.
-runDynamicsInStopTime :: Dynamics a -> Simulation a
-runDynamicsInStopTime (Dynamics m) =
+finalDynamics :: Dynamics a -> Simulation a
+finalDynamics (Dynamics m) =
   Simulation $ m . integStopPoint
 
 -- | Run the 'Dynamics' computation in all integration time points.
@@ -143,8 +141,16 @@ instance (Floating a) => Floating (Dynamics a) where
 instance MonadIO Dynamics where
   liftIO m = Dynamics $ const m
 
+instance ParameterLift Dynamics where
+  liftParameter = liftDP
+
 instance SimulationLift Dynamics where
   liftSimulation = liftDS
+    
+liftDP :: Parameter a -> Dynamics a
+{-# INLINE liftDP #-}
+liftDP (Parameter m) =
+  Dynamics $ \p -> m $ pointRun p
     
 liftDS :: Simulation a -> Dynamics a
 {-# INLINE liftDS #-}
@@ -187,19 +193,7 @@ instance MonadFix Dynamics where
     Dynamics $ \p ->
     do { rec { a <- invokeDynamics p (f a) }; return a }
 
--- | Return the start simulation time.
-starttime :: Dynamics Double
-starttime = Dynamics $ return . spcStartTime . pointSpecs
-
--- | Return the stop simulation time.
-stoptime :: Dynamics Double
-stoptime = Dynamics $ return . spcStopTime . pointSpecs
-
--- | Return the integration time step.
-dt :: Dynamics Double
-dt = Dynamics $ return . spcDT . pointSpecs
-
--- | Return the current simulation time.
+-- | Computation that returns the current simulation time.
 time :: Dynamics Double
 time = Dynamics $ return . pointTime 
 

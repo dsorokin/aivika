@@ -2,7 +2,7 @@
 -- |
 -- Module     : Simulation.Aivika.Internal.Specs
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -30,14 +30,17 @@ module Simulation.Aivika.Internal.Specs
 
 import Data.IORef
 
+import Simulation.Aivika.Generator
 import qualified Simulation.Aivika.PriorityQueue as PQ
 
 -- | It defines the simulation specs.
 data Specs = Specs { spcStartTime :: Double,    -- ^ the start time
                      spcStopTime :: Double,     -- ^ the stop time
                      spcDT :: Double,           -- ^ the integration time step
-                     spcMethod :: Method        -- ^ the integration method
-                   } deriving (Eq, Ord, Show)
+                     spcMethod :: Method,       -- ^ the integration method
+                     spcGeneratorType :: GeneratorType
+                     -- ^ the type of the random number generator
+                   }
 
 -- | It defines the integration method.
 data Method = Euler          -- ^ Euler's method
@@ -49,7 +52,8 @@ data Method = Euler          -- ^ Euler's method
 data Run = Run { runSpecs :: Specs,  -- ^ the simulation specs
                  runIndex :: Int,    -- ^ the current simulation run index
                  runCount :: Int,    -- ^ the total number of runs in this experiment
-                 runEventQueue :: EventQueue   -- ^ the event queue
+                 runEventQueue :: EventQueue,  -- ^ the event queue
+                 runGenerator :: Generator     -- ^ the random number generator
                }
 
 -- | It defines the simulation point appended with the additional information.

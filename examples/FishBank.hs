@@ -3,16 +3,14 @@
 
 import Data.Array
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.SystemDynamics
+import Simulation.Aivika
 
 specs = Specs { spcStartTime = 0, 
                 spcStopTime = 13, 
                 spcDT = 0.01,
                 -- spcDT = 0.000005,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
 
 model :: Simulation Double
 model =
@@ -47,6 +45,6 @@ model =
       totalProfit <- integ annualProfit 0
       let totalCatchPerYear = maxDynamics 0 (ships * catchPerShip)
       -- results --
-      runDynamicsInStopTime annualProfit
+      finalDynamics annualProfit
 
 main = runSimulation model specs >>= print

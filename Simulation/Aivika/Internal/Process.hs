@@ -2,7 +2,7 @@
 -- |
 -- Module     : Simulation.Aivika.Internal.Process
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -26,22 +26,16 @@ module Simulation.Aivika.Internal.Process
         -- * Running Process
         runProcess,
         runProcessUsingId,
-        runProcessInStartTime,
-        runProcessInStartTimeUsingId,
-        runProcessInStopTime,
-        runProcessInStopTimeUsingId,
-        -- * Forking Process
-        forkProcess,
-        forkProcessUsingId,
-        childProcess,
-        childProcessUsingId,
+        initProcess,
+        initProcessUsingId,
+        finalProcess,
+        finalProcessUsingId,
+        -- * Spawning Processes
+        spawnProcess,
+        spawnProcessUsingId,
         -- * Enqueuing Process
         enqueueProcess,
         enqueueProcessUsingId,
-        enqueueProcessWithStartTime,
-        enqueueProcessWithStartTimeUsingId,
-        enqueueProcessWithStopTime,
-        enqueueProcessWithStopTimeUsingId,
         -- * Creating Process Identifier
         newProcessId,
         processId,
@@ -53,8 +47,14 @@ module Simulation.Aivika.Internal.Process
         passivateProcess,
         processPassive,
         reactivateProcess,
+        cancelProcessUsingId,
         cancelProcess,
-        processCanceled,
+        processCancelled,
+        -- * Awaiting Signal
+        processAwait,
+        -- * Process Timeout
+        timeoutProcess,
+        timeoutProcessUsingId,
         -- * Parallelizing Processes
         processParallel,
         processParallelUsingIds,
@@ -63,7 +63,13 @@ module Simulation.Aivika.Internal.Process
         -- * Exception Handling
         catchProcess,
         finallyProcess,
-        throwProcess) where
+        throwProcess,
+        -- * Utilities
+        zipProcessParallel,
+        zip3ProcessParallel,
+        unzipProcess,
+        -- * Memoizing Process
+        memoProcess) where
 
 import Data.Maybe
 import Data.IORef
@@ -83,7 +89,7 @@ import Simulation.Aivika.Internal.Signal
 data ProcessId = 
   ProcessId { processStarted :: IORef Bool,
               processReactCont     :: IORef (Maybe (ContParams ())), 
-              processCancel        :: ContCancellation,
+              processCancelSource  :: ContCancellationSource,
               processInterruptRef  :: IORef Bool, 
               processInterruptCont :: IORef (Maybe (ContParams ())), 
               processInterruptVersion :: IORef Int }
@@ -188,13 +194,13 @@ processIdPrepare pid =
             "Another process with the specified identifier " ++
             "has been started already: processIdPrepare"
        else writeIORef (processStarted pid) True
-     let signal = (contCancellationInitiating $ processCancel pid)
+     let signal = (contCancellationInitiating $ processCancelSource pid)
      invokeEvent p $
        handleSignal_ signal $ \_ ->
        do interruptProcess pid
           reactivateProcess pid
 
--- | Start immediately the process. A new 'ProcessId' identifier will be
+-- | Run immediately the process. A new 'ProcessId' identifier will be
 -- assigned to the process.
 --            
 -- To run the process at the specified time, you can use
@@ -204,7 +210,7 @@ runProcess p =
   do pid <- liftSimulation newProcessId
      runProcessUsingId pid p
              
--- | Start immediately the process with the specified identifier.
+-- | Run immediately the process with the specified identifier.
 -- It will be more efficient than as you would specify the process identifier
 -- with help of the 'processUsingId' combinator and then would call 'runProcess'.
 --            
@@ -213,47 +219,31 @@ runProcess p =
 runProcessUsingId :: ProcessId -> Process () -> Event ()
 runProcessUsingId pid p =
   do processIdPrepare pid
-     runCont m cont econt ccont (processCancel pid) False
+     runCont m cont econt ccont (processCancelSource pid) False
        where cont  = return
              econt = throwEvent
              ccont = return
              m = invokeProcess pid p
 
--- | Start the process in the start time immediately.
-runProcessInStartTime :: EventProcessing -> Process () -> Simulation ()
-runProcessInStartTime processing p =
-  runEventInStartTime processing $ runProcess p
+-- | Run the process in the start time immediately.
+initProcess :: EventProcessing -> Process () -> Simulation ()
+initProcess processing p =
+  initEvent processing $ runProcess p
 
--- | Start the process in the start time immediately using the specified identifier.
-runProcessInStartTimeUsingId :: EventProcessing -> ProcessId -> Process () -> Simulation ()
-runProcessInStartTimeUsingId processing pid p =
-  runEventInStartTime processing $ runProcessUsingId pid p
+-- | Run the process in the start time immediately using the specified identifier.
+initProcessUsingId :: EventProcessing -> ProcessId -> Process () -> Simulation ()
+initProcessUsingId processing pid p =
+  initEvent processing $ runProcessUsingId pid p
 
--- | Start the process in the stop time immediately.
-runProcessInStopTime :: EventProcessing -> Process () -> Simulation ()
-runProcessInStopTime processing p =
-  runEventInStopTime processing $ runProcess p
+-- | Run the process in the final simulation time immediately.
+finalProcess :: EventProcessing -> Process () -> Simulation ()
+finalProcess processing p =
+  finalEvent processing $ runProcess p
 
--- | Start the process in the stop time immediately using the specified identifier.
-runProcessInStopTimeUsingId :: EventProcessing -> ProcessId -> Process () -> Simulation ()
-runProcessInStopTimeUsingId processing pid p =
-  runEventInStopTime processing $ runProcessUsingId pid p
-
--- | Fork the process in parallel in the sense that the process will be executed
--- by the event queue simultaneously on a single operating system thread.
--- A new 'ProcessId' identifier will be assigned to the forked process.
-forkProcess :: Process () -> Event ()
-forkProcess p =
-  enqueueEventWithCurrentTime $ runProcess p
-
--- | Fork the process in parallel using the specified identifier in the sense
--- that the process will be executed by the event queue simultaneously on a single
--- operating system thread. Calling this function is more efficient than
--- as you would specify the process identifier with help of the 'processUsingId'
--- combinator and then would call 'forkProcess'.
-forkProcessUsingId :: ProcessId -> Process () -> Event ()
-forkProcessUsingId pid p =
-  enqueueEventWithCurrentTime $ runProcessUsingId pid p
+-- | Run the process in the final simulation time immediately using the specified identifier.
+finalProcessUsingId :: EventProcessing -> ProcessId -> Process () -> Simulation ()
+finalProcessUsingId processing pid p =
+  finalEvent processing $ runProcessUsingId pid p
 
 -- | Enqueue the process that will be then started at the specified time
 -- from the event queue.
@@ -267,30 +257,6 @@ enqueueProcessUsingId :: Double -> ProcessId -> Process () -> Event ()
 enqueueProcessUsingId t pid p =
   enqueueEvent t $ runProcessUsingId pid p
 
--- | Enqueue the process that will be then started in the start time
--- from the event queue.
-enqueueProcessWithStartTime :: Process () -> Event ()
-enqueueProcessWithStartTime p =
-  enqueueEventWithStartTime $ runProcess p
-
--- | Enqueue the process that will be then started in the start time
--- from the event queue.
-enqueueProcessWithStartTimeUsingId :: ProcessId -> Process () -> Event ()
-enqueueProcessWithStartTimeUsingId pid p =
-  enqueueEventWithStartTime $ runProcessUsingId pid p
-
--- | Enqueue the process that will be then started in the stop time
--- from the event queue.
-enqueueProcessWithStopTime :: ProcessId -> Process () -> Event ()
-enqueueProcessWithStopTime pid p =
-  enqueueEventWithStopTime $ runProcess p
-
--- | Enqueue the process that will be then started in the stop time
--- from the event queue.
-enqueueProcessWithStopTimeUsingId :: ProcessId -> Process () -> Event ()
-enqueueProcessWithStopTimeUsingId pid p =
-  enqueueEventWithStopTime $ runProcessUsingId pid p
-
 -- | Return the current process identifier.
 processId :: Process ProcessId
 processId = Process return
@@ -300,24 +266,31 @@ newProcessId :: Simulation ProcessId
 newProcessId =
   do x <- liftIO $ newIORef Nothing
      y <- liftIO $ newIORef False
-     c <- newContCancellation
+     c <- newContCancellationSource
      i <- liftIO $ newIORef False
      z <- liftIO $ newIORef Nothing
      v <- liftIO $ newIORef 0
      return ProcessId { processStarted = y,
                         processReactCont     = x, 
-                        processCancel        = c, 
+                        processCancelSource  = c, 
                         processInterruptRef  = i,
                         processInterruptCont = z, 
                         processInterruptVersion = v }
 
 -- | Cancel a process with the specified identifier, interrupting it if needed.
-cancelProcess :: ProcessId -> Event ()
-cancelProcess pid = contCancellationInitiate (processCancel pid)
+cancelProcessUsingId :: ProcessId -> Event ()
+cancelProcessUsingId pid = contCancellationInitiate (processCancelSource pid)
 
--- | Test whether the process with the specified identifier was canceled.
-processCanceled :: ProcessId -> Event Bool
-processCanceled pid = contCancellationInitiated (processCancel pid)
+-- | The process cancels itself.
+cancelProcess :: Process a
+cancelProcess =
+  do pid <- processId
+     liftEvent $ cancelProcessUsingId pid
+     throwProcess $ error "The process must be cancelled already: cancelProcessItself."
+
+-- | Test whether the process with the specified identifier was cancelled.
+processCancelled :: ProcessId -> Event Bool
+processCancelled pid = contCancellationInitiated (processCancelSource pid)
 
 instance Eq ProcessId where
   x == y = processReactCont x == processReactCont y    -- for the references are unique
@@ -421,7 +394,7 @@ processParallelUsingIds xs =
   do liftEvent $ processParallelPrepare xs
      contParallel $
        flip map xs $ \(pid, m) ->
-       (invokeProcess pid m, processCancel pid)
+       (invokeProcess pid m, processCancelSource pid)
 
 -- | Like 'processParallel' but ignores the result.
 processParallel_ :: [Process a] -> Process ()
@@ -435,7 +408,7 @@ processParallelUsingIds_ xs =
   do liftEvent $ processParallelPrepare xs
      contParallel_ $
        flip map xs $ \(pid, m) ->
-       (invokeProcess pid m, processCancel pid)
+       (invokeProcess pid m, processCancelSource pid)
 
 -- | Create the new process identifiers.
 processParallelCreateIds :: [Process a] -> Simulation [(ProcessId, Process a)]
@@ -461,23 +434,144 @@ processUsingId :: ProcessId -> Process a -> Process a
 processUsingId pid x =
   Process $ \pid' ->
   do liftEvent $ processIdPrepare pid
-     rerunCont (invokeProcess pid x) (processCancel pid)
+     rerunCont (invokeProcess pid x) (processCancelSource pid)
 
--- | Like 'forkProcess' but now the child process is canceled
--- automatically if the current 'Process' computation is canceled
--- and vice versa. Therefore these two functions have different types.
-childProcess :: Process () -> Process ()
-childProcess x =
+-- | Spawn the child process specifying how the child and parent processes
+-- should be cancelled in case of need.
+spawnProcess :: ContCancellation -> Process () -> Process ()
+spawnProcess cancellation x =
   do pid <- liftSimulation $ newProcessId
-     childProcessUsingId pid x
+     spawnProcessUsingId cancellation pid x
 
--- | Like 'forkProcessUsingId' but now the child process is canceled
--- automatically if the current 'Process' computation is canceled
--- and vice versa. Therefore these two functions have different types.
-childProcessUsingId :: ProcessId -> Process () -> Process ()
-childProcessUsingId pid x =
+-- | Spawn the child process specifying how the child and parent processes
+-- should be cancelled in case of need.
+spawnProcessUsingId :: ContCancellation -> ProcessId -> Process () -> Process ()
+spawnProcessUsingId cancellation pid x =
   Process $ \pid' ->
   do liftEvent $ processIdPrepare pid
-     childCont (invokeProcess pid x) (processCancel pid)
+     spawnCont cancellation (invokeProcess pid x) (processCancelSource pid)
 
+-- | Await the signal.
+processAwait :: Signal a -> Process a
+processAwait signal =
+  Process $ \pid -> contAwait signal
 
+-- | The result of memoization.
+data MemoResult a = MemoComputed a
+                  | MemoError IOException
+                  | MemoCancelled
+
+-- | Memoize the process so that it would always return the same value
+-- within the simulation run.
+memoProcess :: Process a -> Simulation (Process a)
+memoProcess x =
+  do started  <- liftIO $ newIORef False
+     computed <- newSignalSource
+     value    <- liftIO $ newIORef Nothing
+     let result =
+           do Just x <- liftIO $ readIORef value
+              case x of
+                MemoComputed a -> return a
+                MemoError e    -> throwProcess e
+                MemoCancelled  -> cancelProcess
+     return $
+       do v <- liftIO $ readIORef value
+          case v of
+            Just _ -> result
+            Nothing ->
+              do f <- liftIO $ readIORef started
+                 case f of
+                   True ->
+                     do processAwait $ publishSignal computed
+                        result
+                   False ->
+                     do liftIO $ writeIORef started True
+                        r <- liftIO $ newIORef MemoCancelled
+                        finallyProcess
+                          (catchProcess
+                           (do a <- x    -- compute only once!
+                               liftIO $ writeIORef r (MemoComputed a))
+                           (\e ->
+                             liftIO $ writeIORef r (MemoError e)))
+                          (liftEvent $
+                           do liftIO $
+                                do x <- readIORef r
+                                   writeIORef value (Just x)
+                              triggerSignal computed ())
+                        result
+
+-- | Zip two parallel processes waiting for the both.
+zipProcessParallel :: Process a -> Process b -> Process (a, b)
+zipProcessParallel x y =
+  do [Left a, Right b] <- processParallel [fmap Left x, fmap Right y]
+     return (a, b)
+
+-- | Zip three parallel processes waiting for their results.
+zip3ProcessParallel :: Process a -> Process b -> Process c -> Process (a, b, c)
+zip3ProcessParallel x y z =
+  do [Left a,
+      Right (Left b),
+      Right (Right c)] <-
+       processParallel [fmap Left x,
+                        fmap (Right . Left) y,
+                        fmap (Right . Right) z]
+     return (a, b, c)
+
+-- | Unzip the process using memoization so that the both returned
+-- processes could be applied independently, although they will refer
+-- to the same pair of values.
+unzipProcess :: Process (a, b) -> Simulation (Process a, Process b)
+unzipProcess xy =
+  do xy' <- memoProcess xy
+     return (fmap fst xy', fmap snd xy')
+
+-- | Try to run the child process within the specified timeout.
+-- If the process will finish successfully within this time interval then
+-- the result wrapped in 'Just' will be returned; otherwise, the child process
+-- will be cancelled and 'Nothing' will be returned.
+--
+-- If an exception is raised in the child process then it is propagated to
+-- the parent computation as well.
+--
+-- A cancellation of the child process doesn't lead to cancelling the parent process.
+-- Then 'Nothing' is returned within the computation.
+timeoutProcess :: Double -> Process a -> Process (Maybe a)
+timeoutProcess timeout p =
+  do pid <- liftSimulation newProcessId
+     timeoutProcessUsingId timeout pid p
+
+-- | Try to run the child process with the given identifier within the specified timeout.
+-- If the process will finish successfully within this time interval then
+-- the result wrapped in 'Just' will be returned; otherwise, the child process
+-- will be cancelled and 'Nothing' will be returned.
+--
+-- If an exception is raised in the child process then it is propagated to
+-- the parent computation as well.
+--
+-- A cancellation of the child process doesn't lead to cancelling the parent process.
+-- Then 'Nothing' is returned within the computation.
+timeoutProcessUsingId :: Double -> ProcessId -> Process a -> Process (Maybe a)
+timeoutProcessUsingId timeout pid p =
+  do s <- liftSimulation newSignalSource
+     timeoutPid <- liftSimulation newProcessId
+     spawnProcessUsingId CancelChildAfterParent timeoutPid $
+       finallyProcess
+       (holdProcess timeout)
+       (liftEvent $
+        cancelProcessUsingId pid)
+     spawnProcessUsingId CancelChildAfterParent pid $
+       do r <- liftIO $ newIORef Nothing
+          finallyProcess
+            (catchProcess
+             (do a <- p
+                 liftIO $ writeIORef r $ Just (Right a))
+             (\e ->
+               liftIO $ writeIORef r $ Just (Left e)))
+            (liftEvent $
+             do x <- liftIO $ readIORef r
+                triggerSignal s x)
+     x <- processAwait $ publishSignal s
+     case x of
+       Nothing -> return Nothing
+       Just (Right a) -> return (Just a)
+       Just (Left e) -> throwProcess e

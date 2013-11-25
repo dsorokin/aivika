@@ -2,7 +2,7 @@
 -- |
 -- Module     : Simulation.Aivika.Dynamics
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -13,8 +13,8 @@ module Simulation.Aivika.Dynamics
        (-- * Dynamics Monad
         Dynamics,
         DynamicsLift(..),
-        runDynamicsInStartTime,
-        runDynamicsInStopTime,
+        initDynamics,
+        finalDynamics,
         runDynamicsInIntegTimes,
         runDynamicsInTime,
         runDynamicsInTimes,
@@ -22,10 +22,7 @@ module Simulation.Aivika.Dynamics
         catchDynamics,
         finallyDynamics,
         throwDynamics,
-        -- * Time parameters
-        starttime,
-        stoptime,
-        dt,
+        -- * Simulation Time
         time,
         isTimeInteg,
         integIteration,

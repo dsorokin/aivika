@@ -4,7 +4,7 @@
 -- |
 -- Module     : Simulation.Aivika.Internal.Simulation
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -37,6 +37,7 @@ import Control.Monad.Fix
 
 import Data.IORef
 
+import Simulation.Aivika.Generator
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Parameter
 
@@ -64,20 +65,24 @@ bindS (Simulation m) k =
 runSimulation :: Simulation a -> Specs -> IO a
 runSimulation (Simulation m) sc =
   do q <- newEventQueue sc
+     g <- newGenerator $ spcGeneratorType sc
      m Run { runSpecs = sc,
              runIndex = 1,
              runCount = 1,
-             runEventQueue = q }
+             runEventQueue = q,
+             runGenerator = g }
 
 -- | Run the given number of simulations using the specified specs, 
 --   where each simulation is distinguished by its index 'simulationIndex'.
 runSimulations :: Simulation a -> Specs -> Int -> [IO a]
 runSimulations (Simulation m) sc runs = map f [1 .. runs]
   where f i = do q <- newEventQueue sc
+                 g <- newGenerator $ spcGeneratorType sc
                  m Run { runSpecs = sc,
                          runIndex = i,
                          runCount = runs,
-                         runEventQueue = q }
+                         runEventQueue = q,
+                         runGenerator = g }
 
 -- | Return the event queue.
 simulationEventQueue :: Simulation EventQueue

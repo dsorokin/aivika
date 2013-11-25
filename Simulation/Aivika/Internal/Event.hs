@@ -4,7 +4,7 @@
 -- |
 -- Module     : Simulation.Aivika.Internal.Event
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -17,25 +17,28 @@ module Simulation.Aivika.Internal.Event
         Event(..),
         EventLift(..),
         EventProcessing(..),
-        EventCancellation(..),
         invokeEvent,
         runEvent,
-        runEventInStartTime,
-        runEventInStopTime,
+        initEvent,
+        finalEvent,
         -- * Event Queue
         enqueueEvent,
         enqueueEventWithCancellation,
         enqueueEventWithTimes,
         enqueueEventWithPoints,
         enqueueEventWithIntegTimes,
-        enqueueEventWithStartTime,
-        enqueueEventWithStopTime,
-        enqueueEventWithCurrentTime,
         eventQueueCount,
+        -- * Cancelling Event
+        EventCancellation,
+        cancelEvent,
+        eventCancelled,
+        eventFinished,
         -- * Error Handling
         catchEvent,
         finallyEvent,
-        throwEvent) where
+        throwEvent,
+        -- * Memoization
+        memoEvent) where
 
 import Data.IORef
 
@@ -259,14 +262,14 @@ runEvent processing (Event e) =
      e p
 
 -- | Run the 'Event' computation in the start time.
-runEventInStartTime :: EventProcessing -> Event a -> Simulation a
-runEventInStartTime processing e =
-  runDynamicsInStartTime $ runEvent processing e
+initEvent :: EventProcessing -> Event a -> Simulation a
+initEvent processing e =
+  initDynamics $ runEvent processing e
 
 -- | Run the 'Event' computation in the stop time.
-runEventInStopTime :: EventProcessing -> Event a -> Simulation a
-runEventInStopTime processing e =
-  runDynamicsInStopTime $ runEvent processing e
+finalEvent :: EventProcessing -> Event a -> Simulation a
+finalEvent processing e =
+  finalDynamics $ runEvent processing e
 
 -- | Return the number of pending events that should
 -- be yet actuated.
@@ -296,35 +299,12 @@ enqueueEventWithIntegTimes e =
   let points = integPoints $ pointRun p
   in invokeEvent p $ enqueueEventWithPoints points e
 
--- | Actuate the event handler in the start time.
-enqueueEventWithStartTime :: Event () -> Event ()
-enqueueEventWithStartTime e =
-  Event $ \p ->
-  let point = integStartPoint $ pointRun p
-  in invokeEvent p $ enqueueEventWithPoints [point] e
-
--- | Actuate the event handler in the stop time.
-enqueueEventWithStopTime :: Event () -> Event ()
-enqueueEventWithStopTime e =
-  Event $ \p ->
-  let point = integStopPoint $ pointRun p
-  in invokeEvent p $ enqueueEventWithPoints [point] e
-
--- | Actuate the event handler in the current time but 
--- through the event queue, which allows continuing the 
--- current tasks and then calling the handler after the 
--- tasks are finished. The simulation time will be the same.
-enqueueEventWithCurrentTime :: Event () -> Event ()
-enqueueEventWithCurrentTime e =
-  Event $ \p ->
-  invokeEvent p $ enqueueEvent (pointTime p) e
-
 -- | It allows cancelling the event.
 data EventCancellation =
   EventCancellation { cancelEvent   :: Event (),
                       -- ^ Cancel the event.
-                      eventCanceled :: Event Bool,
-                      -- ^ Test whether the event was canceled.
+                      eventCancelled :: Event Bool,
+                      -- ^ Test whether the event was cancelled.
                       eventFinished :: Event Bool
                       -- ^ Test whether the event was processed and finished.
                     }
@@ -333,26 +313,40 @@ data EventCancellation =
 enqueueEventWithCancellation :: Double -> Event () -> Event EventCancellation
 enqueueEventWithCancellation t e =
   Event $ \p ->
-  do canceledRef <- newIORef False
+  do cancelledRef <- newIORef False
      cancellableRef <- newIORef True
      finishedRef <- newIORef False
      let cancel =
            Event $ \p ->
            do x <- readIORef cancellableRef
               when x $
-                writeIORef canceledRef True
-         canceled =
-           Event $ \p -> readIORef canceledRef
+                writeIORef cancelledRef True
+         cancelled =
+           Event $ \p -> readIORef cancelledRef
          finished =
            Event $ \p -> readIORef finishedRef
      invokeEvent p $
        enqueueEvent t $
        Event $ \p ->
        do writeIORef cancellableRef False
-          x <- readIORef canceledRef
+          x <- readIORef cancelledRef
           unless x $
             do invokeEvent p e
                writeIORef finishedRef True
      return EventCancellation { cancelEvent   = cancel,
-                                eventCanceled = canceled,
+                                eventCancelled = cancelled,
                                 eventFinished = finished }
+
+-- | Memoize the 'Event' computation, always returning the same value
+-- within a simulation run.
+memoEvent :: Event a -> Simulation (Event a)
+memoEvent m =
+  do ref <- liftIO $ newIORef Nothing
+     return $ Event $ \p ->
+       do x <- readIORef ref
+          case x of
+            Just v -> return v
+            Nothing ->
+              do v <- invokeEvent p m
+                 writeIORef ref (Just v)
+                 return v

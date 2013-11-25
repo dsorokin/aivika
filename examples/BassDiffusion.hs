@@ -4,13 +4,7 @@ import Data.Array
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Event
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Agent
-import Simulation.Aivika.Ref
-import Simulation.Aivika.Random
+import Simulation.Aivika
 
 n = 500    -- the number of agents
 
@@ -21,11 +15,12 @@ adoptionFraction = 0.015
 specs = Specs { spcStartTime = 0.0, 
                 spcStopTime = 8.0,
                 spcDT = 0.1,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
 
-boolrnd :: Double -> IO Bool
-boolrnd p =
-  do x <- getStdRandom random
+randomTrue :: Double -> Parameter Bool
+randomTrue p =
+  do x <- randomUniform 0 1
      return (x <= p)
 
 data Person = Person { personAgent :: Agent,
@@ -53,22 +48,23 @@ definePerson p ps potentialAdopters adopters =
   do setStateActivation (personPotentialAdopter p) $
        do modifyRef potentialAdopters $ \a -> a + 1
           -- add a timeout
-          t <- liftIO $
-               exponentialGen (1 / advertisingEffectiveness) 
+          t <- liftParameter $
+               randomExponential (1 / advertisingEffectiveness) 
           let st  = personPotentialAdopter p
               st' = personAdopter p
           addTimeout st t $ activateState st'
      setStateActivation (personAdopter p) $ 
        do modifyRef adopters  $ \a -> a + 1
           -- add a timer that works while the state is active
-          let t = liftIO $
-                  exponentialGen (1 / contactRate)    -- many times!
+          let t = liftParameter $
+                  randomExponential (1 / contactRate)    -- many times!
           addTimer (personAdopter p) t $
             do i <- liftIO $ getStdRandom $ randomR (1, n)
                let p' = ps ! i
                st <- agentState (personAgent p')
                when (st == Just (personPotentialAdopter p')) $
-                 do b <- liftIO $ boolrnd adoptionFraction
+                 do b <- liftParameter $
+                         randomTrue adoptionFraction
                     when b $ activateState (personAdopter p')
      setStateDeactivation (personPotentialAdopter p) $
        modifyRef potentialAdopters $ \a -> a - 1
@@ -93,7 +89,7 @@ model =
      adopters <- newRef 0
      ps <- createPersons
      definePersons ps potentialAdopters adopters
-     runEventInStartTime IncludingCurrentEvents $
+     initEvent IncludingCurrentEvents $
        activatePersons ps
      runDynamicsInIntegTimes $
        runEvent IncludingCurrentEvents $

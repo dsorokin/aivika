@@ -66,11 +66,6 @@ description:
     This document is included in the distributive of Aivika but 
     you can usually find a more recent version by the link provided.
     .
-    License
-    .
-    Aivika is dual licensed under the GPL license version 3 and 
-    a commercial license. See the LICENSE file for details.
-    .
     \[1] <http://hackage.haskell.org/package/aivika-experiment>
     .
     \[2] <http://hackage.haskell.org/package/aivika-experiment-chart>
@@ -78,7 +73,7 @@ description:
     \[3] <https://github.com/dsorokin/aivika/blob/master/doc/aivika.pdf>
     .
 category:        Simulation
-license:         OtherLicense
+license:         BSD3
 license-file:    LICENSE
 copyright:       (c) 2009-2013. David Sorokin <david.sorokin@gmail.com>
 author:          David Sorokin
@@ -105,7 +100,8 @@ data-files:          doc/aivika.pdf
 
 library
 
-    exposed-modules: Simulation.Aivika.Agent
+    exposed-modules: Simulation.Aivika
+                     Simulation.Aivika.Agent
                      Simulation.Aivika.Cont
                      Simulation.Aivika.DoubleLinkedList
                      Simulation.Aivika.Dynamics
@@ -115,19 +111,28 @@ library
                      Simulation.Aivika.Dynamics.Memo.Unboxed
                      Simulation.Aivika.Dynamics.Random
                      Simulation.Aivika.Event
+                     Simulation.Aivika.Generator
                      Simulation.Aivika.Parameter
                      Simulation.Aivika.Parameter.Random
                      Simulation.Aivika.PriorityQueue
                      Simulation.Aivika.Process
+                     Simulation.Aivika.Processor
+                     Simulation.Aivika.Processor.RoundRobbin
+                     Simulation.Aivika.Queue
+                     Simulation.Aivika.Queue.Infinite
                      Simulation.Aivika.QueueStrategy
-                     Simulation.Aivika.Random
                      Simulation.Aivika.Ref
                      Simulation.Aivika.Resource
+                     Simulation.Aivika.Server
                      Simulation.Aivika.Signal
                      Simulation.Aivika.Simulation
                      Simulation.Aivika.Specs
                      Simulation.Aivika.Statistics
+                     Simulation.Aivika.Stream
+                     Simulation.Aivika.Stream.Random
                      Simulation.Aivika.SystemDynamics
+                     Simulation.Aivika.Table
+                     Simulation.Aivika.Task
                      Simulation.Aivika.Unboxed
                      Simulation.Aivika.Var
                      Simulation.Aivika.Var.Unboxed

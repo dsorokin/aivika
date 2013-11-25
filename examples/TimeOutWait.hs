@@ -25,13 +25,7 @@ import Control.Monad.Trans
 
 import Data.Maybe
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Event
-import Simulation.Aivika.Ref
-import Simulation.Aivika.Process
-import Simulation.Aivika.Signal
-import Simulation.Aivika.Random
+import Simulation.Aivika
 
 ackRate = 1.0 / 1.0  -- reciprocal of the acknowledge mean time
 toPeriod = 0.5       -- timeout period
@@ -39,7 +33,8 @@ toPeriod = 0.5       -- timeout period
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 10000.0,
                 spcDT = 1.0,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
         
 model :: Simulation Double
 model =
@@ -52,22 +47,20 @@ model =
      let node :: Process ()
          node =
            do liftEvent $ modifyRef nMsgs $ (+) 1
-              signal <-
-                liftEvent $
+              result <-
                 timeoutProcess toPeriod $
                 do ackTime <-
-                     liftIO $ exponentialGen (1 / ackRate)
+                     liftParameter $
+                     randomExponential (1 / ackRate)
                    holdProcess ackTime
-              result <- awaitSignal signal
               liftEvent $
                 when (isNothing result) $
                 modifyRef nTimeOuts $ (+) 1
               node
 
-     runProcessInStartTime IncludingCurrentEvents
-       node
+     initProcess IncludingCurrentEvents node
      
-     runEventInStopTime IncludingCurrentEvents $
+     finalEvent IncludingCurrentEvents $
        do x <- readRef nTimeOuts
           y <- readRef nMsgs
           return $ x / y

@@ -21,12 +21,7 @@
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Event
-import Simulation.Aivika.Ref
-import Simulation.Aivika.Process
-import Simulation.Aivika.Random
+import Simulation.Aivika
 
 ackRate = 1.0 / 1.0  -- reciprocal of the acknowledge mean time
 toPeriod = 0.5       -- timeout period
@@ -34,7 +29,8 @@ toPeriod = 0.5       -- timeout period
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 10000.0,
                 spcDT = 1.0,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
      
 model :: Simulation Double
 model =
@@ -74,21 +70,23 @@ model =
               liftEvent $
                 do writeRef reactivatedCode 1
                    reactivateProcess nodePid
-                   cancelProcess ackPid
+                   cancelProcessUsingId ackPid
          
          acknowledge :: ProcessId -> Process ()
          acknowledge timeoutPid =
-           do ackTime <- liftIO $ exponentialGen (1 / ackRate)
+           do ackTime <-
+                liftParameter $
+                randomExponential (1 / ackRate)
               holdProcess ackTime
               liftEvent $
                 do writeRef reactivatedCode 2
                    reactivateProcess nodePid
-                   cancelProcess timeoutPid
+                   cancelProcessUsingId timeoutPid
 
-     runProcessInStartTimeUsingId IncludingCurrentEvents
+     initProcessUsingId IncludingCurrentEvents
        nodePid node
      
-     runEventInStopTime IncludingCurrentEvents $
+     finalEvent IncludingCurrentEvents $
        do x <- readRef nTimeOuts
           y <- readRef nMsgs
           return $ x / y

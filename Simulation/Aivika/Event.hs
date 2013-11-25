@@ -2,7 +2,7 @@
 -- |
 -- Module     : Simulation.Aivika.Event
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -15,22 +15,25 @@ module Simulation.Aivika.Event
         Event,
         EventLift(..),
         EventProcessing(..),
-        EventCancellation(..),
         runEvent,
-        runEventInStartTime,
-        runEventInStopTime,
+        initEvent,
+        finalEvent,
         -- * Event Queue
         enqueueEvent,
         enqueueEventWithCancellation,
         enqueueEventWithTimes,
         enqueueEventWithIntegTimes,
-        enqueueEventWithStartTime,
-        enqueueEventWithStopTime,
-        enqueueEventWithCurrentTime,
         eventQueueCount,
+        -- * Cancelling Event
+        EventCancellation,
+        cancelEvent,
+        eventCancelled,
+        eventFinished,
         -- * Error Handling
         catchEvent,
         finallyEvent,
-        throwEvent) where
+        throwEvent,
+        -- * Memoization
+        memoEvent) where
 
 import Simulation.Aivika.Internal.Event

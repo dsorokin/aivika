@@ -4,7 +4,7 @@
 -- |
 -- Module     : Simulation.Aivika.Internal.Parameter
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -24,14 +24,17 @@ module Simulation.Aivika.Internal.Parameter
         finallyParameter,
         throwParameter,
         -- * Predefined Parameters
-        parameterIndex,
-        parameterCount,
-        parameterSpecs,
+        simulationIndex,
+        simulationCount,
+        simulationSpecs,
+        starttime,
+        stoptime,
+        dt,
+        generatorParameter,
         -- * Memoization
         memoParameter,
         -- * Utilities
-        newTableParameter,
-        newIndexedParameter) where
+        tableParameter) where
 
 import qualified Control.Exception as C
 import Control.Exception (IOException, throw, finally)
@@ -45,6 +48,7 @@ import Data.IORef
 import qualified Data.Map as M
 import Data.Array
 
+import Simulation.Aivika.Generator
 import Simulation.Aivika.Internal.Specs
 
 -- | The 'Parameter' monad that allows specifying the model parameters.
@@ -71,32 +75,40 @@ bindP (Parameter m) k =
 runParameter :: Parameter a -> Specs -> IO a
 runParameter (Parameter m) sc =
   do q <- newEventQueue sc
+     g <- newGenerator $ spcGeneratorType sc
      m Run { runSpecs = sc,
              runIndex = 1,
              runCount = 1,
-             runEventQueue = q }
+             runEventQueue = q,
+             runGenerator = g }
 
 -- | Run the given number of parameters using the specified specs, 
 --   where each parameter is distinguished by its index 'parameterIndex'.
 runParameters :: Parameter a -> Specs -> Int -> [IO a]
 runParameters (Parameter m) sc runs = map f [1 .. runs]
   where f i = do q <- newEventQueue sc
+                 g <- newGenerator $ spcGeneratorType sc
                  m Run { runSpecs = sc,
                          runIndex = i,
                          runCount = runs,
-                         runEventQueue = q }
+                         runEventQueue = q,
+                         runGenerator = g }
 
 -- | Return the run index for the current simulation.
-parameterIndex :: Parameter Int
-parameterIndex = Parameter $ return . runIndex
+simulationIndex :: Parameter Int
+simulationIndex = Parameter $ return . runIndex
 
 -- | Return the number of simulations currently run.
-parameterCount :: Parameter Int
-parameterCount = Parameter $ return . runCount
+simulationCount :: Parameter Int
+simulationCount = Parameter $ return . runCount
 
 -- | Return the simulation specs.
-parameterSpecs :: Parameter Specs
-parameterSpecs = Parameter $ return . runSpecs
+simulationSpecs :: Parameter Specs
+simulationSpecs = Parameter $ return . runSpecs
+
+-- | Return the random number generator for the simulation run.
+generatorParameter :: Parameter Generator
+generatorParameter = Parameter $ return . runGenerator
 
 instance Functor Parameter where
   fmap = liftMP
@@ -212,21 +224,28 @@ memoParameter x =
                                      writeIORef dict $ M.insert i v m
                                      return v }
 
--- | Create a thread-safe parameter that returns always the same value within the simulation run,
--- where the value is taken consequently from the specified table based on the number of the 
--- current run starting from zero. After all values from the table are used, it takes the first 
--- value of the table, then the second one and so on.
---
--- It uses the 'memoParameter' function.
-newTableParameter :: Array Int a -> IO (Parameter a)
-newTableParameter t = newIndexedParameter (\i -> return $ t ! (((i - i1) `mod` n) + i1))
+-- | Return a parameter which value is taken consequently from the specified table
+-- based on the run index of the current simulation starting from zero. After all
+-- values from the table are used, it takes again the first value of the table,
+-- then the second one and so on.
+tableParameter :: Array Int a -> Parameter a
+tableParameter t =
+  do i <- simulationIndex
+     return $ t ! (((i - i1) `mod` n) + i1)
   where (i1, i2) = bounds t
         n = i2 - i1 + 1
 
--- | Create a thread-safe parameter that returns always the same value within the simulation run, 
--- where the value depends on the number of this run starting from zero.
---
--- It uses the 'memoParameter' function.
-newIndexedParameter :: (Int -> Parameter a) -> IO (Parameter a)
-newIndexedParameter f =
-  memoParameter $ parameterIndex >>= f
+-- | Computation that returns the start simulation time.
+starttime :: Parameter Double
+starttime =
+  Parameter $ return . spcStartTime . runSpecs
+
+-- | Computation that returns the final simulation time.
+stoptime :: Parameter Double
+stoptime =
+  Parameter $ return . spcStopTime . runSpecs
+
+-- | Computation that returns the integration time step.
+dt :: Parameter Double
+dt =
+  Parameter $ return . spcDT . runSpecs

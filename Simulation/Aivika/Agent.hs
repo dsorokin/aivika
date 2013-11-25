@@ -2,7 +2,7 @@
 -- |
 -- Module     : Simulation.Aivika.Agent
 -- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
--- License    : OtherLicense
+-- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
@@ -15,10 +15,10 @@ module Simulation.Aivika.Agent
         newAgent,
         newState,
         newSubstate,
-        agentState,
-        agentStateChanged,
-        agentStateChanged_,
-        activateState,
+        selectedState,
+        selectedStateChanged,
+        selectedStateChanged_,
+        selectState,
         stateAgent,
         stateParent,
         addTimeout,
@@ -190,15 +190,15 @@ newAgent =
                     agentStateRef = stateRef, 
                     agentStateChangedSource = stateChangedSource }
 
--- | Return the selected downmost active state.
-agentState :: Agent -> Event (Maybe AgentState)
-agentState agent =
+-- | Return the selected active state.
+selectedState :: Agent -> Event (Maybe AgentState)
+selectedState agent =
   Event $ \p -> readIORef (agentStateRef agent)
                    
--- | Select the next downmost active state. The activation is repeated while
+-- | Select the state. The activation and selection are repeated while
 -- there is the transition state defined by 'setStateTransition'.
-activateState :: AgentState -> Event ()
-activateState st =
+selectState :: AgentState -> Event ()
+selectState st =
   Event $ \p ->
   do let agent = stateAgent st
      mode <- readIORef (agentModeRef agent)
@@ -227,8 +227,8 @@ setStateDeactivation st action =
   writeIORef (stateDeactivateRef st) action
   
 -- | Set the transition state which will be next and which is used only
--- when activating the state directly with help of 'activateState'.
--- If the state was activated intermediately, when activating directly
+-- when selecting the state directly with help of 'selectState'.
+-- If the state was activated intermediately, when selecting
 -- another state, then this computation is not used.
 setStateTransition :: AgentState -> Event (Maybe AgentState) -> Simulation ()
 setStateTransition st action =
@@ -241,12 +241,12 @@ triggerAgentStateChanged p agent =
   do st <- readIORef (agentStateRef agent)
      invokeEvent p $ triggerSignal (agentStateChangedSource agent) st
 
--- | Return a signal that notifies about every change of the state.
-agentStateChanged :: Agent -> Signal (Maybe AgentState)
-agentStateChanged agent =
+-- | Return a signal that notifies about every change of the selected state.
+selectedStateChanged :: Agent -> Signal (Maybe AgentState)
+selectedStateChanged agent =
   publishSignal (agentStateChangedSource agent)
 
--- | Return a signal that notifies about every change of the state.
-agentStateChanged_ :: Agent -> Signal ()
-agentStateChanged_ agent =
-  mapSignal (const ()) $ agentStateChanged agent
+-- | Return a signal that notifies about every change of the selected state.
+selectedStateChanged_ :: Agent -> Signal ()
+selectedStateChanged_ agent =
+  mapSignal (const ()) $ selectedStateChanged agent

@@ -20,23 +20,16 @@
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Event
-import Simulation.Aivika.Ref
-import Simulation.Aivika.QueueStrategy
-import Simulation.Aivika.Resource
-import Simulation.Aivika.Process
-import Simulation.Aivika.Random
+import Simulation.Aivika
 
-upRate = 1.0 / 1.0       -- reciprocal of mean up time
-repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
+meanUpTime = 1.0
+meanRepairTime = 0.5
 
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 1000.0,
                 spcDT = 1.0,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
      
 model :: Simulation (Double, Double)
 model =
@@ -50,17 +43,16 @@ model =
      -- total up time for all machines
      totalUpTime <- newRef 0.0
      
-     repairPerson <- newResource FCFS 1
+     repairPerson <- newFCFSResource 1
      
      let machine :: Process ()
          machine =
-           do startUpTime <- liftDynamics time
-              upTime <-
-                liftIO $ exponentialGen (1 / upRate)
+           do upTime <-
+                liftParameter $
+                randomExponential meanUpTime
               holdProcess upTime
-              finishUpTime <- liftDynamics time
-              liftEvent $ modifyRef totalUpTime 
-                (+ (finishUpTime - startUpTime))
+              liftEvent $
+                modifyRef totalUpTime (+ upTime) 
               
               -- check the resource availability
               liftEvent $
@@ -71,21 +63,19 @@ model =
                 
               requestResource repairPerson
               repairTime <-
-                liftIO $ exponentialGen (1 / repairRate)
+                liftParameter $
+                randomExponential meanRepairTime
               holdProcess repairTime
               releaseResource repairPerson
               
               machine
 
-     runProcessInStartTime IncludingCurrentEvents
-       machine
-
-     runProcessInStartTime IncludingCurrentEvents
-       machine
+     initProcess IncludingCurrentEvents machine
+     initProcess IncludingCurrentEvents machine
           
-     runEventInStopTime IncludingCurrentEvents $
+     finalEvent IncludingCurrentEvents $
        do x <- readRef totalUpTime
-          y <- liftDynamics stoptime
+          y <- liftParameter stoptime
           n <- readRef nRep
           nImmed <- readRef nImmedRep
           return (x / (2 * y), 

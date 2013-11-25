@@ -17,21 +17,16 @@
 
 import Control.Monad.Trans
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Event
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Ref
-import Simulation.Aivika.Process
-import Simulation.Aivika.Random
+import Simulation.Aivika
 
-upRate = 1.0 / 1.0       -- reciprocal of mean up time
-repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
+meanUpTime = 1.0
+meanRepairTime = 0.5
 
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 1000.0,
                 spcDT = 1.0,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
         
 model :: Simulation Double
 model =
@@ -39,28 +34,24 @@ model =
      
      let machine :: Process ()
          machine =
-           do startUpTime <- liftDynamics time
-              upTime <-
-                liftIO $ exponentialGen (1 / upRate)
+           do upTime <-
+                liftParameter $
+                randomExponential meanUpTime
               holdProcess upTime
-              finishUpTime <- liftDynamics time
               liftEvent $ 
-                modifyRef totalUpTime
-                (+ (finishUpTime - startUpTime))
+                modifyRef totalUpTime (+ upTime)
               repairTime <-
-                liftIO $ exponentialGen (1 / repairRate)
+                liftParameter $
+                randomExponential meanRepairTime
               holdProcess repairTime
               machine
 
-     runProcessInStartTime IncludingCurrentEvents
-       machine
-       
-     runProcessInStartTime IncludingCurrentEvents
-       machine
+     initProcess IncludingCurrentEvents machine
+     initProcess IncludingCurrentEvents machine
      
-     runEventInStopTime IncludingCurrentEvents $
+     finalEvent IncludingCurrentEvents $
        do x <- readRef totalUpTime
-          y <- liftDynamics stoptime
+          y <- liftParameter stoptime
           return $ x / (2 * y)
   
 main = runSimulation model specs >>= print
