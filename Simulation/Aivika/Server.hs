@@ -7,7 +7,7 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- It defines the data structure that models the server prodiving some service.
+-- It models the server that prodives a service.
 module Simulation.Aivika.Server
        (-- * Server
         Server,
@@ -15,6 +15,8 @@ module Simulation.Aivika.Server
         newServerWithState,
         serverInitState,
         serverState,
+        -- * Processing
+        newServerProcessor,
         -- * Server Properties and Activities
         serverTotalInputTime,
         serverTotalProcessingTime,
@@ -81,7 +83,7 @@ data Server s a b =
 -- updates the server state.
 newServer :: (a -> Process b)
              -- ^ provide an output by the specified input
-             -> Simulation (Server () a b, Processor a b)
+             -> Simulation (Server () a b)
 newServer provide =
   newServerWithState () $ \(s, a) ->
   do b <- provide a
@@ -95,7 +97,7 @@ newServerWithState :: s
                       -> ((s, a) -> Process (s, b))
                       -- ^ provide an output by the specified input
                       -- and update the state 
-                      -> Simulation (Server s a b, Processor a b)
+                      -> Simulation (Server s a b)
 newServerWithState state provide =
   do r0 <- liftIO $ newIORef state
      r1 <- liftIO $ newIORef 0
@@ -119,13 +121,13 @@ newServerWithState state provide =
                            serverInputReceivedSource = s1,
                            serverTaskProcessedSource = s2,
                            serverOutputProvidedSource = s3 }
-     return (server, serverProcessor server)
+     return server
 
--- | Return a processor by the specified server.
+-- | Create a processor by the specified server.
 --
--- You cannot use more than one processor for the server.
-serverProcessor :: Server s a b -> Processor a b
-serverProcessor server =
+-- You should not use more than one processor for the specified server.
+newServerProcessor :: Server s a b -> Processor a b
+newServerProcessor server =
   Processor $ \xs -> loop (serverInitState server) Nothing xs
   where
     loop s r xs =
