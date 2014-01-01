@@ -125,7 +125,8 @@ newServerWithState state provide =
 
 -- | Create a processor by the specified server.
 --
--- You should not use more than one processor for the specified server.
+-- You should not use more than one processor for the specified server as the processor changes
+-- the state of the server when working.
 newServerProcessor :: Server s a b -> Processor a b
 newServerProcessor server =
   Processor $ \xs -> loop (serverInitState server) Nothing xs
