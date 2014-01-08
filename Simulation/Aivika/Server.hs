@@ -14,7 +14,7 @@ module Simulation.Aivika.Server
         newServer,
         newServerWithState,
         -- * Processing
-        newServerProcessor,
+        serverProcessor,
         -- * Server Properties and Activities
         serverInitState,
         serverState,
@@ -123,12 +123,13 @@ newServerWithState state provide =
                            serverOutputProvidedSource = s3 }
      return server
 
--- | Create a processor by the specified server.
+-- | Return a processor for the specified server.
 --
--- You should not use more than one processor for the specified server as the processor changes
--- the state of the server and its properties when working.
-newServerProcessor :: Server s a b -> Processor a b
-newServerProcessor server =
+-- The processor updates the internal state of the server. The usual case is when 
+-- the processor is applied only once in a chain of data processing. Otherwise; 
+-- every time the processor is used, the state of the server changes. 
+serverProcessor :: Server s a b -> Processor a b
+serverProcessor server =
   Processor $ \xs -> loop (serverInitState server) Nothing xs
   where
     loop s r xs =
