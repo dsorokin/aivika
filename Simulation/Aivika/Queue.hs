@@ -922,7 +922,12 @@ waitWhileFullQueue q =
        do processAwait (dequeueExtracted q)
           waitWhileFullQueue q
 
--- | Signal whenever the queue state changes.
+-- | Signal whenever any property of the queue changes.
+--
+-- The property must have the corresponded signal. There are also characteristics
+-- similar to the properties but that have no signals. As a rule, such characteristics
+-- already depend on the simulation time and therefore they may change at any
+-- time point.
 queueChanged_ :: Queue si qi sm qm so qo a -> Signal ()
 queueChanged_ q =
   mapSignal (const ()) (enqueueInitiated q) <>
