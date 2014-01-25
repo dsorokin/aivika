@@ -26,11 +26,11 @@ module Simulation.Aivika.Queue
         newPriorityQueue,
         newQueue,
         -- * Queue Properties and Activities
-        queueNull,
-        queueFull,
         queueInputStrategy,
         queueStoringStrategy,
         queueOutputStrategy,
+        queueNull,
+        queueFull,
         queueMaxCount,
         queueCount,
         queueLostCount,
@@ -63,12 +63,41 @@ module Simulation.Aivika.Queue
         enqueueWithStoringPriorityOrLost_,
         -- * Awaiting
         waitWhileFullQueue,
-        -- * Signals
+        -- * Derived Signals for Properties
+        queueNullChanged,
+        queueNullChanged_,
+        queueFullChanged,
+        queueFullChanged_,
+        queueCountChanged,
+        queueCountChanged_,
+        queueLostCountChanged,
+        queueLostCountChanged_,
+        queueInputCountChanged,
+        queueInputCountChanged_,
+        queueStoreCountChanged,
+        queueStoreCountChanged_,
+        queueOutputRequestCountChanged,
+        queueOutputRequestCountChanged_,
+        queueOutputCountChanged,
+        queueOutputCountChanged_,
+        queueLoadFactorChanged,
+        queueLoadFactorChanged_,
+        queueWaitTimeChanged,
+        queueWaitTimeChanged_,
+        queueTotalWaitTimeChanged,
+        queueTotalWaitTimeChanged_,
+        queueInputWaitTimeChanged,
+        queueInputWaitTimeChanged_,
+        queueOutputWaitTimeChanged,
+        queueOutputWaitTimeChanged_,
+        -- * Basic Signals
         enqueueInitiated,
         enqueueStored,
         enqueueLost,
         dequeueRequested,
-        dequeueExtracted) where
+        dequeueExtracted,
+        -- * Overall Signal
+        queueChanged_) where
 
 import Data.IORef
 import Data.Monoid
@@ -229,82 +258,166 @@ newQueue si sm so count =
                     dequeueExtractedSource = s5 }
   
 -- | Test whether the queue is empty.
+--
+-- See also 'queueNullChanged' and 'queueNullChanged_'.
 queueNull :: Queue si qi sm qm so qo a -> Event Bool
 queueNull q =
   Event $ \p ->
   do n <- readIORef (queueCountRef q)
      return (n == 0)
+  
+-- | Signal when changing the 'queueNull' property value.
+queueNullChanged :: Queue si qi sm qm so qo a -> Signal Bool
+queueNullChanged q =
+  mapSignalM (const $ queueNull q) (queueNullChanged_ q)
+  
+-- | Signal when changing the 'queueNull' property value.
+queueNullChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueNullChanged_ = queueCountChanged_
 
 -- | Test whether the queue is full.
+--
+-- See also 'queueFullChanged' and 'queueFullChanged_'.
 queueFull :: Queue si qi sm qm so qo a -> Event Bool
 queueFull q =
   Event $ \p ->
   do n <- readIORef (queueCountRef q)
      return (n == queueMaxCount q)
+  
+-- | Signal when changing the 'queueFull' property value.
+queueFullChanged :: Queue si qi sm qm so qo a -> Signal Bool
+queueFullChanged q =
+  mapSignalM (const $ queueFull q) (queueFullChanged_ q)
+  
+-- | Signal when changing the 'queueFull' property value.
+queueFullChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueFullChanged_ = queueCountChanged_
 
 -- | Return the queue size.
-queueCount :: Queue si qi sm qm so qo a -> Signalable Int
+--
+-- See also 'queueCountChanged' and 'queueCountChanged_'.
+queueCount :: Queue si qi sm qm so qo a -> Event Int
 queueCount q =
-  let read = Event $ \p -> readIORef (queueCountRef q)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (enqueueStored q) <>
-                    mapSignal (const ()) (dequeueExtracted q) }
+  Event $ \p -> readIORef (queueCountRef q)
+  
+-- | Signal when changing the 'queueCount' property value.
+queueCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+queueCountChanged q =
+  mapSignalM (const $ queueCount q) (queueCountChanged_ q)
+  
+-- | Signal when changing the 'queueCount' property value.
+queueCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueCountChanged_ q =
+  mapSignal (const ()) (enqueueStored q) <>
+  mapSignal (const ()) (dequeueExtracted q)
   
 -- | Return the number of lost items.
-queueLostCount :: Queue si qi sm qm so qo a -> Signalable Int
+--
+-- See also 'queueLostCountChanged' and 'queueLostCountChanged_'.
+queueLostCount :: Queue si qi sm qm so qo a -> Event Int
 queueLostCount q =
-  let read = Event $ \p -> readIORef (queueLostCountRef q)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (enqueueLost q) }
+  Event $ \p -> readIORef (queueLostCountRef q)
+  
+-- | Signal when changing the 'queueLostCount' property value.
+queueLostCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+queueLostCountChanged q =
+  mapSignalM (const $ queueLostCount q) (queueLostCountChanged_ q)
+  
+-- | Signal when changing the 'queueLostCount' property value.
+queueLostCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueLostCountChanged_ q =
+  mapSignal (const ()) (enqueueLost q)
 
 -- | Return the total number of input items that were enqueued.
-queueInputCount :: Queue si qi sm qm so qo a -> Signalable Int
+--
+-- See also 'queueInputCountChanged' and 'queueInputCountChanged_'.
+queueInputCount :: Queue si qi sm qm so qo a -> Event Int
 queueInputCount q =
-  let read = Event $ \p -> readIORef (queueInputCountRef q)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (enqueueInitiated q) }
+  Event $ \p -> readIORef (queueInputCountRef q)
+  
+-- | Signal when changing the 'queueInputCount' property value.
+queueInputCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+queueInputCountChanged q =
+  mapSignalM (const $ queueInputCount q) (queueInputCountChanged_ q)
+  
+-- | Signal when changing the 'queueInputCount' property value.
+queueInputCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueInputCountChanged_ q =
+  mapSignal (const ()) (enqueueInitiated q)
       
 -- | Return the total number of input items that were stored.
-queueStoreCount :: Queue si qi sm qm so qo a -> Signalable Int
+--
+-- See also 'queueStoreCountChanged' and 'queueStoreCountChanged_'.
+queueStoreCount :: Queue si qi sm qm so qo a -> Event Int
 queueStoreCount q =
-  let read = Event $ \p -> readIORef (queueStoreCountRef q)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (enqueueStored q) }
+  Event $ \p -> readIORef (queueStoreCountRef q)
+  
+-- | Signal when changing the 'queueStoreCount' property value.
+queueStoreCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+queueStoreCountChanged q =
+  mapSignalM (const $ queueStoreCount q) (queueStoreCountChanged_ q)
+  
+-- | Signal when changing the 'queueStoreCount' property value.
+queueStoreCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueStoreCountChanged_ q =
+  mapSignal (const ()) (enqueueStored q)
       
 -- | Return the total number of requests to dequeue the items,
 -- not taking into account the attempts to dequeue immediately
 -- without suspension.
-queueOutputRequestCount :: Queue si qi sm qm so qo a -> Signalable Int
+--
+-- See also 'queueOutputRequestCountChanged' and 'queueOutputRequestCountChanged_'.
+queueOutputRequestCount :: Queue si qi sm qm so qo a -> Event Int
 queueOutputRequestCount q =
-  let read = Event $ \p -> readIORef (queueOutputRequestCountRef q)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    dequeueRequested q }
+  Event $ \p -> readIORef (queueOutputRequestCountRef q)
+      
+-- | Signal when changing the 'queueOutputRequestCount' property value.
+queueOutputRequestCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+queueOutputRequestCountChanged q =
+  mapSignalM (const $ queueOutputRequestCount q) (queueOutputRequestCountChanged_ q)
+  
+-- | Signal when changing the 'queueOutputRequestCount' property value.
+queueOutputRequestCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueOutputRequestCountChanged_ q =
+  mapSignal (const ()) (dequeueRequested q)
       
 -- | Return the total number of output items that were dequeued.
-queueOutputCount :: Queue si qi sm qm so qo a -> Signalable Int
+--
+-- See also 'queueOutputCountChanged' and 'queueOutputCountChanged_'.
+queueOutputCount :: Queue si qi sm qm so qo a -> Event Int
 queueOutputCount q =
-  let read = Event $ \p -> readIORef (queueOutputCountRef q)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (dequeueExtracted q) }
+  Event $ \p -> readIORef (queueOutputCountRef q)
+      
+-- | Signal when changing the 'queueOutputCount' property value.
+queueOutputCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+queueOutputCountChanged q =
+  mapSignalM (const $ queueOutputCount q) (queueOutputCountChanged_ q)
+  
+-- | Signal when changing the 'queueOutputCount' property value.
+queueOutputCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueOutputCountChanged_ q =
+  mapSignal (const ()) (dequeueExtracted q)
 
 -- | Return the load factor: the queue size divided by its maximum size.
-queueLoadFactor :: Queue si qi sm qm so qo a -> Signalable Double
+--
+-- See also 'queueLoadFactorChanged' and 'queueLoadFactorChanged_'.
+queueLoadFactor :: Queue si qi sm qm so qo a -> Event Double
 queueLoadFactor q =
-  let read =
-        Event $ \p ->
-        do x <- readIORef (queueCountRef q)
-           let y = queueMaxCount q
-           return (fromIntegral x / fromIntegral y)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (enqueueStored q) <>
-                    mapSignal (const ()) (dequeueExtracted q) }
+  Event $ \p ->
+  do x <- readIORef (queueCountRef q)
+     let y = queueMaxCount q
+     return (fromIntegral x / fromIntegral y)
+      
+-- | Signal when changing the 'queueLoadFactor' property value.
+queueLoadFactorChanged :: Queue si qi sm qm so qo a -> Signal Double
+queueLoadFactorChanged q =
+  mapSignalM (const $ queueLoadFactor q) (queueLoadFactorChanged_ q)
+  
+-- | Signal when changing the 'queueLoadFactor' property value.
+queueLoadFactorChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueLoadFactorChanged_ q =
+  mapSignal (const ()) (enqueueStored q) <>
+  mapSignal (const ()) (dequeueExtracted q)
       
 -- | Return the rate of the input items that were enqueued: how many items
 -- per time.
@@ -349,41 +462,77 @@ queueOutputRate q =
       
 -- | Return the wait time from the time at which the item was stored in the queue to
 -- the time at which it was dequeued.
-queueWaitTime :: Queue si qi sm qm so qo a -> Signalable (SamplingStats Double)
+--
+-- See also 'queueWaitTimeChanged' and 'queueWaitTimeChanged_'.
+queueWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
 queueWaitTime q =
-  let read = Event $ \p -> readIORef (queueWaitTimeRef q)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (dequeueExtracted q) }
+  Event $ \p -> readIORef (queueWaitTimeRef q)
+      
+-- | Signal when changing the 'queueWaitTime' property value.
+queueWaitTimeChanged :: Queue si qi sm qm so qo a -> Signal (SamplingStats Double)
+queueWaitTimeChanged q =
+  mapSignalM (const $ queueWaitTime q) (queueWaitTimeChanged_ q)
+  
+-- | Signal when changing the 'queueWaitTime' property value.
+queueWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueWaitTimeChanged_ q =
+  mapSignal (const ()) (dequeueExtracted q)
       
 -- | Return the total wait time from the time at which the enqueueing operation
 -- was initiated to the time at which the item was dequeued.
 --
 -- In some sense, @queueTotalWaitTime == queueInputWaitTime + queueWaitTime@.
-queueTotalWaitTime :: Queue si qi sm qm so qo a -> Signalable (SamplingStats Double)
+--
+-- See also 'queueTotalWaitTimeChanged' and 'queueTotalWaitTimeChanged_'.
+queueTotalWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
 queueTotalWaitTime q =
-  let read = Event $ \p -> readIORef (queueTotalWaitTimeRef q)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ = 
-                    mapSignal (const ()) (dequeueExtracted q) }
+  Event $ \p -> readIORef (queueTotalWaitTimeRef q)
+      
+-- | Signal when changing the 'queueTotalWaitTime' property value.
+queueTotalWaitTimeChanged :: Queue si qi sm qm so qo a -> Signal (SamplingStats Double)
+queueTotalWaitTimeChanged q =
+  mapSignalM (const $ queueTotalWaitTime q) (queueTotalWaitTimeChanged_ q)
+  
+-- | Signal when changing the 'queueTotalWaitTime' property value.
+queueTotalWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueTotalWaitTimeChanged_ q =
+  mapSignal (const ()) (dequeueExtracted q)
       
 -- | Return the input wait time from the time at which the enqueueing operation
 -- was initiated to the time at which the item was stored in the queue.
-queueInputWaitTime :: Queue si qi sm qm so qo a -> Signalable (SamplingStats Double)
+--
+-- See also 'queueInputWaitTimeChanged' and 'queueInputWaitTimeChanged_'.
+queueInputWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
 queueInputWaitTime q =
-  let read = Event $ \p -> readIORef (queueInputWaitTimeRef q)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (enqueueStored q) }
+  Event $ \p -> readIORef (queueInputWaitTimeRef q)
+      
+-- | Signal when changing the 'queueInputWaitTime' property value.
+queueInputWaitTimeChanged :: Queue si qi sm qm so qo a -> Signal (SamplingStats Double)
+queueInputWaitTimeChanged q =
+  mapSignalM (const $ queueInputWaitTime q) (queueInputWaitTimeChanged_ q)
+  
+-- | Signal when changing the 'queueInputWaitTime' property value.
+queueInputWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueInputWaitTimeChanged_ q =
+  mapSignal (const ()) (enqueueStored q)
       
 -- | Return the output wait time from the time at which the item was requested
 -- for dequeuing to the time at which it was actually dequeued.
-queueOutputWaitTime :: Queue si qi sm qm so qo a -> Signalable (SamplingStats Double)
+--
+-- See also 'queueOutputWaitTimeChanged' and 'queueOutputWaitTimeChanged_'.
+queueOutputWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
 queueOutputWaitTime q =
-  let read = Event $ \p -> readIORef (queueOutputWaitTimeRef q)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (dequeueExtracted q) }
+  Event $ \p -> readIORef (queueOutputWaitTimeRef q)
+      
+-- | Signal when changing the 'queueOutputWaitTime' property value.
+queueOutputWaitTimeChanged :: Queue si qi sm qm so qo a -> Signal (SamplingStats Double)
+queueOutputWaitTimeChanged q =
+  mapSignalM (const $ queueOutputWaitTime q) (queueOutputWaitTimeChanged_ q)
+  
+-- | Signal when changing the 'queueOutputWaitTime' property value.
+queueOutputWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueOutputWaitTimeChanged_ q =
+  mapSignal (const ()) (dequeueExtracted q)
   
 -- | Dequeue suspending the process if the queue is empty.
 dequeue :: (DequeueStrategy si qi,
@@ -772,3 +921,12 @@ waitWhileFullQueue q =
      when x $
        do processAwait (dequeueExtracted q)
           waitWhileFullQueue q
+
+-- | Signal whenever the queue state changes.
+queueChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueChanged_ q =
+  mapSignal (const ()) (enqueueInitiated q) <>
+  mapSignal (const ()) (enqueueStored q) <>
+  mapSignal (const ()) (enqueueLost q) <>
+  dequeueRequested q <>
+  mapSignal (const ()) (dequeueExtracted q)
