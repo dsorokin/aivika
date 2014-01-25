@@ -29,10 +29,33 @@ module Simulation.Aivika.Server
         serverOutputTimeFactor,
         -- * Summary
         serverSummary,
-        -- * Signals
+        -- * Derived Signals for Properties
+        serverStateChanged,
+        serverStateChanged_,
+        serverTotalInputTimeChanged,
+        serverTotalInputTimeChanged_,
+        serverTotalProcessingTimeChanged,
+        serverTotalProcessingTimeChanged_,
+        serverTotalOutputTimeChanged,
+        serverTotalOutputTimeChanged_,
+        serverInputTimeChanged,
+        serverInputTimeChanged_,
+        serverProcessingTimeChanged,
+        serverProcessingTimeChanged_,
+        serverOutputTimeChanged,
+        serverOutputTimeChanged_,
+        serverInputTimeFactorChanged,
+        serverInputTimeFactorChanged_,
+        serverProcessingTimeFactorChanged,
+        serverProcessingTimeFactorChanged_,
+        serverOutputTimeFactorChanged,
+        serverOutputTimeFactorChanged_,
+        -- * Basic Signals
         serverInputReceived,
         serverTaskProcessed,
-        serverOutputProvided) where
+        serverOutputProvided,
+        -- * Overall Signal
+        serverChanged_) where
 
 import Data.IORef
 import Data.Monoid
@@ -166,80 +189,143 @@ serverProcessor server =
          return (b, loop s' (Just $ (t2, a, b)) xs')
 
 -- | Return the current state of the server.
-serverState :: Server s a b -> Signalable s
+--
+-- See also 'serverStateChanged' and 'serverStateChanged_'.
+serverState :: Server s a b -> Event s
 serverState server =
-  let read = Event $ \p -> readIORef (serverStateRef server)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (serverTaskProcessed server) }
+  Event $ \p -> readIORef (serverStateRef server)
+  
+-- | Signal when the 'serverState' property value has changed.
+serverStateChanged :: Server s a b -> Signal s
+serverStateChanged server =
+  mapSignalM (const $ serverState server) (serverStateChanged_ server)
+  
+-- | Signal when the 'serverState' property value has changed.
+serverStateChanged_ :: Server s a b -> Signal ()
+serverStateChanged_ server =
+  mapSignal (const ()) (serverTaskProcessed server)
 
 -- | Return the counted total time spent by the server in awaiting the input.
 --
 -- The value returned changes discretely and it is usually delayed relative
 -- to the current simulation time.
-serverTotalInputTime :: Server s a b -> Signalable Double
+--
+-- See also 'serverTotalInputTimeChanged' and 'serverTotalInputTimeChanged_'.
+serverTotalInputTime :: Server s a b -> Event Double
 serverTotalInputTime server =
-  let read = Event $ \p -> readIORef (serverTotalInputTimeRef server)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (serverInputReceived server) }
+  Event $ \p -> readIORef (serverTotalInputTimeRef server)
+  
+-- | Signal when the 'serverTotalInputTime' property value has changed.
+serverTotalInputTimeChanged :: Server s a b -> Signal Double
+serverTotalInputTimeChanged server =
+  mapSignalM (const $ serverTotalInputTime server) (serverTotalInputTimeChanged_ server)
+  
+-- | Signal when the 'serverTotalInputTime' property value has changed.
+serverTotalInputTimeChanged_ :: Server s a b -> Signal ()
+serverTotalInputTimeChanged_ server =
+  mapSignal (const ()) (serverInputReceived server)
 
 -- | Return the counted total time spent by the server to process all tasks.
 --
 -- The value returned changes discretely and it is usually delayed relative
 -- to the current simulation time.
-serverTotalProcessingTime :: Server s a b -> Signalable Double
+--
+-- See also 'serverTotalProcessingTimeChanged' and 'serverTotalProcessingTimeChanged_'.
+serverTotalProcessingTime :: Server s a b -> Event Double
 serverTotalProcessingTime server =
-  let read = Event $ \p -> readIORef (serverTotalProcessingTimeRef server)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (serverTaskProcessed server) }
+  Event $ \p -> readIORef (serverTotalProcessingTimeRef server)
+  
+-- | Signal when the 'serverTotalProcessingTime' property value has changed.
+serverTotalProcessingTimeChanged :: Server s a b -> Signal Double
+serverTotalProcessingTimeChanged server =
+  mapSignalM (const $ serverTotalProcessingTime server) (serverTotalProcessingTimeChanged_ server)
+  
+-- | Signal when the 'serverTotalProcessingTime' property value has changed.
+serverTotalProcessingTimeChanged_ :: Server s a b -> Signal ()
+serverTotalProcessingTimeChanged_ server =
+  mapSignal (const ()) (serverTaskProcessed server)
 
 -- | Return the counted total time when the server was in the lock state trying
 -- to deliver the output.
 --
 -- The value returned changes discretely and it is usually delayed relative
 -- to the current simulation time.
-serverTotalOutputTime :: Server s a b -> Signalable Double
+--
+-- See also 'serverTotalOutputTimeChanged' and 'serverTotalOutputTimeChanged_'.
+serverTotalOutputTime :: Server s a b -> Event Double
 serverTotalOutputTime server =
-  let read = Event $ \p -> readIORef (serverTotalOutputTimeRef server)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (serverOutputProvided server) }
+  Event $ \p -> readIORef (serverTotalOutputTimeRef server)
+  
+-- | Signal when the 'serverTotalOutputTime' property value has changed.
+serverTotalOutputTimeChanged :: Server s a b -> Signal Double
+serverTotalOutputTimeChanged server =
+  mapSignalM (const $ serverTotalOutputTime server) (serverTotalOutputTimeChanged_ server)
+  
+-- | Signal when the 'serverTotalOutputTime' property value has changed.
+serverTotalOutputTimeChanged_ :: Server s a b -> Signal ()
+serverTotalOutputTimeChanged_ server =
+  mapSignal (const ()) (serverOutputProvided server)
 
 -- | Return the statistics of the time spent by the server in awaiting the input.
 --
 -- The value returned changes discretely and it is usually delayed relative
 -- to the current simulation time.
-serverInputTime :: Server s a b -> Signalable (SamplingStats Double)
+--
+-- See also 'serverInputTimeChanged' and 'serverInputTimeChanged_'.
+serverInputTime :: Server s a b -> Event (SamplingStats Double)
 serverInputTime server =
-  let read = Event $ \p -> readIORef (serverInputTimeRef server)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (serverInputReceived server) }
+  Event $ \p -> readIORef (serverInputTimeRef server)
+  
+-- | Signal when the 'serverInputTime' property value has changed.
+serverInputTimeChanged :: Server s a b -> Signal (SamplingStats Double)
+serverInputTimeChanged server =
+  mapSignalM (const $ serverInputTime server) (serverInputTimeChanged_ server)
+  
+-- | Signal when the 'serverInputTime' property value has changed.
+serverInputTimeChanged_ :: Server s a b -> Signal ()
+serverInputTimeChanged_ server =
+  mapSignal (const ()) (serverInputReceived server)
 
 -- | Return the statistics of the time spent by the server to process the tasks.
 --
 -- The value returned changes discretely and it is usually delayed relative
 -- to the current simulation time.
-serverProcessingTime :: Server s a b -> Signalable (SamplingStats Double)
+--
+-- See also 'serverProcessingTimeChanged' and 'serverProcessingTimeChanged_'.
+serverProcessingTime :: Server s a b -> Event (SamplingStats Double)
 serverProcessingTime server =
-  let read = Event $ \p -> readIORef (serverProcessingTimeRef server)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (serverTaskProcessed server) }
+  Event $ \p -> readIORef (serverProcessingTimeRef server)
+  
+-- | Signal when the 'serverProcessingTime' property value has changed.
+serverProcessingTimeChanged :: Server s a b -> Signal (SamplingStats Double)
+serverProcessingTimeChanged server =
+  mapSignalM (const $ serverProcessingTime server) (serverProcessingTimeChanged_ server)
+  
+-- | Signal when the 'serverProcessingTime' property value has changed.
+serverProcessingTimeChanged_ :: Server s a b -> Signal ()
+serverProcessingTimeChanged_ server =
+  mapSignal (const ()) (serverTaskProcessed server)
 
 -- | Return the statistics of the time when the server was in the lock state trying
 -- to deliver the output. 
 --
 -- The value returned changes discretely and it is usually delayed relative
 -- to the current simulation time.
-serverOutputTime :: Server s a b -> Signalable (SamplingStats Double)
+--
+-- See also 'serverOutputTimeChanged' and 'serverOutputTimeChanged_'.
+serverOutputTime :: Server s a b -> Event (SamplingStats Double)
 serverOutputTime server =
-  let read = Event $ \p -> readIORef (serverOutputTimeRef server)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ =
-                    mapSignal (const ()) (serverOutputProvided server) }
+  Event $ \p -> readIORef (serverOutputTimeRef server)
+  
+-- | Signal when the 'serverOutputTime' property value has changed.
+serverOutputTimeChanged :: Server s a b -> Signal (SamplingStats Double)
+serverOutputTimeChanged server =
+  mapSignalM (const $ serverOutputTime server) (serverOutputTimeChanged_ server)
+  
+-- | Signal when the 'serverOutputTime' property value has changed.
+serverOutputTimeChanged_ :: Server s a b -> Signal ()
+serverOutputTimeChanged_ server =
+  mapSignal (const ()) (serverOutputProvided server)
 
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the server was awaiting for the next input task.
@@ -252,20 +338,27 @@ serverOutputTime server =
 --
 -- As before in this module, the value returned changes discretely and
 -- it is usually delayed relative to the current simulation time.
-serverInputTimeFactor :: Server s a b -> Signalable Double
+--
+-- See also 'serverInputTimeFactorChanged' and 'serverInputTimeFactorChanged_'.
+serverInputTimeFactor :: Server s a b -> Event Double
 serverInputTimeFactor server =
-  let read =
-        Event $ \p ->
-        do x1 <- readIORef (serverTotalInputTimeRef server)
-           x2 <- readIORef (serverTotalProcessingTimeRef server)
-           x3 <- readIORef (serverTotalOutputTimeRef server)
-           return (x1 / (x1 + x2 + x3))
-      signal =
-        mapSignal (const ()) (serverInputReceived server) <>
-        mapSignal (const ()) (serverTaskProcessed server) <>
-        mapSignal (const ()) (serverOutputProvided server)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ = signal }
+  Event $ \p ->
+  do x1 <- readIORef (serverTotalInputTimeRef server)
+     x2 <- readIORef (serverTotalProcessingTimeRef server)
+     x3 <- readIORef (serverTotalOutputTimeRef server)
+     return (x1 / (x1 + x2 + x3))
+  
+-- | Signal when the 'serverInputTimeFactor' property value has changed.
+serverInputTimeFactorChanged :: Server s a b -> Signal Double
+serverInputTimeFactorChanged server =
+  mapSignalM (const $ serverInputTimeFactor server) (serverInputTimeFactorChanged_ server)
+  
+-- | Signal when the 'serverInputTimeFactor' property value has changed.
+serverInputTimeFactorChanged_ :: Server s a b -> Signal ()
+serverInputTimeFactorChanged_ server =
+  mapSignal (const ()) (serverInputReceived server) <>
+  mapSignal (const ()) (serverTaskProcessed server) <>
+  mapSignal (const ()) (serverOutputProvided server)
 
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the server was busy with direct processing its tasks.
@@ -278,20 +371,27 @@ serverInputTimeFactor server =
 --
 -- As before in this module, the value returned changes discretely and
 -- it is usually delayed relative to the current simulation time.
-serverProcessingTimeFactor :: Server s a b -> Signalable Double
+--
+-- See also 'serverProcessingTimeFactorChanged' and 'serverProcessingTimeFactorChanged_'.
+serverProcessingTimeFactor :: Server s a b -> Event Double
 serverProcessingTimeFactor server =
-  let read =
-        Event $ \p ->
-        do x1 <- readIORef (serverTotalInputTimeRef server)
-           x2 <- readIORef (serverTotalProcessingTimeRef server)
-           x3 <- readIORef (serverTotalOutputTimeRef server)
-           return (x2 / (x1 + x2 + x3))
-      signal =
-        mapSignal (const ()) (serverInputReceived server) <>
-        mapSignal (const ()) (serverTaskProcessed server) <>
-        mapSignal (const ()) (serverOutputProvided server)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ = signal }
+  Event $ \p ->
+  do x1 <- readIORef (serverTotalInputTimeRef server)
+     x2 <- readIORef (serverTotalProcessingTimeRef server)
+     x3 <- readIORef (serverTotalOutputTimeRef server)
+     return (x2 / (x1 + x2 + x3))
+  
+-- | Signal when the 'serverProcessingTimeFactor' property value has changed.
+serverProcessingTimeFactorChanged :: Server s a b -> Signal Double
+serverProcessingTimeFactorChanged server =
+  mapSignalM (const $ serverProcessingTimeFactor server) (serverProcessingTimeFactorChanged_ server)
+  
+-- | Signal when the 'serverProcessingTimeFactor' property value has changed.
+serverProcessingTimeFactorChanged_ :: Server s a b -> Signal ()
+serverProcessingTimeFactorChanged_ server =
+  mapSignal (const ()) (serverInputReceived server) <>
+  mapSignal (const ()) (serverTaskProcessed server) <>
+  mapSignal (const ()) (serverOutputProvided server)
 
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the server was locked trying to deliver the output after the task is finished.
@@ -304,20 +404,27 @@ serverProcessingTimeFactor server =
 --
 -- As before in this module, the value returned changes discretely and
 -- it is usually delayed relative to the current simulation time.
-serverOutputTimeFactor :: Server s a b -> Signalable Double
+--
+-- See also 'serverOutputTimeFactorChanged' and 'serverOutputTimeFactorChanged_'.
+serverOutputTimeFactor :: Server s a b -> Event Double
 serverOutputTimeFactor server =
-  let read =
-        Event $ \p ->
-        do x1 <- readIORef (serverTotalInputTimeRef server)
-           x2 <- readIORef (serverTotalProcessingTimeRef server)
-           x3 <- readIORef (serverTotalOutputTimeRef server)
-           return (x3 / (x1 + x2 + x3))
-      signal =
-        mapSignal (const ()) (serverInputReceived server) <>
-        mapSignal (const ()) (serverTaskProcessed server) <>
-        mapSignal (const ()) (serverOutputProvided server)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ = signal }
+  Event $ \p ->
+  do x1 <- readIORef (serverTotalInputTimeRef server)
+     x2 <- readIORef (serverTotalProcessingTimeRef server)
+     x3 <- readIORef (serverTotalOutputTimeRef server)
+     return (x3 / (x1 + x2 + x3))
+  
+-- | Signal when the 'serverOutputTimeFactor' property value has changed.
+serverOutputTimeFactorChanged :: Server s a b -> Signal Double
+serverOutputTimeFactorChanged server =
+  mapSignalM (const $ serverOutputTimeFactor server) (serverOutputTimeFactorChanged_ server)
+  
+-- | Signal when the 'serverOutputTimeFactor' property value has changed.
+serverOutputTimeFactorChanged_ :: Server s a b -> Signal ()
+serverOutputTimeFactorChanged_ server =
+  mapSignal (const ()) (serverInputReceived server) <>
+  mapSignal (const ()) (serverTaskProcessed server) <>
+  mapSignal (const ()) (serverOutputProvided server)
 
 -- | Raised when the server receives a new input task.
 serverInputReceived :: Server s a b -> Signal a
@@ -331,55 +438,55 @@ serverTaskProcessed = publishSignal . serverTaskProcessedSource
 serverOutputProvided :: Server s a b -> Signal (a, b)
 serverOutputProvided = publishSignal . serverOutputProvidedSource
 
+-- | Signal whenever any property of the server changes.
+serverChanged_ :: Server s a b -> Signal ()
+serverChanged_ server =
+  mapSignal (const ()) (serverInputReceived server) <>
+  mapSignal (const ()) (serverTaskProcessed server) <>
+  mapSignal (const ()) (serverOutputProvided server)
+
 -- | Return the summary for the server with desciption of its
 -- properties and activities using the specified indent.
-serverSummary :: Server s a b -> Int -> Signalable ShowS
+serverSummary :: Server s a b -> Int -> Event ShowS
 serverSummary server indent =
-  let read =
-        Event $ \p ->
-        do tx1 <- readIORef (serverTotalInputTimeRef server)
-           tx2 <- readIORef (serverTotalProcessingTimeRef server)
-           tx3 <- readIORef (serverTotalOutputTimeRef server)
-           let xf1 = tx1 / (tx1 + tx2 + tx3)
-               xf2 = tx2 / (tx1 + tx2 + tx3)
-               xf3 = tx3 / (tx1 + tx2 + tx3)
-           xs1 <- readIORef (serverInputTimeRef server)
-           xs2 <- readIORef (serverProcessingTimeRef server)
-           xs3 <- readIORef (serverOutputTimeRef server)
-           let tab = replicate indent ' '
-           return $
-             showString tab .
-             showString "total input time (in awaiting the input) = " . shows tx1 .
-             showString "\n" .
-             showString tab .
-             showString "total processing time = " . shows tx2 .
-             showString "\n" .
-             showString tab .
-             showString "total output time (to deliver the output) = " . shows tx3 .
-             showString "\n\n" .
-             showString tab .
-             showString "input time factor (from 0 to 1) = " . shows xf1 .
-             showString "\n" .
-             showString tab .
-             showString "processing time factor (from 0 to 1) = " . shows xf2 .
-             showString "\n" .
-             showString tab .
-             showString "output time factor (from 0 to 1) = " . shows xf3 .
-             showString "\n\n" .
-             showString tab .
-             showString "input time:\n\n" .
-             samplingStatsSummary xs1 (2 + indent) .
-             showString "\n\n" .
-             showString tab .
-             showString "processing time:\n\n" .
-             samplingStatsSummary xs2 (2 + indent) .
-             showString "\n\n" .
-             showString tab .
-             showString "output time:\n\n" .
-             samplingStatsSummary xs3 (2 + indent)
-      signal =
-        mapSignal (const ()) (serverInputReceived server) <>
-        mapSignal (const ()) (serverTaskProcessed server) <>
-        mapSignal (const ()) (serverOutputProvided server)
-  in Signalable { readSignalable = read,
-                  signalableChanged_ = signal }
+  Event $ \p ->
+  do tx1 <- readIORef (serverTotalInputTimeRef server)
+     tx2 <- readIORef (serverTotalProcessingTimeRef server)
+     tx3 <- readIORef (serverTotalOutputTimeRef server)
+     let xf1 = tx1 / (tx1 + tx2 + tx3)
+         xf2 = tx2 / (tx1 + tx2 + tx3)
+         xf3 = tx3 / (tx1 + tx2 + tx3)
+     xs1 <- readIORef (serverInputTimeRef server)
+     xs2 <- readIORef (serverProcessingTimeRef server)
+     xs3 <- readIORef (serverOutputTimeRef server)
+     let tab = replicate indent ' '
+     return $
+       showString tab .
+       showString "total input time (in awaiting the input) = " . shows tx1 .
+       showString "\n" .
+       showString tab .
+       showString "total processing time = " . shows tx2 .
+       showString "\n" .
+       showString tab .
+       showString "total output time (to deliver the output) = " . shows tx3 .
+       showString "\n\n" .
+       showString tab .
+       showString "input time factor (from 0 to 1) = " . shows xf1 .
+       showString "\n" .
+       showString tab .
+       showString "processing time factor (from 0 to 1) = " . shows xf2 .
+       showString "\n" .
+       showString tab .
+       showString "output time factor (from 0 to 1) = " . shows xf3 .
+       showString "\n\n" .
+       showString tab .
+       showString "input time:\n\n" .
+       samplingStatsSummary xs1 (2 + indent) .
+       showString "\n\n" .
+       showString tab .
+       showString "processing time:\n\n" .
+       samplingStatsSummary xs2 (2 + indent) .
+       showString "\n\n" .
+       showString tab .
+       showString "output time:\n\n" .
+       samplingStatsSummary xs3 (2 + indent)
