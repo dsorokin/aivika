@@ -42,10 +42,8 @@ module Simulation.Aivika.Signal
         newSignalHistory,
         readSignalHistory,
         -- * Signalable Computations
-        Signalable,
-        readSignalable,
+        Signalable(..),
         signalableChanged,
-        signalableChanged_,
         emptySignalable,
         appendSignalable) where
 

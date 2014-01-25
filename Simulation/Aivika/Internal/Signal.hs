@@ -315,7 +315,7 @@ data Signalable a =
                -- but without providing the information about the changed value.
              }
 
--- | Return a signale notifying that the value has changed.
+-- | Return a signal notifying that the value has changed.
 signalableChanged :: Signalable a -> Signal a
 signalableChanged x = mapSignalM (const $ readSignalable x) $ signalableChanged_ x
 
