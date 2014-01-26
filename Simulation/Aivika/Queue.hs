@@ -63,6 +63,8 @@ module Simulation.Aivika.Queue
         enqueueWithStoringPriorityOrLost_,
         -- * Awaiting
         waitWhileFullQueue,
+        -- * Summary
+        queueSummary,
         -- * Derived Signals for Properties
         queueNullChanged,
         queueNullChanged_,
@@ -935,3 +937,114 @@ queueChanged_ q =
   mapSignal (const ()) (enqueueLost q) <>
   dequeueRequested q <>
   mapSignal (const ()) (dequeueExtracted q)
+
+-- | Return the summary for the queue with desciption of its
+-- properties and activities using the specified indent.
+queueSummary :: (Show si, Show sm, Show so) => Queue si qi sm qm so qo a -> Int -> Event ShowS
+queueSummary q indent =
+  do let si = queueInputStrategy q
+         sm = queueStoringStrategy q
+         so = queueOutputStrategy q
+     null <- queueNull q
+     full <- queueFull q
+     let maxCount = queueMaxCount q
+     count <- queueCount q
+     lostCount <- queueLostCount q
+     inputCount <- queueInputCount q
+     storeCount <- queueStoreCount q
+     outputRequestCount <- queueOutputRequestCount q
+     outputCount <- queueOutputCount q
+     loadFactor <- queueLoadFactor q
+     inputRate <- queueInputRate q
+     storeRate <- queueStoreRate q
+     outputRequestRate <- queueOutputRequestRate q
+     outputRate <- queueOutputRate q
+     waitTime <- queueWaitTime q
+     totalWaitTime <- queueTotalWaitTime q
+     inputWaitTime <- queueInputWaitTime q
+     outputWaitTime <- queueOutputWaitTime q
+     let tab = replicate indent ' '
+     return $
+       showString tab .
+       showString "input (enqueueing) strategy = " .
+       shows si .
+       showString "\n" .
+       showString tab .
+       showString "storing (memory) strategy = " .
+       shows sm .
+       showString "\n" .
+       showString tab .
+       showString "output (dequeueing) strategy = " .
+       shows so .
+       showString "\n" .
+       showString tab .
+       showString "empty? = " .
+       shows null .
+       showString "\n" .
+       showString tab .
+       showString "full? = " .
+       shows full .
+       showString "\n" .
+       showString tab .
+       showString "max. capacity = " .
+       shows maxCount .
+       showString "\n" .
+       showString tab .
+       showString "size = " .
+       shows count .
+       showString "\n" .
+       showString tab .
+       showString "the lost count (number of the lost items) = " .
+       shows lostCount .
+       showString "\n" .
+       showString tab .
+       showString "the input count (number of the input items that were enqueued) = " .
+       shows inputCount .
+       showString "\n" .
+       showString tab .
+       showString "the store count (number of the input items that were stored) = " .
+       shows storeCount .
+       showString "\n" .
+       showString tab .
+       showString "the output request count (number of requests for dequeueing an item) = " .
+       shows outputRequestCount .
+       showString "\n" .
+       showString tab .
+       showString "the output count (number of the output items that were dequeued) = " .
+       shows outputCount .
+       showString "\n" .
+       showString tab .
+       showString "the load factor (size / max. capacity) = " .
+       shows loadFactor .
+       showString "\n" .
+       showString tab .
+       showString "the input rate (how many input items were enqueued per time) = " .
+       shows inputRate .
+       showString "\n" .
+       showString tab .
+       showString "the store rate (how many input items were stored per time) = " .
+       shows storeRate .
+       showString "\n" .
+       showString tab .
+       showString "the output request count (how many requests for dequeueing per time) = " .
+       shows outputRequestCount .
+       showString "\n" .
+       showString tab .
+       showString "the output count (how many output items were dequeued per time) = " .
+       shows outputCount .
+       showString "\n" .
+       showString tab .
+       showString "the wait time (when was stored -> when was dequeued) = \n\n" .
+       samplingStatsSummary waitTime (2 + indent) .
+       showString "\n\n" .
+       showString tab .
+       showString "the total wait time (when the enqueueing was initiated -> when was dequeued) = \n\n" .
+       samplingStatsSummary totalWaitTime (2 + indent) .
+       showString "\n\n" .
+       showString tab .
+       showString "the input wait time (when the enqueueing was initiated -> when was stored) = \n\n" .
+       samplingStatsSummary inputWaitTime (2 + indent) .
+       showString "\n\n" .
+       showString tab .
+       showString "the output wait time (when was requested for dequeueing -> when was dequeued) = \n\n" .
+       samplingStatsSummary outputWaitTime (2 + indent)
