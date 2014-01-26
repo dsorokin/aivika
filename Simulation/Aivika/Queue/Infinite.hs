@@ -41,6 +41,8 @@ module Simulation.Aivika.Queue.Infinite
         tryDequeue,
         enqueue,
         enqueueWithStoringPriority,
+        -- * Summary
+        queueSummary,
         -- * Derived Signals for Properties
         queueNullChanged,
         queueNullChanged_,
@@ -522,3 +524,69 @@ queueChanged_ q =
   mapSignal (const ()) (enqueueStored q) <>
   dequeueRequested q <>
   mapSignal (const ()) (dequeueExtracted q)
+
+-- | Return the summary for the queue with desciption of its
+-- properties and activities using the specified indent.
+queueSummary :: (Show sm, Show so) => Queue sm qm so qo a -> Int -> Event ShowS
+queueSummary q indent =
+  do let sm = queueStoringStrategy q
+         so = queueOutputStrategy q
+     null <- queueNull q
+     count <- queueCount q
+     storeCount <- queueStoreCount q
+     outputRequestCount <- queueOutputRequestCount q
+     outputCount <- queueOutputCount q
+     storeRate <- queueStoreRate q
+     outputRequestRate <- queueOutputRequestRate q
+     outputRate <- queueOutputRate q
+     waitTime <- queueWaitTime q
+     outputWaitTime <- queueOutputWaitTime q
+     let tab = replicate indent ' '
+     return $
+       showString tab .
+       showString "storing (memory) strategy = " .
+       shows sm .
+       showString "\n" .
+       showString tab .
+       showString "output (dequeueing) strategy = " .
+       shows so .
+       showString "\n" .
+       showString tab .
+       showString "empty? = " .
+       shows null .
+       showString "\n" .
+       showString tab .
+       showString "size = " .
+       shows count .
+       showString "\n" .
+       showString tab .
+       showString "the store count (number of the input items that were stored) = " .
+       shows storeCount .
+       showString "\n" .
+       showString tab .
+       showString "the output request count (number of requests for dequeueing an item) = " .
+       shows outputRequestCount .
+       showString "\n" .
+       showString tab .
+       showString "the output count (number of the output items that were dequeued) = " .
+       shows outputCount .
+       showString "\n" .
+       showString tab .
+       showString "the store rate (how many input items were stored per time) = " .
+       shows storeRate .
+       showString "\n" .
+       showString tab .
+       showString "the output request count (how many requests for dequeueing per time) = " .
+       shows outputRequestCount .
+       showString "\n" .
+       showString tab .
+       showString "the output count (how many output items were dequeued per time) = " .
+       shows outputCount .
+       showString "\n" .
+       showString tab .
+       showString "the wait time (when was stored -> when was dequeued) = \n\n" .
+       samplingStatsSummary waitTime (2 + indent) .
+       showString "\n\n" .
+       showString tab .
+       showString "the output wait time (when was requested for dequeueing -> when was dequeued) = \n\n" .
+       samplingStatsSummary outputWaitTime (2 + indent)
