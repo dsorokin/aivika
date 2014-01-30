@@ -46,6 +46,6 @@ model =
       totalProfit <- integ annualProfit 0
       let totalCatchPerYear = maxDynamics 0 (ships * catchPerShip)
       -- results --
-      finalDynamics annualProfit
+      runDynamicsInStopTime annualProfit
 
 main = runSimulation model specs >>= print

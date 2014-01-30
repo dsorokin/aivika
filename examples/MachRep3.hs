@@ -70,13 +70,13 @@ model =
               
               machine pid
 
-     initProcessUsingId IncludingCurrentEvents
+     runProcessInStartTimeUsingId IncludingCurrentEvents
        pid1 (machine pid2)
 
-     initProcessUsingId IncludingCurrentEvents
+     runProcessInStartTimeUsingId IncludingCurrentEvents
        pid2 (machine pid1)
 
-     finalEvent IncludingCurrentEvents $
+     runEventInStopTime IncludingCurrentEvents $
        do x <- readRef totalUpTime
           y <- liftParameter stoptime
           return $ x / (2 * y)

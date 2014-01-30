@@ -94,14 +94,14 @@ model =
      m2 <- machine
 
      -- start the time-driven simulation of the machines
-     initEvent IncludingCurrentEvents $
+     runEventInStartTime IncludingCurrentEvents $
        -- in the integration time points
        enqueueEventWithIntegTimes $
        do m1
           m2
 
      -- return the result in the stop time
-     finalEvent IncludingCurrentEvents $
+     runEventInStopTime IncludingCurrentEvents $
        do x <- readRef totalUpTime
           y <- liftParameter stoptime
           return $ x / (2 * y)

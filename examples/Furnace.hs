@@ -273,20 +273,20 @@ model =
   do furnace <- newFurnace
   
      -- initialize the furnace and start its iterating in start time
-     initEvent IncludingCurrentEvents $
+     runEventInStartTime IncludingCurrentEvents $
        do initializeFurnace furnace
           startIteratingFurnace furnace
      
      -- generate randomly new input ingots
-     initProcess IncludingCurrentEvents $
+     runProcessInStartTime IncludingCurrentEvents $
        inputProcess furnace
 
      -- load permanently the input ingots in the furnace
-     initProcess IncludingCurrentEvents $
+     runProcessInStartTime IncludingCurrentEvents $
        loadingProcess furnace
      
      -- run the model in the final time point
-     finalEvent IncludingCurrentEvents $
+     runEventInStopTime IncludingCurrentEvents $
        do -- the ingots
           c0 <- queueStoreCount (furnaceQueue furnace)
           c1 <- queueOutputCount (furnaceQueue furnace)

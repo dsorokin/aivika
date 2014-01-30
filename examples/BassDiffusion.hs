@@ -89,7 +89,7 @@ model =
      adopters <- newRef 0
      ps <- createPersons
      definePersons ps potentialAdopters adopters
-     initEvent IncludingCurrentEvents $
+     runEventInStartTime IncludingCurrentEvents $
        activatePersons ps
      runDynamicsInIntegTimes $
        runEvent IncludingCurrentEvents $

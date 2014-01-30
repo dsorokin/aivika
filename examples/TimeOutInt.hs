@@ -64,10 +64,10 @@ model =
            do holdProcess toPeriod
               liftEvent $ interruptProcess nodePid
 
-     initProcessUsingId IncludingCurrentEvents
+     runProcessInStartTimeUsingId IncludingCurrentEvents
        nodePid node 
      
-     finalEvent IncludingCurrentEvents $
+     runEventInStopTime IncludingCurrentEvents $
        do x <- readRef nTimeOuts
           y <- readRef nMsgs
           return $ x / y

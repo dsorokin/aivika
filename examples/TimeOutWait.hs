@@ -58,9 +58,9 @@ model =
                 modifyRef nTimeOuts $ (+) 1
               node
 
-     initProcess IncludingCurrentEvents node
+     runProcessInStartTime IncludingCurrentEvents node
      
-     finalEvent IncludingCurrentEvents $
+     runEventInStopTime IncludingCurrentEvents $
        do x <- readRef nTimeOuts
           y <- readRef nMsgs
           return $ x / y

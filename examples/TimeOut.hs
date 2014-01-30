@@ -83,10 +83,10 @@ model =
                    reactivateProcess nodePid
                    cancelProcessUsingId timeoutPid
 
-     initProcessUsingId IncludingCurrentEvents
+     runProcessInStartTimeUsingId IncludingCurrentEvents
        nodePid node
      
-     finalEvent IncludingCurrentEvents $
+     runEventInStopTime IncludingCurrentEvents $
        do x <- readRef nTimeOuts
           y <- readRef nMsgs
           return $ x / y

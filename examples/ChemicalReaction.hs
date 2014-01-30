@@ -17,6 +17,6 @@ model =
       c <- integ (kb * b) 0
       let ka = 1
           kb = 1
-      finalDynamics $ sequence [a, b, c]
+      runDynamicsInStopTime $ sequence [a, b, c]
 
 main = runSimulation model specs >>= print
