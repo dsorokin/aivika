@@ -52,7 +52,7 @@ definePerson p ps potentialAdopters adopters =
                randomExponential (1 / advertisingEffectiveness) 
           let st  = personPotentialAdopter p
               st' = personAdopter p
-          addTimeout st t $ activateState st'
+          addTimeout st t $ selectState st'
      setStateActivation (personAdopter p) $ 
        do modifyRef adopters  $ \a -> a + 1
           -- add a timer that works while the state is active
@@ -61,11 +61,11 @@ definePerson p ps potentialAdopters adopters =
           addTimer (personAdopter p) t $
             do i <- liftIO $ getStdRandom $ randomR (1, n)
                let p' = ps ! i
-               st <- agentState (personAgent p')
+               st <- selectedState (personAgent p')
                when (st == Just (personPotentialAdopter p')) $
                  do b <- liftParameter $
                          randomTrue adoptionFraction
-                    when b $ activateState (personAdopter p')
+                    when b $ selectState (personAdopter p')
      setStateDeactivation (personPotentialAdopter p) $
        modifyRef potentialAdopters $ \a -> a - 1
      setStateDeactivation (personAdopter p) $
@@ -77,7 +77,7 @@ definePersons ps potentialAdopters adopters =
   definePerson p ps potentialAdopters adopters
                                
 activatePerson :: Person -> Event ()
-activatePerson p = activateState (personPotentialAdopter p)
+activatePerson p = selectState (personPotentialAdopter p)
 
 activatePersons :: Array Int Person -> Event ()
 activatePersons ps =
