@@ -1,6 +1,6 @@
 More examples are bundled with packages aivika-experiment and aivika-experiment-chart. 
 They plot charts, save the simulation results in the CSV files and generate 
-an HTML web page which can be observed in your favourite Internet browser.
+HTML web pages which can be observed in your favourite Internet browser.
 
 Some examples define a parametric Monte-Carlo simulation, after which the deviation 
 charts and histograms are plotted, for example.
