@@ -1026,12 +1026,12 @@ queueSummary q indent =
        shows storeRate .
        showString "\n" .
        showString tab .
-       showString "the output request count (how many requests for dequeueing per time) = " .
-       shows outputRequestCount .
+       showString "the output request rate (how many requests for dequeueing per time) = " .
+       shows outputRequestRate .
        showString "\n" .
        showString tab .
-       showString "the output count (how many output items were dequeued per time) = " .
-       shows outputCount .
+       showString "the output rate (how many output items were dequeued per time) = " .
+       shows outputRate .
        showString "\n" .
        showString tab .
        showString "the wait time (when was stored -> when was dequeued) = \n\n" .
