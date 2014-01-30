@@ -966,15 +966,15 @@ queueSummary q indent =
      let tab = replicate indent ' '
      return $
        showString tab .
-       showString "input (enqueueing) strategy = " .
+       showString "the input (enqueueing) strategy = " .
        shows si .
        showString "\n" .
        showString tab .
-       showString "storing (memory) strategy = " .
+       showString "the storing (memory) strategy = " .
        shows sm .
        showString "\n" .
        showString tab .
-       showString "output (dequeueing) strategy = " .
+       showString "the output (dequeueing) strategy = " .
        shows so .
        showString "\n" .
        showString tab .
