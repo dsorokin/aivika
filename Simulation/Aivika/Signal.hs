@@ -34,8 +34,8 @@ module Simulation.Aivika.Signal
         -- * Creating Signal in Time Points
         newSignalInTimes,
         newSignalInIntegTimes,
-        newInitSignal,
-        newFinalSignal,
+        newSignalInStartTime,
+        newSignalInStopTime,
         -- * Signal History
         SignalHistory,
         signalHistorySignal,

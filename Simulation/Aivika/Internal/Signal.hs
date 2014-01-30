@@ -35,8 +35,8 @@ module Simulation.Aivika.Internal.Signal
         -- * Creating Signal in Time Points
         newSignalInTimes,
         newSignalInIntegTimes,
-        newInitSignal,
-        newFinalSignal,
+        newSignalInStartTime,
+        newSignalInStopTime,
         -- * Signal History
         SignalHistory,
         signalHistorySignal,
@@ -291,16 +291,16 @@ newSignalInIntegTimes =
      
 -- | Return a signal that is triggered in the start time.
 -- It should be called with help of 'runEventInStartTime'.
-newInitSignal :: Event (Signal Double)
-newInitSignal =
+newSignalInStartTime :: Event (Signal Double)
+newSignalInStartTime =
   do s <- liftSimulation newSignalSource
      t <- liftParameter starttime
      enqueueEvent t $ triggerSignalWithCurrentTime s
      return $ publishSignal s
 
 -- | Return a signal that is triggered in the final time.
-newFinalSignal :: Event (Signal Double)
-newFinalSignal =
+newSignalInStopTime :: Event (Signal Double)
+newSignalInStopTime =
   do s <- liftSimulation newSignalSource
      t <- liftParameter stoptime
      enqueueEvent t $ triggerSignalWithCurrentTime s
