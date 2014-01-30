@@ -13,8 +13,8 @@ module Simulation.Aivika.Dynamics
        (-- * Dynamics Monad
         Dynamics,
         DynamicsLift(..),
-        initDynamics,
-        finalDynamics,
+        runDynamicsInStartTime,
+        runDynamicsInStopTime,
         runDynamicsInIntegTimes,
         runDynamicsInTime,
         runDynamicsInTimes,

@@ -16,8 +16,8 @@ module Simulation.Aivika.Internal.Dynamics
         Dynamics(..),
         DynamicsLift(..),
         invokeDynamics,
-        initDynamics,
-        finalDynamics,
+        runDynamicsInStartTime,
+        runDynamicsInStopTime,
         runDynamicsInIntegTimes,
         runDynamicsInTime,
         runDynamicsInTimes,
@@ -62,13 +62,13 @@ bindD (Dynamics m) k =
      m' p
 
 -- | Run the 'Dynamics' computation in the initial time point.
-initDynamics :: Dynamics a -> Simulation a
-initDynamics (Dynamics m) =
+runDynamicsInStartTime :: Dynamics a -> Simulation a
+runDynamicsInStartTime (Dynamics m) =
   Simulation $ m . integStartPoint
 
 -- | Run the 'Dynamics' computation in the final time point.
-finalDynamics :: Dynamics a -> Simulation a
-finalDynamics (Dynamics m) =
+runDynamicsInStopTime :: Dynamics a -> Simulation a
+runDynamicsInStopTime (Dynamics m) =
   Simulation $ m . integStopPoint
 
 -- | Run the 'Dynamics' computation in all integration time points.

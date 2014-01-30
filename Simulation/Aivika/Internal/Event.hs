@@ -19,8 +19,8 @@ module Simulation.Aivika.Internal.Event
         EventProcessing(..),
         invokeEvent,
         runEvent,
-        initEvent,
-        finalEvent,
+        runEventInStartTime,
+        runEventInStopTime,
         -- * Event Queue
         enqueueEvent,
         enqueueEventWithCancellation,
@@ -262,14 +262,14 @@ runEvent processing (Event e) =
      e p
 
 -- | Run the 'Event' computation in the start time.
-initEvent :: EventProcessing -> Event a -> Simulation a
-initEvent processing e =
-  initDynamics $ runEvent processing e
+runEventInStartTime :: EventProcessing -> Event a -> Simulation a
+runEventInStartTime processing e =
+  runDynamicsInStartTime $ runEvent processing e
 
 -- | Run the 'Event' computation in the stop time.
-finalEvent :: EventProcessing -> Event a -> Simulation a
-finalEvent processing e =
-  finalDynamics $ runEvent processing e
+runEventInStopTime :: EventProcessing -> Event a -> Simulation a
+runEventInStopTime processing e =
+  runDynamicsInStopTime $ runEvent processing e
 
 -- | Return the number of pending events that should
 -- be yet actuated.

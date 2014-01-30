@@ -16,8 +16,8 @@ module Simulation.Aivika.Event
         EventLift(..),
         EventProcessing(..),
         runEvent,
-        initEvent,
-        finalEvent,
+        runEventInStartTime,
+        runEventInStopTime,
         -- * Event Queue
         enqueueEvent,
         enqueueEventWithCancellation,

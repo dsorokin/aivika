@@ -28,10 +28,10 @@ module Simulation.Aivika.Process
         -- * Running Process
         runProcess,
         runProcessUsingId,
-        initProcess,
-        initProcessUsingId,
-        finalProcess,
-        finalProcessUsingId,
+        runProcessInStartTime,
+        runProcessInStartTimeUsingId,
+        runProcessInStopTime,
+        runProcessInStopTimeUsingId,
         -- * Spawning Processes
         spawnProcess,
         spawnProcessUsingId,

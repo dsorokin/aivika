@@ -26,10 +26,10 @@ module Simulation.Aivika.Internal.Process
         -- * Running Process
         runProcess,
         runProcessUsingId,
-        initProcess,
-        initProcessUsingId,
-        finalProcess,
-        finalProcessUsingId,
+        runProcessInStartTime,
+        runProcessInStartTimeUsingId,
+        runProcessInStopTime,
+        runProcessInStopTimeUsingId,
         -- * Spawning Processes
         spawnProcess,
         spawnProcessUsingId,
@@ -226,24 +226,24 @@ runProcessUsingId pid p =
              m = invokeProcess pid p
 
 -- | Run the process in the start time immediately.
-initProcess :: EventProcessing -> Process () -> Simulation ()
-initProcess processing p =
-  initEvent processing $ runProcess p
+runProcessInStartTime :: EventProcessing -> Process () -> Simulation ()
+runProcessInStartTime processing p =
+  runEventInStartTime processing $ runProcess p
 
 -- | Run the process in the start time immediately using the specified identifier.
-initProcessUsingId :: EventProcessing -> ProcessId -> Process () -> Simulation ()
-initProcessUsingId processing pid p =
-  initEvent processing $ runProcessUsingId pid p
+runProcessInStartTimeUsingId :: EventProcessing -> ProcessId -> Process () -> Simulation ()
+runProcessInStartTimeUsingId processing pid p =
+  runEventInStartTime processing $ runProcessUsingId pid p
 
 -- | Run the process in the final simulation time immediately.
-finalProcess :: EventProcessing -> Process () -> Simulation ()
-finalProcess processing p =
-  finalEvent processing $ runProcess p
+runProcessInStopTime :: EventProcessing -> Process () -> Simulation ()
+runProcessInStopTime processing p =
+  runEventInStopTime processing $ runProcess p
 
 -- | Run the process in the final simulation time immediately using the specified identifier.
-finalProcessUsingId :: EventProcessing -> ProcessId -> Process () -> Simulation ()
-finalProcessUsingId processing pid p =
-  finalEvent processing $ runProcessUsingId pid p
+runProcessInStopTimeUsingId :: EventProcessing -> ProcessId -> Process () -> Simulation ()
+runProcessInStopTimeUsingId processing pid p =
+  runEventInStopTime processing $ runProcessUsingId pid p
 
 -- | Enqueue the process that will be then started at the specified time
 -- from the event queue.
