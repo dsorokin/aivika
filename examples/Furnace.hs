@@ -288,12 +288,13 @@ model =
      -- run the model in the final time point
      finalEvent IncludingCurrentEvents $
        do -- the ingots
-          c0 <- readSignalable $ queueStoreCount (furnaceQueue furnace)
-          c1 <- readSignalable $ queueOutputCount (furnaceQueue furnace)
+          c0 <- queueStoreCount (furnaceQueue furnace)
+          c1 <- queueOutputCount (furnaceQueue furnace)
           c2 <- readRef (furnaceReadyCount furnace)
               
           liftIO $ do
             putStrLn "The count of ingots:"
+            putStrLn ""
             putStrLn $ "  total  = " ++ show c0
             putStrLn $ "  loaded = " ++ show c1
             putStrLn $ "  ready  = " ++ show c2
@@ -304,7 +305,8 @@ model =
             
           liftIO $ do 
             putStrLn "The temperature of ready ingots:"
-            putStrLn $ "  " ++ show (listSamplingStats temps)
+            putStrLn ""
+            putStrLn $ samplingStatsSummary (listSamplingStats temps) 2 []
             putStrLn ""
               
           -- the mean heating time
@@ -312,7 +314,8 @@ model =
             
           liftIO $ do
             putStrLn "The heating time:"
-            putStrLn $ "  " ++ show r5
+            putStrLn ""
+            putStrLn $ samplingStatsSummary r5 2 []
             putStrLn ""
                 
           -- the ingots in pits
@@ -324,17 +327,24 @@ model =
             putStrLn ""
               
           -- the queue size and mean wait time
-          r3 <- readSignalable $ queueCount (furnaceQueue furnace)
+          r3 <- queueCount (furnaceQueue furnace)
           
           r4 <- fmap samplingStatsMean $
-                readSignalable $
                 queueWaitTime (furnaceQueue furnace) 
      
           liftIO $ do
-            putStrLn "The queue: "
+            putStrLn "The queue summary: "
+            putStrLn ""
             putStrLn $ "  size (in the final time) = " ++ show r3
             putStrLn $ "  mean wait time = " ++ show r4
             putStrLn ""
+
+          summary <- queueSummary (furnaceQueue furnace) 2
+
+          liftIO $ do
+            putStrLn "The detailed info about the queue (in the final time): "
+            putStrLn ""
+            putStrLn $ summary []
 
 -- | The main program.
 main = runSimulation model specs
