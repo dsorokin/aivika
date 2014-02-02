@@ -78,7 +78,7 @@ model =
 
      runEventInStopTime IncludingCurrentEvents $
        do x <- readRef totalUpTime
-          y <- liftParameter stoptime
+          y <- liftDynamics time
           return $ x / (2 * y)
   
 main = runSimulation model specs >>= print
