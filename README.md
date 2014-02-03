@@ -20,6 +20,14 @@ the following features:
 * allows customizing the queues (you can define your own behaviour
   or use the predefined queue strategies);
 
+* allows defining an infinite stream of data based on the
+  process-oriented computation (designed but not tested in
+  anyway - please be very careful when using it);
+
+* allows defining processors (actually, the Haskell arrows) that
+  operate on infinite streams of data (designed but not tested
+  in anyway - please be very careful when using them);
+
 * supports the activity-oriented paradigm of DES;
 
 * supports the basic constructs for the agent-based modeling;
@@ -64,6 +72,22 @@ Please read the PDF document [An Introduction to
 Aivika Simulation Library] [4] for more details. 
 This document is included in the distributive of Aivika 
 but you can usually find a more recent version by the link provided.
+
+P.S.
+
+Two items, streams and processors, are not yet tested. This is a
+goal for the future version of Aivika. The main reason why I ever uploaded
+my three packages is that the Aivika Experiment Chart package
+was broken in its dependencies, namely, when using the charting
+library. So, I decided to provide the compilable packages again.
+
+Although I would like to say that the mentioned streams and processors
+will be the main improvement in the future version as they actually
+allow defining some DES models on a very high level as you would define
+them with help of diagrams.
+
+Also the queues and server are not tested carefully. Use at your own
+risk. At least, the infinite queue seems to be working.
 
 [1]: http://hackage.haskell.org/package/aivika  "Aivika"
 [2]: http://hackage.haskell.org/package/aivika-experiment  "Aivika Experiment"
