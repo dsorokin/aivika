@@ -332,12 +332,14 @@ concatQueuedStreams :: EnqueueStrategy s q
 concatQueuedStreams s streams = Cons z where
   z = do reading <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
          writing <- liftSimulation $ newResourceWithMaxCount s 1 (Just 1)
+         conting <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
          ref <- liftIO $ newIORef Nothing
          let writer p =
                do (a, xs) <- runStream p
                   requestResource writing
                   liftIO $ writeIORef ref (Just a)
                   releaseResource reading
+                  requestResource conting
                   writer xs
              reader =
                do requestResource reading
@@ -346,7 +348,9 @@ concatQueuedStreams s streams = Cons z where
                   releaseResource writing
                   return a
          forM_ streams $ spawnProcess CancelTogether . writer
-         runStream $ repeatProcess reader
+         a <- reader
+         let xs = repeatProcess (releaseResource conting >> reader)
+         return (a, xs)
 
 -- | Concatenate the input priority streams producing one output stream.
 concatPriorityStreams :: PriorityQueueStrategy s q p
@@ -359,12 +363,14 @@ concatPriorityStreams :: PriorityQueueStrategy s q p
 concatPriorityStreams s streams = Cons z where
   z = do reading <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
          writing <- liftSimulation $ newResourceWithMaxCount s 1 (Just 1)
+         conting <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
          ref <- liftIO $ newIORef Nothing
          let writer p =
                do ((priority, a), xs) <- runStream p
                   requestResourceWithPriority writing priority
                   liftIO $ writeIORef ref (Just a)
                   releaseResource reading
+                  requestResource conting
                   writer xs
              reader =
                do requestResource reading
@@ -373,7 +379,9 @@ concatPriorityStreams s streams = Cons z where
                   releaseResource writing
                   return a
          forM_ streams $ spawnProcess CancelTogether . writer
-         runStream $ repeatProcess reader
+         a <- reader
+         let xs = repeatProcess (releaseResource conting >> reader)
+         return (a, xs)
 
 -- | Merge two streams applying the 'FCFS' strategy for enqueuing the input data.
 mergeStreams :: Stream a -> Stream a -> Stream a
