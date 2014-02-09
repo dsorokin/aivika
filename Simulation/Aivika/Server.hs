@@ -205,7 +205,7 @@ serverStateChanged_ :: Server s a b -> Signal ()
 serverStateChanged_ server =
   mapSignal (const ()) (serverTaskProcessed server)
 
--- | Return the counted total time spent by the server in awaiting the input.
+-- | Return the counted total time when the server was locked while awaiting the input.
 --
 -- The value returned changes discretely and it is usually delayed relative
 -- to the current simulation time.
@@ -225,7 +225,7 @@ serverTotalInputTimeChanged_ :: Server s a b -> Signal ()
 serverTotalInputTimeChanged_ server =
   mapSignal (const ()) (serverInputReceived server)
 
--- | Return the counted total time spent by the server to process all tasks.
+-- | Return the counted total time spent by the server to process the tasks.
 --
 -- The value returned changes discretely and it is usually delayed relative
 -- to the current simulation time.
@@ -245,7 +245,7 @@ serverTotalProcessingTimeChanged_ :: Server s a b -> Signal ()
 serverTotalProcessingTimeChanged_ server =
   mapSignal (const ()) (serverTaskProcessed server)
 
--- | Return the counted total time when the server was in the lock state trying
+-- | Return the counted total time when the server was locked while trying
 -- to deliver the output.
 --
 -- The value returned changes discretely and it is usually delayed relative
@@ -266,7 +266,7 @@ serverTotalOutputTimeChanged_ :: Server s a b -> Signal ()
 serverTotalOutputTimeChanged_ server =
   mapSignal (const ()) (serverOutputProvided server)
 
--- | Return the statistics of the time spent by the server in awaiting the input.
+-- | Return the statistics of the time when the server was locked while awaiting the input.
 --
 -- The value returned changes discretely and it is usually delayed relative
 -- to the current simulation time.
@@ -306,7 +306,7 @@ serverProcessingTimeChanged_ :: Server s a b -> Signal ()
 serverProcessingTimeChanged_ server =
   mapSignal (const ()) (serverTaskProcessed server)
 
--- | Return the statistics of the time when the server was in the lock state trying
+-- | Return the statistics of the time when the server was locked while trying
 -- to deliver the output. 
 --
 -- The value returned changes discretely and it is usually delayed relative
@@ -462,13 +462,13 @@ serverSummary server indent =
      let tab = replicate indent ' '
      return $
        showString tab .
-       showString "total input time (in awaiting the input) = " . shows tx1 .
+       showString "total input time (locked while awaiting the input) = " . shows tx1 .
        showString "\n" .
        showString tab .
        showString "total processing time = " . shows tx2 .
        showString "\n" .
        showString tab .
-       showString "total output time (to deliver the output) = " . shows tx3 .
+       showString "total output time (locked while delivering the output) = " . shows tx3 .
        showString "\n\n" .
        showString tab .
        showString "input time factor (from 0 to 1) = " . shows xf1 .
@@ -480,7 +480,7 @@ serverSummary server indent =
        showString "output time factor (from 0 to 1) = " . shows xf3 .
        showString "\n\n" .
        showString tab .
-       showString "input time:\n\n" .
+       showString "input time (locked while awaiting the input):\n\n" .
        samplingStatsSummary xs1 (2 + indent) .
        showString "\n\n" .
        showString tab .
@@ -488,5 +488,5 @@ serverSummary server indent =
        samplingStatsSummary xs2 (2 + indent) .
        showString "\n\n" .
        showString tab .
-       showString "output time:\n\n" .
+       showString "output time (locked while delivering the output):\n\n" .
        samplingStatsSummary xs3 (2 + indent)
