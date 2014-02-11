@@ -47,7 +47,7 @@ module Simulation.Aivika.Internal.Process
         passivateProcess,
         processPassive,
         reactivateProcess,
-        cancelProcessUsingId,
+        cancelProcessWithId,
         cancelProcess,
         processCancelled,
         -- * Awaiting Signal
@@ -278,15 +278,15 @@ newProcessId =
                         processInterruptVersion = v }
 
 -- | Cancel a process with the specified identifier, interrupting it if needed.
-cancelProcessUsingId :: ProcessId -> Event ()
-cancelProcessUsingId pid = contCancellationInitiate (processCancelSource pid)
+cancelProcessWithId :: ProcessId -> Event ()
+cancelProcessWithId pid = contCancellationInitiate (processCancelSource pid)
 
 -- | The process cancels itself.
 cancelProcess :: Process a
 cancelProcess =
   do pid <- processId
-     liftEvent $ cancelProcessUsingId pid
-     throwProcess $ error "The process must be cancelled already: cancelProcessItself."
+     liftEvent $ cancelProcessWithId pid
+     throwProcess $ error "The process must be cancelled already: cancelProcess."
 
 -- | Test whether the process with the specified identifier was cancelled.
 processCancelled :: ProcessId -> Event Bool
@@ -558,7 +558,7 @@ timeoutProcessUsingId timeout pid p =
        finallyProcess
        (holdProcess timeout)
        (liftEvent $
-        cancelProcessUsingId pid)
+        cancelProcessWithId pid)
      spawnProcessUsingId CancelChildAfterParent pid $
        do r <- liftIO $ newIORef Nothing
           finallyProcess

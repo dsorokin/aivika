@@ -87,7 +87,7 @@ taskResult t =
 -- | Cancel the task.
 cancelTask :: Task a -> Event ()
 cancelTask t =
-  cancelProcessUsingId (taskId t)
+  cancelProcessWithId (taskId t)
 
 -- | Test whether the task was cancelled.
 taskCancelled :: Task a -> Event Bool

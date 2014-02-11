@@ -49,7 +49,7 @@ module Simulation.Aivika.Process
         passivateProcess,
         processPassive,
         reactivateProcess,
-        cancelProcessUsingId,
+        cancelProcessWithId,
         cancelProcess,
         processCancelled,
         -- * Awaiting Signal
