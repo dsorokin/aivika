@@ -33,6 +33,7 @@ module Simulation.Aivika
         module Simulation.Aivika.Simulation,
         module Simulation.Aivika.Specs,
         module Simulation.Aivika.Statistics,
+        module Simulation.Aivika.Statistics.Accumulator,
         module Simulation.Aivika.Stream,
         module Simulation.Aivika.Stream.Random,
         module Simulation.Aivika.Task,
@@ -59,8 +60,8 @@ import Simulation.Aivika.Signal
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Specs
 import Simulation.Aivika.Statistics
+import Simulation.Aivika.Statistics.Accumulator
 import Simulation.Aivika.Stream
 import Simulation.Aivika.Stream.Random
 import Simulation.Aivika.Task
 import Simulation.Aivika.Var.Unboxed
-

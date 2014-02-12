@@ -153,6 +153,7 @@ library
                      Simulation.Aivika.Simulation
                      Simulation.Aivika.Specs
                      Simulation.Aivika.Statistics
+                     Simulation.Aivika.Statistics.Accumulator
                      Simulation.Aivika.Stream
                      Simulation.Aivika.Stream.Random
                      Simulation.Aivika.SystemDynamics
