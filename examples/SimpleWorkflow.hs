@@ -7,9 +7,12 @@
 --
 -- There are two work places with finite queues in one workflow.
 
+import Prelude hiding (id, (.)) 
+
 import Control.Monad
 import Control.Monad.Trans
 import Control.Arrow
+import Control.Category (id, (.))
 
 import Simulation.Aivika
 import Simulation.Aivika.Queue
@@ -24,18 +27,37 @@ specs = Specs { spcStartTime = 0.0,
 -- the mean delay of input orders
 meanOrderDelay = 0.4 
 
--- the capacity of the queue before the first work place
+-- the capacity of the queue before the first work places
 queueMaxCount1 = 4
 
--- the capacity of the queue before the second work place
+-- the capacity of the queue before the second work places
 queueMaxCount2 = 2
 
--- the mean time of processing an order in the first work place
+-- the mean time of processing an order in the first work places
 meanProcessingTime1 = 0.25
 
--- the mean time of processing an order in the second work place
+-- the mean time of processing an order in the second work places
 meanProcessingTime2 = 0.5
 
+-- the number of the first work places
+workplaceCount1 = 1
+
+-- the number of the second work places
+workplaceCount2 = 1
+
+-- create an accumulator to gather the queue size statistics 
+newQueueSizeAccumulator queue =
+  newTimingStatsAccumulator $
+  Signalable (queueCount queue) (queueCountChanged_ queue)
+
+-- create a workflow with the exponential processing time
+newWorkplaceExponential meanTime =
+  newServer $ \a ->
+  do holdProcess =<<
+       (liftParameter $
+        randomExponential meanTime)
+     return a
+  
 model :: Simulation ()
 model = do
   -- the statistics of the processing time
@@ -51,25 +73,17 @@ model = do
   -- the first queue size statistics
   queueSizeAcc1 <- 
     runEventInStartTime IncludingCurrentEvents $
-    newTimingStatsAccumulator $
-    Signalable (queueCount queue1) (queueCountChanged_ queue1)
+    newQueueSizeAccumulator queue1
   -- the second queue size statistics
   queueSizeAcc2 <- 
     runEventInStartTime IncludingCurrentEvents $
-    newTimingStatsAccumulator $
-    Signalable (queueCount queue2) (queueCountChanged_ queue2)
-  -- create the first work place, i.e. a "server"
-  workplace1 <- newServer $ \a ->
-    do holdProcess =<<
-         (liftParameter $
-          randomExponential meanProcessingTime1)
-       return a
-  -- create the second work place, i.e. a "server"
-  workplace2 <- newServer $ \a ->
-    do holdProcess =<<
-         (liftParameter $
-          randomExponential meanProcessingTime2)
-       return a
+    newQueueSizeAccumulator queue2
+  -- create the first work places, i.e. the "servers"
+  workplace1s <- forM [1 .. workplaceCount1] $ \_ ->
+    newWorkplaceExponential meanProcessingTime1
+  -- create the second work places, i.e. the "servers"
+  workplace2s <- forM [1 .. workplaceCount2] $ \_ ->
+    newWorkplaceExponential meanProcessingTime2
   -- processor for the queue before the first work place
   let queueProcessor1 =
         queueProcessor
@@ -80,18 +94,14 @@ model = do
         queueProcessor
         (enqueue queue2)
         (dequeue queue2)
-  -- -- the entire processor from input to output
-  -- let entireProcessor =
-  --       queueProcessor1 >>>
-  --       processorParallel [serverProcessor workplace1] >>>
-  --       queueProcessor2 >>>
-  --       processorParallel [serverProcessor workplace2]
   -- the entire processor from input to output
   let entireProcessor =
         queueProcessor1 >>>
-        serverProcessor workplace1 >>>
+        processorParallel (map serverProcessor workplace1s) >>>
+        -- foldr (>>>) id (map serverProcessor workplace1s) >>>
         queueProcessor2 >>>
-        serverProcessor workplace2
+        processorParallel (map serverProcessor workplace2s)
+        -- foldr (>>>) id (map serverProcessor workplace2s)
   -- start simulating the model
   runProcessInStartTime IncludingCurrentEvents $
     consumeStream
@@ -105,8 +115,8 @@ model = do
   runEventInStopTime IncludingCurrentEvents $
     do queueSum1 <- queueSummary queue1 2
        queueSum2 <- queueSummary queue2 2
-       workplaceSum1 <- serverSummary workplace1 2
-       workplaceSum2 <- serverSummary workplace2 2
+       workplaceSum1s <- forM workplace1s $ \x -> serverSummary x 2
+       workplaceSum2s <- forM workplace2s $ \x -> serverSummary x 2
        timeStats <- readRef processingTimeStats
        queueSize1 <- timingStatsAccumulated queueSizeAcc1
        queueSize2 <- timingStatsAccumulated queueSizeAcc2
@@ -116,18 +126,20 @@ model = do
             putStrLn ""
             putStrLn $ queueSum1 []
             putStrLn ""
-            putStrLn "--- the first work place (in the final time) ---"
-            putStrLn ""
-            putStrLn $ workplaceSum1 []
-            putStrLn ""
+            forM_ (zip [1..] workplaceSum1s) $ \(i, x) ->
+              do putStrLn $ "--- the first work place no." ++ show i ++ " (in the final time) ---"
+                 putStrLn ""
+                 putStrLn $ x []
+                 putStrLn ""
             putStrLn "--- the second queue summary (in the final time) ---"
             putStrLn ""
             putStrLn $ queueSum2 []
             putStrLn ""
-            putStrLn "--- the second work place (in the final time) ---"
-            putStrLn ""
-            putStrLn $ workplaceSum2 []
-            putStrLn ""
+            forM_ (zip [1..] workplaceSum2s) $ \(i, x) ->
+              do putStrLn $ "--- the second work place no. " ++ show i ++ " (in the final time) ---"
+                 putStrLn ""
+                 putStrLn $ x []
+                 putStrLn ""
             putStrLn "--- the processing time summary ---"
             putStrLn ""
             putStrLn $ samplingStatsSummary timeStats 2 []
