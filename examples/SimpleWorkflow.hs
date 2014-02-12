@@ -48,16 +48,16 @@ model = do
   queue1 <- newFCFSQueue queueMaxCount1
   -- create a queue before the second work place
   queue2 <- newFCFSQueue queueMaxCount2
-  -- statistics of the queue size 
-  countStats1 <- newRef emptySamplingStats
-  countStats2 <- newRef emptySamplingStats
-  runEventInStartTime IncludingCurrentEvents $
-    do handleSignal_ (queueCountChanged queue1) $ \a ->
-          modifyRef countStats1 $ 
-          addSamplingStats a
-       handleSignal_ (queueCountChanged queue2) $ \a ->
-          modifyRef countStats2 $
-          addSamplingStats a
+  -- the first queue size statistics
+  queueSizeAcc1 <- 
+    runEventInStartTime IncludingCurrentEvents $
+    newTimingStatsAccumulator $
+    Signalable (queueCount queue1) (queueCountChanged_ queue1)
+  -- the second queue size statistics
+  queueSizeAcc2 <- 
+    runEventInStartTime IncludingCurrentEvents $
+    newTimingStatsAccumulator $
+    Signalable (queueCount queue2) (queueCountChanged_ queue2)
   -- create the first work place, i.e. a "server"
   workplace1 <- newServer $ \a ->
     do holdProcess =<<
@@ -108,8 +108,8 @@ model = do
        workplaceSum1 <- serverSummary workplace1 2
        workplaceSum2 <- serverSummary workplace2 2
        timeStats <- readRef processingTimeStats
-       countStats1 <- readRef countStats1
-       countStats2 <- readRef countStats2
+       queueSize1 <- timingStatsAccumulated queueSizeAcc1
+       queueSize2 <- timingStatsAccumulated queueSizeAcc2
        liftIO $
          do putStrLn ""
             putStrLn "--- the first queue summary (in the final time) ---"
@@ -131,15 +131,14 @@ model = do
             putStrLn "--- the processing time summary ---"
             putStrLn ""
             putStrLn $ samplingStatsSummary timeStats 2 []
-
             putStrLn ""
-            putStrLn "--- the first queue size ---"
+            putStrLn "--- the first queue size summary ---"
             putStrLn ""
-            putStrLn $ samplingStatsSummary countStats1 2 []
+            putStrLn $ timingStatsSummary queueSize1 2 []
             putStrLn ""
-            putStrLn "--- the second queue size ---"
+            putStrLn "--- the second queue size summary ---"
             putStrLn ""
-            putStrLn $ samplingStatsSummary countStats2 2 []
+            putStrLn $ timingStatsSummary queueSize2 2 []
             putStrLn ""
 
 main = runSimulation model specs
