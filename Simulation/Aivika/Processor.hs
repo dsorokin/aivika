@@ -335,7 +335,7 @@ bufferProcessorLoop consume preoutput filter =
 queueProcessor :: (a -> Process ())
                   -- ^ enqueue the input item and wait
                   -- while the queue is full if required
-                  -- so that there was no hanging items
+                  -- so that there were no hanging items
                   -> Process b
                   -- ^ dequeue an output item
                   -> Processor a b
@@ -354,7 +354,7 @@ queueProcessorLoopMerging :: (Stream a -> Stream d -> Stream e)
                              -> (e -> Process ())
                              -- ^ enqueue the input item and wait
                              -- while the queue is full if required
-                             -- so that there was no hanging items
+                             -- so that there were no hanging items
                              -> Process c
                              -- ^ dequeue an item for the further processing
                              -> Processor c (Either d b)
@@ -377,7 +377,7 @@ queueProcessorLoopMerging merge enqueue dequeue =
 queueProcessorLoopSeq :: (a -> Process ())
                          -- ^ enqueue the input item and wait
                          -- while the queue is full if required
-                         -- so that there was no hanging items
+                         -- so that there were no hanging items
                          -> Process c
                          -- ^ dequeue an item for the further processing
                          -> Processor c (Either a b)
@@ -396,7 +396,7 @@ queueProcessorLoopSeq =
 queueProcessorLoopParallel :: (a -> Process ())
                               -- ^ enqueue the input item and wait
                               -- while the queue is full if required
-                              -- so that there was no hanging items
+                              -- so that there were no hanging items
                               -> Process c
                               -- ^ dequeue an item for the further processing
                               -> Processor c (Either a b)
