@@ -23,6 +23,7 @@ import Data.IORef
 import Control.Monad
 
 import Simulation.Aivika.Internal.Specs
+import Simulation.Aivika.Internal.Parameter
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Interpolate
@@ -32,7 +33,8 @@ newBoxedArray_ :: Ix i => (i, i) -> IO (IOArray i e)
 newBoxedArray_ = newArray_
 
 -- | Memoize and order the computation in the integration time points using 
--- the interpolation that knows of the Runge-Kutta method.
+-- the interpolation that knows of the Runge-Kutta method. The values are
+-- calculated sequentially starting from 'starttime'.
 memoDynamics :: Dynamics e -> Simulation (Dynamics e)
 {-# INLINE memoDynamics #-}
 memoDynamics (Dynamics m) = 

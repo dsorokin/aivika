@@ -18,11 +18,6 @@ specs = Specs { spcStartTime = 0.0,
                 spcMethod = RungeKutta4,
                 spcGeneratorType = SimpleGenerator }
 
-randomTrue :: Double -> Parameter Bool
-randomTrue p =
-  do x <- randomUniform 0 1
-     return (x <= p)
-
 data Person = Person { personAgent :: Agent,
                        personPotentialAdopter :: AgentState,
                        personAdopter :: AgentState }

@@ -7,7 +7,16 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- This module defines the random parameters of simulation experiments.
+-- This module defines the random functions that always return the same values
+-- in the integration time points within a single simulation run. The values
+-- for another simulation run will be regenerated anew.
+--
+-- For example, the computations returned by these functions can be used in
+-- the equations of System Dynamics.
+--
+-- Also it is worth noting that the values are generated in a strong order starting
+-- from 'starttime' with step 'dt'. This is how the 'memo0Dynamics' function
+-- actually works.
 --
 
 module Simulation.Aivika.Dynamics.Random
