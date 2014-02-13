@@ -432,8 +432,8 @@ enqueueStore q a =
                          itemStoringTime = pointTime p }
      invokeEvent p $
        strategyEnqueue (queueStoringStrategy q) (queueStore q) i
-     modifyIORef (queueCountRef q) (+ 1)
-     modifyIORef (queueStoreCountRef q) (+ 1)
+     modifyIORef' (queueCountRef q) (+ 1)
+     modifyIORef' (queueStoreCountRef q) (+ 1)
      invokeEvent p $
        releaseResourceWithinEvent (queueOutputRes q)
      invokeEvent p $
@@ -455,8 +455,8 @@ enqueueStoreWithPriority q pm a =
                          itemStoringTime = pointTime p }
      invokeEvent p $
        strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
-     modifyIORef (queueCountRef q) (+ 1)
-     modifyIORef (queueStoreCountRef q) (+ 1)
+     modifyIORef' (queueCountRef q) (+ 1)
+     modifyIORef' (queueStoreCountRef q) (+ 1)
      invokeEvent p $
        releaseResourceWithinEvent (queueOutputRes q)
      invokeEvent p $
@@ -469,7 +469,7 @@ dequeueRequest :: Queue sm qm so qo a
                  -- ^ the current time
 dequeueRequest q =
   Event $ \p ->
-  do modifyIORef (queueOutputRequestCountRef q) (+ 1)
+  do modifyIORef' (queueOutputRequestCountRef q) (+ 1)
      invokeEvent p $
        triggerSignal (dequeueRequestedSource q) ()
      return $ pointTime p 
@@ -486,8 +486,8 @@ dequeueExtract q t' =
   Event $ \p ->
   do i <- invokeEvent p $
           strategyDequeue (queueStoringStrategy q) (queueStore q)
-     modifyIORef (queueCountRef q) (+ (- 1))
-     modifyIORef (queueOutputCountRef q) (+ 1)
+     modifyIORef' (queueCountRef q) (+ (- 1))
+     modifyIORef' (queueOutputCountRef q) (+ 1)
      invokeEvent p $
        dequeueStat q t' i
      invokeEvent p $
@@ -508,9 +508,9 @@ dequeueStat q t' i =
   Event $ \p ->
   do let t1 = itemStoringTime i
          t  = pointTime p
-     modifyIORef (queueOutputWaitTimeRef q) $
+     modifyIORef' (queueOutputWaitTimeRef q) $
        addSamplingStats (t - t')
-     modifyIORef (queueWaitTimeRef q) $
+     modifyIORef' (queueWaitTimeRef q) $
        addSamplingStats (t - t1)
 
 -- | Signal whenever any property of the queue changes.

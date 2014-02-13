@@ -163,8 +163,8 @@ serverProcessor server =
              Nothing -> return ()
              Just (t', a', b') ->
                do liftIO $
-                    do modifyIORef (serverTotalOutputTimeRef server) (+ (t0 - t'))
-                       modifyIORef (serverOutputTimeRef server) $
+                    do modifyIORef' (serverTotalOutputTimeRef server) (+ (t0 - t'))
+                       modifyIORef' (serverOutputTimeRef server) $
                          addSamplingStats (t0 - t')
                   triggerSignal (serverOutputProvidedSource server) (a', b')
          -- get input
@@ -172,8 +172,8 @@ serverProcessor server =
          t1 <- liftDynamics time
          liftEvent $
            do liftIO $
-                do modifyIORef (serverTotalInputTimeRef server) (+ (t1 - t0))
-                   modifyIORef (serverInputTimeRef server) $
+                do modifyIORef' (serverTotalInputTimeRef server) (+ (t1 - t0))
+                   modifyIORef' (serverInputTimeRef server) $
                      addSamplingStats (t1 - t0)
               triggerSignal (serverInputReceivedSource server) a
          -- provide the service
@@ -181,9 +181,9 @@ serverProcessor server =
          t2 <- liftDynamics time
          liftEvent $
            do liftIO $
-                do writeIORef (serverStateRef server) s'
-                   modifyIORef (serverTotalProcessingTimeRef server) (+ (t2 - t1))
-                   modifyIORef (serverProcessingTimeRef server) $
+                do writeIORef (serverStateRef server) $! s'
+                   modifyIORef' (serverTotalProcessingTimeRef server) (+ (t2 - t1))
+                   modifyIORef' (serverProcessingTimeRef server) $
                      addSamplingStats (t2 - t1)
               triggerSignal (serverTaskProcessedSource server) (a, b)
          return (b, loop s' (Just $ (t2, a, b)) xs')

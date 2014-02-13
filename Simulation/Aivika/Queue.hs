@@ -779,7 +779,7 @@ enqueueInitiate :: Queue si qi sm qm so qo a
 enqueueInitiate q a =
   Event $ \p ->
   do let t = pointTime p
-     modifyIORef (queueInputCountRef q) (+ 1)
+     modifyIORef' (queueInputCountRef q) (+ 1)
      invokeEvent p $
        triggerSignal (enqueueInitiatedSource q) a
      return QueueItem { itemValue = a,
@@ -800,8 +800,8 @@ enqueueStore q i =
   do let i' = i { itemStoringTime = pointTime p }  -- now we have the actual time of storing
      invokeEvent p $
        strategyEnqueue (queueStoringStrategy q) (queueStore q) i'
-     modifyIORef (queueCountRef q) (+ 1)
-     modifyIORef (queueStoreCountRef q) (+ 1)
+     modifyIORef' (queueCountRef q) (+ 1)
+     modifyIORef' (queueStoreCountRef q) (+ 1)
      invokeEvent p $
        enqueueStat q i'
      invokeEvent p $
@@ -824,8 +824,8 @@ enqueueStoreWithPriority q pm i =
   do let i' = i { itemStoringTime = pointTime p }  -- now we have the actual time of storing
      invokeEvent p $
        strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i'
-     modifyIORef (queueCountRef q) (+ 1)
-     modifyIORef (queueStoreCountRef q) (+ 1)
+     modifyIORef' (queueCountRef q) (+ 1)
+     modifyIORef' (queueStoreCountRef q) (+ 1)
      invokeEvent p $
        enqueueStat q i'
      invokeEvent p $
@@ -841,7 +841,7 @@ enqueueDeny :: Queue si qi sm qm so qo a
                -> Event ()
 enqueueDeny q a =
   Event $ \p ->
-  do modifyIORef (queueLostCountRef q) $ (+) 1
+  do modifyIORef' (queueLostCountRef q) $ (+) 1
      invokeEvent p $
        triggerSignal (enqueueLostSource q) a
 
@@ -856,7 +856,7 @@ enqueueStat q i =
   Event $ \p ->
   do let t0 = itemInputTime i
          t1 = itemStoringTime i
-     modifyIORef (queueInputWaitTimeRef q) $
+     modifyIORef' (queueInputWaitTimeRef q) $
        addSamplingStats (t1 - t0)
 
 -- | Accept the dequeuing request and return the current simulation time.
@@ -866,7 +866,7 @@ dequeueRequest :: Queue si qi sm qm so qo a
                  -- ^ the current time
 dequeueRequest q =
   Event $ \p ->
-  do modifyIORef (queueOutputRequestCountRef q) (+ 1)
+  do modifyIORef' (queueOutputRequestCountRef q) (+ 1)
      invokeEvent p $
        triggerSignal (dequeueRequestedSource q) ()
      return $ pointTime p 
@@ -884,8 +884,8 @@ dequeueExtract q t' =
   Event $ \p ->
   do i <- invokeEvent p $
           strategyDequeue (queueStoringStrategy q) (queueStore q)
-     modifyIORef (queueCountRef q) (+ (- 1))
-     modifyIORef (queueOutputCountRef q) (+ 1)
+     modifyIORef' (queueCountRef q) (+ (- 1))
+     modifyIORef' (queueOutputCountRef q) (+ 1)
      invokeEvent p $
        dequeueStat q t' i
      invokeEvent p $
@@ -909,11 +909,11 @@ dequeueStat q t' i =
   do let t0 = itemInputTime i
          t1 = itemStoringTime i
          t  = pointTime p
-     modifyIORef (queueOutputWaitTimeRef q) $
+     modifyIORef' (queueOutputWaitTimeRef q) $
        addSamplingStats (t - t')
-     modifyIORef (queueTotalWaitTimeRef q) $
+     modifyIORef' (queueTotalWaitTimeRef q) $
        addSamplingStats (t - t0)
-     modifyIORef (queueWaitTimeRef q) $
+     modifyIORef' (queueWaitTimeRef q) $
        addSamplingStats (t - t1)
 
 -- | Wait while the queue is full.
