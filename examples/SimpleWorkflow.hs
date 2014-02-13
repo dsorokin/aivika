@@ -60,12 +60,10 @@ newWorkplaceExponential meanTime =
   
 model :: Simulation ()
 model = do
-  -- the statistics of the processing time
-  processingTimeStats <- newRef emptySamplingStats
-  -- define a stream of input orders
-  let inputStream =
-        mapStreamM (const $ liftDynamics time) $
-        randomExponentialStream meanOrderDelay 
+  -- it will gather the statistics of the processing time
+  arrivalTimer <- newArrivalTimer
+  -- define a stream of input events
+  let inputStream = randomExponentialStream meanOrderDelay 
   -- create a queue before the first work place
   queue1 <- newFCFSQueue queueMaxCount1
   -- create a queue before the second work place
@@ -100,24 +98,19 @@ model = do
         processorParallel (map serverProcessor workplace1s) >>>
         -- foldr (>>>) id (map serverProcessor workplace1s) >>>
         queueProcessor2 >>>
-        processorParallel (map serverProcessor workplace2s)
-        -- foldr (>>>) id (map serverProcessor workplace2s)
+        processorParallel (map serverProcessor workplace2s) >>>
+        -- foldr (>>>) id (map serverProcessor workplace2s) >>>
+        arrivalTimerProcessor arrivalTimer
   -- start simulating the model
   runProcessInStartTime IncludingCurrentEvents $
-    consumeStream
-    (\a -> do
-        t <- liftDynamics time
-        liftEvent $
-          modifyRef processingTimeStats $
-          addSamplingStats (t - a))
-    (runProcessor entireProcessor inputStream)
+    sinkStream $ runProcessor entireProcessor inputStream
   -- show the results in the final time
   runEventInStopTime IncludingCurrentEvents $
     do queueSum1 <- queueSummary queue1 2
        queueSum2 <- queueSummary queue2 2
        workplaceSum1s <- forM workplace1s $ \x -> serverSummary x 2
        workplaceSum2s <- forM workplace2s $ \x -> serverSummary x 2
-       timeStats <- readRef processingTimeStats
+       processingTime <- arrivalProcessingTime arrivalTimer
        queueSize1 <- timingStatsAccumulated queueSizeAcc1
        queueSize2 <- timingStatsAccumulated queueSizeAcc2
        liftIO $
@@ -142,7 +135,7 @@ model = do
                  putStrLn ""
             putStrLn "--- the processing time summary ---"
             putStrLn ""
-            putStrLn $ samplingStatsSummary timeStats 2 []
+            putStrLn $ samplingStatsSummary processingTime 2 []
             putStrLn ""
             putStrLn "--- the first queue size summary ---"
             putStrLn ""
