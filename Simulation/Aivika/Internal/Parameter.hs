@@ -12,6 +12,9 @@
 -- The module defines the 'Parameter' monad that allows representing the model
 -- parameters. For example, they can be used when running the Monte-Carlo simulation.
 -- 
+-- In general, this monad is very useful for representing a computation which is external
+-- relative to the model itself.
+--
 module Simulation.Aivika.Internal.Parameter
        (-- * Parameter
         Parameter(..),
@@ -52,7 +55,10 @@ import Simulation.Aivika.Generator
 import Simulation.Aivika.Internal.Specs
 
 -- | The 'Parameter' monad that allows specifying the model parameters.
---   For example, they can be used when running the Monte-Carlo simulation.
+-- For example, they can be used when running the Monte-Carlo simulation.
+-- 
+-- In general, this monad is very useful for representing a computation which is external
+-- relative to the model itself.
 newtype Parameter a = Parameter (Run -> IO a)
 
 instance Monad Parameter where

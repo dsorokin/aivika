@@ -8,6 +8,9 @@
 --
 -- The module defines the 'Parameter' monad that allows representing the model
 -- parameters. For example, they can be used when running the Monte-Carlo simulation.
+--
+-- In general, this monad is very useful for representing a computation which is external
+-- relative to the model itself.
 -- 
 module Simulation.Aivika.Parameter
        (-- * Parameter
