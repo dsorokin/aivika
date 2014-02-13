@@ -1,11 +1,11 @@
 
--- This is a model of the workflow with 2 work places. It is described in different sources [1, 2].
+-- This is a model of the workflow with originally two work places. Also there are two finite queues.
+--
+-- It is described in different sources [1, 2]. So, this is chapter 7 of [2].
 --
 -- [1] { add a foreign source in English }
 --
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
---
--- There are two work places with finite queues in one workflow.
 
 import Prelude hiding (id, (.)) 
 
@@ -24,7 +24,7 @@ specs = Specs { spcStartTime = 0.0,
                 spcMethod = RungeKutta4,
                 spcGeneratorType = SimpleGenerator }
 
--- the mean delay of input orders
+-- the mean delay of the input arrivals distributed exponentially
 meanOrderDelay = 0.4 
 
 -- the capacity of the queue before the first work places
@@ -33,16 +33,20 @@ queueMaxCount1 = 4
 -- the capacity of the queue before the second work places
 queueMaxCount2 = 2
 
--- the mean time of processing an order in the first work places
+-- the mean processing time distributed exponentially in
+-- the first work places
 meanProcessingTime1 = 0.25
 
--- the mean time of processing an order in the second work places
+-- the mean processing time distributed exponentially in
+-- the second work places
 meanProcessingTime2 = 0.5
 
 -- the number of the first work places
+-- (in parallel but the commented code allocates them sequentially)
 workplaceCount1 = 1
 
 -- the number of the second work places
+-- (in parallel but the commented code allocates them sequentially)
 workplaceCount2 = 1
 
 -- create an accumulator to gather the queue size statistics 
