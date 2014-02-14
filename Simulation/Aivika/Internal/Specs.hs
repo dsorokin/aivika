@@ -86,14 +86,14 @@ newEventQueue specs =
 -- | Returns the integration iterations starting from zero.
 integIterations :: Specs -> [Int]
 integIterations sc = [i1 .. i2] where
-  i1 = 0
-  i2 = round ((spcStopTime sc - 
-               spcStartTime sc) / spcDT sc)
+  i1 = integIterationLoBnd sc
+  i2 = integIterationHiBnd sc
 
 -- | Returns the first and last integration iterations.
 integIterationBnds :: Specs -> (Int, Int)
-integIterationBnds sc = (0, round ((spcStopTime sc - 
-                                    spcStartTime sc) / spcDT sc))
+integIterationBnds sc = (i1, i2) where
+  i1 = integIterationLoBnd sc
+  i2 = integIterationHiBnd sc
 
 -- | Returns the first integration iteration, i.e. zero.
 integIterationLoBnd :: Specs -> Int
@@ -101,8 +101,28 @@ integIterationLoBnd sc = 0
 
 -- | Returns the last integration iteration.
 integIterationHiBnd :: Specs -> Int
-integIterationHiBnd sc = round ((spcStopTime sc - 
-                                 spcStartTime sc) / spcDT sc)
+integIterationHiBnd sc =
+  let n = round ((spcStopTime sc - 
+                  spcStartTime sc) / spcDT sc)
+  in if n < 0
+     then
+       error $
+       "The iteration number in the stop time has a negative value. " ++
+       "Either the simulation specs are incorrect, " ++
+       "or a floating point overflow occurred, " ++
+       "for example, when using a too small integration time step. " ++
+       "You have to define this time step regardless of " ++
+       "whether you actually use it or not, " ++
+       "for Aivika allows combining the ordinary differential equations " ++
+       "with the discrete event simulation within one model. " ++
+       "So, if you are still using the 32-bit architecture and " ++
+       "you do need a small integration time step " ++
+       "for integrating the equations " ++
+       "then you might think of using the 64-bit architecture. " ++
+       "Although you could probably just forget " ++
+       "to increase the time step " ++
+       "after increasing the stop time: integIterationHiBnd"
+     else n
 
 -- | Returns the phases for the specified simulation specs starting from zero.
 integPhases :: Specs -> [Int]
