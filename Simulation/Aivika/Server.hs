@@ -15,7 +15,6 @@ module Simulation.Aivika.Server
         newServerWithState,
         -- * Processing
         serverProcessor,
-        autoServerProcessor,
         -- * Server Properties and Activities
         serverInitState,
         serverState,
@@ -163,9 +162,13 @@ newServerWithState state provide =
 -- finishes its current task and requests for the next one from the previous processor 
 -- in the chain. This is not always that thing you might need.
 --
--- To model a separate working place with the server that performs its job truly 
--- autonomously, you should apply the 'autoProcessor' before the server's processor, 
--- or just use the 'autoServerProcessor' function that does namely this.
+-- To model a sequence of the server processors working independently, you
+-- should separate them with help of the 'prefetchProcessor' that plays a role
+-- of a small one-place buffer in that case.
+--
+-- The queue processors usually have the prefetching capabilities per se, where
+-- the items are already stored in the queue. Therefore, the server processor
+-- should not be prefetched if it is connected directly with the queue processor.
 serverProcessor :: Server s a b -> Processor a b
 serverProcessor server =
   Processor $ \xs -> loop (serverInitState server) Nothing xs
@@ -202,11 +205,6 @@ serverProcessor server =
                      addSamplingStats (t2 - t1)
               triggerSignal (serverTaskProcessedSource server) (a, b)
          return (b, loop s' (Just $ (t2, a, b)) xs')
-
--- | Return the server's processor with allocated space for one working place.
-autoServerProcessor :: Server s a b -> Processor a b
-autoServerProcessor server =
-  autoProcessor >>> serverProcessor server
 
 -- | Return the current state of the server.
 --

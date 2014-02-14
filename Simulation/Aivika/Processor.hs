@@ -17,8 +17,8 @@ module Simulation.Aivika.Processor
         statefulProcessor,
         -- * Specifying Identifier
         processorUsingId,
-        -- * Autonomous Processor
-        autoProcessor,
+        -- * Prefetch Processor
+        prefetchProcessor,
         -- * Buffer Processor
         bufferProcessor,
         bufferProcessorLoop,
@@ -415,12 +415,12 @@ queueProcessorLoopParallel enqueue dequeue =
          consumeStream enqueue cs)
   (repeatProcess dequeue)
 
--- | This is a processor working autonomously in the following sense that
--- we request for one more data item from the input in advance while the latest
--- item is not yet fully processed in the chain of streams, usually by other
--- processes.
+-- | This is a prefetch processor that requests for one more data item from 
+-- the input in advance while the latest item is not yet fully processed in 
+-- the chain of streams, usually by other processors.
 --
--- Literally, the autonomous process can allocate its latest data item in some
--- space, which is very useful for modeling one working place.
-autoProcessor :: Processor a a
-autoProcessor = Processor autoStream
+-- You can think of this as the prefetched processor could place its latest 
+-- data item in some temporary space for later use, which is very useful 
+-- for modeling a sequence of separate and independent work places.
+prefetchProcessor :: Processor a a
+prefetchProcessor = Processor prefetchStream
