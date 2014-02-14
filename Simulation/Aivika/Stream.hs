@@ -25,6 +25,8 @@ module Simulation.Aivika.Stream
         splitStreamPrioritising,
         -- * Specifying Identifier
         streamUsingId,
+        -- * Making Stream Autonomous
+        autoStream,
         -- * Memoizing, Zipping and Uzipping Stream
         memoStream,
         zipStreamSeq,
@@ -444,3 +446,28 @@ sinkStream s = p s where
   p (Cons s) = do (a, xs) <- s
                   p xs
   
+-- | Allows the input stream to work autonomously requesting for one more data item
+-- while the last received item is not yet fully processed in the chain of streams,
+-- usually, by the processors.
+--
+-- Literally, the autonomous stream can allocate its latest data item
+-- in some space, which is very useful for modeling one working place.
+autoStream :: Stream a -> Stream a
+autoStream s = Cons z where
+  z = do reading <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
+         writing <- liftSimulation $ newResourceWithMaxCount FCFS 1 (Just 1)
+         ref <- liftIO $ newIORef Nothing
+         let writer p =
+               do (a, xs) <- runStream p
+                  requestResource writing
+                  liftIO $ writeIORef ref (Just a)
+                  releaseResource reading
+                  writer xs
+             reader =
+               do requestResource reading
+                  Just a <- liftIO $ readIORef ref
+                  liftIO $ writeIORef ref Nothing
+                  releaseResource writing
+                  return a
+         spawnProcess CancelTogether $ writer s
+         runStream $ repeatProcess reader
