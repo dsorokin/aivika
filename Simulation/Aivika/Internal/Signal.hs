@@ -41,6 +41,7 @@ module Simulation.Aivika.Internal.Signal
         SignalHistory,
         signalHistorySignal,
         newSignalHistory,
+        newSignalHistoryStartingWith,
         readSignalHistory,
         -- * Signalable Computations
         Signalable(..),
@@ -251,13 +252,26 @@ data SignalHistory a =
 
 -- | Create a history of the signal values.
 newSignalHistory :: Signal a -> Event (SignalHistory a)
-newSignalHistory signal =
-  do ts <- liftIO UV.newVector
-     xs <- liftIO V.newVector
-     handleSignal_ signal $ \a ->
+newSignalHistory =
+  newSignalHistoryStartingWith Nothing
+
+-- | Create a history of the signal values starting with
+-- the optional initial value.
+newSignalHistoryStartingWith :: Maybe a -> Signal a -> Event (SignalHistory a)
+newSignalHistoryStartingWith init signal =
+  Event $ \p ->
+  do ts <- UV.newVector
+     xs <- V.newVector
+     case init of
+       Nothing -> return ()
+       Just a ->
+         do UV.appendVector ts (pointTime p)
+            V.appendVector xs a
+     invokeEvent p $
+       handleSignal_ signal $ \a ->
        Event $ \p ->
-       do liftIO $ UV.appendVector ts (pointTime p)
-          liftIO $ V.appendVector xs a
+       do UV.appendVector ts (pointTime p)
+          V.appendVector xs a
      return SignalHistory { signalHistorySignal = signal,
                             signalHistoryTimes  = ts,
                             signalHistoryValues = xs }

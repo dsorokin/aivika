@@ -40,6 +40,7 @@ module Simulation.Aivika.Signal
         SignalHistory,
         signalHistorySignal,
         newSignalHistory,
+        newSignalHistoryStartingWith,
         readSignalHistory,
         -- * Signalable Computations
         Signalable(..),
