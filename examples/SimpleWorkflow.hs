@@ -61,7 +61,7 @@ newWorkplaceExponential meanTime =
        (liftParameter $
         randomExponential meanTime)
      return a
-  
+
 model :: Simulation ()
 model = do
   -- it will gather the statistics of the processing time
@@ -99,11 +99,11 @@ model = do
   -- the entire processor from input to output
   let entireProcessor =
         queueProcessor1 >>>
-        processorParallel (map serverProcessor workplace1s) >>>
-        -- foldr (>>>) id (map serverProcessor workplace1s) >>>
+        processorParallel (map autoServerProcessor workplace1s) >>>
+        -- foldr (>>>) id (map autoServerProcessor workplace1s) >>>
         queueProcessor2 >>>
-        processorParallel (map serverProcessor workplace2s) >>>
-        -- foldr (>>>) id (map serverProcessor workplace2s) >>>
+        processorParallel (map autoServerProcessor workplace2s) >>>
+        -- foldr (>>>) id (map autoServerProcessor workplace2s) >>>
         arrivalTimerProcessor arrivalTimer
   -- start simulating the model
   runProcessInStartTime IncludingCurrentEvents $

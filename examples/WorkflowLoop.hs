@@ -129,10 +129,10 @@ model = mdo
         (dequeue tunerQueue)
   -- the parallel work of all the testers
   let testerProcessor =
-        processorParallel (map serverProcessor testerWorkplaces)
+        processorParallel (map autoServerProcessor testerWorkplaces)
   -- the parallel work of all the tuners
   let tunerProcessor =
-        processorParallel (map serverProcessor tunerWorkplaces)
+        processorParallel (map autoServerProcessor tunerWorkplaces)
   -- the entire processor from input to output
   let entireProcessor =
         testerQueueProcessorLoop >>>

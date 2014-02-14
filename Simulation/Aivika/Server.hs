@@ -15,6 +15,7 @@ module Simulation.Aivika.Server
         newServerWithState,
         -- * Processing
         serverProcessor,
+        autoServerProcessor,
         -- * Server Properties and Activities
         serverInitState,
         serverState,
@@ -59,7 +60,9 @@ module Simulation.Aivika.Server
 
 import Data.IORef
 import Data.Monoid
+
 import Control.Monad.Trans
+import Control.Arrow
 
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
@@ -150,7 +153,19 @@ newServerWithState state provide =
 --
 -- The processor updates the internal state of the server. The usual case is when 
 -- the processor is applied only once in a chain of data processing. Otherwise; 
--- every time the processor is used, the state of the server changes. 
+-- every time the processor is used, the state of the server changes. Sometimes 
+-- it can be indeed useful if you want to aggregate the statistics for different 
+-- servers simultaneously, but it would be more preferable to avoid this.
+--
+-- If you connect different server processors returned by this function in a chain 
+-- with help of '>>>' or other category combinator then this chain will act as one 
+-- whole, where the first server will take a new task only after the last server 
+-- finishes its current task and requests for the next one from the previous processor 
+-- in the chain. This is not always that thing you might need.
+--
+-- To model a separate working place with the server that performs its job truly 
+-- autonomously, you should apply the 'autoProcessor' before the server's processor, 
+-- or just use the 'autoServerProcessor' function that does namely this.
 serverProcessor :: Server s a b -> Processor a b
 serverProcessor server =
   Processor $ \xs -> loop (serverInitState server) Nothing xs
@@ -187,6 +202,11 @@ serverProcessor server =
                      addSamplingStats (t2 - t1)
               triggerSignal (serverTaskProcessedSource server) (a, b)
          return (b, loop s' (Just $ (t2, a, b)) xs')
+
+-- | Return the server's processor with allocated space for one working place.
+autoServerProcessor :: Server s a b -> Processor a b
+autoServerProcessor server =
+  autoProcessor >>> serverProcessor server
 
 -- | Return the current state of the server.
 --
