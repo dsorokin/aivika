@@ -94,11 +94,11 @@ model = mdo
   tunerQueue <- newFCFSQueue
   -- the tester's queue size statistics
   testerQueueSizeAcc <- 
-    runEventInStartTime IncludingCurrentEvents $
+    runEventInStartTime $
     newQueueSizeAccumulator testerQueue
   -- the tuner's queue size statistics
   tunerQueueSizeAcc <- 
-    runEventInStartTime IncludingCurrentEvents $
+    runEventInStartTime $
     newQueueSizeAccumulator tunerQueue
   -- create the tester's work places, i.e. the "servers"
   testerWorkplaces <-
@@ -131,10 +131,10 @@ model = mdo
         testerQueueProcessorLoop >>>
         arrivalTimerProcessor arrivalTimer
   -- start simulating the model
-  runProcessInStartTime IncludingCurrentEvents $
+  runProcessInStartTime $
     sinkStream $ runProcessor entireProcessor inputStream
   -- show the results in the final time
-  runEventInStopTime IncludingCurrentEvents $
+  runEventInStopTime $
     do testerQueueSum <- queueSummary testerQueue 2
        tunerQueueSum  <- queueSummary tunerQueue 2
        testerWorkplaceSums <- 

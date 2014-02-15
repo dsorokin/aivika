@@ -57,13 +57,13 @@ model =
               let t = startUpTime + upTime
               enqueueEvent t $ machineBroken startUpTime
 
-     runEventInStartTime IncludingCurrentEvents $
+     runEventInStartTime $
        do -- start the first machine
           machineRepaired
           -- start the second machine
           machineRepaired
 
-     runEventInStopTime IncludingCurrentEvents $
+     runEventInStopTime $
        do x <- readRef totalUpTime
           y <- liftParameter stoptime
           return $ x / (2 * y)

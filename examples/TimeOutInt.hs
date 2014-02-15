@@ -56,7 +56,7 @@ model =
                 do interrupted <- processInterrupted nodePid
                    if interrupted
                      then modifyRef nTimeOuts $ (+) 1
-                     else cancelProcessUsingId timeoutPid
+                     else cancelProcessWithId timeoutPid
               node
               
          timeout :: Process ()
@@ -64,10 +64,10 @@ model =
            do holdProcess toPeriod
               liftEvent $ interruptProcess nodePid
 
-     runProcessInStartTimeUsingId IncludingCurrentEvents
+     runProcessInStartTimeUsingId
        nodePid node 
      
-     runEventInStopTime IncludingCurrentEvents $
+     runEventInStopTime $
        do x <- readRef nTimeOuts
           y <- readRef nMsgs
           return $ x / y

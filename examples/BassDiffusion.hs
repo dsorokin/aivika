@@ -84,10 +84,10 @@ model =
      adopters <- newRef 0
      ps <- createPersons
      definePersons ps potentialAdopters adopters
-     runEventInStartTime IncludingCurrentEvents $
+     runEventInStartTime $
        activatePersons ps
      runDynamicsInIntegTimes $
-       runEvent IncludingCurrentEvents $
+       runEvent $
        do i1 <- readRef potentialAdopters
           i2 <- readRef adopters
           return [i1, i2]

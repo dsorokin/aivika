@@ -46,10 +46,10 @@ model =
               holdProcess repairTime
               machine
 
-     runProcessInStartTime IncludingCurrentEvents machine
-     runProcessInStartTime IncludingCurrentEvents machine
+     runProcessInStartTime machine
+     runProcessInStartTime machine
      
-     runEventInStopTime IncludingCurrentEvents $
+     runEventInStopTime $
        do x <- readRef totalUpTime
           y <- liftParameter stoptime
           return $ x / (2 * y)

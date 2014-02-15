@@ -70,13 +70,13 @@ model =
               
               machine pid
 
-     runProcessInStartTimeUsingId IncludingCurrentEvents
+     runProcessInStartTimeUsingId
        pid1 (machine pid2)
 
-     runProcessInStartTimeUsingId IncludingCurrentEvents
+     runProcessInStartTimeUsingId
        pid2 (machine pid1)
 
-     runEventInStopTime IncludingCurrentEvents $
+     runEventInStopTime $
        do x <- readRef totalUpTime
           y <- liftDynamics time
           return $ x / (2 * y)

@@ -70,7 +70,7 @@ model =
               liftEvent $
                 do writeRef reactivatedCode 1
                    reactivateProcess nodePid
-                   cancelProcessUsingId ackPid
+                   cancelProcessWithId ackPid
          
          acknowledge :: ProcessId -> Process ()
          acknowledge timeoutPid =
@@ -81,12 +81,12 @@ model =
               liftEvent $
                 do writeRef reactivatedCode 2
                    reactivateProcess nodePid
-                   cancelProcessUsingId timeoutPid
+                   cancelProcessWithId timeoutPid
 
-     runProcessInStartTimeUsingId IncludingCurrentEvents
+     runProcessInStartTimeUsingId
        nodePid node
      
-     runEventInStopTime IncludingCurrentEvents $
+     runEventInStopTime $
        do x <- readRef nTimeOuts
           y <- readRef nMsgs
           return $ x / y

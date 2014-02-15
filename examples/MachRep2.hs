@@ -70,10 +70,10 @@ model =
               
               machine
 
-     runProcessInStartTime IncludingCurrentEvents machine
-     runProcessInStartTime IncludingCurrentEvents machine
+     runProcessInStartTime machine
+     runProcessInStartTime machine
           
-     runEventInStopTime IncludingCurrentEvents $
+     runEventInStopTime $
        do x <- readRef totalUpTime
           y <- liftParameter stoptime
           n <- readRef nRep

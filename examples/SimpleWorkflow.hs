@@ -78,11 +78,11 @@ model = do
   queue2 <- newFCFSQueue queueMaxCount2
   -- the first queue size statistics
   queueSizeAcc1 <- 
-    runEventInStartTime IncludingCurrentEvents $
+    runEventInStartTime $
     newQueueSizeAccumulator queue1
   -- the second queue size statistics
   queueSizeAcc2 <- 
-    runEventInStartTime IncludingCurrentEvents $
+    runEventInStartTime $
     newQueueSizeAccumulator queue2
   -- create the first work places, i.e. the "servers"
   workplace1s <- forM [1 .. workplaceCount1] $ \_ ->
@@ -110,10 +110,10 @@ model = do
         -- foldr1 interposePrefetchProcessor (map serverProcessor workplace2s) >>>
         arrivalTimerProcessor arrivalTimer
   -- start simulating the model
-  runProcessInStartTime IncludingCurrentEvents $
+  runProcessInStartTime $
     sinkStream $ runProcessor entireProcessor inputStream
   -- show the results in the final time
-  runEventInStopTime IncludingCurrentEvents $
+  runEventInStopTime $
     do queueSum1 <- queueSummary queue1 2
        queueSum2 <- queueSummary queue2 2
        workplaceSum1s <- forM workplace1s $ \x -> serverSummary x 2
