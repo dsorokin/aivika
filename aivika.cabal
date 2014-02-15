@@ -119,6 +119,8 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/SimpleWorkflow.hs
                      examples/TimeOut.hs
                      examples/TimeOutInt.hs
+                     examples/TimeOutWait.hs
+                     examples/WorkflowLoop.hs
                      examples/README
 
 data-files:          doc/aivika.pdf

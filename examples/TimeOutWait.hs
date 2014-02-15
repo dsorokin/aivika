@@ -7,10 +7,10 @@
 -- The model description is as follows.
 --
 -- Introductory example to illustrate the modeling of "competing
--- events" such as timeouts, especially using the timeoutProcess and
--- awaitSignal function. A network node starts a process within
--- the specified timeout and receives a signal that notifies whether
--- the process has finished successfully within the timeout; if the node
+-- events" such as timeouts, especially using the timeoutProcess
+-- function. A network node starts a process within the specified 
+-- timeout and receives a signal that notifies whether the process 
+-- has finished successfully within the timeout; if the node
 -- times out, it assumes the message it had sent was lost, and it
 -- will send again. The time to get an acknowledgement for a message is
 -- exponentially distributed with mean 1.0, and the timeout period is
