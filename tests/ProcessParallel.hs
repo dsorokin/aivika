@@ -2,31 +2,20 @@
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Event
-import Simulation.Aivika.Ref
-import Simulation.Aivika.QueueStrategy
+import Simulation.Aivika
 import Simulation.Aivika.Queue
-import Simulation.Aivika.Resource
-import Simulation.Aivika.Process
 
-specs = Specs 0 1 0.1 RungeKutta4
+specs = Specs 0 1 0.1 RungeKutta4 SimpleGenerator
 
 n1 = 3
 n2 = 5
 
 model :: Simulation ()
 model =
-  do q <- newQueue FCFS StaticPriorities FCFS n2
-
-     pid <- newProcessId
-
-     let timer :: Int -> Int -> Process Int
+  do let timer :: Int -> Int -> Process Int
          timer i n =
            do t'  <- liftDynamics time
-              dt' <- liftDynamics dt
+              dt' <- liftParameter dt
               liftIO $
                 do putStr "Current nested process (number "
                    putStr $ show i
@@ -36,10 +25,9 @@ model =
                    putStrLn $ show t'
               holdProcess dt'
               when ((i == 3) && (n == 1)) $
-                do pid <- processId
-                   --
+                do --
                    -- N.B. uncomment this to cancel all processes immediately
-                   -- liftEvent $ cancelProcess pid
+                   -- cancelProcess
                    --
                    -- N.B. or, uncomment this to raise the IO exception
                    -- liftIO $ ioError $ userError "Test error"
@@ -49,7 +37,7 @@ model =
                 then timer i (n + 1)
                 else return i
 
-     runProcessInStartTimeUsingId IncludingCurrentEvents pid $
+     runProcessInStartTime IncludingCurrentEvents $
        do let m1 =
                 do xs <- processParallel $ map (\i -> timer i 0) [1..n2]
                    liftIO $
