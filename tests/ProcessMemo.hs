@@ -25,19 +25,19 @@ model =
 
      memoizedP <- memoProcess p
 
-     runProcessInStartTime IncludingCurrentEvents $
+     runProcessInStartTime $
        memoizedP >>= display "MemoizedP   "
 
-     runProcessInStartTime IncludingCurrentEvents $
+     runProcessInStartTime $
        memoizedP >>= display "MemoizedP(2)"
 
-     runProcessInStartTime IncludingCurrentEvents $
+     runProcessInStartTime $
        memoizedP >>= display "MemoizedP(3)"
 
-     runProcessInStartTime IncludingCurrentEvents $
+     runProcessInStartTime $
        memoizedP >>= display "MemoizedP(4)"
 
-     runEventInStopTime IncludingCurrentEvents $
+     runEventInStopTime $
        return ()
 
 main = runSimulation model specs

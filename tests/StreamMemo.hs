@@ -25,19 +25,19 @@ model =
      
      s <- memoStream $ randomUniformStream 1 2
          
-     runProcessInStartTime IncludingCurrentEvents $
+     runProcessInStartTime $
        trace "MemoizedS    " s
      
-     runProcessInStartTime IncludingCurrentEvents $
+     runProcessInStartTime $
        trace "MemoizedS(2) " s
      
-     runProcessInStartTime IncludingCurrentEvents $
+     runProcessInStartTime $
        trace "MemoizedS(3) " s
      
-     runProcessInStartTime IncludingCurrentEvents $
+     runProcessInStartTime $
        trace "MemoizedS(4) " s
  
-     runEventInStopTime IncludingCurrentEvents $
+     runEventInStopTime $
        return ()
 
 main = runSimulation model specs

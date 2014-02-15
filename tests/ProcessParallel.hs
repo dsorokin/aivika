@@ -37,7 +37,7 @@ model =
                 then timer i (n + 1)
                 else return i
 
-     runProcessInStartTime IncludingCurrentEvents $
+     runProcessInStartTime $
        do let m1 =
                 do xs <- processParallel $ map (\i -> timer i 0) [1..n2]
                    liftIO $
@@ -51,6 +51,6 @@ model =
             (catchProcess m1 m3)
             m2
 
-     runEventInStopTime IncludingCurrentEvents $ return ()
+     runEventInStopTime $ return ()
 
 main = runSimulation model specs >>= print
