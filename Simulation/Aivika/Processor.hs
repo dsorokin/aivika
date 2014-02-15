@@ -293,25 +293,29 @@ bufferProcessor consume output =
      runStream output
 
 -- | Like 'bufferProcessor' but allows creating a loop when some items
--- can be returned for processing them again. It is very useful for
--- modeling the processors with queues and loop-backs.
+-- can be processed repeatedly. It is very useful for modeling the processors 
+-- with queues and loop-backs.
 bufferProcessorLoop :: (Stream a -> Stream c -> Process ())
                        -- ^ consume two streams: the input values of type @a@
                        -- and the values of type @c@ returned by the loop
                        -> Stream d
                        -- ^ the stream of data that may become results
-                       -> Processor d (Either c b)
-                       -- ^ process and then decide what values of type @c@
-                       -- should be processed again
+                       -> Processor d (Either e b)
+                       -- ^ process and then decide what values of type @e@
+                       -- should be processed in the loop (this is a condition)
+                       -> Processor e c
+                       -- ^ process in the loop and then return a value
+                       -- of type @c@ to the input again (this is a loop body)
                        -> Processor a b
-bufferProcessorLoop consume preoutput filter =
+bufferProcessorLoop consume preoutput cond body =
   Processor $ \xs ->
   Cons $
   do (reverted, output) <-
        liftSimulation $
        partitionEitherStream $
-       runProcessor filter preoutput
-     spawnProcess CancelTogether (consume xs reverted)
+       runProcessor cond preoutput
+     spawnProcess CancelTogether 
+       (consume xs $ runProcessor body reverted)
      runStream output
 
 -- | Return a processor with help of which we can model the queue.
@@ -347,9 +351,9 @@ queueProcessor enqueue dequeue =
   (consumeStream enqueue)
   (repeatProcess dequeue)
 
--- | Like 'queueProcessor' creates a queue processor but allows creating
--- a loop when some items can be returned and added to the queue again.
--- Also it allows specifying how two input streams of data can be merged.
+-- | Like 'queueProcessor' creates a queue processor but with a loop when some items 
+-- can be processed and then added to the queue again. Also it allows specifying 
+-- how two input streams of data can be merged.
 queueProcessorLoopMerging :: (Stream a -> Stream d -> Stream e)
                              -- ^ merge two streams: the input values of type @a@
                              -- and the values of type @d@ returned by the loop
@@ -359,9 +363,12 @@ queueProcessorLoopMerging :: (Stream a -> Stream d -> Stream e)
                              -- so that there were no hanging items
                              -> Process c
                              -- ^ dequeue an item for the further processing
-                             -> Processor c (Either d b)
-                             -- ^ process and then decide what values of type @d@
-                             -- should be processed again
+                             -> Processor c (Either f b)
+                             -- ^ process and then decide what values of type @f@
+                             -- should be processed in the loop (this is a condition)
+                             -> Processor f d
+                             -- ^ process in the loop and then return a value
+                             -- of type @d@ to the queue again (this is a loop body)
                              -> Processor a b
                              -- ^ the buffering processor
 queueProcessorLoopMerging merge enqueue dequeue =
@@ -371,39 +378,44 @@ queueProcessorLoopMerging merge enqueue dequeue =
     merge bs cs)
   (repeatProcess dequeue)
 
--- | Like 'queueProcessorLoopMerging' creates a queue processor and allows
--- creating a loop when some items can be returned and added to the queue again.
--- Only it sequentially merges two input streams of data: one stream
--- that come from the external source and another stream of data returned
--- by the loop. The first stream has a priority over the second one.
+-- | Like 'queueProcessorLoopMerging' creates a queue processor with a loop when
+-- some items can be processed and then added to the queue again. Only it sequentially 
+-- merges two input streams of data: one stream that come from the external source and 
+-- another stream of data returned by the loop. The first stream has a priority over 
+-- the second one.
 queueProcessorLoopSeq :: (a -> Process ())
                          -- ^ enqueue the input item and wait
                          -- while the queue is full if required
                          -- so that there were no hanging items
                          -> Process c
                          -- ^ dequeue an item for the further processing
-                         -> Processor c (Either a b)
-                         -- ^ process and then decide what values of type @a@
-                         -- should be processed again
+                         -> Processor c (Either e b)
+                         -- ^ process and then decide what values of type @e@
+                         -- should be processed in the loop (this is a condition)
+                         -> Processor e a
+                         -- ^ process in the loop and then return a value
+                         -- of type @a@ to the queue again (this is a loop body)
                          -> Processor a b
                          -- ^ the buffering processor
 queueProcessorLoopSeq =
   queueProcessorLoopMerging mergeStreams
 
--- | Like 'queueProcessorLoopMerging' creates a queue processor and allows
--- creating a loop when some items can be returned and added to the queue again.
--- Only it runs two simultaneous processes to enqueue the input streams of data:
--- one stream that come from the external source and another stream of data returned
--- by the loop.
+-- | Like 'queueProcessorLoopMerging' creates a queue processor with a loop when
+-- some items can be processed and then added to the queue again. Only it runs two 
+-- simultaneous processes to enqueue the input streams of data: one stream that come 
+-- from the external source and another stream of data returned by the loop.
 queueProcessorLoopParallel :: (a -> Process ())
                               -- ^ enqueue the input item and wait
                               -- while the queue is full if required
                               -- so that there were no hanging items
                               -> Process c
                               -- ^ dequeue an item for the further processing
-                              -> Processor c (Either a b)
-                              -- ^ process and then decide what values of type @a@
-                              -- should be processed again
+                              -> Processor c (Either e b)
+                              -- ^ process and then decide what values of type @e@
+                              -- should be processed in the loop (this is a condition)
+                              -> Processor e a
+                              -- ^ process in the loop and then return a value
+                              -- of type @a@ to the queue again (this is a loop body)
                               -> Processor a b
                               -- ^ the buffering processor
 queueProcessorLoopParallel enqueue dequeue =
