@@ -2,17 +2,10 @@
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Event
-import Simulation.Aivika.Event
-import Simulation.Aivika.Ref
-import Simulation.Aivika.QueueStrategy
+import Simulation.Aivika
 import Simulation.Aivika.Queue
-import Simulation.Aivika.Resource
-import Simulation.Aivika.Process
 
-specs = Specs 0 1 0.1 RungeKutta4
+specs = Specs 0 1 0.1 RungeKutta4 SimpleGenerator
 
 n1 = 10
 n2 = 3
@@ -42,7 +35,7 @@ model =
                 liftIO $
                   do putStr "Enqueued: "
                      putStrLn $ show i
-                -- -- pause
+                -- -- allow dequeueing immediately
                 -- holdProcess 0
                 when (i < n1) $
                   loop $ i + 1
