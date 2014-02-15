@@ -429,7 +429,7 @@ emptyStream = Cons z where
 
 -- | Consume the stream. It returns a process that infinitely reads data
 -- from the stream and then redirects them to the provided function.
--- It is useful for modeling the process of enqueuing data in the queue
+-- It is useful for modeling the process of enqueueing data in the queue
 -- from the input stream.
 consumeStream :: (a -> Process ()) -> Stream a -> Process ()
 consumeStream f s = p s where
