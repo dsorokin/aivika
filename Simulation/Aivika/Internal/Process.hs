@@ -225,25 +225,28 @@ runProcessUsingId pid p =
              ccont = return
              m = invokeProcess pid p
 
--- | Run the process in the start time immediately.
-runProcessInStartTime :: EventProcessing -> Process () -> Simulation ()
-runProcessInStartTime processing p =
-  runEventInStartTime processing $ runProcess p
+-- | Run the process in the start time immediately involving all pending
+-- 'CurrentEvents' in the computation too.
+runProcessInStartTime :: Process () -> Simulation ()
+runProcessInStartTime = runEventInStartTime . runProcess
 
--- | Run the process in the start time immediately using the specified identifier.
-runProcessInStartTimeUsingId :: EventProcessing -> ProcessId -> Process () -> Simulation ()
-runProcessInStartTimeUsingId processing pid p =
-  runEventInStartTime processing $ runProcessUsingId pid p
+-- | Run the process in the start time immediately using the specified identifier
+-- and involving all pending 'CurrentEvents' in the computation too.
+runProcessInStartTimeUsingId :: ProcessId -> Process () -> Simulation ()
+runProcessInStartTimeUsingId pid p =
+  runEventInStartTime $ runProcessUsingId pid p
 
--- | Run the process in the final simulation time immediately.
-runProcessInStopTime :: EventProcessing -> Process () -> Simulation ()
-runProcessInStopTime processing p =
-  runEventInStopTime processing $ runProcess p
+-- | Run the process in the final simulation time immediately involving all
+-- pending 'CurrentEvents' in the computation too.
+runProcessInStopTime :: Process () -> Simulation ()
+runProcessInStopTime = runEventInStopTime . runProcess
 
--- | Run the process in the final simulation time immediately using the specified identifier.
-runProcessInStopTimeUsingId :: EventProcessing -> ProcessId -> Process () -> Simulation ()
-runProcessInStopTimeUsingId processing pid p =
-  runEventInStopTime processing $ runProcessUsingId pid p
+-- | Run the process in the final simulation time immediately using 
+-- the specified identifier and involving all pending 'CurrentEvents'
+-- in the computation too.
+runProcessInStopTimeUsingId :: ProcessId -> Process () -> Simulation ()
+runProcessInStopTimeUsingId pid p =
+  runEventInStopTime $ runProcessUsingId pid p
 
 -- | Enqueue the process that will be then started at the specified time
 -- from the event queue.

@@ -19,6 +19,7 @@ module Simulation.Aivika.Internal.Event
         EventProcessing(..),
         invokeEvent,
         runEvent,
+        runEventWith,
         runEventInStartTime,
         runEventInStopTime,
         -- * Event Queue
@@ -148,21 +149,23 @@ instance MonadFix Event where
     do { rec { a <- invokeEvent p (f a) }; return a }
 
 -- | Defines how the events are processed.
-data EventProcessing = IncludingCurrentEvents
+data EventProcessing = CurrentEvents
                        -- ^ either process all earlier and then current events,
                        -- or raise an error if the current simulation time is less
-                       -- than the actual time of the event queue
-                     | IncludingEarlierEvents
+                       -- than the actual time of the event queue (safe within
+                       -- the 'Event' computation as this is protected by the type system)
+                     | EarlierEvents
                        -- ^ either process all earlier events not affecting
                        -- the events at the current simulation time,
                        -- or raise an error if the current simulation time is less
-                       -- than the actual time of the event queue
-                     | IncludingCurrentEventsOrFromPast
+                       -- than the actual time of the event queue (safe within
+                       -- the 'Event' computation as this is protected by the type system)
+                     | CurrentEventsOrFromPast
                        -- ^ either process all earlier and then current events,
                        -- or do nothing if the current simulation time is less
                        -- than the actual time of the event queue
                        -- (do not use unless the documentation states the opposite)
-                     | IncludingEarlierEventsOrFromPast
+                     | EarlierEventsOrFromPast
                        -- ^ either process all earlier events,
                        -- or do nothing if the current simulation time is less
                        -- than the actual time of the event queue
@@ -248,28 +251,35 @@ processEventsIncludingEarlierCore = processPendingEventsCore True
 
 -- | Process the events.
 processEvents :: EventProcessing -> Dynamics ()
-processEvents IncludingCurrentEvents = processEventsIncludingCurrent
-processEvents IncludingEarlierEvents = processEventsIncludingEarlier
-processEvents IncludingCurrentEventsOrFromPast = processEventsIncludingCurrentCore
-processEvents IncludingEarlierEventsOrFromPast = processEventsIncludingEarlierCore
+processEvents CurrentEvents = processEventsIncludingCurrent
+processEvents EarlierEvents = processEventsIncludingEarlier
+processEvents CurrentEventsOrFromPast = processEventsIncludingCurrentCore
+processEvents EarlierEventsOrFromPast = processEventsIncludingEarlierCore
 
 -- | Run the 'Event' computation in the current simulation time
--- within the 'Dynamics' computation.
-runEvent :: EventProcessing -> Event a -> Dynamics a
-runEvent processing (Event e) =
+-- within the 'Dynamics' computation involving all pending
+-- 'CurrentEvents' in the processing too.
+runEvent :: Event a -> Dynamics a
+runEvent = runEventWith CurrentEvents
+
+-- | Run the 'Event' computation in the current simulation time
+-- within the 'Dynamics' computation specifying what pending events 
+-- should be involved in the processing.
+runEventWith :: EventProcessing -> Event a -> Dynamics a
+runEventWith processing (Event e) =
   Dynamics $ \p ->
   do invokeDynamics p $ processEvents processing
      e p
 
--- | Run the 'Event' computation in the start time.
-runEventInStartTime :: EventProcessing -> Event a -> Simulation a
-runEventInStartTime processing e =
-  runDynamicsInStartTime $ runEvent processing e
+-- | Run the 'Event' computation in the start time involving all
+-- pending 'CurrentEvents' in the processing too.
+runEventInStartTime :: Event a -> Simulation a
+runEventInStartTime = runDynamicsInStartTime . runEvent
 
--- | Run the 'Event' computation in the stop time.
-runEventInStopTime :: EventProcessing -> Event a -> Simulation a
-runEventInStopTime processing e =
-  runDynamicsInStopTime $ runEvent processing e
+-- | Run the 'Event' computation in the stop time involving all
+-- pending 'CurrentEvents' in the processing too.
+runEventInStopTime :: Event a -> Simulation a
+runEventInStopTime = runDynamicsInStopTime . runEvent
 
 -- | Return the number of pending events that should
 -- be yet actuated.

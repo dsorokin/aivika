@@ -61,11 +61,10 @@ newVar a =
 
 -- | Read the value of a variable.
 --
--- It is safe to run the resulting computation with help of the 'runEvent'
--- function using modes 'IncludingCurrentEventsOrFromPast' and
--- 'IncludingEarlierEventsOrFromPast', which is necessary if you are going
--- to use the variable in the differential or difference equations. Only
--- it is preferrable if the variable is not updated twice
+-- It is safe to run the resulting computation with help of the 'runEventWith'
+-- function using modes 'CurrentEventsOrFromPast' and 'EarlierEventsOrFromPast', 
+-- which is necessary if you are going to use the variable in the differential 
+-- or difference equations. Only it is preferrable if the variable is not updated twice
 -- in the same integration time point; otherwise, different values can be returned
 -- for the same point.
 readVar :: Var a -> Event a
