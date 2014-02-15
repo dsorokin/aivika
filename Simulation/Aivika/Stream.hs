@@ -234,7 +234,7 @@ rightStream (Cons s) = Cons y where
 
 -- | Replace the 'Left' values.
 replaceLeftStream :: Stream (Either a b) -> Stream c -> Stream (Either c b)
-replaceLeftStream (Cons sab) (ys0 @ (Cons sc)) = Cons z where
+replaceLeftStream (Cons sab) (ys0 @ ~(Cons sc)) = Cons z where
   z = do (a, xs) <- sab
          case a of
            Left _ ->
@@ -245,7 +245,7 @@ replaceLeftStream (Cons sab) (ys0 @ (Cons sc)) = Cons z where
 
 -- | Replace the 'Right' values.
 replaceRightStream :: Stream (Either a b) -> Stream c -> Stream (Either a c)
-replaceRightStream (Cons sab) (ys0 @ (Cons sc)) = Cons z where
+replaceRightStream (Cons sab) (ys0 @ ~(Cons sc)) = Cons z where
   z = do (a, xs) <- sab
          case a of
            Right _ ->
