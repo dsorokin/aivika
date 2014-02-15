@@ -2,17 +2,11 @@
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Random
-
+import Simulation.Aivika
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.ExperimentSpecsView
-import Simulation.Aivika.Experiment.TimingStatsView
-import Simulation.Aivika.Experiment.TimeSeriesView
+import Simulation.Aivika.Experiment.Chart
 
-specs = Specs 0 100 0.1 RungeKutta4
+specs = Specs 0 100 0.1 RungeKutta4 SimpleGenerator
 
 experiment =
   defaultExperiment {
@@ -72,11 +66,11 @@ n = 5 :: Int
 
 model :: Simulation ExperimentData
 model =
-  do rndX <- newRandomDynamics (return m1) (return m2)
-     normalX <- newNormalDynamics (return mu) (return nu)
-     expX <- newExponentialDynamics (return mu)
-     poissonX <- newPoissonDynamics (return mu)
-     binomialX <- newBinomialDynamics (return p) (return n)
+  do rndX <- memoRandomUniformDynamics (return m1) (return m2)
+     normalX <- memoRandomNormalDynamics (return mu) (return nu)
+     expX <- memoRandomExponentialDynamics (return mu)
+     poissonX <- memoRandomPoissonDynamics (return mu)
+     binomialX <- memoRandomBinomialDynamics (return p) (return n)
      experimentDataInStartTime
        [("rnd", seriesEntity "rnd" rndX),
         ("normal", seriesEntity "normal" normalX),
