@@ -53,7 +53,7 @@ minTuningTime = 20
 maxTuningTime = 40
 
 -- how many persons perform a tuning of TV sets?
-tunerWorkplaceCount = 2
+tunerWorkplaceCount = 1
 
 -- create an accumulator to gather the queue size statistics 
 newQueueSizeAccumulator queue =
@@ -110,7 +110,7 @@ model = mdo
     newTunerWorkplace
   -- a processor loop for the tester's queue
   let testerQueueProcessorLoop =
-        queueProcessorLoopParallel
+        queueProcessorLoopSeq
         (liftEvent . enqueue testerQueue)
         (dequeue testerQueue)
         (proc x ->
@@ -129,10 +129,10 @@ model = mdo
         (dequeue tunerQueue)
   -- the parallel work of all the testers
   let testerProcessor =
-        processorParallel (map autoServerProcessor testerWorkplaces)
+        processorParallel (map serverProcessor testerWorkplaces)
   -- the parallel work of all the tuners
   let tunerProcessor =
-        processorParallel (map autoServerProcessor tunerWorkplaces)
+        processorParallel (map serverProcessor tunerWorkplaces)
   -- the entire processor from input to output
   let entireProcessor =
         testerQueueProcessorLoop >>>
