@@ -42,7 +42,7 @@ data Arrival =
             arrivalDelay :: Double
             -- ^ the delay time which has passed from the time of
             -- arriving the previous event
-          }
+          } deriving (Eq, Ord, Show)
 
 -- | Accumulates the statistics about that how long the arrived events are processed.
 data ArrivalTimer =
