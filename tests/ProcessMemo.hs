@@ -3,26 +3,9 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Arrow
 
-import System.Random
+import Simulation.Aivika
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Event
-import Simulation.Aivika.Ref
-import Simulation.Aivika.QueueStrategy
-import Simulation.Aivika.Queue
-import Simulation.Aivika.Resource
-import Simulation.Aivika.Process
-import Simulation.Aivika.Processor
-import Simulation.Aivika.Random
-import Simulation.Aivika.Stream
-import Simulation.Aivika.Stream.Random
-
-specs = Specs 0 1 0.1 RungeKutta4
-
-n1 = 3
-n2 = 5
+specs = Specs 0 10 0.1 RungeKutta4 SimpleGenerator
 
 model :: Simulation ()
 model =
@@ -36,7 +19,7 @@ model =
                    putStr ", a = "
                    putStrLn $ show a
 
-     let p = do x <- liftIO $ exponentialGen 0.1
+     let p = do x <- liftParameter $ randomExponential 0.1
                 holdProcess x
                 return x
 
