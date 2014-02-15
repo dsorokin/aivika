@@ -113,15 +113,8 @@ model = mdo
         queueProcessorLoopSeq
         (liftEvent . enqueue testerQueue)
         (dequeue testerQueue)
-        (proc x ->
-          do test <- testerProcessor -< x
-             case test of
-               Left x  ->
-                 do y <- (tunerProcessor <<< 
-                          tunerQueueProcessor) -< x
-                    returnA -< Left y
-               Right x -> 
-                 returnA -< Right x)
+        testerProcessor
+        (tunerQueueProcessor >>> tunerProcessor)
   -- a processor for the tuner's queue
   let tunerQueueProcessor =
         queueProcessor
