@@ -1,5 +1,9 @@
 Aivika -- a multi-paradigm simulation library for 
-the Haskell programming language and licensed under BSD3.
+the Haskell programming language with a strong emphasis on
+the Discrete Event Simulation (DES) in the first order and
+System Dynamics (SD) in the second one.
+
+It is licensed under BSD3.
 
 [Aivika] [1] is a multi-paradigm simulation library which has 
 the following features:
@@ -7,10 +11,10 @@ the following features:
 * allows defining recursive stochastic differential equations of 
   System Dynamics (unordered as in maths via the recursive do-notation);
 
-* has a basic support of the event-driven paradigm of 
-  the Discrete Event Simulation (DES);
+* supports the event-driven paradigm of DES as a basic core
+  for implementing other paradigms;
 
-* has a basic support of the process-oriented paradigm of DES
+* supports extensively the process-oriented paradigm of DES
   with an ability to resume, suspend and cancel 
   the discontinuous processes;
 
@@ -21,18 +25,21 @@ the following features:
   or use the predefined queue strategies);
 
 * allows defining an infinite stream of data based on the
-  process-oriented computation (designed but not tested in
-  anyway - please be very careful when using it);
+  process-oriented computation, where we can define a complex enough
+  behaviour just in a few lines of code;
 
 * allows defining processors (actually, the Haskell arrows) that
-  operate on infinite streams of data (designed but not tested
-  in anyway - please be very careful when using them);
+  operate on the infinite streams of data, because of which some models
+  can remind of their high-level graphical representation on the
+  diagram used by visual simulation software tools;
 
 * supports the activity-oriented paradigm of DES;
 
 * supports the basic constructs for the agent-based modeling;
 
-* allows creating combined discrete-continuous models;
+* allows creating combined discrete-continuous models as all parts
+  of the library are very well integrated and this is reflected
+  directly in the type system;
 
 * the arrays of simulation variables are inherently supported 
   (this is mostly a feature of Haskell itself);
@@ -47,7 +54,8 @@ the following features:
 * allows gathering statistics in time points;
 
 * hides the technical details in high-level simulation monads
-  (three of them support the recursive do-notation).
+  and even one arrow (some of these monads support the recursive
+  do-notation).
 
 Aivika itself is a light-weight engine with minimal dependencies. 
 However, it has additional packages [Aivika Experiment] [2] and 
@@ -69,25 +77,9 @@ However, it has additional packages [Aivika Experiment] [2] and
 All three libraries were tested on Linux, Windows and OS X.
 
 Please read the PDF document [An Introduction to 
-Aivika Simulation Library] [4] for more details. 
-This document is included in the distributive of Aivika 
-but you can usually find a more recent version by the link provided.
-
-P.S.
-
-Two items, streams and processors, are not yet tested. This is a
-goal for the future version of Aivika. The main reason why I ever uploaded
-my three packages is that the Aivika Experiment Chart package
-was broken in its dependencies, namely, when using the charting
-library. So, I decided to provide the compilable packages again.
-
-Although I would like to say that the mentioned streams and processors
-will be the main improvement in the future version as they actually
-allow defining some DES models on a very high level as you would define
-them with help of diagrams.
-
-Also the queues and server are not tested carefully. Use at your own
-risk. At least, the infinite queue seems to be working.
+Aivika Simulation Library] [4] for more details, although it is
+outdated and contains a very basic description only. The most
+powerful features of Aivika are not yet described in this PDF document.
 
 [1]: http://hackage.haskell.org/package/aivika  "Aivika"
 [2]: http://hackage.haskell.org/package/aivika-experiment  "Aivika Experiment"
