@@ -34,7 +34,7 @@ module Simulation.Aivika.Queue
         queueMaxCount,
         queueCount,
         enqueueCount,
-        queueLostCount,
+        enqueueLostCount,
         queueStoreCount,
         queueOutputRequestCount,
         queueOutputCount,
@@ -74,8 +74,8 @@ module Simulation.Aivika.Queue
         queueCountChanged_,
         enqueueCountChanged,
         enqueueCountChanged_,
-        queueLostCountChanged,
-        queueLostCountChanged_,
+        enqueueLostCountChanged,
+        enqueueLostCountChanged_,
         queueStoreCountChanged,
         queueStoreCountChanged_,
         queueOutputRequestCountChanged,
@@ -162,7 +162,7 @@ data Queue si qi sm qm so qo a =
           dequeueRes :: Resource so qo,
           queueCountRef :: IORef Int,
           enqueueCountRef :: IORef Int,
-          queueLostCountRef :: IORef Int,
+          enqueueLostCountRef :: IORef Int,
           queueStoreCountRef :: IORef Int,
           queueOutputRequestCountRef :: IORef Int,
           queueOutputCountRef :: IORef Int,
@@ -245,7 +245,7 @@ newQueue si sm so count =
                     dequeueRes = ro,
                     queueCountRef = i,
                     enqueueCountRef = ci,
-                    queueLostCountRef = cl,
+                    enqueueLostCountRef = cl,
                     queueStoreCountRef = cm,
                     queueOutputRequestCountRef = cr,
                     queueOutputCountRef = co,
@@ -332,19 +332,19 @@ enqueueCountChanged_ q =
   
 -- | Return the number of lost items.
 --
--- See also 'queueLostCountChanged' and 'queueLostCountChanged_'.
-queueLostCount :: Queue si qi sm qm so qo a -> Event Int
-queueLostCount q =
-  Event $ \p -> readIORef (queueLostCountRef q)
+-- See also 'enqueueLostCountChanged' and 'enqueueLostCountChanged_'.
+enqueueLostCount :: Queue si qi sm qm so qo a -> Event Int
+enqueueLostCount q =
+  Event $ \p -> readIORef (enqueueLostCountRef q)
   
--- | Signal when the 'queueLostCount' property value has changed.
-queueLostCountChanged :: Queue si qi sm qm so qo a -> Signal Int
-queueLostCountChanged q =
-  mapSignalM (const $ queueLostCount q) (queueLostCountChanged_ q)
+-- | Signal when the 'enqueueLostCount' property value has changed.
+enqueueLostCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+enqueueLostCountChanged q =
+  mapSignalM (const $ enqueueLostCount q) (enqueueLostCountChanged_ q)
   
--- | Signal when the 'queueLostCount' property value has changed.
-queueLostCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
-queueLostCountChanged_ q =
+-- | Signal when the 'enqueueLostCount' property value has changed.
+enqueueLostCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+enqueueLostCountChanged_ q =
   mapSignal (const ()) (enqueueLost q)
       
 -- | Return the total number of input items that were stored.
@@ -841,7 +841,7 @@ enqueueDeny :: Queue si qi sm qm so qo a
                -> Event ()
 enqueueDeny q a =
   Event $ \p ->
-  do modifyIORef' (queueLostCountRef q) $ (+) 1
+  do modifyIORef' (enqueueLostCountRef q) $ (+) 1
      invokeEvent p $
        triggerSignal (enqueueLostSource q) a
 
@@ -950,7 +950,7 @@ queueSummary q indent =
      let maxCount = queueMaxCount q
      count <- queueCount q
      enqueueCount <- enqueueCount q
-     lostCount <- queueLostCount q
+     enqueueLostCount <- enqueueLostCount q
      storeCount <- queueStoreCount q
      outputRequestCount <- queueOutputRequestCount q
      outputCount <- queueOutputCount q
@@ -998,8 +998,8 @@ queueSummary q indent =
        shows enqueueCount .
        showString "\n" .
        showString tab .
-       showString "the lost count (number of the lost items) = " .
-       shows lostCount .
+       showString "the enqueue lost count (number of the lost items) = " .
+       shows enqueueLostCount .
        showString "\n" .
        showString tab .
        showString "the store count (number of the input items that were stored) = " .
