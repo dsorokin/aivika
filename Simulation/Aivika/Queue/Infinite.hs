@@ -23,8 +23,8 @@ module Simulation.Aivika.Queue.Infinite
         newPriorityQueue,
         newQueue,
         -- * Queue Properties and Activities
-        queueStoringStrategy,
-        queueOutputStrategy,
+        enqueueStoringStrategy,
+        dequeueStrategy,
         queueNull,
         queueCount,
         queueStoreCount,
@@ -107,16 +107,16 @@ type SIROQueue a =
 type PriorityQueue a =
   Queue StaticPriorities PQ.PriorityQueue FCFS DLL.DoubleLinkedList a
 
--- | Represents the infinite queue using the specified strategies for
--- internal storing (in memory) @sm@ and output @so@, where @a@ denotes
+-- | Represents an infinite queue using the specified strategies for
+-- internal storing (in memory), @sm@, and dequeueing (output), @so@, where @a@ denotes
 -- the type of items stored in the queue. Types @qm@ and @qo@ are
 -- determined automatically and you should not care about them - they
 -- are dependent types.
 data Queue sm qm so qo a =
-  Queue { queueStoringStrategy :: sm,
+  Queue { enqueueStoringStrategy :: sm,
           -- ^ The strategy applied when storing (in memory) items in the queue.
-          queueOutputStrategy :: so,
-          -- ^ The strategy applied to the output (dequeuing) process.
+          dequeueStrategy :: so,
+          -- ^ The strategy applied to the dequeueing (output) processes.
           queueStore :: qm (QueueItem a),
           queueOutputRes :: Resource so qo,
           queueCountRef :: IORef Int,
@@ -159,7 +159,7 @@ newQueue :: (QueueStrategy sm qm,
             sm
             -- ^ the strategy applied when storing items in the queue
             -> so
-            -- ^ the strategy applied to the output (dequeuing) process
+            -- ^ the strategy applied to the dequeueing (output) processes when the queue is empty
             -> Simulation (Queue sm qm so qo a)  
 newQueue sm so =
   do i  <- liftIO $ newIORef 0
@@ -173,8 +173,8 @@ newQueue sm so =
      s3 <- newSignalSource
      s4 <- newSignalSource
      s5 <- newSignalSource
-     return Queue { queueStoringStrategy = sm,
-                    queueOutputStrategy = so,
+     return Queue { enqueueStoringStrategy = sm,
+                    dequeueStrategy = so,
                     queueStore = qm,
                     queueOutputRes = ro,
                     queueCountRef = i,
@@ -431,7 +431,7 @@ enqueueStore q a =
   do let i = QueueItem { itemValue = a,
                          itemStoringTime = pointTime p }
      invokeEvent p $
-       strategyEnqueue (queueStoringStrategy q) (queueStore q) i
+       strategyEnqueue (enqueueStoringStrategy q) (queueStore q) i
      modifyIORef' (queueCountRef q) (+ 1)
      modifyIORef' (queueStoreCountRef q) (+ 1)
      invokeEvent p $
@@ -454,7 +454,7 @@ enqueueStoreWithPriority q pm a =
   do let i = QueueItem { itemValue = a,
                          itemStoringTime = pointTime p }
      invokeEvent p $
-       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i
+       strategyEnqueueWithPriority (enqueueStoringStrategy q) (queueStore q) pm i
      modifyIORef' (queueCountRef q) (+ 1)
      modifyIORef' (queueStoreCountRef q) (+ 1)
      invokeEvent p $
@@ -485,7 +485,7 @@ dequeueExtract :: DequeueStrategy sm qm
 dequeueExtract q t' =
   Event $ \p ->
   do i <- invokeEvent p $
-          strategyDequeue (queueStoringStrategy q) (queueStore q)
+          strategyDequeue (enqueueStoringStrategy q) (queueStore q)
      modifyIORef' (queueCountRef q) (+ (- 1))
      modifyIORef' (queueOutputCountRef q) (+ 1)
      invokeEvent p $
@@ -529,8 +529,8 @@ queueChanged_ q =
 -- properties and activities using the specified indent.
 queueSummary :: (Show sm, Show so) => Queue sm qm so qo a -> Int -> Event ShowS
 queueSummary q indent =
-  do let sm = queueStoringStrategy q
-         so = queueOutputStrategy q
+  do let sm = enqueueStoringStrategy q
+         so = dequeueStrategy q
      null <- queueNull q
      count <- queueCount q
      storeCount <- queueStoreCount q
@@ -548,7 +548,7 @@ queueSummary q indent =
        shows sm .
        showString "\n" .
        showString tab .
-       showString "the output (dequeueing) strategy = " .
+       showString "the dequeueing (output) strategy = " .
        shows so .
        showString "\n" .
        showString tab .

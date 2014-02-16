@@ -26,9 +26,9 @@ module Simulation.Aivika.Queue
         newPriorityQueue,
         newQueue,
         -- * Queue Properties and Activities
-        queueInputStrategy,
-        queueStoringStrategy,
-        queueOutputStrategy,
+        enqueueStrategy,
+        enqueueStoringStrategy,
+        dequeueStrategy,
         queueNull,
         queueFull,
         queueMaxCount,
@@ -143,20 +143,20 @@ type SIROQueue a =
 type PriorityQueue a =
   Queue FCFS DLL.DoubleLinkedList StaticPriorities PQ.PriorityQueue FCFS DLL.DoubleLinkedList a
 
--- | Represents the queue using the specified strategies for input @si@,
--- internal storing (in memory) @sm@ and output @so@, where @a@ denotes
+-- | Represents a queue using the specified strategies for enqueueing (input), @si@,
+-- internal storing (in memory), @sm@, and dequeueing (output), @so@, where @a@ denotes
 -- the type of items stored in the queue. Types @qi@, @qm@ and @qo@ are
 -- determined automatically and you should not care about them - they
 -- are dependent types.
 data Queue si qi sm qm so qo a =
   Queue { queueMaxCount :: Int,
           -- ^ The queue capacity.
-          queueInputStrategy :: si,
-          -- ^ The strategy applied to the input (enqueuing) process.
-          queueStoringStrategy :: sm,
+          enqueueStrategy :: si,
+          -- ^ The strategy applied to the enqueueing (input) processes when the queue is full.
+          enqueueStoringStrategy :: sm,
           -- ^ The strategy applied when storing (in memory) items in the queue.
-          queueOutputStrategy :: so,
-          -- ^ The strategy applied to the output (dequeuing) process.
+          dequeueStrategy :: so,
+          -- ^ The strategy applied to the dequeueing (output) processes when the queue is empty.
           queueInputRes :: Resource si qi,
           queueStore :: qm (QueueItem a),
           queueOutputRes :: Resource so qo,
@@ -209,11 +209,11 @@ newQueue :: (QueueStrategy si qi,
              QueueStrategy sm qm,
              QueueStrategy so qo) =>
             si
-            -- ^ the strategy applied to the input (enqueuing) process
+            -- ^ the strategy applied to the enqueueing (input) processes when the queue is full
             -> sm
             -- ^ the strategy applied when storing items in the queue
             -> so
-            -- ^ the strategy applied to the output (dequeuing) process
+            -- ^ the strategy applied to the dequeueing (output) processes when the queue is empty
             -> Int
             -- ^ the queue capacity
             -> Simulation (Queue si qi sm qm so qo a)  
@@ -237,9 +237,9 @@ newQueue si sm so count =
      s4 <- newSignalSource
      s5 <- newSignalSource
      return Queue { queueMaxCount = count,
-                    queueInputStrategy = si,
-                    queueStoringStrategy = sm,
-                    queueOutputStrategy = so,
+                    enqueueStrategy = si,
+                    enqueueStoringStrategy = sm,
+                    dequeueStrategy = so,
                     queueInputRes = ri,
                     queueStore = qm,
                     queueOutputRes = ro,
@@ -799,7 +799,7 @@ enqueueStore q i =
   Event $ \p ->
   do let i' = i { itemStoringTime = pointTime p }  -- now we have the actual time of storing
      invokeEvent p $
-       strategyEnqueue (queueStoringStrategy q) (queueStore q) i'
+       strategyEnqueue (enqueueStoringStrategy q) (queueStore q) i'
      modifyIORef' (queueCountRef q) (+ 1)
      modifyIORef' (queueStoreCountRef q) (+ 1)
      invokeEvent p $
@@ -823,7 +823,7 @@ enqueueStoreWithPriority q pm i =
   Event $ \p ->
   do let i' = i { itemStoringTime = pointTime p }  -- now we have the actual time of storing
      invokeEvent p $
-       strategyEnqueueWithPriority (queueStoringStrategy q) (queueStore q) pm i'
+       strategyEnqueueWithPriority (enqueueStoringStrategy q) (queueStore q) pm i'
      modifyIORef' (queueCountRef q) (+ 1)
      modifyIORef' (queueStoreCountRef q) (+ 1)
      invokeEvent p $
@@ -883,7 +883,7 @@ dequeueExtract :: (DequeueStrategy si qi,
 dequeueExtract q t' =
   Event $ \p ->
   do i <- invokeEvent p $
-          strategyDequeue (queueStoringStrategy q) (queueStore q)
+          strategyDequeue (enqueueStoringStrategy q) (queueStore q)
      modifyIORef' (queueCountRef q) (+ (- 1))
      modifyIORef' (queueOutputCountRef q) (+ 1)
      invokeEvent p $
@@ -942,9 +942,9 @@ queueChanged_ q =
 -- properties and activities using the specified indent.
 queueSummary :: (Show si, Show sm, Show so) => Queue si qi sm qm so qo a -> Int -> Event ShowS
 queueSummary q indent =
-  do let si = queueInputStrategy q
-         sm = queueStoringStrategy q
-         so = queueOutputStrategy q
+  do let si = enqueueStrategy q
+         sm = enqueueStoringStrategy q
+         so = dequeueStrategy q
      null <- queueNull q
      full <- queueFull q
      let maxCount = queueMaxCount q
@@ -966,7 +966,7 @@ queueSummary q indent =
      let tab = replicate indent ' '
      return $
        showString tab .
-       showString "the input (enqueueing) strategy = " .
+       showString "the enqueueing (input) strategy = " .
        shows si .
        showString "\n" .
        showString tab .
@@ -974,7 +974,7 @@ queueSummary q indent =
        shows sm .
        showString "\n" .
        showString tab .
-       showString "the output (dequeueing) strategy = " .
+       showString "the dequeueing (output) strategy = " .
        shows so .
        showString "\n" .
        showString tab .
