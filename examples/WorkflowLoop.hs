@@ -9,6 +9,8 @@
 --
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 
+-- CAUTION: this is model is not yet fully tested and it may contain logical errors.
+
 import Prelude hiding (id, (.)) 
 
 import Control.Monad
