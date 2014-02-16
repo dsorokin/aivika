@@ -33,8 +33,8 @@ module Simulation.Aivika.Queue
         queueFull,
         queueMaxCount,
         queueCount,
+        enqueueCount,
         queueLostCount,
-        queueInputCount,
         queueStoreCount,
         queueOutputRequestCount,
         queueOutputCount,
@@ -72,10 +72,10 @@ module Simulation.Aivika.Queue
         queueFullChanged_,
         queueCountChanged,
         queueCountChanged_,
+        enqueueCountChanged,
+        enqueueCountChanged_,
         queueLostCountChanged,
         queueLostCountChanged_,
-        queueInputCountChanged,
-        queueInputCountChanged_,
         queueStoreCountChanged,
         queueStoreCountChanged_,
         queueOutputRequestCountChanged,
@@ -161,8 +161,8 @@ data Queue si qi sm qm so qo a =
           queueStore :: qm (QueueItem a),
           dequeueRes :: Resource so qo,
           queueCountRef :: IORef Int,
+          enqueueCountRef :: IORef Int,
           queueLostCountRef :: IORef Int,
-          queueInputCountRef :: IORef Int,
           queueStoreCountRef :: IORef Int,
           queueOutputRequestCountRef :: IORef Int,
           queueOutputCountRef :: IORef Int,
@@ -219,8 +219,8 @@ newQueue :: (QueueStrategy si qi,
             -> Simulation (Queue si qi sm qm so qo a)  
 newQueue si sm so count =
   do i  <- liftIO $ newIORef 0
-     l  <- liftIO $ newIORef 0
      ci <- liftIO $ newIORef 0
+     cl <- liftIO $ newIORef 0
      cm <- liftIO $ newIORef 0
      cr <- liftIO $ newIORef 0
      co <- liftIO $ newIORef 0
@@ -244,8 +244,8 @@ newQueue si sm so count =
                     queueStore = qm,
                     dequeueRes = ro,
                     queueCountRef = i,
-                    queueLostCountRef = l,
-                    queueInputCountRef = ci,
+                    enqueueCountRef = ci,
+                    queueLostCountRef = cl,
                     queueStoreCountRef = cm,
                     queueOutputRequestCountRef = cr,
                     queueOutputCountRef = co,
@@ -312,6 +312,23 @@ queueCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
 queueCountChanged_ q =
   mapSignal (const ()) (enqueueStored q) <>
   mapSignal (const ()) (dequeueExtracted q)
+
+-- | Return the total number of input items that were enqueued.
+--
+-- See also 'enqueueCountChanged' and 'enqueueCountChanged_'.
+enqueueCount :: Queue si qi sm qm so qo a -> Event Int
+enqueueCount q =
+  Event $ \p -> readIORef (enqueueCountRef q)
+  
+-- | Signal when the 'enqueueCount' property value has changed.
+enqueueCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+enqueueCountChanged q =
+  mapSignalM (const $ enqueueCount q) (enqueueCountChanged_ q)
+  
+-- | Signal when the 'enqueueCount' property value has changed.
+enqueueCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+enqueueCountChanged_ q =
+  mapSignal (const ()) (enqueueInitiated q)
   
 -- | Return the number of lost items.
 --
@@ -329,23 +346,6 @@ queueLostCountChanged q =
 queueLostCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
 queueLostCountChanged_ q =
   mapSignal (const ()) (enqueueLost q)
-
--- | Return the total number of input items that were enqueued.
---
--- See also 'queueInputCountChanged' and 'queueInputCountChanged_'.
-queueInputCount :: Queue si qi sm qm so qo a -> Event Int
-queueInputCount q =
-  Event $ \p -> readIORef (queueInputCountRef q)
-  
--- | Signal when the 'queueInputCount' property value has changed.
-queueInputCountChanged :: Queue si qi sm qm so qo a -> Signal Int
-queueInputCountChanged q =
-  mapSignalM (const $ queueInputCount q) (queueInputCountChanged_ q)
-  
--- | Signal when the 'queueInputCount' property value has changed.
-queueInputCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
-queueInputCountChanged_ q =
-  mapSignal (const ()) (enqueueInitiated q)
       
 -- | Return the total number of input items that were stored.
 --
@@ -426,7 +426,7 @@ queueLoadFactorChanged_ q =
 queueInputRate :: Queue si qi sm qm so qo a -> Event Double
 queueInputRate q =
   Event $ \p ->
-  do x <- readIORef (queueInputCountRef q)
+  do x <- readIORef (enqueueCountRef q)
      let t0 = spcStartTime $ pointSpecs p
          t  = pointTime p
      return (fromIntegral x / (t - t0))
@@ -779,7 +779,7 @@ enqueueInitiate :: Queue si qi sm qm so qo a
 enqueueInitiate q a =
   Event $ \p ->
   do let t = pointTime p
-     modifyIORef' (queueInputCountRef q) (+ 1)
+     modifyIORef' (enqueueCountRef q) (+ 1)
      invokeEvent p $
        triggerSignal (enqueueInitiatedSource q) a
      return QueueItem { itemValue = a,
@@ -949,8 +949,8 @@ queueSummary q indent =
      full <- queueFull q
      let maxCount = queueMaxCount q
      count <- queueCount q
+     enqueueCount <- enqueueCount q
      lostCount <- queueLostCount q
-     inputCount <- queueInputCount q
      storeCount <- queueStoreCount q
      outputRequestCount <- queueOutputRequestCount q
      outputCount <- queueOutputCount q
@@ -994,12 +994,12 @@ queueSummary q indent =
        shows count .
        showString "\n" .
        showString tab .
-       showString "the lost count (number of the lost items) = " .
-       shows lostCount .
+       showString "the enqueue count (number of the input items that were enqueued) = " .
+       shows enqueueCount .
        showString "\n" .
        showString tab .
-       showString "the input count (number of the input items that were enqueued) = " .
-       shows inputCount .
+       showString "the lost count (number of the lost items) = " .
+       shows lostCount .
        showString "\n" .
        showString tab .
        showString "the store count (number of the input items that were stored) = " .
