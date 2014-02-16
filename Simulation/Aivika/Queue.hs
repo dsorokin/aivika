@@ -39,10 +39,10 @@ module Simulation.Aivika.Queue
         dequeueCount,
         dequeueExtractCount,
         queueLoadFactor,
-        queueInputRate,
-        queueStoreRate,
-        queueOutputRequestRate,
-        queueOutputRate,
+        enqueueRate,
+        enqueueStoreRate,
+        dequeueRate,
+        dequeueExtractRate,
         queueWaitTime,
         queueTotalWaitTime,
         queueInputWaitTime,
@@ -423,8 +423,8 @@ queueLoadFactorChanged_ q =
       
 -- | Return the rate of the input items that were enqueued: how many items
 -- per time.
-queueInputRate :: Queue si qi sm qm so qo a -> Event Double
-queueInputRate q =
+enqueueRate :: Queue si qi sm qm so qo a -> Event Double
+enqueueRate q =
   Event $ \p ->
   do x <- readIORef (enqueueCountRef q)
      let t0 = spcStartTime $ pointSpecs p
@@ -433,8 +433,8 @@ queueInputRate q =
       
 -- | Return the rate of the items that were stored: how many items
 -- per time.
-queueStoreRate :: Queue si qi sm qm so qo a -> Event Double
-queueStoreRate q =
+enqueueStoreRate :: Queue si qi sm qm so qo a -> Event Double
+enqueueStoreRate q =
   Event $ \p ->
   do x <- readIORef (enqueueStoreCountRef q)
      let t0 = spcStartTime $ pointSpecs p
@@ -442,10 +442,10 @@ queueStoreRate q =
      return (fromIntegral x / (t - t0))
       
 -- | Return the rate of the requests for dequeueing the items: how many requests
--- per time. It does not include the attempts to dequeue immediately
+-- per time. It does not include the failed attempts to dequeue immediately
 -- without suspension.
-queueOutputRequestRate :: Queue si qi sm qm so qo a -> Event Double
-queueOutputRequestRate q =
+dequeueRate :: Queue si qi sm qm so qo a -> Event Double
+dequeueRate q =
   Event $ \p ->
   do x <- readIORef (dequeueCountRef q)
      let t0 = spcStartTime $ pointSpecs p
@@ -454,8 +454,8 @@ queueOutputRequestRate q =
       
 -- | Return the rate of the output items that were actually dequeued: how many items
 -- per time.
-queueOutputRate :: Queue si qi sm qm so qo a -> Event Double
-queueOutputRate q =
+dequeueExtractRate :: Queue si qi sm qm so qo a -> Event Double
+dequeueExtractRate q =
   Event $ \p ->
   do x <- readIORef (dequeueExtractCountRef q)
      let t0 = spcStartTime $ pointSpecs p
@@ -955,10 +955,10 @@ queueSummary q indent =
      dequeueCount <- dequeueCount q
      dequeueExtractCount <- dequeueExtractCount q
      loadFactor <- queueLoadFactor q
-     inputRate <- queueInputRate q
-     storeRate <- queueStoreRate q
-     outputRequestRate <- queueOutputRequestRate q
-     outputRate <- queueOutputRate q
+     enqueueRate <- enqueueRate q
+     enqueueStoreRate <- enqueueStoreRate q
+     dequeueRate <- dequeueRate q
+     dequeueExtractRate <- dequeueExtractRate q
      waitTime <- queueWaitTime q
      totalWaitTime <- queueTotalWaitTime q
      inputWaitTime <- queueInputWaitTime q
@@ -1018,20 +1018,20 @@ queueSummary q indent =
        shows loadFactor .
        showString "\n" .
        showString tab .
-       showString "the input rate (how many input items were enqueued per time) = " .
-       shows inputRate .
+       showString "the enqueue rate (how many input items were enqueued per time) = " .
+       shows enqueueRate .
        showString "\n" .
        showString tab .
-       showString "the store rate (how many input items were stored per time) = " .
-       shows storeRate .
+       showString "the enqueue store rate (how many input items were stored per time) = " .
+       shows enqueueStoreRate .
        showString "\n" .
        showString tab .
-       showString "the output request rate (how many requests for dequeueing per time) = " .
-       shows outputRequestRate .
+       showString "the dequeue rate (how many requests for dequeueing per time) = " .
+       shows dequeueRate .
        showString "\n" .
        showString tab .
-       showString "the output rate (how many output items were dequeued per time) = " .
-       shows outputRate .
+       showString "the dequeue extract rate (how many output items were dequeued per time) = " .
+       shows dequeueExtractRate .
        showString "\n" .
        showString tab .
        showString "the wait time (when was stored -> when was dequeued) = \n\n" .

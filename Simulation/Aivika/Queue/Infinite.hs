@@ -30,9 +30,9 @@ module Simulation.Aivika.Queue.Infinite
         enqueueStoreCount,
         dequeueCount,
         dequeueExtractCount,
-        queueStoreRate,
-        queueOutputRequestRate,
-        queueOutputRate,
+        enqueueStoreRate,
+        dequeueRate,
+        dequeueExtractRate,
         queueWaitTime,
         queueOutputWaitTime,
         -- * Dequeuing and Enqueuing
@@ -278,8 +278,8 @@ dequeueExtractCountChanged_ q =
 
 -- | Return the rate of the items that were stored: how many items
 -- per time.
-queueStoreRate :: Queue sm qm so qo a -> Event Double
-queueStoreRate q =
+enqueueStoreRate :: Queue sm qm so qo a -> Event Double
+enqueueStoreRate q =
   Event $ \p ->
   do x <- readIORef (enqueueStoreCountRef q)
      let t0 = spcStartTime $ pointSpecs p
@@ -287,10 +287,10 @@ queueStoreRate q =
      return (fromIntegral x / (t - t0))
       
 -- | Return the rate of the requests for dequeueing the items: how many requests
--- per time. It does not include the attempts to dequeue immediately
+-- per time. It does not include the failed attempts to dequeue immediately
 -- without suspension.
-queueOutputRequestRate :: Queue sm qm so qo a -> Event Double
-queueOutputRequestRate q =
+dequeueRate :: Queue sm qm so qo a -> Event Double
+dequeueRate q =
   Event $ \p ->
   do x <- readIORef (dequeueCountRef q)
      let t0 = spcStartTime $ pointSpecs p
@@ -299,8 +299,8 @@ queueOutputRequestRate q =
       
 -- | Return the rate of the output items that were dequeued: how many items
 -- per time.
-queueOutputRate :: Queue sm qm so qo a -> Event Double
-queueOutputRate q =
+dequeueExtractRate :: Queue sm qm so qo a -> Event Double
+dequeueExtractRate q =
   Event $ \p ->
   do x <- readIORef (dequeueExtractCountRef q)
      let t0 = spcStartTime $ pointSpecs p
@@ -536,9 +536,9 @@ queueSummary q indent =
      enqueueStoreCount <- enqueueStoreCount q
      dequeueCount <- dequeueCount q
      dequeueExtractCount <- dequeueExtractCount q
-     storeRate <- queueStoreRate q
-     outputRequestRate <- queueOutputRequestRate q
-     outputRate <- queueOutputRate q
+     enqueueStoreRate <- enqueueStoreRate q
+     dequeueRate <- dequeueRate q
+     dequeueExtractRate <- dequeueExtractRate q
      waitTime <- queueWaitTime q
      outputWaitTime <- queueOutputWaitTime q
      let tab = replicate indent ' '
@@ -572,16 +572,16 @@ queueSummary q indent =
        shows dequeueExtractCount .
        showString "\n" .
        showString tab .
-       showString "the store rate (how many input items were stored per time) = " .
-       shows storeRate .
+       showString "the enqueue store rate (how many input items were stored per time) = " .
+       shows enqueueStoreRate .
        showString "\n" .
        showString tab .
-       showString "the output request rate (how many requests for dequeueing per time) = " .
-       shows outputRequestRate .
+       showString "the dequeue rate (how many requests for dequeueing per time) = " .
+       shows dequeueRate .
        showString "\n" .
        showString tab .
-       showString "the output rate (how many output items were dequeued per time) = " .
-       shows outputRate .
+       showString "the dequeue extract rate (how many output items were dequeued per time) = " .
+       shows dequeueExtractRate .
        showString "\n" .
        showString tab .
        showString "the wait time (when was stored -> when was dequeued) = \n\n" .
