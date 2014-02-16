@@ -288,8 +288,8 @@ model =
      -- run the model in the final time point
      runEventInStopTime $
        do -- the ingots
-          c0 <- queueStoreCount (furnaceQueue furnace)
-          c1 <- queueOutputCount (furnaceQueue furnace)
+          c0 <- enqueueStoreCount (furnaceQueue furnace)
+          c1 <- dequeueCount (furnaceQueue furnace)
           c2 <- readRef (furnaceReadyCount furnace)
               
           liftIO $ do
