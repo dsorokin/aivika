@@ -45,8 +45,8 @@ module Simulation.Aivika.Queue
         dequeueExtractRate,
         queueWaitTime,
         queueTotalWaitTime,
-        queueInputWaitTime,
-        queueOutputWaitTime,
+        enqueueWaitTime,
+        dequeueWaitTime,
         -- * Dequeuing and Enqueuing
         dequeue,
         dequeueWithOutputPriority,
@@ -88,10 +88,10 @@ module Simulation.Aivika.Queue
         queueWaitTimeChanged_,
         queueTotalWaitTimeChanged,
         queueTotalWaitTimeChanged_,
-        queueInputWaitTimeChanged,
-        queueInputWaitTimeChanged_,
-        queueOutputWaitTimeChanged,
-        queueOutputWaitTimeChanged_,
+        enqueueWaitTimeChanged,
+        enqueueWaitTimeChanged_,
+        dequeueWaitTimeChanged,
+        dequeueWaitTimeChanged_,
         -- * Basic Signals
         enqueueInitiated,
         enqueueStored,
@@ -168,8 +168,8 @@ data Queue si qi sm qm so qo a =
           dequeueExtractCountRef :: IORef Int,
           queueWaitTimeRef :: IORef (SamplingStats Double),
           queueTotalWaitTimeRef :: IORef (SamplingStats Double),
-          queueInputWaitTimeRef :: IORef (SamplingStats Double),
-          queueOutputWaitTimeRef :: IORef (SamplingStats Double),
+          enqueueWaitTimeRef :: IORef (SamplingStats Double),
+          dequeueWaitTimeRef :: IORef (SamplingStats Double),
           enqueueInitiatedSource :: SignalSource a,
           enqueueLostSource :: SignalSource a,
           enqueueStoredSource :: SignalSource a,
@@ -251,8 +251,8 @@ newQueue si sm so count =
                     dequeueExtractCountRef = co,
                     queueWaitTimeRef = w,
                     queueTotalWaitTimeRef = wt,
-                    queueInputWaitTimeRef = wi,
-                    queueOutputWaitTimeRef = wo,
+                    enqueueWaitTimeRef = wi,
+                    dequeueWaitTimeRef = wo,
                     enqueueInitiatedSource = s1,
                     enqueueLostSource = s2,
                     enqueueStoredSource = s3,
@@ -500,40 +500,40 @@ queueTotalWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
 queueTotalWaitTimeChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
       
--- | Return the input wait time from the time at which the enqueueing operation
+-- | Return the enqueue wait time from the time at which the enqueueing operation
 -- was initiated to the time at which the item was stored in the queue.
 --
--- See also 'queueInputWaitTimeChanged' and 'queueInputWaitTimeChanged_'.
-queueInputWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
-queueInputWaitTime q =
-  Event $ \p -> readIORef (queueInputWaitTimeRef q)
+-- See also 'enqueueWaitTimeChanged' and 'enqueueWaitTimeChanged_'.
+enqueueWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
+enqueueWaitTime q =
+  Event $ \p -> readIORef (enqueueWaitTimeRef q)
       
--- | Signal when the 'queueInputWaitTime' property value has changed.
-queueInputWaitTimeChanged :: Queue si qi sm qm so qo a -> Signal (SamplingStats Double)
-queueInputWaitTimeChanged q =
-  mapSignalM (const $ queueInputWaitTime q) (queueInputWaitTimeChanged_ q)
+-- | Signal when the 'enqueueWaitTime' property value has changed.
+enqueueWaitTimeChanged :: Queue si qi sm qm so qo a -> Signal (SamplingStats Double)
+enqueueWaitTimeChanged q =
+  mapSignalM (const $ enqueueWaitTime q) (enqueueWaitTimeChanged_ q)
   
--- | Signal when the 'queueInputWaitTime' property value has changed.
-queueInputWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
-queueInputWaitTimeChanged_ q =
+-- | Signal when the 'enqueueWaitTime' property value has changed.
+enqueueWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+enqueueWaitTimeChanged_ q =
   mapSignal (const ()) (enqueueStored q)
       
--- | Return the output wait time from the time at which the item was requested
+-- | Return the dequeue wait time from the time at which the item was requested
 -- for dequeueing to the time at which it was actually dequeued.
 --
--- See also 'queueOutputWaitTimeChanged' and 'queueOutputWaitTimeChanged_'.
-queueOutputWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
-queueOutputWaitTime q =
-  Event $ \p -> readIORef (queueOutputWaitTimeRef q)
+-- See also 'dequeueWaitTimeChanged' and 'dequeueWaitTimeChanged_'.
+dequeueWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
+dequeueWaitTime q =
+  Event $ \p -> readIORef (dequeueWaitTimeRef q)
       
--- | Signal when the 'queueOutputWaitTime' property value has changed.
-queueOutputWaitTimeChanged :: Queue si qi sm qm so qo a -> Signal (SamplingStats Double)
-queueOutputWaitTimeChanged q =
-  mapSignalM (const $ queueOutputWaitTime q) (queueOutputWaitTimeChanged_ q)
+-- | Signal when the 'dequeueWaitTime' property value has changed.
+dequeueWaitTimeChanged :: Queue si qi sm qm so qo a -> Signal (SamplingStats Double)
+dequeueWaitTimeChanged q =
+  mapSignalM (const $ dequeueWaitTime q) (dequeueWaitTimeChanged_ q)
   
--- | Signal when the 'queueOutputWaitTime' property value has changed.
-queueOutputWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
-queueOutputWaitTimeChanged_ q =
+-- | Signal when the 'dequeueWaitTime' property value has changed.
+dequeueWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+dequeueWaitTimeChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
   
 -- | Dequeue suspending the process if the queue is empty.
@@ -856,7 +856,7 @@ enqueueStat q i =
   Event $ \p ->
   do let t0 = itemInputTime i
          t1 = itemStoringTime i
-     modifyIORef' (queueInputWaitTimeRef q) $
+     modifyIORef' (enqueueWaitTimeRef q) $
        addSamplingStats (t1 - t0)
 
 -- | Accept the dequeuing request and return the current simulation time.
@@ -909,7 +909,7 @@ dequeueStat q t' i =
   do let t0 = itemInputTime i
          t1 = itemStoringTime i
          t  = pointTime p
-     modifyIORef' (queueOutputWaitTimeRef q) $
+     modifyIORef' (dequeueWaitTimeRef q) $
        addSamplingStats (t - t')
      modifyIORef' (queueTotalWaitTimeRef q) $
        addSamplingStats (t - t0)
@@ -961,8 +961,8 @@ queueSummary q indent =
      dequeueExtractRate <- dequeueExtractRate q
      waitTime <- queueWaitTime q
      totalWaitTime <- queueTotalWaitTime q
-     inputWaitTime <- queueInputWaitTime q
-     outputWaitTime <- queueOutputWaitTime q
+     enqueueWaitTime <- enqueueWaitTime q
+     dequeueWaitTime <- dequeueWaitTime q
      let tab = replicate indent ' '
      return $
        showString tab .
@@ -1042,9 +1042,9 @@ queueSummary q indent =
        samplingStatsSummary totalWaitTime (2 + indent) .
        showString "\n\n" .
        showString tab .
-       showString "the input wait time (when the enqueueing was initiated -> when was stored) = \n\n" .
-       samplingStatsSummary inputWaitTime (2 + indent) .
+       showString "the enqueue wait time (when the enqueueing was initiated -> when was stored) = \n\n" .
+       samplingStatsSummary enqueueWaitTime (2 + indent) .
        showString "\n\n" .
        showString tab .
-       showString "the output wait time (when was requested for dequeueing -> when was dequeued) = \n\n" .
-       samplingStatsSummary outputWaitTime (2 + indent)
+       showString "the dequeue wait time (when was requested for dequeueing -> when was dequeued) = \n\n" .
+       samplingStatsSummary dequeueWaitTime (2 + indent)

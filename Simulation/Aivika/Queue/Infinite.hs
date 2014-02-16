@@ -34,7 +34,7 @@ module Simulation.Aivika.Queue.Infinite
         dequeueRate,
         dequeueExtractRate,
         queueWaitTime,
-        queueOutputWaitTime,
+        dequeueWaitTime,
         -- * Dequeuing and Enqueuing
         dequeue,
         dequeueWithOutputPriority,
@@ -56,8 +56,8 @@ module Simulation.Aivika.Queue.Infinite
         dequeueExtractCountChanged_,
         queueWaitTimeChanged,
         queueWaitTimeChanged_,
-        queueOutputWaitTimeChanged,
-        queueOutputWaitTimeChanged_,
+        dequeueWaitTimeChanged,
+        dequeueWaitTimeChanged_,
         -- * Basic Signals
         enqueueStored,
         dequeueRequested,
@@ -124,7 +124,7 @@ data Queue sm qm so qo a =
           dequeueCountRef :: IORef Int,
           dequeueExtractCountRef :: IORef Int,
           queueWaitTimeRef :: IORef (SamplingStats Double),
-          queueOutputWaitTimeRef :: IORef (SamplingStats Double),
+          dequeueWaitTimeRef :: IORef (SamplingStats Double),
           enqueueStoredSource :: SignalSource a,
           dequeueRequestedSource :: SignalSource (),
           dequeueExtractedSource :: SignalSource a }
@@ -182,7 +182,7 @@ newQueue sm so =
                     dequeueCountRef = cr,
                     dequeueExtractCountRef = co,
                     queueWaitTimeRef = w,
-                    queueOutputWaitTimeRef = wo,
+                    dequeueWaitTimeRef = wo,
                     enqueueStoredSource = s3,
                     dequeueRequestedSource = s4,
                     dequeueExtractedSource = s5 }
@@ -325,22 +325,22 @@ queueWaitTimeChanged_ :: Queue sm qm so qo a -> Signal ()
 queueWaitTimeChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
       
--- | Return the output wait time from the time at which the item was requested
+-- | Return the dequeue wait time from the time at which the item was requested
 -- for dequeueing to the time at which it was actually dequeued.
 --
--- See also 'queueOutputWaitTimeChanged' and 'queueOutputWaitTimeChanged_'.
-queueOutputWaitTime :: Queue sm qm so qo a -> Event (SamplingStats Double)
-queueOutputWaitTime q =
-  Event $ \p -> readIORef (queueOutputWaitTimeRef q)
+-- See also 'dequeueWaitTimeChanged' and 'dequeueWaitTimeChanged_'.
+dequeueWaitTime :: Queue sm qm so qo a -> Event (SamplingStats Double)
+dequeueWaitTime q =
+  Event $ \p -> readIORef (dequeueWaitTimeRef q)
       
--- | Signal when the 'queueOutputWaitTime' property value has changed.
-queueOutputWaitTimeChanged :: Queue sm qm so qo a -> Signal (SamplingStats Double)
-queueOutputWaitTimeChanged q =
-  mapSignalM (const $ queueOutputWaitTime q) (queueOutputWaitTimeChanged_ q)
+-- | Signal when the 'dequeueWaitTime' property value has changed.
+dequeueWaitTimeChanged :: Queue sm qm so qo a -> Signal (SamplingStats Double)
+dequeueWaitTimeChanged q =
+  mapSignalM (const $ dequeueWaitTime q) (dequeueWaitTimeChanged_ q)
   
--- | Signal when the 'queueOutputWaitTime' property value has changed.
-queueOutputWaitTimeChanged_ :: Queue sm qm so qo a -> Signal ()
-queueOutputWaitTimeChanged_ q =
+-- | Signal when the 'dequeueWaitTime' property value has changed.
+dequeueWaitTimeChanged_ :: Queue sm qm so qo a -> Signal ()
+dequeueWaitTimeChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
   
 -- | Dequeue suspending the process if the queue is empty.
@@ -508,7 +508,7 @@ dequeueStat q t' i =
   Event $ \p ->
   do let t1 = itemStoringTime i
          t  = pointTime p
-     modifyIORef' (queueOutputWaitTimeRef q) $
+     modifyIORef' (dequeueWaitTimeRef q) $
        addSamplingStats (t - t')
      modifyIORef' (queueWaitTimeRef q) $
        addSamplingStats (t - t1)
@@ -540,7 +540,7 @@ queueSummary q indent =
      dequeueRate <- dequeueRate q
      dequeueExtractRate <- dequeueExtractRate q
      waitTime <- queueWaitTime q
-     outputWaitTime <- queueOutputWaitTime q
+     dequeueWaitTime <- dequeueWaitTime q
      let tab = replicate indent ' '
      return $
        showString tab .
@@ -588,5 +588,5 @@ queueSummary q indent =
        samplingStatsSummary waitTime (2 + indent) .
        showString "\n\n" .
        showString tab .
-       showString "the output wait time (when was requested for dequeueing -> when was dequeued) = \n\n" .
-       samplingStatsSummary outputWaitTime (2 + indent)
+       showString "the dequeue wait time (when was requested for dequeueing -> when was dequeued) = \n\n" .
+       samplingStatsSummary dequeueWaitTime (2 + indent)
