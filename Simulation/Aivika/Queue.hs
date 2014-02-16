@@ -157,9 +157,9 @@ data Queue si qi sm qm so qo a =
           -- ^ The strategy applied when storing (in memory) items in the queue.
           dequeueStrategy :: so,
           -- ^ The strategy applied to the dequeueing (output) processes when the queue is empty.
-          queueInputRes :: Resource si qi,
+          enqueueRes :: Resource si qi,
           queueStore :: qm (QueueItem a),
-          queueOutputRes :: Resource so qo,
+          dequeueRes :: Resource so qo,
           queueCountRef :: IORef Int,
           queueLostCountRef :: IORef Int,
           queueInputCountRef :: IORef Int,
@@ -240,9 +240,9 @@ newQueue si sm so count =
                     enqueueStrategy = si,
                     enqueueStoringStrategy = sm,
                     dequeueStrategy = so,
-                    queueInputRes = ri,
+                    enqueueRes = ri,
                     queueStore = qm,
-                    queueOutputRes = ro,
+                    dequeueRes = ro,
                     queueCountRef = i,
                     queueLostCountRef = l,
                     queueInputCountRef = ci,
@@ -546,7 +546,7 @@ dequeue :: (DequeueStrategy si qi,
            -- ^ the dequeued value
 dequeue q =
   do t <- liftEvent $ dequeueRequest q
-     requestResource (queueOutputRes q)
+     requestResource (dequeueRes q)
      liftEvent $ dequeueExtract q t
   
 -- | Dequeue with the output priority suspending the process if the queue is empty.
@@ -561,7 +561,7 @@ dequeueWithOutputPriority :: (DequeueStrategy si qi,
                              -- ^ the dequeued value
 dequeueWithOutputPriority q po =
   do t <- liftEvent $ dequeueRequest q
-     requestResourceWithPriority (queueOutputRes q) po
+     requestResourceWithPriority (dequeueRes q) po
      liftEvent $ dequeueExtract q t
   
 -- | Try to dequeue immediately.
@@ -572,7 +572,7 @@ tryDequeue :: (DequeueStrategy si qi,
               -> Event (Maybe a)
               -- ^ the dequeued value of 'Nothing'
 tryDequeue q =
-  do x <- tryRequestResourceWithinEvent (queueOutputRes q)
+  do x <- tryRequestResourceWithinEvent (dequeueRes q)
      if x 
        then do t <- dequeueRequest q
                fmap Just $ dequeueExtract q t
@@ -589,7 +589,7 @@ enqueue :: (EnqueueStrategy si qi,
            -> Process ()
 enqueue q a =
   do i <- liftEvent $ enqueueInitiate q a
-     requestResource (queueInputRes q)
+     requestResource (enqueueRes q)
      liftEvent $ enqueueStore q i
      
 -- | Enqueue with the input priority the item suspending the process if the queue is full.  
@@ -605,7 +605,7 @@ enqueueWithInputPriority :: (PriorityQueueStrategy si qi pi,
                             -> Process ()
 enqueueWithInputPriority q pi a =
   do i <- liftEvent $ enqueueInitiate q a
-     requestResourceWithPriority (queueInputRes q) pi
+     requestResourceWithPriority (enqueueRes q) pi
      liftEvent $ enqueueStore q i
      
 -- | Enqueue with the storing priority the item suspending the process if the queue is full.  
@@ -621,7 +621,7 @@ enqueueWithStoringPriority :: (EnqueueStrategy si qi,
                               -> Process ()
 enqueueWithStoringPriority q pm a =
   do i <- liftEvent $ enqueueInitiate q a
-     requestResource (queueInputRes q)
+     requestResource (enqueueRes q)
      liftEvent $ enqueueStoreWithPriority q pm i
      
 -- | Enqueue with the input and storing priorities the item suspending the process if the queue is full.  
@@ -639,7 +639,7 @@ enqueueWithInputStoringPriorities :: (PriorityQueueStrategy si qi pi,
                                      -> Process ()
 enqueueWithInputStoringPriorities q pi pm a =
   do i <- liftEvent $ enqueueInitiate q a
-     requestResourceWithPriority (queueInputRes q) pi
+     requestResourceWithPriority (enqueueRes q) pi
      liftEvent $ enqueueStoreWithPriority q pm i
      
 -- | Try to enqueue the item. Return 'False' in the monad if the queue is full.
@@ -651,7 +651,7 @@ tryEnqueue :: (EnqueueStrategy sm qm,
               -- ^ the item which we try to enqueue
               -> Event Bool
 tryEnqueue q a =
-  do x <- tryRequestResourceWithinEvent (queueInputRes q)
+  do x <- tryRequestResourceWithinEvent (enqueueRes q)
      if x 
        then do enqueueInitiate q a >>= enqueueStore q
                return True
@@ -669,7 +669,7 @@ tryEnqueueWithStoringPriority :: (PriorityQueueStrategy sm qm pm,
                                  -- ^ the item which we try to enqueue
                                  -> Event Bool
 tryEnqueueWithStoringPriority q pm a =
-  do x <- tryRequestResourceWithinEvent (queueInputRes q)
+  do x <- tryRequestResourceWithinEvent (enqueueRes q)
      if x 
        then do enqueueInitiate q a >>= enqueueStoreWithPriority q pm
                return True
@@ -685,7 +685,7 @@ enqueueOrLost :: (EnqueueStrategy sm qm,
                  -- ^ the item which we try to enqueue
                  -> Event Bool
 enqueueOrLost q a =
-  do x <- tryRequestResourceWithinEvent (queueInputRes q)
+  do x <- tryRequestResourceWithinEvent (enqueueRes q)
      if x
        then do enqueueInitiate q a >>= enqueueStore q
                return True
@@ -704,7 +704,7 @@ enqueueWithStoringPriorityOrLost :: (PriorityQueueStrategy sm qm pm,
                                     -- ^ the item which we try to enqueue
                                     -> Event Bool
 enqueueWithStoringPriorityOrLost q pm a =
-  do x <- tryRequestResourceWithinEvent (queueInputRes q)
+  do x <- tryRequestResourceWithinEvent (enqueueRes q)
      if x
        then do enqueueInitiate q a >>= enqueueStoreWithPriority q pm
                return True
@@ -805,7 +805,7 @@ enqueueStore q i =
      invokeEvent p $
        enqueueStat q i'
      invokeEvent p $
-       releaseResourceWithinEvent (queueOutputRes q)
+       releaseResourceWithinEvent (dequeueRes q)
      invokeEvent p $
        triggerSignal (enqueueStoredSource q) (itemValue i')
 
@@ -829,7 +829,7 @@ enqueueStoreWithPriority q pm i =
      invokeEvent p $
        enqueueStat q i'
      invokeEvent p $
-       releaseResourceWithinEvent (queueOutputRes q)
+       releaseResourceWithinEvent (dequeueRes q)
      invokeEvent p $
        triggerSignal (enqueueStoredSource q) (itemValue i')
 
@@ -889,7 +889,7 @@ dequeueExtract q t' =
      invokeEvent p $
        dequeueStat q t' i
      invokeEvent p $
-       releaseResourceWithinEvent (queueInputRes q)
+       releaseResourceWithinEvent (enqueueRes q)
      invokeEvent p $
        triggerSignal (dequeueExtractedSource q) (itemValue i)
      return $ itemValue i

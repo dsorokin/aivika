@@ -118,7 +118,7 @@ data Queue sm qm so qo a =
           dequeueStrategy :: so,
           -- ^ The strategy applied to the dequeueing (output) processes.
           queueStore :: qm (QueueItem a),
-          queueOutputRes :: Resource so qo,
+          dequeueRes :: Resource so qo,
           queueCountRef :: IORef Int,
           queueStoreCountRef :: IORef Int,
           queueOutputRequestCountRef :: IORef Int,
@@ -176,7 +176,7 @@ newQueue sm so =
      return Queue { enqueueStoringStrategy = sm,
                     dequeueStrategy = so,
                     queueStore = qm,
-                    queueOutputRes = ro,
+                    dequeueRes = ro,
                     queueCountRef = i,
                     queueStoreCountRef = cm,
                     queueOutputRequestCountRef = cr,
@@ -352,7 +352,7 @@ dequeue :: (DequeueStrategy sm qm,
            -- ^ the dequeued value
 dequeue q =
   do t <- liftEvent $ dequeueRequest q
-     requestResource (queueOutputRes q)
+     requestResource (dequeueRes q)
      liftEvent $ dequeueExtract q t
   
 -- | Dequeue with the output priority suspending the process if the queue is empty.
@@ -366,7 +366,7 @@ dequeueWithOutputPriority :: (DequeueStrategy sm qm,
                              -- ^ the dequeued value
 dequeueWithOutputPriority q po =
   do t <- liftEvent $ dequeueRequest q
-     requestResourceWithPriority (queueOutputRes q) po
+     requestResourceWithPriority (dequeueRes q) po
      liftEvent $ dequeueExtract q t
   
 -- | Try to dequeue immediately.
@@ -376,7 +376,7 @@ tryDequeue :: DequeueStrategy sm qm
               -> Event (Maybe a)
               -- ^ the dequeued value of 'Nothing'
 tryDequeue q =
-  do x <- tryRequestResourceWithinEvent (queueOutputRes q)
+  do x <- tryRequestResourceWithinEvent (dequeueRes q)
      if x 
        then do t <- dequeueRequest q
                fmap Just $ dequeueExtract q t
@@ -435,7 +435,7 @@ enqueueStore q a =
      modifyIORef' (queueCountRef q) (+ 1)
      modifyIORef' (queueStoreCountRef q) (+ 1)
      invokeEvent p $
-       releaseResourceWithinEvent (queueOutputRes q)
+       releaseResourceWithinEvent (dequeueRes q)
      invokeEvent p $
        triggerSignal (enqueueStoredSource q) (itemValue i)
 
@@ -458,7 +458,7 @@ enqueueStoreWithPriority q pm a =
      modifyIORef' (queueCountRef q) (+ 1)
      modifyIORef' (queueStoreCountRef q) (+ 1)
      invokeEvent p $
-       releaseResourceWithinEvent (queueOutputRes q)
+       releaseResourceWithinEvent (dequeueRes q)
      invokeEvent p $
        triggerSignal (enqueueStoredSource q) (itemValue i)
 
