@@ -37,7 +37,7 @@ module Simulation.Aivika.Queue
         enqueueLostCount,
         enqueueStoreCount,
         dequeueCount,
-        queueOutputCount,
+        dequeueExtractCount,
         queueLoadFactor,
         queueInputRate,
         queueStoreRate,
@@ -80,8 +80,8 @@ module Simulation.Aivika.Queue
         enqueueStoreCountChanged_,
         dequeueCountChanged,
         dequeueCountChanged_,
-        queueOutputCountChanged,
-        queueOutputCountChanged_,
+        dequeueExtractCountChanged,
+        dequeueExtractCountChanged_,
         queueLoadFactorChanged,
         queueLoadFactorChanged_,
         queueWaitTimeChanged,
@@ -165,7 +165,7 @@ data Queue si qi sm qm so qo a =
           enqueueLostCountRef :: IORef Int,
           enqueueStoreCountRef :: IORef Int,
           dequeueCountRef :: IORef Int,
-          queueOutputCountRef :: IORef Int,
+          dequeueExtractCountRef :: IORef Int,
           queueWaitTimeRef :: IORef (SamplingStats Double),
           queueTotalWaitTimeRef :: IORef (SamplingStats Double),
           queueInputWaitTimeRef :: IORef (SamplingStats Double),
@@ -248,7 +248,7 @@ newQueue si sm so count =
                     enqueueLostCountRef = cl,
                     enqueueStoreCountRef = cm,
                     dequeueCountRef = cr,
-                    queueOutputCountRef = co,
+                    dequeueExtractCountRef = co,
                     queueWaitTimeRef = w,
                     queueTotalWaitTimeRef = wt,
                     queueInputWaitTimeRef = wi,
@@ -383,21 +383,21 @@ dequeueCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
 dequeueCountChanged_ q =
   mapSignal (const ()) (dequeueRequested q)
       
--- | Return the total number of output items that were dequeued.
+-- | Return the total number of output items that were actually dequeued.
 --
--- See also 'queueOutputCountChanged' and 'queueOutputCountChanged_'.
-queueOutputCount :: Queue si qi sm qm so qo a -> Event Int
-queueOutputCount q =
-  Event $ \p -> readIORef (queueOutputCountRef q)
+-- See also 'dequeueExtractCountChanged' and 'dequeueExtractCountChanged_'.
+dequeueExtractCount :: Queue si qi sm qm so qo a -> Event Int
+dequeueExtractCount q =
+  Event $ \p -> readIORef (dequeueExtractCountRef q)
       
--- | Signal when the 'queueOutputCount' property value has changed.
-queueOutputCountChanged :: Queue si qi sm qm so qo a -> Signal Int
-queueOutputCountChanged q =
-  mapSignalM (const $ queueOutputCount q) (queueOutputCountChanged_ q)
+-- | Signal when the 'dequeueExtractCount' property value has changed.
+dequeueExtractCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+dequeueExtractCountChanged q =
+  mapSignalM (const $ dequeueExtractCount q) (dequeueExtractCountChanged_ q)
   
--- | Signal when the 'queueOutputCount' property value has changed.
-queueOutputCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
-queueOutputCountChanged_ q =
+-- | Signal when the 'dequeueExtractCount' property value has changed.
+dequeueExtractCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+dequeueExtractCountChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
 
 -- | Return the load factor: the queue size divided by its maximum size.
@@ -452,12 +452,12 @@ queueOutputRequestRate q =
          t  = pointTime p
      return (fromIntegral x / (t - t0))
       
--- | Return the rate of the output items that were dequeued: how many items
+-- | Return the rate of the output items that were actually dequeued: how many items
 -- per time.
 queueOutputRate :: Queue si qi sm qm so qo a -> Event Double
 queueOutputRate q =
   Event $ \p ->
-  do x <- readIORef (queueOutputCountRef q)
+  do x <- readIORef (dequeueExtractCountRef q)
      let t0 = spcStartTime $ pointSpecs p
          t  = pointTime p
      return (fromIntegral x / (t - t0))
@@ -885,7 +885,7 @@ dequeueExtract q t' =
   do i <- invokeEvent p $
           strategyDequeue (enqueueStoringStrategy q) (queueStore q)
      modifyIORef' (queueCountRef q) (+ (- 1))
-     modifyIORef' (queueOutputCountRef q) (+ 1)
+     modifyIORef' (dequeueExtractCountRef q) (+ 1)
      invokeEvent p $
        dequeueStat q t' i
      invokeEvent p $
@@ -953,7 +953,7 @@ queueSummary q indent =
      enqueueLostCount <- enqueueLostCount q
      enqueueStoreCount <- enqueueStoreCount q
      dequeueCount <- dequeueCount q
-     outputCount <- queueOutputCount q
+     dequeueExtractCount <- dequeueExtractCount q
      loadFactor <- queueLoadFactor q
      inputRate <- queueInputRate q
      storeRate <- queueStoreRate q
@@ -1010,8 +1010,8 @@ queueSummary q indent =
        shows dequeueCount .
        showString "\n" .
        showString tab .
-       showString "the output count (number of the output items that were dequeued) = " .
-       shows outputCount .
+       showString "the dequeue extract count (number of the output items that were dequeued) = " .
+       shows dequeueExtractCount .
        showString "\n" .
        showString tab .
        showString "the load factor (size / max. capacity) = " .
