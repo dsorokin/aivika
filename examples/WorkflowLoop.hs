@@ -84,7 +84,8 @@ newTunerWorkplace =
 model :: Simulation ()
 model = mdo
   -- it will gather the statistics of the processing time
-  arrivalTimer <- newArrivalTimer
+  inputArrivalTimer <- newArrivalTimer
+  outputArrivalTimer <- newArrivalTimer
   -- define a stream of input events
   let inputStream =
         randomUniformStream minArrivalDelay maxArrivalDelay 
@@ -128,8 +129,9 @@ model = mdo
         processorParallel (map serverProcessor tunerWorkplaces)
   -- the entire processor from input to output
   let entireProcessor =
+        arrivalTimerProcessor inputArrivalTimer >>>
         testerQueueProcessorLoop >>>
-        arrivalTimerProcessor arrivalTimer
+        arrivalTimerProcessor outputArrivalTimer
   -- start simulating the model
   runProcessInStartTime $
     sinkStream $ runProcessor entireProcessor inputStream
@@ -141,7 +143,8 @@ model = mdo
          forM testerWorkplaces $ \x -> serverSummary x 2
        tunerWorkplaceSums <- 
          forM tunerWorkplaces  $ \x -> serverSummary x 2
-       processingTime  <- arrivalProcessingTime arrivalTimer
+       inputProcessingTime  <- arrivalProcessingTime inputArrivalTimer
+       outputProcessingTime  <- arrivalProcessingTime outputArrivalTimer
        testerQueueSize <- timingStatsAccumulated testerQueueSizeAcc
        tunerQueueSize  <- timingStatsAccumulated tunerQueueSizeAcc
        liftIO $
@@ -166,15 +169,19 @@ model = mdo
                  putStrLn ""
                  putStrLn $ x []
                  putStrLn ""
-            putStrLn "--- the processing time summary ---"
+            putStrLn "--- the arrival receiving time summary (we are interested in their count) ---"
             putStrLn ""
-            putStrLn $ samplingStatsSummary processingTime 2 []
+            putStrLn $ samplingStatsSummary inputProcessingTime 2 []
             putStrLn ""
-            putStrLn "--- the tester's queue size summary ---"
+            putStrLn "--- the arrival processing time summary ---"
+            putStrLn ""
+            putStrLn $ samplingStatsSummary outputProcessingTime 2 []
+            putStrLn ""
+            putStrLn "--- the tester's queue size summary (updated when enqueueing and dequeueing) ---"
             putStrLn ""
             putStrLn $ timingStatsSummary testerQueueSize 2 []
             putStrLn ""
-            putStrLn "--- the tuner's queue size summary ---"
+            putStrLn "--- the tuner's queue size summary (updated when enqueueing and dequeueing) ---"
             putStrLn ""
             putStrLn $ timingStatsSummary tunerQueueSize 2 []
             putStrLn ""
