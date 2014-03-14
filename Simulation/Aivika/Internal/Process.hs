@@ -52,6 +52,8 @@ module Simulation.Aivika.Internal.Process
         processCancelled,
         -- * Awaiting Signal
         processAwait,
+        -- * Yield of Process
+        processYield,
         -- * Process Timeout
         timeoutProcess,
         timeoutProcessUsingId,
@@ -578,3 +580,14 @@ timeoutProcessUsingId timeout pid p =
        Nothing -> return Nothing
        Just (Right a) -> return (Just a)
        Just (Left e) -> throwProcess e
+
+-- | Yield to allow other 'Process' and 'Event' computations to run
+-- at the current simulation time point.
+processYield :: Process ()
+processYield =
+  Process $ \pid ->
+  Cont $ \c ->
+  Event $ \p ->
+  invokeEvent p $
+  enqueueEvent (pointTime p) $
+  resumeCont c ()

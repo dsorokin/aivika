@@ -54,6 +54,8 @@ module Simulation.Aivika.Process
         processCancelled,
         -- * Awaiting Signal
         processAwait,
+        -- * Yield of Process
+        processYield,
         -- * Process Timeout
         timeoutProcess,
         timeoutProcessUsingId,
