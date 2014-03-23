@@ -1,9 +1,11 @@
 
--- This is a model of the workflow with originally two work places. Also there are two finite queues.
+-- Example: Work Stations in Series
 --
--- It is described in different sources [1, 2]. So, this is chapter 7 of [2].
+-- This is a model of two work stations connected in a series and separated by finite queues.
 --
--- [1] { add a foreign source in English }
+-- It is described in different sources [1, 2]. So, this is chapter 7 of [2] and section 5.14 of [1].
+--
+-- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
 --
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 
@@ -34,28 +36,28 @@ queueMaxCount1 = 4
 queueMaxCount2 = 2
 
 -- the mean processing time distributed exponentially in
--- the first work places
+-- the first work stations
 meanProcessingTime1 = 0.25
 
 -- the mean processing time distributed exponentially in
--- the second work places
+-- the second work stations
 meanProcessingTime2 = 0.5
 
--- the number of the first work places
+-- the number of the first work stations
 -- (in parallel but the commented code allocates them sequentially)
-workplaceCount1 = 1
+workStationCount1 = 1
 
--- the number of the second work places
+-- the number of the second work stations
 -- (in parallel but the commented code allocates them sequentially)
-workplaceCount2 = 1
+workStationCount2 = 1
 
 -- create an accumulator to gather the queue size statistics 
 newQueueSizeAccumulator queue =
   newTimingStatsAccumulator $
   Signalable (queueCount queue) (queueCountChanged_ queue)
 
--- create a workflow with the exponential processing time
-newWorkplaceExponential meanTime =
+-- create a work station (server) with the exponential processing time
+newWorkStationExponential meanTime =
   newServer $ \a ->
   do holdProcess =<<
        (liftParameter $
@@ -72,9 +74,9 @@ model = do
   arrivalTimer <- newArrivalTimer
   -- define a stream of input events
   let inputStream = randomExponentialStream meanOrderDelay 
-  -- create a queue before the first work place
+  -- create a queue before the first work stations
   queue1 <- newFCFSQueue queueMaxCount1
-  -- create a queue before the second work place
+  -- create a queue before the second work stations
   queue2 <- newFCFSQueue queueMaxCount2
   -- the first queue size statistics
   queueSizeAcc1 <- 
@@ -84,18 +86,18 @@ model = do
   queueSizeAcc2 <- 
     runEventInStartTime $
     newQueueSizeAccumulator queue2
-  -- create the first work places, i.e. the "servers"
-  workplace1s <- forM [1 .. workplaceCount1] $ \_ ->
-    newWorkplaceExponential meanProcessingTime1
-  -- create the second work places, i.e. the "servers"
-  workplace2s <- forM [1 .. workplaceCount2] $ \_ ->
-    newWorkplaceExponential meanProcessingTime2
-  -- processor for the queue before the first work place
+  -- create the first work stations (servers)
+  workStation1s <- forM [1 .. workStationCount1] $ \_ ->
+    newWorkStationExponential meanProcessingTime1
+  -- create the second work stations (servers)
+  workStation2s <- forM [1 .. workStationCount2] $ \_ ->
+    newWorkStationExponential meanProcessingTime2
+  -- processor for the queue before the first work station
   let queueProcessor1 =
         queueProcessor
         (\a -> liftEvent $ enqueueOrLost_ queue1 a)
         (dequeue queue1)
-  -- processor for the queue before the second work place
+  -- processor for the queue before the second work station
   let queueProcessor2 =
         queueProcessor
         (enqueue queue2)
@@ -103,11 +105,11 @@ model = do
   -- the entire processor from input to output
   let entireProcessor =
         queueProcessor1 >>>
-        processorParallel (map serverProcessor workplace1s) >>>
-        -- foldr1 interposePrefetchProcessor (map serverProcessor workplace1s) >>>
+        processorParallel (map serverProcessor workStation1s) >>>
+        -- foldr1 interposePrefetchProcessor (map serverProcessor workStation1s) >>>
         queueProcessor2 >>>
-        processorParallel (map serverProcessor workplace2s) >>>
-        -- foldr1 interposePrefetchProcessor (map serverProcessor workplace2s) >>>
+        processorParallel (map serverProcessor workStation2s) >>>
+        -- foldr1 interposePrefetchProcessor (map serverProcessor workStation2s) >>>
         arrivalTimerProcessor arrivalTimer
   -- start simulating the model
   runProcessInStartTime $
@@ -116,8 +118,8 @@ model = do
   runEventInStopTime $
     do queueSum1 <- queueSummary queue1 2
        queueSum2 <- queueSummary queue2 2
-       workplaceSum1s <- forM workplace1s $ \x -> serverSummary x 2
-       workplaceSum2s <- forM workplace2s $ \x -> serverSummary x 2
+       workStationSum1s <- forM workStation1s $ \x -> serverSummary x 2
+       workStationSum2s <- forM workStation2s $ \x -> serverSummary x 2
        processingTime <- arrivalProcessingTime arrivalTimer
        queueSize1 <- timingStatsAccumulated queueSizeAcc1
        queueSize2 <- timingStatsAccumulated queueSizeAcc2
@@ -127,8 +129,8 @@ model = do
             putStrLn ""
             putStrLn $ queueSum1 []
             putStrLn ""
-            forM_ (zip [1..] workplaceSum1s) $ \(i, x) ->
-              do putStrLn $ "--- the first work place no." ++ show i ++ " (in the final time) ---"
+            forM_ (zip [1..] workStationSum1s) $ \(i, x) ->
+              do putStrLn $ "--- the first work station no. " ++ show i ++ " (in the final time) ---"
                  putStrLn ""
                  putStrLn $ x []
                  putStrLn ""
@@ -136,8 +138,8 @@ model = do
             putStrLn ""
             putStrLn $ queueSum2 []
             putStrLn ""
-            forM_ (zip [1..] workplaceSum2s) $ \(i, x) ->
-              do putStrLn $ "--- the second work place no. " ++ show i ++ " (in the final time) ---"
+            forM_ (zip [1..] workStationSum2s) $ \(i, x) ->
+              do putStrLn $ "--- the second work station no. " ++ show i ++ " (in the final time) ---"
                  putStrLn ""
                  putStrLn $ x []
                  putStrLn ""
