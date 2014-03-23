@@ -85,3 +85,7 @@ powerful features of Aivika are not yet described in this PDF document.
 [2]: http://hackage.haskell.org/package/aivika-experiment  "Aivika Experiment"
 [3]: http://hackage.haskell.org/package/aivika-experiment-chart  "Aivika Experiment Chart"
 [4]: https://github.com/dsorokin/aivika/blob/master/doc/aivika.pdf  "An Introduction to Aivika Simulation Library"
+
+P.S. Aivika is actually a genuine female Mari name which is pronounced 
+with stress on the last syllable as in French, but the Russians usually 
+pronounce it wrong :)
