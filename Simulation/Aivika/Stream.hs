@@ -22,6 +22,7 @@ module Simulation.Aivika.Stream
         concatPriorityStreams,
         splitStream,
         splitStreamQueuing,
+        splitStreamQueueing,
         splitStreamPrioritising,
         -- * Specifying Identifier
         streamUsingId,
@@ -263,23 +264,23 @@ partitionEitherStream s =
 -- | Split the input stream into the specified number of output streams
 -- after applying the 'FCFS' strategy for enqueuing the output requests.
 splitStream :: Int -> Stream a -> Simulation [Stream a]
-splitStream = splitStreamQueuing FCFS
+splitStream = splitStreamQueueing FCFS
 
 -- | Split the input stream into the specified number of output streams.
 --
 -- If you don't know what the strategy to apply, then you probably
 -- need the 'FCFS' strategy, or function 'splitStream' that
 -- does namely this.
-splitStreamQueuing :: EnqueueStrategy s q
-                      => s
-                      -- ^ the strategy applied for enqueuing the output requests
-                      -> Int
-                      -- ^ the number of output streams
-                      -> Stream a
-                      -- ^ the input stream
-                      -> Simulation [Stream a]
-                      -- ^ the splitted output streams
-splitStreamQueuing s n x =
+splitStreamQueueing :: EnqueueStrategy s q
+                       => s
+                       -- ^ the strategy applied for enqueuing the output requests
+                       -> Int
+                       -- ^ the number of output streams
+                       -> Stream a
+                       -- ^ the input stream
+                       -> Simulation [Stream a]
+                       -- ^ the splitted output streams
+splitStreamQueueing s n x =
   do ref <- liftIO $ newIORef x
      res <- newResource s 1
      let reader =
@@ -289,6 +290,19 @@ splitStreamQueuing s n x =
               liftIO $ writeIORef ref xs
               return a
      return $ map (\i -> repeatProcess reader) [1..n]
+
+-- | It was renamed to 'splitStreamQueueing'.
+{-# DEPRECATED splitStreamQueuing "Use splitStreamQueueing instead" #-}
+splitStreamQueuing :: EnqueueStrategy s q
+                      => s
+                      -- ^ the strategy applied for enqueuing the output requests
+                      -> Int
+                      -- ^ the number of output streams
+                      -> Stream a
+                      -- ^ the input stream
+                      -> Simulation [Stream a]
+                      -- ^ the splitted output streams
+splitStreamQueuing = splitStreamQueueing
 
 -- | Split the input stream into a list of output streams
 -- using the specified priorities.

@@ -201,7 +201,7 @@ processorQueuedParallel si so ps =
   Processor $ \xs ->
   Cons $
   do let n = length ps
-     input <- liftSimulation $ splitStreamQueuing si n xs
+     input <- liftSimulation $ splitStreamQueueing si n xs
      let results = flip map (zip input ps) $ \(input, p) ->
            runProcessor p input
          output  = concatQueuedStreams so results
@@ -222,7 +222,7 @@ processorPrioritisingOutputParallel si so ps =
   Processor $ \xs ->
   Cons $
   do let n = length ps
-     input <- liftSimulation $ splitStreamQueuing si n xs
+     input <- liftSimulation $ splitStreamQueueing si n xs
      let results = flip map (zip input ps) $ \(input, p) ->
            runProcessor p input
          output  = concatPriorityStreams so results
