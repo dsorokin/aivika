@@ -28,6 +28,7 @@ module Simulation.Aivika.Internal.Event
         enqueueEventWithTimes,
         enqueueEventWithPoints,
         enqueueEventWithIntegTimes,
+        yieldEvent,
         eventQueueCount,
         -- * Cancelling Event
         EventCancellation,
@@ -360,3 +361,10 @@ memoEvent m =
               do v <- invokeEvent p m
                  writeIORef ref (Just v)
                  return v
+
+-- | Enqueue the event which must be actuated with the current modeling time but later.
+yieldEvent :: Event () -> Event ()
+yieldEvent m =
+  Event $ \p ->
+  invokeEvent p $
+  enqueueEvent (pointTime p) m
