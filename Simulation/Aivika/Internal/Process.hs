@@ -71,7 +71,9 @@ module Simulation.Aivika.Internal.Process
         zip3ProcessParallel,
         unzipProcess,
         -- * Memoizing Process
-        memoProcess) where
+        memoProcess,
+        -- * Process Hole
+        processHole) where
 
 import Data.Maybe
 import Data.IORef
@@ -591,3 +593,17 @@ processYield =
   invokeEvent p $
   enqueueEvent (pointTime p) $
   resumeCont c ()
+
+-- | A computation that never computes the result. It behaves like a black hole for
+-- the discontinuous process, although such a process can still be canceled outside
+-- (see 'cancelProcessWithId'), but then only its finalization parts (see 'finallyProcess')
+-- will be called, usually, to release the resources acquired before.
+processHole :: Process a
+processHole =
+  Process $ \pid ->
+  Cont $ \c ->
+  Event $ \p ->
+  do let signal = (contCancellationInitiating $ processCancelSource pid)
+     invokeEvent p $
+       handleSignal_ signal $ \_ ->
+       resumeCont c $ error "It must never be computed: processHole"

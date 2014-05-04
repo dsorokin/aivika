@@ -73,6 +73,8 @@ module Simulation.Aivika.Process
         zip3ProcessParallel,
         unzipProcess,
         -- * Memoizing Process
-        memoProcess) where
+        memoProcess,
+        -- * Process Hole
+        processHole) where
 
 import Simulation.Aivika.Internal.Process

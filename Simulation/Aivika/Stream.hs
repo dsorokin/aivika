@@ -433,13 +433,7 @@ mergePriorityStreams s x y = concatPriorityStreams s [x, y]
 
 -- | An empty stream that never returns data.
 emptyStream :: Stream a
-emptyStream = Cons z where
-  z = do pid <- liftSimulation newProcessId
-         -- use the generated identifier so that
-         -- nobody could reactivate the process,
-         -- although it can be still canceled
-         processUsingId pid passivateProcess
-         error "It should never happen: emptyStream."
+emptyStream = Cons processHole
 
 -- | Consume the stream. It returns a process that infinitely reads data
 -- from the stream and then redirects them to the provided function.
