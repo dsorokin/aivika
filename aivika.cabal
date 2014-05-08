@@ -170,6 +170,7 @@ library
                      Simulation.Aivika.Internal.Signal
                      Simulation.Aivika.Internal.Simulation
                      Simulation.Aivika.Internal.Specs
+                     Simulation.Aivika.Internal.Arrival
                      
     build-depends:   base >= 4.5.0.0 && < 6,
                      mtl >= 2.1.1,

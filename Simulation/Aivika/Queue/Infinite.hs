@@ -81,8 +81,6 @@ import Simulation.Aivika.Signal
 import Simulation.Aivika.Resource
 import Simulation.Aivika.QueueStrategy
 import Simulation.Aivika.Statistics
-import Simulation.Aivika.Stream
-import Simulation.Aivika.Processor
 
 import qualified Simulation.Aivika.DoubleLinkedList as DLL 
 import qualified Simulation.Aivika.Vector as V

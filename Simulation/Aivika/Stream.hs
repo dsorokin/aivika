@@ -49,6 +49,9 @@ module Simulation.Aivika.Stream
         apStreamParallel,
         filterStream,
         filterStreamM,
+        -- * Integrating with Queues and Signals
+        dequeueingStream,
+        signalStream,
         -- * Utilities
         leftStream,
         rightStream,
@@ -64,10 +67,15 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Simulation
+import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Event
 import Simulation.Aivika.Cont
 import Simulation.Aivika.Process
+import Simulation.Aivika.Signal
 import Simulation.Aivika.Resource
 import Simulation.Aivika.QueueStrategy
+import Simulation.Aivika.Queue.Infinite
+import Simulation.Aivika.Internal.Arrival
 
 -- | Represents an infinite stream of data in time,
 -- some kind of the cons cell.
@@ -480,3 +488,30 @@ prefetchStream s = Cons z where
                   return a
          spawnProcess CancelTogether $ writer s
          runStream $ repeatProcess reader
+
+-- | Create a stream that dequeues data from the infinite queue.
+dequeueingStream :: (DequeueStrategy sm qm,
+                     EnqueueStrategy so qo)
+                    => Queue sm qm so qo a
+                    -> Stream (Arrival a)
+dequeueingStream q = Cons z where
+  z = do t <- liftDynamics time
+         let loop t0 =
+               do a <- dequeue q
+                  t <- liftDynamics time
+                  let x = Arrival { arrivalValue = a,
+                                    arrivalTime  = t,
+                                    arrivalDelay = t - t0 }
+                  return (x, Cons $ loop t)
+         loop t
+
+-- | Return a stream by the specified signal.
+signalStream :: Signal a -> Stream (Arrival a)
+signalStream s = Cons z where
+  z = do q <- liftSimulation newFCFSQueue
+         h <- liftEvent $
+              handleSignal s $
+              enqueue q
+         finallyProcess
+           (runStream $ dequeueingStream q)
+           (liftEvent h)
