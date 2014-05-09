@@ -49,9 +49,9 @@ module Simulation.Aivika.Stream
         apStreamParallel,
         filterStream,
         filterStreamM,
-        -- * Integrating with Queues and Signals
-        dequeueingStream,
+        -- * Integrating with Signals
         signalStream,
+        streamSignal,
         -- * Utilities
         leftStream,
         rightStream,
@@ -489,29 +489,39 @@ prefetchStream s = Cons z where
          spawnProcess CancelTogether $ writer s
          runStream $ repeatProcess reader
 
--- | Create a stream that dequeues data from the infinite queue.
-dequeueingStream :: (DequeueStrategy sm qm,
-                     EnqueueStrategy so qo)
-                    => Queue sm qm so qo a
-                    -> Stream (Arrival a)
-dequeueingStream q = Cons z where
-  z = do t <- liftDynamics time
-         let loop t0 =
-               do a <- dequeue q
-                  t <- liftDynamics time
-                  let x = Arrival { arrivalValue = a,
-                                    arrivalTime  = t,
-                                    arrivalDelay = t - t0 }
-                  return (x, Cons $ loop t)
-         loop t
-
--- | Return a stream by the specified signal.
+-- | Return a stream of values triggered by the specified signal.
+--
+-- Since the time at which the values of the stream are requested for may differ from
+-- the time at which the signal is triggered, the values in the stream are wrapped as
+-- arrivals to provide with the additional information about the time at which
+-- the corresponded values were triggered.
+--
+-- The point is that the 'Stream' is requested outside, while the 'Signal' is triggered
+-- inside.
 signalStream :: Signal a -> Stream (Arrival a)
 signalStream s = Cons z where
   z = do q <- liftSimulation newFCFSQueue
+         t <- liftDynamics time
+         r <- liftIO $ newIORef t
          h <- liftEvent $
-              handleSignal s $
-              enqueue q
+              handleSignal s $ \a ->
+              do t0 <- liftIO $ readIORef r
+                 t  <- liftDynamics time
+                 liftIO $ writeIORef r t
+                 let x = Arrival { arrivalValue = a,
+                                   arrivalTime  = t,
+                                   arrivalDelay = t - t0 }
+                 enqueue q x
          finallyProcess
-           (runStream $ dequeueingStream q)
+           (runStream $ repeatProcess $ dequeue q)
            (liftEvent h)
+
+-- | Return a computation of the signal that triggers values from the specified stream,
+-- each time the next value of the stream is requested outside and then received within
+-- the underlying 'Process' computation.
+streamSignal :: Stream a -> Process (Signal a)
+streamSignal z =
+  do s <- liftSimulation newSignalSource
+     spawnProcess CancelTogether $
+       consumeStream (liftEvent . triggerSignal s) z
+     return $ publishSignal s
