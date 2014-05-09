@@ -63,6 +63,7 @@ instance C.Category Processor where
 -- already depend on the Process monad,
 -- while the pure streams were considered in the
 -- mentioned article.
+  
 instance Arrow Processor where
 
   arr = Processor . mapStream
@@ -85,39 +86,6 @@ instance Arrow Processor where
     do (xs, ys) <- liftSimulation $ unzipStream xys
        runStream $ zipStreamSeq (f xs) (g ys)
 
--- N.B.
--- Very probably, Processor is not ArrowLoop,
--- which would be natural as Process is not MonadFix,
--- for the discontinuous process is not irreversible
--- and the time flows in one direction only.
---
--- -- The implementation is based on article
--- -- A New Notation for Arrows by Ross Paterson,
--- -- although my streams are different and they
--- -- already depend on the Process monad,
--- -- while the pure streams were considered in the
--- -- mentioned article.
--- instance ArrowLoop Processor where
--- 
---   loop (Processor f) =
---     Processor $ \xs ->
---     Cons $
---     do Cons zs <- liftSimulation $
---                   simulationLoop (\(xs, ys) ->
---                                    unzipStream $ f $ zipStreamSeq xs ys) xs
---        zs
--- 
--- simulationLoop :: ((b, d) -> Simulation (c, d)) -> b -> Simulation c
--- simulationLoop f b =
---   mdo (c, d) <- f (b, d)
---       return c
-
--- The implementation is based on article
--- A New Notation for Arrows by Ross Paterson,
--- although my streams are different and they
--- already depend on the Process monad,
--- while the pure streams were considered in the
--- mentioned article.
 instance ArrowChoice Processor where
 
   left (Processor f) =
@@ -143,20 +111,6 @@ instance ArrowPlus Processor where
     Cons $
     do [xs1, xs2] <- liftSimulation $ splitStream 2 xs
        runStream $ mergeStreams (f xs1) (g xs2)
-
--- These instances are meaningless:
--- 
--- instance SimulationLift (Processor a) where
---   liftSimulation = Processor . mapStreamM . const . liftSimulation
--- 
--- instance DynamicsLift (Processor a) where
---   liftDynamics = Processor . mapStreamM . const . liftDynamics
--- 
--- instance EventLift (Processor a) where
---   liftEvent = Processor . mapStreamM . const . liftEvent
--- 
--- instance ProcessLift (Processor a) where
---   liftProcess = Processor . mapStreamM . const    -- data first!
 
 -- | Create a simple processor by the specified handling function
 -- that runs the discontinuous process for each input value to get the output.
