@@ -17,7 +17,11 @@
 -- links with help of the proc-notation.
 --
 module Simulation.Aivika.Circuit
-       (-- * Circuit Type
+       (-- * Memoized Event
+        EventMemo,
+        runEventMemo,
+        newEventMemo,
+         -- * Circuit
         Circuit(..)) where
 
 import qualified Control.Category as C
@@ -27,13 +31,25 @@ import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
 
+-- | Represents an 'Event' computation memoized in the modeling time.
+newtype EventMemo a =
+  EventMemo { runEventMemo :: Event a
+              -- ^ Run the memoized 'Event' computation.
+            }
+
+-- | Create a new computation memoized in the modeling time.
+newEventMemo :: Event a -> Simulation (EventMemo a)
+newEventMemo m =
+  do x <- memoEventInTime m
+     return (EventMemo x)
+
 -- | Represents a circuit synchronized with the event queue.
 -- The circuit has an efficient implementtion of the 'Arrow'
 -- related type classes. Also it allows creating the recursive
 -- links with help of the proc-notation.
 --
 newtype Circuit a b =
-  Circuit { runCircuit :: Event a -> Simulation (Event b)
+  Circuit { runCircuit :: EventMemo a -> Simulation (EventMemo b)
             -- ^ Run the circuit.
           }
 
@@ -47,43 +63,55 @@ instance C.Category Circuit where
 instance Arrow Circuit where
 
   arr f =
-    Circuit $ \a ->
-    return (fmap f a)
+    Circuit $ \(EventMemo a) ->
+    return (EventMemo $ fmap f a)
 
   first (Circuit f) =
-    Circuit $ \bd ->
-    do memoizedBD <- memoEventInTime bd
-       c <- f $ Event $ \p ->
-         do (b', d') <- invokeEvent p memoizedBD
+    Circuit $ \(EventMemo bd) ->
+    do EventMemo c <-
+         f $
+         EventMemo $
+         Event $ \p ->
+         do (b', d') <- invokeEvent p bd
             return b'
        return $
+         EventMemo $
          Event $ \p ->
-         do (b', d') <- invokeEvent p memoizedBD
+         do (b', d') <- invokeEvent p bd
             c' <- invokeEvent p c
             return (c', d')
 
   second (Circuit f) =
-    Circuit $ \db ->
-    do memoizedDB <- memoEventInTime db
-       c <- f $ Event $ \p ->
-         do (d', b') <- invokeEvent p memoizedDB
+    Circuit $ \(EventMemo db) ->
+    do EventMemo c <-
+         f $
+         EventMemo $
+         Event $ \p ->
+         do (d', b') <- invokeEvent p db
             return b'
        return $
+         EventMemo $
          Event $ \p ->
-         do (d', b') <- invokeEvent p memoizedDB
+         do (d', b') <- invokeEvent p db
             c' <- invokeEvent p c
             return (d', c')
 
   Circuit f *** Circuit g =
-    Circuit $ \bb' ->
-    do memoizedBB' <- memoEventInTime bb'
-       c  <- f $ Event $ \p ->
-         do (b, b') <- invokeEvent p memoizedBB'
+    Circuit $ \(EventMemo bb') ->
+    do EventMemo c <-
+         f $
+         EventMemo $
+         Event $ \p ->
+         do (b, b') <- invokeEvent p bb'
             return b
-       c' <- g $ Event $ \p ->
-         do (b, b') <- invokeEvent p memoizedBB'
+       EventMemo c' <-
+         g $
+         EventMemo $
+         Event $ \p ->
+         do (b, b') <- invokeEvent p bb'
             return b'
        return $
+         EventMemo $
          Event $ \p ->
          do ca  <- invokeEvent p c
             ca' <- invokeEvent p c'
@@ -91,10 +119,10 @@ instance Arrow Circuit where
 
   Circuit f &&& Circuit g =
     Circuit $ \b ->
-    do memoizedB <- memoEventInTime b
-       c  <- f memoizedB
-       c' <- g memoizedB
+    do EventMemo c  <- f b
+       EventMemo c' <- g b
        return $
+         EventMemo $
          Event $ \p ->
          do ca  <- invokeEvent p c
             ca' <- invokeEvent p c'
@@ -103,33 +131,36 @@ instance Arrow Circuit where
 instance ArrowLoop Circuit where
 
   loop (Circuit f) =
-    Circuit $ \b ->
-    mdo memoizedB  <- memoEventInTime b
-        memoizedD  <- memoEventInTime d  -- pro forma
-        memoizedCD <- memoEventInTime cd
-        let bd = Event $ \p ->
-              do b' <- invokeEvent p memoizedB
-                 d' <- invokeEvent p memoizedD
+    Circuit $ \(EventMemo b) ->
+    mdo let bd =
+              EventMemo $
+              Event $ \p ->
+              do b' <- invokeEvent p b
+                 d' <- invokeEvent p d
                  return (b', d')
-            c  = Event $ \p ->
-              do ~(c', d') <- invokeEvent p memoizedCD
+            c = Event $ \p ->
+              do ~(c', d') <- invokeEvent p cd
                  return c'
-            d  = Event $ \p ->
-              do ~(c', d') <- invokeEvent p memoizedCD
+            d = Event $ \p ->
+              do ~(c', d') <- invokeEvent p cd
                  return d'
-        cd <- f bd
-        return c
+        EventMemo cd <- f bd
+        return $ EventMemo c
 
 instance ArrowChoice Circuit where
 
   left (Circuit f) =
-    Circuit $ \bd ->
-    do memoizedBD <- memoEventInTime bd
-       c <- f $ Event $ \p ->
-         do Left b <- invokeEvent p memoizedBD
+    Circuit $ \(EventMemo bd) ->
+    do EventMemo c <-
+         f $
+         EventMemo $
+         Event $ \p ->
+         do Left b <- invokeEvent p bd
             return b
-       return $ Event $ \p ->
-         do bd <- invokeEvent p memoizedBD
+       return $
+         EventMemo $
+         Event $ \p ->
+         do bd <- invokeEvent p bd
             case bd of
               Left b ->
                 do d <- invokeEvent p c
@@ -138,13 +169,17 @@ instance ArrowChoice Circuit where
                 return $ Right d
   
   right (Circuit f) =
-    Circuit $ \db ->
-    do memoizedDB <- memoEventInTime db
-       c <- f $ Event $ \p ->
-         do Right b <- invokeEvent p memoizedDB
+    Circuit $ \(EventMemo db) ->
+    do EventMemo c <-
+         f $
+         EventMemo $
+         Event $ \p ->
+         do Right b <- invokeEvent p db
             return b
-       return $ Event $ \p ->
-         do db <- invokeEvent p memoizedDB
+       return $
+         EventMemo $
+         Event $ \p ->
+         do db <- invokeEvent p db
             case db of
               Right b ->
                 do d <- invokeEvent p c
@@ -153,16 +188,23 @@ instance ArrowChoice Circuit where
                 return $ Left d
 
   (Circuit f) +++ (Circuit g) =
-    Circuit $ \bb' ->
-    do memoizedBB' <- memoEventInTime bb'
-       c  <- f $ Event $ \p ->
-         do Left b <- invokeEvent p memoizedBB'
+    Circuit $ \(EventMemo bb') ->
+    do EventMemo c <-
+         f $
+         EventMemo $
+         Event $ \p ->
+         do Left b <- invokeEvent p bb'
             return b
-       c' <- g $ Event $ \p ->
-         do Right b' <- invokeEvent p memoizedBB'
+       EventMemo c' <-
+         g $
+         EventMemo $
+         Event $ \p ->
+         do Right b' <- invokeEvent p bb'
             return b'
-       return $ Event $ \p ->
-         do bb' <- invokeEvent p memoizedBB'
+       return $
+         EventMemo $
+         Event $ \p ->
+         do bb' <- invokeEvent p bb'
             case bb' of
               Left b ->
                 do c <- invokeEvent p c
@@ -172,16 +214,23 @@ instance ArrowChoice Circuit where
                    return $ Right c'
 
   (Circuit f) ||| (Circuit g) =
-    Circuit $ \bc ->
-    do memoizedBC <- memoEventInTime bc
-       db <- f $ Event $ \p ->
-         do Left b <- invokeEvent p memoizedBC
+    Circuit $ \(EventMemo bc) ->
+    do EventMemo db <-
+         f $
+         EventMemo $
+         Event $ \p ->
+         do Left b <- invokeEvent p bc
             return b
-       dc <- g $ Event $ \p ->
-         do Right c <- invokeEvent p memoizedBC
+       EventMemo dc <-
+         g $
+         EventMemo $
+         Event $ \p ->
+         do Right c <- invokeEvent p bc
             return c
-       return $ Event $ \p ->
-         do bc <- invokeEvent p memoizedBC
+       return $
+         EventMemo $
+         Event $ \p ->
+         do bc <- invokeEvent p bc
             case bc of
               Left b  -> invokeEvent p db
               Right c -> invokeEvent p dc
