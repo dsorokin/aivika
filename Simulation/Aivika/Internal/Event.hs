@@ -40,7 +40,8 @@ module Simulation.Aivika.Internal.Event
         finallyEvent,
         throwEvent,
         -- * Memoization
-        memoEvent) where
+        memoEvent,
+        memoEventInTime) where
 
 import Data.IORef
 
@@ -360,6 +361,27 @@ memoEvent m =
             Nothing ->
               do v <- invokeEvent p m
                  writeIORef ref (Just v)
+                 return v
+
+-- | Memoize the 'Event' computation, always returning the same value
+-- in the same modeling time. After the time changes, the value is
+-- recalculated by demand.
+--
+-- It is possible to implement this function efficiently, for the 'Event'
+-- computation is always synchronized with the event queue which time
+-- flows in one direction only. This synchronization is a key difference
+-- between the 'Event' and 'Dynamics' computations.
+memoEventInTime :: Event a -> Simulation (Event a)
+memoEventInTime m =
+  do ref <- liftIO $ newIORef Nothing
+     return $ Event $ \p ->
+       do x <- readIORef ref
+          case x of
+            Just (t, v) | t == pointTime p ->
+              return v
+            _ ->
+              do v <- invokeEvent p m
+                 writeIORef ref (Just (pointTime p, v))
                  return v
 
 -- | Enqueue the event which must be actuated with the current modeling time but later.
