@@ -44,7 +44,7 @@ newtype Circuit a b =
             -- ^ Run the circuit.
           }
 
--- | Get the signal transform by the specified circuit.
+-- | Get a signal transform by the specified circuit.
 circuitSignaling :: Circuit a b -> Signal a -> Signal b
 circuitSignaling (Circuit cir) sa =
   Signal { handleSignal = \f ->
