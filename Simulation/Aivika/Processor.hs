@@ -32,7 +32,10 @@ module Simulation.Aivika.Processor
         processorQueuedParallel,
         processorPrioritisingOutputParallel,
         processorPrioritisingInputParallel,
-        processorPrioritisingInputOutputParallel) where
+        processorPrioritisingInputOutputParallel,
+        -- * Integrating with Signals
+        signalProcessor,
+        processorSignaling) where
 
 import qualified Control.Category as C
 import Control.Arrow
@@ -44,6 +47,8 @@ import Simulation.Aivika.Cont
 import Simulation.Aivika.Process
 import Simulation.Aivika.Stream
 import Simulation.Aivika.QueueStrategy
+import Simulation.Aivika.Signal
+import Simulation.Aivika.Internal.Arrival
 
 -- | Represents a processor of simulation data.
 newtype Processor a b =
@@ -390,3 +395,16 @@ queueProcessorLoopParallel enqueue dequeue =
 -- for modeling a sequence of separate and independent work places.
 prefetchProcessor :: Processor a a
 prefetchProcessor = Processor prefetchStream
+
+-- | Convert the specified signal transform to a processor.
+signalProcessor :: (Signal a -> Signal b) -> Processor a (Arrival b)
+signalProcessor f =
+  Processor $ \xs ->
+  Cons $
+  do sa <- streamSignal xs
+     runStream $ signalStream (f sa)
+
+-- | Convert the specified processor to a signal transform. 
+processorSignaling :: Processor (Arrival a) b -> Signal a -> Process (Signal b)
+processorSignaling (Processor f) sa =
+  streamSignal $ f (signalStream sa)
