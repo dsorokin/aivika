@@ -12,225 +12,152 @@
 -- CAUTION: EXPERIMENTAL AND NOT TESTED YET
 --
 -- It represents a circuit synchronized with the event queue.
--- The circuit has an efficient implementation of the 'Arrow'
--- related type classes. Also it allows creating the recursive
--- links with help of the proc-notation.
+-- Also it allows creating the recursive links with help of
+-- the proc-notation.
+--
+-- The implementation is based on the <http://en.wikibooks.org/wiki/Haskell/Arrow_tutorial Arrow Tutorial>
+-- which in its turn is a derivative of the <http://hackage.haskell.org/package/Yampa Yampa> package.
 --
 module Simulation.Aivika.Circuit
-       (-- * Memoized Event
-        EventMemo,
-        runEventMemo,
-        newEventMemo,
-         -- * Circuit
-        Circuit(..)) where
+       (-- * Circuit
+         Circuit(..),
+         circuitSignaling,
+         circuitProcessor) where
 
 import qualified Control.Category as C
 import Control.Arrow
+import Control.Monad.Fix
 
-import Simulation.Aivika.Internal.Simulation
-import Simulation.Aivika.Internal.Dynamics
+import Data.IORef
+
 import Simulation.Aivika.Internal.Event
-
--- | Represents an 'Event' computation memoized in the modeling time.
-newtype EventMemo a =
-  EventMemo { runEventMemo :: Event a
-              -- ^ Run the memoized 'Event' computation.
-            }
-
--- | Create a new computation memoized in the modeling time.
-newEventMemo :: Event a -> Simulation (EventMemo a)
-newEventMemo m =
-  do x <- memoEventInTime m
-     return (EventMemo x)
+import Simulation.Aivika.Signal
+import Simulation.Aivika.Stream
+import Simulation.Aivika.Processor
 
 -- | Represents a circuit synchronized with the event queue.
--- The circuit has an efficient implementtion of the 'Arrow'
--- related type classes. Also it allows creating the recursive
--- links with help of the proc-notation.
+-- Besides, it allows creating the recursive links with help of
+-- the proc-notation.
 --
 newtype Circuit a b =
-  Circuit { runCircuit :: EventMemo a -> Simulation (EventMemo b)
+  Circuit { runCircuit :: a -> Event (Circuit a b, b)
             -- ^ Run the circuit.
           }
 
+-- | Get the signal transform by the specified circuit.
+circuitSignaling :: Circuit a b -> Signal a -> Signal b
+circuitSignaling (Circuit cir) sa =
+  Signal { handleSignal = \f ->
+            Event $ \p ->
+            do r <- newIORef cir
+               invokeEvent p $
+                 handleSignal sa $ \a ->
+                 Event $ \p ->
+                 do cir <- readIORef r
+                    (Circuit cir', b) <- invokeEvent p (cir a)
+                    writeIORef r cir'
+                    invokeEvent p (f b) }
+
+-- | Transform the circuit to a processor.
+circuitProcessor :: Circuit a b -> Processor a b
+circuitProcessor (Circuit cir) = Processor $ \sa ->
+  Cons $
+  do (a, xs) <- runStream sa
+     (cir', b) <- liftEvent (cir a)
+     let f = runProcessor (circuitProcessor cir')
+     return (b, f xs)
+
 instance C.Category Circuit where
 
-  id = Circuit return
+  id = Circuit $ \a -> return (C.id, a)
 
-  Circuit x . Circuit y =
-    Circuit $ \a -> y a >>= x
+  (.) = dot
+    where 
+      (Circuit g) `dot` (Circuit f) =
+        Circuit $ \a ->
+        Event $ \p ->
+        do (cir1, b) <- invokeEvent p (f a)
+           (cir2, c) <- invokeEvent p (g b)
+           return (cir2 `dot` cir1, c)
 
 instance Arrow Circuit where
 
-  arr f =
-    Circuit $ \(EventMemo a) ->
-    return (EventMemo $ fmap f a)
+  arr f = Circuit $ \a -> return (arr f, f a)
 
   first (Circuit f) =
-    Circuit $ \(EventMemo bd) ->
-    do EventMemo c <-
-         f $
-         EventMemo $
-         Event $ \p ->
-         do (b', d') <- invokeEvent p bd
-            return b'
-       return $
-         EventMemo $
-         Event $ \p ->
-         do (b', d') <- invokeEvent p bd
-            c' <- invokeEvent p c
-            return (c', d')
+    Circuit $ \(b, d) ->
+    Event $ \p ->
+    do (cir, c) <- invokeEvent p (f b)
+       return (first cir, (c, d))
 
   second (Circuit f) =
-    Circuit $ \(EventMemo db) ->
-    do EventMemo c <-
-         f $
-         EventMemo $
-         Event $ \p ->
-         do (d', b') <- invokeEvent p db
-            return b'
-       return $
-         EventMemo $
-         Event $ \p ->
-         do (d', b') <- invokeEvent p db
-            c' <- invokeEvent p c
-            return (d', c')
+    Circuit $ \(d, b) ->
+    Event $ \p ->
+    do (cir, c) <- invokeEvent p (f b)
+       return (second cir, (d, c))
 
-  Circuit f *** Circuit g =
-    Circuit $ \(EventMemo bb') ->
-    do EventMemo c <-
-         f $
-         EventMemo $
-         Event $ \p ->
-         do (b, b') <- invokeEvent p bb'
-            return b
-       EventMemo c' <-
-         g $
-         EventMemo $
-         Event $ \p ->
-         do (b, b') <- invokeEvent p bb'
-            return b'
-       return $
-         EventMemo $
-         Event $ \p ->
-         do ca  <- invokeEvent p c
-            ca' <- invokeEvent p c'
-            return (ca, ca')
-
-  Circuit f &&& Circuit g =
+  (Circuit f) *** (Circuit g) =
+    Circuit $ \(b, b') ->
+    Event $ \p ->
+    do (cir1, c) <- invokeEvent p (f b)
+       (cir2, c') <- invokeEvent p (g b')
+       return (cir1 *** cir2, (c, c'))
+       
+  (Circuit f) &&& (Circuit g) =
     Circuit $ \b ->
-    do EventMemo c  <- f b
-       EventMemo c' <- g b
-       return $
-         EventMemo $
-         Event $ \p ->
-         do ca  <- invokeEvent p c
-            ca' <- invokeEvent p c'
-            return (ca, ca')
+    Event $ \p ->
+    do (cir1, c) <- invokeEvent p (f b)
+       (cir2, c') <- invokeEvent p (g b)
+       return (cir1 &&& cir2, (c, c'))
 
 instance ArrowLoop Circuit where
 
   loop (Circuit f) =
-    Circuit $ \(EventMemo b) ->
-    mdo let bd =
-              EventMemo $
-              Event $ \p ->
-              do b' <- invokeEvent p b
-                 d' <- invokeEvent p d
-                 return (b', d')
-            c = Event $ \p ->
-              do ~(c', d') <- invokeEvent p cd
-                 return c'
-            d = Event $ \p ->
-              do ~(c', d') <- invokeEvent p cd
-                 return d'
-        EventMemo cd <- f bd
-        return $ EventMemo c
+    Circuit $ \b ->
+    Event $ \p ->
+    do rec (cir, (c, d)) <- invokeEvent p (f (b, d))
+       return (loop cir, c)
 
 instance ArrowChoice Circuit where
 
-  left (Circuit f) =
-    Circuit $ \(EventMemo bd) ->
-    do EventMemo c <-
-         f $
-         EventMemo $
-         Event $ \p ->
-         do Left b <- invokeEvent p bd
-            return b
-       return $
-         EventMemo $
-         Event $ \p ->
-         do bd <- invokeEvent p bd
-            case bd of
-              Left b ->
-                do d <- invokeEvent p c
-                   return $ Left d
-              Right d ->
-                return $ Right d
-  
-  right (Circuit f) =
-    Circuit $ \(EventMemo db) ->
-    do EventMemo c <-
-         f $
-         EventMemo $
-         Event $ \p ->
-         do Right b <- invokeEvent p db
-            return b
-       return $
-         EventMemo $
-         Event $ \p ->
-         do db <- invokeEvent p db
-            case db of
-              Right b ->
-                do d <- invokeEvent p c
-                   return $ Right d
-              Left d ->
-                return $ Left d
+  left x@(Circuit f) =
+    Circuit $ \ebd ->
+    Event $ \p ->
+    case ebd of
+      Left b ->
+        do (cir, c) <- invokeEvent p (f b)
+           return (left cir, Left c)
+      Right d ->
+        return (left x, Right d)
 
-  (Circuit f) +++ (Circuit g) =
-    Circuit $ \(EventMemo bb') ->
-    do EventMemo c <-
-         f $
-         EventMemo $
-         Event $ \p ->
-         do Left b <- invokeEvent p bb'
-            return b
-       EventMemo c' <-
-         g $
-         EventMemo $
-         Event $ \p ->
-         do Right b' <- invokeEvent p bb'
-            return b'
-       return $
-         EventMemo $
-         Event $ \p ->
-         do bb' <- invokeEvent p bb'
-            case bb' of
-              Left b ->
-                do c <- invokeEvent p c
-                   return $ Left c
-              Right b' ->
-                do c' <- invokeEvent p c'
-                   return $ Right c'
+  right x@(Circuit f) =
+    Circuit $ \edb ->
+    Event $ \p ->
+    case edb of
+      Right b ->
+        do (cir, c) <- invokeEvent p (f b)
+           return (right cir, Right c)
+      Left d ->
+        return (right x, Left d)
 
-  (Circuit f) ||| (Circuit g) =
-    Circuit $ \(EventMemo bc) ->
-    do EventMemo db <-
-         f $
-         EventMemo $
-         Event $ \p ->
-         do Left b <- invokeEvent p bc
-            return b
-       EventMemo dc <-
-         g $
-         EventMemo $
-         Event $ \p ->
-         do Right c <- invokeEvent p bc
-            return c
-       return $
-         EventMemo $
-         Event $ \p ->
-         do bc <- invokeEvent p bc
-            case bc of
-              Left b  -> invokeEvent p db
-              Right c -> invokeEvent p dc
+  x@(Circuit f) +++ y@(Circuit g) =
+    Circuit $ \ebb' ->
+    Event $ \p ->
+    case ebb' of
+      Left b ->
+        do (cir1, c) <- invokeEvent p (f b)
+           return (cir1 +++ y, Left c)
+      Right b' ->
+        do (cir2, c') <- invokeEvent p (g b')
+           return (x +++ cir2, Right c')
+
+  x@(Circuit f) ||| y@(Circuit g) =
+    Circuit $ \ebc ->
+    Event $ \p ->
+    case ebc of
+      Left b ->
+        do (cir1, d) <- invokeEvent p (f b)
+           return (cir1 ||| y, d)
+      Right b' ->
+        do (cir2, d) <- invokeEvent p (g b')
+           return (x ||| cir2, d)

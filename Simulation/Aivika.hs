@@ -14,6 +14,7 @@ module Simulation.Aivika
        (-- * Modules
         module Simulation.Aivika.Agent,
         module Simulation.Aivika.Arrival,
+        module Simulation.Aivika.Circuit,
         module Simulation.Aivika.Cont,
         module Simulation.Aivika.Dynamics,
         module Simulation.Aivika.Dynamics.Interpolate,
@@ -42,6 +43,7 @@ module Simulation.Aivika
 
 import Simulation.Aivika.Agent
 import Simulation.Aivika.Arrival
+import Simulation.Aivika.Circuit
 import Simulation.Aivika.Cont
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Interpolate
