@@ -15,12 +15,12 @@
 -- Also it allows creating the recursive links with help of
 -- the proc-notation.
 --
--- The implementation is based on the <http://en.wikibooks.org/wiki/Haskell/Arrow_tutorial Arrow Tutorial>
--- which in its turn is a derivative of the <http://hackage.haskell.org/package/Yampa Yampa> package.
+-- The implementation is based on the <http://en.wikibooks.org/wiki/Haskell/Arrow_tutorial Arrow Tutorial>.
 --
 module Simulation.Aivika.Circuit
        (-- * Circuit
          Circuit(..),
+         arrEvent,
          circuitSignaling,
          circuitProcessor) where
 
@@ -66,6 +66,16 @@ circuitProcessor (Circuit cir) = Processor $ \sa ->
      (cir', b) <- liftEvent (cir a)
      let f = runProcessor (circuitProcessor cir')
      return (b, f xs)
+
+-- | Lift the 'Event' function to a curcuit.
+arrEvent :: (a -> Event b) -> Circuit a b
+arrEvent f =
+  let x =
+        Circuit $ \a ->
+        Event $ \p ->
+        do b <- invokeEvent p (f a)
+           return (x, b)
+  in x
 
 instance C.Category Circuit where
 
