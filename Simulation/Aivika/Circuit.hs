@@ -20,7 +20,7 @@
 module Simulation.Aivika.Circuit
        (-- * Circuit
          Circuit(..),
-         arrEvent,
+         eventCircuit,
          circuitSignaling,
          circuitProcessor) where
 
@@ -68,8 +68,8 @@ circuitProcessor (Circuit cir) = Processor $ \sa ->
      return (b, f xs)
 
 -- | Lift the 'Event' function to a curcuit.
-arrEvent :: (a -> Event b) -> Circuit a b
-arrEvent f =
+eventCircuit :: (a -> Event b) -> Circuit a b
+eventCircuit f =
   let x =
         Circuit $ \a ->
         Event $ \p ->
