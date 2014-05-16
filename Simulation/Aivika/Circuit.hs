@@ -18,11 +18,14 @@
 -- The implementation is based on the <http://en.wikibooks.org/wiki/Haskell/Arrow_tutorial Arrow Tutorial>.
 --
 module Simulation.Aivika.Circuit
-       (-- * Circuit
-         Circuit(..),
-         eventCircuit,
-         circuitSignaling,
-         circuitProcessor) where
+       (-- * Circuit Arrow
+        Circuit(..),
+        -- * Creating Simple Circuit
+        simpleCircuit,
+        simpleCircuitWithState,
+        -- * Converting to Signals and Processors
+        circuitSignaling,
+        circuitProcessor) where
 
 import qualified Control.Category as C
 import Control.Arrow
@@ -68,14 +71,22 @@ circuitProcessor (Circuit cir) = Processor $ \sa ->
      return (b, f xs)
 
 -- | Lift the 'Event' function to a curcuit.
-eventCircuit :: (a -> Event b) -> Circuit a b
-eventCircuit f =
+simpleCircuit :: (a -> Event b) -> Circuit a b
+simpleCircuit f =
   let x =
         Circuit $ \a ->
         Event $ \p ->
         do b <- invokeEvent p (f a)
            return (x, b)
   in x
+
+-- | Lift the stateful 'Event' transform to a circuit.
+simpleCircuitWithState :: s -> ((s, a) -> Event (s, b)) -> Circuit a b
+simpleCircuitWithState s f =
+  Circuit $ \a ->
+  Event $ \p ->
+  do (s', b) <- invokeEvent p (f (s, a))
+     return (simpleCircuitWithState s' f, b)
 
 instance C.Category Circuit where
 
