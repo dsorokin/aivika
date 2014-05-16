@@ -14,6 +14,7 @@ module Simulation.Aivika.Processor
         Processor(..),
         -- * Creating Simple Processor
         simpleProcessor,
+        simpleProcessorWithState,
         statefulProcessor,
         -- * Specifying Identifier
         processorUsingId,
@@ -124,13 +125,19 @@ simpleProcessor = Processor . mapStreamM
 
 -- | Like 'simpleProcessor' but allows creating a processor that has a state
 -- which is passed in to every new iteration.
-statefulProcessor :: s -> ((s, a) -> Process (s, b)) -> Processor a b
-statefulProcessor s f =
+simpleProcessorWithState :: s -> ((s, a) -> Process (s, b)) -> Processor a b
+simpleProcessorWithState s f =
   Processor $ \xs -> Cons $ loop s xs where
     loop s xs =
       do (a, xs') <- runStream xs
          (s', b) <- f (s, a)
          return (b, Cons $ loop s' xs')
+
+-- | Like 'simpleProcessor' but allows creating a processor that has a state
+-- which is passed in to every new iteration.
+statefulProcessor :: s -> ((s, a) -> Process (s, b)) -> Processor a b
+{-# DEPRECATED statefulProcessor "Use simpleProcessorWithState instead" #-}
+statefulProcessor = simpleProcessorWithState
 
 -- | Create a processor that will use the specified process identifier.
 -- It can be useful to refer to the underlying 'Process' computation which
