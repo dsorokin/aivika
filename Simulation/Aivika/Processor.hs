@@ -12,9 +12,10 @@
 module Simulation.Aivika.Processor
        (-- * Processor Type
         Processor(..),
-        -- * Creating Simple Processor
+        -- * Processor Primitives
+        arrProcessor,
+        accumProcessor,
         simpleProcessor,
-        simpleProcessorWithState,
         statefulProcessor,
         -- * Specifying Identifier
         processorUsingId,
@@ -120,24 +121,29 @@ instance ArrowPlus Processor where
 
 -- | Create a simple processor by the specified handling function
 -- that runs the discontinuous process for each input value to get the output.
+arrProcessor :: (a -> Process b) -> Processor a b
+arrProcessor = Processor . mapStreamM
+
+-- | Accumulator that outputs a value determined by the supplied function.
+accumProcessor :: (acc -> a -> Process (acc, b)) -> acc -> Processor a b
+accumProcessor f acc =
+  Processor $ \xs -> Cons $ loop xs acc where
+    loop xs acc =
+      do (a, xs') <- runStream xs
+         (acc', b) <- f acc a
+         return (b, Cons $ loop xs' acc') 
+
+-- | Create a simple processor by the specified handling function
+-- that runs the discontinuous process for each input value to get the output.
 simpleProcessor :: (a -> Process b) -> Processor a b
+{-# DEPRECATED simpleProcessor "Use arrProcessor instead" #-}
 simpleProcessor = Processor . mapStreamM
 
 -- | Like 'simpleProcessor' but allows creating a processor that has a state
 -- which is passed in to every new iteration.
-simpleProcessorWithState :: s -> ((s, a) -> Process (s, b)) -> Processor a b
-simpleProcessorWithState s f =
-  Processor $ \xs -> Cons $ loop s xs where
-    loop s xs =
-      do (a, xs') <- runStream xs
-         (s', b) <- f (s, a)
-         return (b, Cons $ loop s' xs')
-
--- | Like 'simpleProcessor' but allows creating a processor that has a state
--- which is passed in to every new iteration.
 statefulProcessor :: s -> ((s, a) -> Process (s, b)) -> Processor a b
-{-# DEPRECATED statefulProcessor "Use simpleProcessorWithState instead" #-}
-statefulProcessor = simpleProcessorWithState
+{-# DEPRECATED statefulProcessor "Use accumProcessor instead" #-}
+statefulProcessor s f = accumProcessor (\acc a -> f (s, a)) s
 
 -- | Create a processor that will use the specified process identifier.
 -- It can be useful to refer to the underlying 'Process' computation which

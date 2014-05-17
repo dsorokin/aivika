@@ -20,9 +20,9 @@
 module Simulation.Aivika.Circuit
        (-- * Circuit Arrow
         Circuit(..),
-        -- * Creating Simple Circuit
-        simpleCircuit,
-        simpleCircuitWithState,
+        -- * Circuit Primitives
+        arrCircuit,
+        accumCircuit,
         -- * Converting to Signals and Processors
         circuitSignaling,
         circuitProcessor) where
@@ -71,8 +71,8 @@ circuitProcessor (Circuit cir) = Processor $ \sa ->
      return (b, f xs)
 
 -- | Lift the 'Event' function to a curcuit.
-simpleCircuit :: (a -> Event b) -> Circuit a b
-simpleCircuit f =
+arrCircuit :: (a -> Event b) -> Circuit a b
+arrCircuit f =
   let x =
         Circuit $ \a ->
         Event $ \p ->
@@ -80,13 +80,13 @@ simpleCircuit f =
            return (x, b)
   in x
 
--- | Lift the stateful 'Event' transform to a circuit.
-simpleCircuitWithState :: s -> ((s, a) -> Event (s, b)) -> Circuit a b
-simpleCircuitWithState s f =
+-- | Accumulator that outputs a value determined by the supplied function.
+accumCircuit :: (acc -> a -> Event (acc, b)) -> acc -> Circuit a b
+accumCircuit f acc =
   Circuit $ \a ->
   Event $ \p ->
-  do (s', b) <- invokeEvent p (f (s, a))
-     return (simpleCircuitWithState s' f, b)
+  do (acc', b) <- invokeEvent p (f acc a)
+     return (accumCircuit f acc', b) 
 
 instance C.Category Circuit where
 
