@@ -50,6 +50,7 @@ module Simulation.Aivika.Internal.Process
         cancelProcessWithId,
         cancelProcess,
         processCancelled,
+        processCancelling,
         -- * Awaiting Signal
         processAwait,
         -- * Yield of Process
@@ -298,6 +299,11 @@ cancelProcess =
 -- | Test whether the process with the specified identifier was cancelled.
 processCancelled :: ProcessId -> Event Bool
 processCancelled pid = contCancellationInitiated (processCancelSource pid)
+
+-- | Return a signal that notifies about cancelling the process with 
+-- the specified identifier.
+processCancelling :: ProcessId -> Signal ()
+processCancelling pid = contCancellationInitiating (processCancelSource pid)
 
 instance Eq ProcessId where
   x == y = processReactCont x == processReactCont y    -- for the references are unique
