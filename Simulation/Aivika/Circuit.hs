@@ -9,8 +9,6 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- CAUTION: EXPERIMENTAL AND NOT TESTED YET
---
 -- It represents a circuit synchronized with the event queue.
 -- Also it allows creating the recursive links with help of
 -- the proc-notation.
