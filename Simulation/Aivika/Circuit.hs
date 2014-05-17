@@ -23,6 +23,8 @@ module Simulation.Aivika.Circuit
         -- * Circuit Primitives
         arrCircuit,
         accumCircuit,
+        -- * Arrival Circuit
+        arrivalCircuit,
         -- * Converting to Signals and Processors
         circuitSignaling,
         circuitProcessor) where
@@ -33,6 +35,8 @@ import Control.Monad.Fix
 
 import Data.IORef
 
+import Simulation.Aivika.Internal.Arrival
+import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Signal
 import Simulation.Aivika.Stream
@@ -87,6 +91,23 @@ accumCircuit f acc =
   Event $ \p ->
   do (acc', b) <- invokeEvent p (f acc a)
      return (accumCircuit f acc', b) 
+
+-- | A circuit that adds the information about the time points at which 
+-- the values were received.
+arrivalCircuit :: Circuit a (Arrival a)
+arrivalCircuit =
+  let loop t0 =
+        Circuit $ \a ->
+        Event $ \p ->
+        let t = pointTime p
+            b = Arrival { arrivalValue = a,
+                          arrivalTime  = t,
+                          arrivalDelay = 
+                            case t0 of
+                              Nothing -> 0
+                              Just t0 -> t - t0 }
+        in return (loop $ Just t, b)
+  in loop Nothing
 
 instance C.Category Circuit where
 
