@@ -28,6 +28,8 @@ module Simulation.Aivika.Stream
         streamUsingId,
         -- * Prefetching Stream
         prefetchStream,
+        -- * Stream Arriving
+        arrivalStream,
         -- * Memoizing, Zipping and Uzipping Stream
         memoStream,
         zipStreamSeq,
@@ -525,3 +527,17 @@ streamSignal z =
      spawnProcess CancelTogether $
        consumeStream (liftEvent . triggerSignal s) z
      return $ publishSignal s
+
+-- | Transform a stream so that the resulting stream returns a sequence of arrivals
+-- saving the information about the time points at which the original stream items 
+-- were received by demand.
+arrivalStream :: Stream a -> Stream (Arrival a)
+arrivalStream s = Cons z where
+  z = do t <- liftDynamics time
+         loop s t
+  loop s t0 = do (a, xs) <- runStream s
+                 t <- liftDynamics time
+                 let b = Arrival { arrivalValue = a,
+                                   arrivalTime  = t,
+                                   arrivalDelay = t - t0 }
+                 return (b, Cons $ loop xs t)
