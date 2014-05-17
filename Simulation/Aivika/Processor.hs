@@ -35,6 +35,8 @@ module Simulation.Aivika.Processor
         processorPrioritisingOutputParallel,
         processorPrioritisingInputParallel,
         processorPrioritisingInputOutputParallel,
+        -- * Arrival Processor
+        arrivalProcessor,
         -- * Integrating with Signals
         signalProcessor,
         processorSignaling) where
@@ -421,3 +423,8 @@ signalProcessor f =
 processorSignaling :: Processor (Arrival a) b -> Signal a -> Process (Signal b)
 processorSignaling (Processor f) sa =
   streamSignal $ f (signalStream sa)
+
+-- | A processor that adds the information about the time points at which 
+-- the original stream items were received by demand.
+arrivalProcessor :: Processor a (Arrival a)
+arrivalProcessor = Processor arrivalStream
