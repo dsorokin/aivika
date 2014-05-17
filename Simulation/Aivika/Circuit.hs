@@ -25,6 +25,8 @@ module Simulation.Aivika.Circuit
         arrivalCircuit,
         -- * Delaying Circuit
         delayCircuit,
+        -- * Time Circuit
+        timeCircuit,
         -- * Converting to Signals and Processors
         circuitSignaling,
         circuitProcessor) where
@@ -209,3 +211,10 @@ delayCircuit :: a -> Circuit a a
 delayCircuit a0 =
   Circuit $ \a ->
   return (delayCircuit a, a0)
+
+-- | A circuit that returns the current modeling time.
+timeCircuit :: Circuit a Double
+timeCircuit =
+  Circuit $ \a ->
+  Event $ \p ->
+  return (timeCircuit, pointTime p)
