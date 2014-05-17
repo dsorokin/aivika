@@ -506,14 +506,14 @@ prefetchStream s = Cons z where
 -- the stream and it is returned within the computation.
 --
 -- Cancel the stream's process to unsubscribe from the specified signal.
-signalStream :: Signal a -> Stream a
-signalStream s = Cons z where
-  z = do q <- liftSimulation newFCFSQueue
-         h <- liftEvent $
-              handleSignal s $ 
-              enqueue q
-         whenCancellingProcess h
-         runStream $ repeatProcess $ dequeue q
+signalStream :: Signal a -> Process (Stream a)
+signalStream s =
+  do q <- liftSimulation newFCFSQueue
+     h <- liftEvent $
+          handleSignal s $ 
+          enqueue q
+     whenCancellingProcess h
+     return $ repeatProcess $ dequeue q
 
 -- | Return a computation of the signal that triggers values from the specified stream,
 -- each time the next value of the stream is received within the underlying 'Process' 

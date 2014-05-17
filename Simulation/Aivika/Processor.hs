@@ -427,7 +427,8 @@ signalProcessor f =
   Processor $ \xs ->
   Cons $
   do sa <- streamSignal xs
-     runStream $ signalStream (f sa)
+     sb <- signalStream (f sa)
+     runStream sb
 
 -- | Convert the specified processor to a signal transform. 
 --
@@ -442,7 +443,9 @@ signalProcessor f =
 -- Cancel the returned process to unsubscribe from the signal specified.
 processorSignaling :: Processor a b -> Signal a -> Process (Signal b)
 processorSignaling (Processor f) sa =
-  streamSignal $ f (signalStream sa)
+  do xs <- signalStream sa
+     let ys = f xs
+     streamSignal ys
 
 -- | A processor that adds the information about the time points at which 
 -- the original stream items were received by demand.
