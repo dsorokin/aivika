@@ -25,6 +25,8 @@ module Simulation.Aivika.Circuit
         accumCircuit,
         -- * Arrival Circuit
         arrivalCircuit,
+        -- * Delaying Circuit
+        delayCircuit,
         -- * Converting to Signals and Processors
         circuitSignaling,
         circuitProcessor) where
@@ -203,3 +205,9 @@ arrivalCircuit =
                               Just t0 -> t - t0 }
         in return (loop $ Just t, b)
   in loop Nothing
+
+-- | Delay the input by one step using the specified initial value.
+delayCircuit :: a -> Circuit a a
+delayCircuit a0 =
+  Circuit $ \a ->
+  return (delayCircuit a, a0)
