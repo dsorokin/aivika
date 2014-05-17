@@ -51,64 +51,6 @@ newtype Circuit a b =
             -- ^ Run the circuit.
           }
 
--- | Get a signal transform by the specified circuit.
-circuitSignaling :: Circuit a b -> Signal a -> Signal b
-circuitSignaling (Circuit cir) sa =
-  Signal { handleSignal = \f ->
-            Event $ \p ->
-            do r <- newIORef cir
-               invokeEvent p $
-                 handleSignal sa $ \a ->
-                 Event $ \p ->
-                 do cir <- readIORef r
-                    (Circuit cir', b) <- invokeEvent p (cir a)
-                    writeIORef r cir'
-                    invokeEvent p (f b) }
-
--- | Transform the circuit to a processor.
-circuitProcessor :: Circuit a b -> Processor a b
-circuitProcessor (Circuit cir) = Processor $ \sa ->
-  Cons $
-  do (a, xs) <- runStream sa
-     (cir', b) <- liftEvent (cir a)
-     let f = runProcessor (circuitProcessor cir')
-     return (b, f xs)
-
--- | Lift the 'Event' function to a curcuit.
-arrCircuit :: (a -> Event b) -> Circuit a b
-arrCircuit f =
-  let x =
-        Circuit $ \a ->
-        Event $ \p ->
-        do b <- invokeEvent p (f a)
-           return (x, b)
-  in x
-
--- | Accumulator that outputs a value determined by the supplied function.
-accumCircuit :: (acc -> a -> Event (acc, b)) -> acc -> Circuit a b
-accumCircuit f acc =
-  Circuit $ \a ->
-  Event $ \p ->
-  do (acc', b) <- invokeEvent p (f acc a)
-     return (accumCircuit f acc', b) 
-
--- | A circuit that adds the information about the time points at which 
--- the values were received.
-arrivalCircuit :: Circuit a (Arrival a)
-arrivalCircuit =
-  let loop t0 =
-        Circuit $ \a ->
-        Event $ \p ->
-        let t = pointTime p
-            b = Arrival { arrivalValue = a,
-                          arrivalTime  = t,
-                          arrivalDelay = 
-                            case t0 of
-                              Nothing -> 0
-                              Just t0 -> t - t0 }
-        in return (loop $ Just t, b)
-  in loop Nothing
-
 instance C.Category Circuit where
 
   id = Circuit $ \a -> return (C.id, a)
@@ -203,3 +145,61 @@ instance ArrowChoice Circuit where
       Right b' ->
         do (cir2, d) <- invokeEvent p (g b')
            return (x ||| cir2, d)
+
+-- | Get a signal transform by the specified circuit.
+circuitSignaling :: Circuit a b -> Signal a -> Signal b
+circuitSignaling (Circuit cir) sa =
+  Signal { handleSignal = \f ->
+            Event $ \p ->
+            do r <- newIORef cir
+               invokeEvent p $
+                 handleSignal sa $ \a ->
+                 Event $ \p ->
+                 do cir <- readIORef r
+                    (Circuit cir', b) <- invokeEvent p (cir a)
+                    writeIORef r cir'
+                    invokeEvent p (f b) }
+
+-- | Transform the circuit to a processor.
+circuitProcessor :: Circuit a b -> Processor a b
+circuitProcessor (Circuit cir) = Processor $ \sa ->
+  Cons $
+  do (a, xs) <- runStream sa
+     (cir', b) <- liftEvent (cir a)
+     let f = runProcessor (circuitProcessor cir')
+     return (b, f xs)
+
+-- | Lift the 'Event' function to a curcuit.
+arrCircuit :: (a -> Event b) -> Circuit a b
+arrCircuit f =
+  let x =
+        Circuit $ \a ->
+        Event $ \p ->
+        do b <- invokeEvent p (f a)
+           return (x, b)
+  in x
+
+-- | Accumulator that outputs a value determined by the supplied function.
+accumCircuit :: (acc -> a -> Event (acc, b)) -> acc -> Circuit a b
+accumCircuit f acc =
+  Circuit $ \a ->
+  Event $ \p ->
+  do (acc', b) <- invokeEvent p (f acc a)
+     return (accumCircuit f acc', b) 
+
+-- | A circuit that adds the information about the time points at which 
+-- the values were received.
+arrivalCircuit :: Circuit a (Arrival a)
+arrivalCircuit =
+  let loop t0 =
+        Circuit $ \a ->
+        Event $ \p ->
+        let t = pointTime p
+            b = Arrival { arrivalValue = a,
+                          arrivalTime  = t,
+                          arrivalDelay = 
+                            case t0 of
+                              Nothing -> 0
+                              Just t0 -> t - t0 }
+        in return (loop $ Just t, b)
+  in loop Nothing
