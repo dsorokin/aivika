@@ -51,6 +51,7 @@ module Simulation.Aivika.Internal.Process
         cancelProcess,
         processCancelled,
         processCancelling,
+        whenCancellingProcess,
         -- * Awaiting Signal
         processAwait,
         -- * Yield of Process
@@ -304,6 +305,13 @@ processCancelled pid = contCancellationInitiated (processCancelSource pid)
 -- the specified identifier.
 processCancelling :: ProcessId -> Signal ()
 processCancelling pid = contCancellationInitiating (processCancelSource pid)
+
+-- | Register a handler that will be invoked in case of cancelling the current process.
+whenCancellingProcess :: Event () -> Process ()
+whenCancellingProcess h =
+  Process $ \pid ->
+  liftEvent $
+  handleSignal_ (processCancelling pid) $ \() -> h
 
 instance Eq ProcessId where
   x == y = processReactCont x == processReactCont y    -- for the references are unique

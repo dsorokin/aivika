@@ -53,6 +53,7 @@ module Simulation.Aivika.Process
         cancelProcess,
         processCancelled,
         processCancelling,
+        whenCancellingProcess,
         -- * Awaiting Signal
         processAwait,
         -- * Yield of Process
