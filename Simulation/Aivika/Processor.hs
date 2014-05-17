@@ -412,7 +412,17 @@ prefetchProcessor :: Processor a a
 prefetchProcessor = Processor prefetchStream
 
 -- | Convert the specified signal transform to a processor.
-signalProcessor :: (Signal a -> Signal b) -> Processor a (Arrival b)
+--
+-- The processor may return data with delay as the values are requested by demand.
+-- Consider using the 'arrivalSignal' function to provide with the information
+-- about the time points at which the signal was actually triggered.
+--
+-- The point is that the 'Stream' used in the 'Processor' is requested outside, 
+-- while the 'Signal' is triggered inside. They are different by nature. 
+-- The former is passive, while the latter is active.
+--
+-- Cancel the processor's process to unsubscribe from the signals provided.
+signalProcessor :: (Signal a -> Signal b) -> Processor a b
 signalProcessor f =
   Processor $ \xs ->
   Cons $
@@ -420,7 +430,17 @@ signalProcessor f =
      runStream $ signalStream (f sa)
 
 -- | Convert the specified processor to a signal transform. 
-processorSignaling :: Processor (Arrival a) b -> Signal a -> Process (Signal b)
+--
+-- The processor may return data with delay as the values are requested by demand.
+-- Consider using the 'arrivalSignal' function to provide with the information
+-- about the time points at which the signal was actually triggered.
+--
+-- The point is that the 'Stream' used in the 'Processor' is requested outside, 
+-- while the 'Signal' is triggered inside. They are different by nature.
+-- The former is passive, while the latter is active.
+--
+-- Cancel the returned process to unsubscribe from the signal specified.
+processorSignaling :: Processor a b -> Signal a -> Process (Signal b)
 processorSignaling (Processor f) sa =
   streamSignal $ f (signalStream sa)
 

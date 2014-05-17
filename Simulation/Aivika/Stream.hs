@@ -494,33 +494,32 @@ prefetchStream s = Cons z where
 -- | Return a stream of values triggered by the specified signal.
 --
 -- Since the time at which the values of the stream are requested for may differ from
--- the time at which the signal is triggered, the values in the stream are wrapped as
--- arrivals to provide with the additional information about the time at which
--- the corresponded values were triggered.
+-- the time at which the signal is triggered, it can be useful to apply the 'arrivalSignal'
+-- function to add the information about the time points at which the signal was 
+-- actually received.
 --
 -- The point is that the 'Stream' is requested outside, while the 'Signal' is triggered
--- inside.
-signalStream :: Signal a -> Stream (Arrival a)
+-- inside. They are different by nature. The former is passive, while the latter is active.
+--
+-- The resulting stream may be a root of space leak as it uses an internal queue to store
+-- the values received from the signal. The oldest value is dequeued each time we request
+-- the stream and it is returned within the computation.
+--
+-- Cancel the stream's process to unsubscribe from the specified signal.
+signalStream :: Signal a -> Stream a
 signalStream s = Cons z where
   z = do q <- liftSimulation newFCFSQueue
-         t <- liftDynamics time
-         r <- liftIO $ newIORef t
          h <- liftEvent $
-              handleSignal s $ \a ->
-              do t0 <- liftIO $ readIORef r
-                 t  <- liftDynamics time
-                 liftIO $ writeIORef r t
-                 let x = Arrival { arrivalValue = a,
-                                   arrivalTime  = t,
-                                   arrivalDelay = t - t0 }
-                 enqueue q x
-         finallyProcess
-           (runStream $ repeatProcess $ dequeue q)
-           (liftEvent h)
+              handleSignal s $ 
+              enqueue q
+         whenCancellingProcess h
+         runStream $ repeatProcess $ dequeue q
 
 -- | Return a computation of the signal that triggers values from the specified stream,
--- each time the next value of the stream is requested outside and then received within
--- the underlying 'Process' computation.
+-- each time the next value of the stream is received within the underlying 'Process' 
+-- computation.
+--
+-- Cancel the returned process to stop reading from the specified stream. 
 streamSignal :: Stream a -> Process (Signal a)
 streamSignal z =
   do s <- liftSimulation newSignalSource
