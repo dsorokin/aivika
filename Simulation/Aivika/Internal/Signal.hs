@@ -32,6 +32,8 @@ module Simulation.Aivika.Internal.Signal
         merge3Signals,
         merge4Signals,
         merge5Signals,
+        -- * Signal Arriving
+        arrivalSignal,
         -- * Creating Signal in Time Points
         newSignalInTimes,
         newSignalInIntegTimes,
@@ -61,6 +63,7 @@ import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Parameter
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Event
+import Simulation.Aivika.Internal.Arrival
 
 import qualified Simulation.Aivika.Vector as V
 import qualified Simulation.Aivika.Vector.Unboxed as UV
@@ -352,3 +355,22 @@ appendSignalable :: Monoid a => Signalable a -> Signalable a -> Signalable a
 appendSignalable m1 m2 =
   Signalable { readSignalable = liftM2 (<>) (readSignalable m1) (readSignalable m2),
                signalableChanged_ = (signalableChanged_ m1) <> (signalableChanged_ m2) }
+
+-- | Transform a signal so that the resulting signal returns a sequence of arrivals
+-- saving the information about the time points at which the original signal was received.
+arrivalSignal :: Signal a -> Signal (Arrival a)
+arrivalSignal m = 
+  Signal { handleSignal = \h ->
+             Event $ \p ->
+             do r <- newIORef (pointTime p)
+                invokeEvent p $
+                  handleSignal m $ \a ->
+                  Event $ \p ->
+                  do t0 <- readIORef r
+                     let t = pointTime p
+                     writeIORef r t
+                     invokeEvent p $
+                       h Arrival { arrivalValue = a,
+                                   arrivalTime  = t,
+                                   arrivalDelay = t - t0 } 
+         }

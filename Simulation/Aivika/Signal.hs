@@ -31,6 +31,8 @@ module Simulation.Aivika.Signal
         merge3Signals,
         merge4Signals,
         merge5Signals,
+        -- * Signal Arriving
+        arrivalSignal,
         -- * Creating Signal in Time Points
         newSignalInTimes,
         newSignalInIntegTimes,
