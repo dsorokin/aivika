@@ -39,6 +39,7 @@ module Simulation.Aivika
         module Simulation.Aivika.Stream,
         module Simulation.Aivika.Stream.Random,
         module Simulation.Aivika.Task,
+        module Simulation.Aivika.Transform,
         module Simulation.Aivika.Var.Unboxed) where
 
 import Simulation.Aivika.Agent
@@ -68,4 +69,5 @@ import Simulation.Aivika.Statistics.Accumulator
 import Simulation.Aivika.Stream
 import Simulation.Aivika.Stream.Random
 import Simulation.Aivika.Task
+import Simulation.Aivika.Transform
 import Simulation.Aivika.Var.Unboxed
