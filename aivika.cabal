@@ -185,6 +185,7 @@ library
     extensions:      FlexibleContexts,
                      BangPatterns,
                      RecursiveDo,
+                     Arrows,
                      MultiParamTypeClasses,
                      FunctionalDependencies
                      
