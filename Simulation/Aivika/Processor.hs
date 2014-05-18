@@ -13,6 +13,7 @@ module Simulation.Aivika.Processor
        (-- * Processor Type
         Processor(..),
         -- * Processor Primitives
+        emptyProcessor,
         arrProcessor,
         accumProcessor,
         simpleProcessor,
@@ -29,6 +30,8 @@ module Simulation.Aivika.Processor
         queueProcessorLoopMerging,
         queueProcessorLoopSeq,
         queueProcessorLoopParallel,
+        -- * Sequencing Processors
+        processorSeq,
         -- * Parallelizing Processors
         processorParallel,
         processorQueuedParallel,
@@ -120,6 +123,10 @@ instance ArrowPlus Processor where
     Cons $
     do [xs1, xs2] <- liftSimulation $ splitStream 2 xs
        runStream $ mergeStreams (f xs1) (g xs2)
+
+-- | A processor that never finishes its work producing an 'emptyStream'.
+emptyProcessor :: Processor a b
+emptyProcessor = Processor $ \xs -> emptyStream
 
 -- | Create a simple processor by the specified handling function
 -- that runs the discontinuous process for each input value to get the output.
@@ -250,6 +257,13 @@ processorPrioritisingInputOutputParallel si so ps =
 -- and output, which suits the most part of uses cases.
 processorParallel :: [Processor a b] -> Processor a b
 processorParallel = processorQueuedParallel FCFS FCFS
+
+-- | Launches the processors sequentially using the 'prefetchProcessor' between them
+-- to model an autonomous work of each of the processors specified.
+processorSeq :: [Processor a a] -> Processor a a
+processorSeq []  = emptyProcessor
+processorSeq [p] = p
+processorSeq (p : ps) = p >>> prefetchProcessor >>> processorSeq ps
 
 -- | Create a buffer processor, where the process from the first argument
 -- consumes the input stream but the stream passed in as the second argument
