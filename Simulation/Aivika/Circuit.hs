@@ -1,5 +1,5 @@
 
-{-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE RecursiveDo, Arrows #-}
 
 -- |
 -- Module     : Simulation.Aivika.Circuit
@@ -27,6 +27,9 @@ module Simulation.Aivika.Circuit
         delayCircuit,
         -- * Time Circuit
         timeCircuit,
+        -- * Conditional Computation
+        (<?<),
+        (>?>),
         -- * Converting to Signals and Processors
         circuitSignaling,
         circuitProcessor) where
@@ -218,3 +221,28 @@ timeCircuit =
   Circuit $ \a ->
   Event $ \p ->
   return (timeCircuit, pointTime p)
+
+-- | Like '>>>' but processes only the represented events.
+(>?>) :: Circuit a (Maybe b)
+         -- ^ whether there is an event
+         -> Circuit b c
+         -- ^ process the event if it presents
+         -> Circuit a (Maybe c)
+         -- ^ the resulting circuit that processes only the represented events
+whether >?> process =
+  proc a -> do
+    b <- whether -< a
+    case b of
+      Nothing ->
+        returnA -< Nothing
+      Just b ->
+        arr Just <<< process -< b
+
+-- | Like '<<<' but processes only the represented events.
+(<?<) :: Circuit b c
+         -- ^ process the event if it presents
+         -> Circuit a (Maybe b)
+         -- ^ whether there is an event
+         -> Circuit a (Maybe c)
+         -- ^ the resulting circuit that processes only the represented events
+(<?<) = flip (>?>)
