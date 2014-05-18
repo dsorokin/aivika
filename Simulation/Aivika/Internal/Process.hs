@@ -74,8 +74,8 @@ module Simulation.Aivika.Internal.Process
         unzipProcess,
         -- * Memoizing Process
         memoProcess,
-        -- * Process Hole
-        processHole) where
+        -- * Never Ending Process
+        neverProcess) where
 
 import Data.Maybe
 import Data.IORef
@@ -612,12 +612,10 @@ processYield =
 -- the discontinuous process, although such a process can still be canceled outside
 -- (see 'cancelProcessWithId'), but then only its finalization parts (see 'finallyProcess')
 -- will be called, usually, to release the resources acquired before.
-processHole :: Process a
-processHole =
+neverProcess :: Process a
+neverProcess =
   Process $ \pid ->
   Cont $ \c ->
-  Event $ \p ->
-  do let signal = (contCancellationInitiating $ processCancelSource pid)
-     invokeEvent p $
-       handleSignal_ signal $ \_ ->
-       resumeCont c $ error "It must never be computed: processHole"
+  let signal = processCancelling pid
+  in handleSignal_ signal $ \_ ->
+     resumeCont c $ error "It must never be computed: neverProcess"

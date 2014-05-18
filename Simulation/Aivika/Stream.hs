@@ -443,7 +443,7 @@ mergePriorityStreams s x y = concatPriorityStreams s [x, y]
 
 -- | An empty stream that never returns data.
 emptyStream :: Stream a
-emptyStream = Cons processHole
+emptyStream = Cons neverProcess
 
 -- | Consume the stream. It returns a process that infinitely reads data
 -- from the stream and then redirects them to the provided function.

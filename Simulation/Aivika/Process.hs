@@ -76,7 +76,7 @@ module Simulation.Aivika.Process
         unzipProcess,
         -- * Memoizing Process
         memoProcess,
-        -- * Process Hole
-        processHole) where
+        -- * Never Ending Process
+        neverProcess) where
 
 import Simulation.Aivika.Internal.Process
