@@ -352,7 +352,13 @@ sumCircuit init = start
       do let v = v0 + a0
          return (next v a, v)
 
--- | Represent the circuit as a transform of time varying function.
+-- | Approximate the circuit as a transform of time varying function,
+-- calculating the values in the integration time points and then
+-- interpolating in all other time points. The resulting transform
+-- computation is synchronized with the event queue.         
+--
+-- This procedure consumes memory as the underlying memoization allocates
+-- an array to store the calculated values.
 circuitTransform :: Circuit a b -> Transform a b
 circuitTransform cir = Transform start
   where
