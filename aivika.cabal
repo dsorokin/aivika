@@ -187,3 +187,8 @@ library
                      FunctionalDependencies
                      
     ghc-options:     -O2
+
+source-repository head
+
+    type:     git
+    location: https://github.com/dsorokin/aivika
