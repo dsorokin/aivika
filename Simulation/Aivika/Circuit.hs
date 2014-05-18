@@ -38,7 +38,9 @@ module Simulation.Aivika.Circuit
         circuitProcessor,
         -- * Integrals and Difference Equations
         integCircuit,
-        sumCircuit) where
+        sumCircuit,
+        -- * Circuit Transform
+        circuitTransform) where
 
 import qualified Control.Category as C
 import Control.Arrow
@@ -51,6 +53,8 @@ import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
+import Simulation.Aivika.Dynamics.Memo
+import Simulation.Aivika.Transform
 import Simulation.Aivika.SystemDynamics
 import Simulation.Aivika.Signal
 import Simulation.Aivika.Stream
@@ -347,3 +351,22 @@ sumCircuit init = start
       Event $ \p ->
       do let v = v0 + a0
          return (next v a, v)
+
+-- | Represent the circuit as a transform of time varying function.
+circuitTransform :: Circuit a b -> Transform a b
+circuitTransform cir = Transform start
+  where
+    start m =
+      Simulation $ \r ->
+      do ref <- newIORef cir
+         invokeSimulation r $
+           memo0Dynamics (next ref m)
+    next ref m =
+      Dynamics $ \p ->
+      do a <- invokeDynamics p m
+         cir <- readIORef ref
+         (cir', b) <-
+           invokeDynamics p $
+           runEvent (runCircuit cir a)
+         writeIORef ref cir'
+         return b
