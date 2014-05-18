@@ -103,6 +103,7 @@ tested-with:     GHC == 7.6.3
 
 extra-source-files:  examples/BassDiffusion.hs
                      examples/ChemicalReaction.hs
+                     examples/ChemicalReactionCircuit.hs
                      examples/FishBank.hs
                      examples/MachRep1.hs
                      examples/MachRep1EventDriven.hs
