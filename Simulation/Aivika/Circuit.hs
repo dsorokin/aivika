@@ -32,6 +32,7 @@ module Simulation.Aivika.Circuit
         (>?>),
         filterCircuit,
         filterCircuitM,
+        neverCircuit,
         -- * Converting to Signals and Processors
         circuitSignaling,
         circuitProcessor) where
@@ -267,4 +268,8 @@ filterCircuitM pred cir =
        then do (cir', b) <- invokeEvent p (runCircuit cir a)
                return (filterCircuitM pred cir', Just b)
        else return (filterCircuitM pred cir, Nothing)
-       
+
+-- | The source of events that never occur.
+neverCircuit :: Circuit a (Maybe b)
+neverCircuit =
+  Circuit $ \a -> return (neverCircuit, Nothing)
