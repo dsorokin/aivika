@@ -12,6 +12,7 @@ module Simulation.Aivika.Server
        (-- * Server
         Server,
         newServer,
+        newStateServer,
         newServerWithState,
         -- * Processing
         serverProcessor,
@@ -80,7 +81,7 @@ data Server s a b =
            -- ^ The initial state of the server.
            serverStateRef :: IORef s,
            -- ^ The current state of the server.
-           serverProcess :: (s, a) -> Process (s, b),
+           serverProcess :: s -> a -> Process (s, b),
            -- ^ Provide @b@ by specified @a@.
            serverTotalInputWaitTimeRef :: IORef Double,
            -- ^ The counted total time spent in awating the input.
@@ -117,13 +118,13 @@ newServer provide =
 -- | Create a new server that can provide output @b@ by input @a@
 -- starting from state @s@. Also it returns the corresponded processor
 -- that being applied updates the server state.
-newServerWithState :: s
-                      -- ^ the initial state
-                      -> ((s, a) -> Process (s, b))
-                      -- ^ provide an output by the specified input
-                      -- and update the state 
-                      -> Simulation (Server s a b)
-newServerWithState state provide =
+newStateServer :: (s -> a -> Process (s, b))
+                  -- ^ provide a new state and output by the specified 
+                  -- old state and input
+                  -> s
+                  -- ^ the initial state
+                  -> Simulation (Server s a b)
+newStateServer provide state =
   do r0 <- liftIO $ newIORef state
      r1 <- liftIO $ newIORef 0
      r2 <- liftIO $ newIORef 0
@@ -147,6 +148,18 @@ newServerWithState state provide =
                            serverTaskProcessedSource = s2,
                            serverOutputProvidedSource = s3 }
      return server
+
+-- | Create a new server that can provide output @b@ by input @a@
+-- starting from state @s@. Also it returns the corresponded processor
+-- that being applied updates the server state.
+newServerWithState :: s
+                      -- ^ the initial state
+                      -> ((s, a) -> Process (s, b))
+                      -- ^ provide an output by the specified input
+                      -- and update the state 
+                      -> Simulation (Server s a b)
+{-# DEPRECATED newServerWithState "Use newStateServer instead" #-}
+newServerWithState state provide = newStateServer (\s a -> provide (s, a)) state
 
 -- | Return a processor for the specified server.
 --
@@ -195,7 +208,7 @@ serverProcessor server =
                      addSamplingStats (t1 - t0)
               triggerSignal (serverInputReceivedSource server) a
          -- provide the service
-         (s', b) <- serverProcess server (s, a)
+         (s', b) <- serverProcess server s a
          t2 <- liftDynamics time
          liftEvent $
            do liftIO $
