@@ -159,7 +159,7 @@ newServerWithState :: s
                       -- and update the state 
                       -> Simulation (Server s a b)
 {-# DEPRECATED newServerWithState "Use newStateServer instead" #-}
-newServerWithState state provide = newStateServer (\s a -> provide (s, a)) state
+newServerWithState state provide = newStateServer (curry provide) state
 
 -- | Return a processor for the specified server.
 --
@@ -217,7 +217,7 @@ serverProcessor server =
                    modifyIORef' (serverProcessingTimeRef server) $
                      addSamplingStats (t2 - t1)
               triggerSignal (serverTaskProcessedSource server) (a, b)
-         return (b, loop s' (Just $ (t2, a, b)) xs')
+         return (b, loop s' (Just (t2, a, b)) xs')
 
 -- | Return the current state of the server.
 --

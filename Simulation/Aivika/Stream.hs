@@ -160,7 +160,7 @@ unzipStream s =
 -- This is a generalization of 'zipStreamSeq'.
 streamSeq :: [Stream a] -> Stream [a]
 streamSeq xs = Cons y where
-  y = do ps <- forM xs $ runStream
+  y = do ps <- forM xs runStream
          return (map fst ps, streamSeq $ map snd ps)
 
 -- | To form each new portion of data for the output stream,
@@ -450,7 +450,7 @@ emptyStream = Cons neverProcess
 -- It is useful for modeling the process of enqueueing data in the queue
 -- from the input stream.
 consumeStream :: (a -> Process ()) -> Stream a -> Process ()
-consumeStream f s = p s where
+consumeStream f = p where
   p (Cons s) = do (a, xs) <- s
                   f a
                   p xs
@@ -460,7 +460,7 @@ consumeStream f s = p s where
 -- to simulate the whole system of the interconnected streams and
 -- processors.
 sinkStream :: Stream a -> Process ()
-sinkStream s = p s where
+sinkStream = p where
   p (Cons s) = do (a, xs) <- s
                   p xs
   

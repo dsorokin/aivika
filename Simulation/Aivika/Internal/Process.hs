@@ -200,7 +200,7 @@ processIdPrepare pid =
             "Another process with the specified identifier " ++
             "has been started already: processIdPrepare"
        else writeIORef (processStarted pid) True
-     let signal = (contCancellationInitiating $ processCancelSource pid)
+     let signal = processCancelling pid
      invokeEvent p $
        handleSignal_ signal $ \_ ->
        do interruptProcess pid
@@ -461,7 +461,7 @@ processUsingId pid x =
 -- should be cancelled in case of need.
 spawnProcess :: ContCancellation -> Process () -> Process ()
 spawnProcess cancellation x =
-  do pid <- liftSimulation $ newProcessId
+  do pid <- liftSimulation newProcessId
      spawnProcessUsingId cancellation pid x
 
 -- | Spawn the child process specifying how the child and parent processes

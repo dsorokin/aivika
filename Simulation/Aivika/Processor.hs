@@ -126,7 +126,7 @@ instance ArrowPlus Processor where
 
 -- | A processor that never finishes its work producing an 'emptyStream'.
 emptyProcessor :: Processor a b
-emptyProcessor = Processor $ \xs -> emptyStream
+emptyProcessor = Processor $ const emptyStream
 
 -- | Create a simple processor by the specified handling function
 -- that runs the discontinuous process for each input value to get the output.

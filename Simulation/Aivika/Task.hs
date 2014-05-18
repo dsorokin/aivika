@@ -80,9 +80,7 @@ taskResult t =
   do x <- liftIO $ readIORef (taskResultRef t)
      case x of
        Just x -> return x
-       Nothing ->
-         do x <- processAwait (taskResultReceived t)
-            return x
+       Nothing -> processAwait (taskResultReceived t)
 
 -- | Cancel the task.
 cancelTask :: Task a -> Event ()
