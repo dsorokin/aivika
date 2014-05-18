@@ -19,7 +19,7 @@ model =
                    putStr ", a = "
                    putStrLn $ show a
                    
-     let trace :: String -> Stream Arrival -> Process ()
+     let trace :: Show a => String -> Stream (Arrival a) -> Process ()
          trace name =
            consumeStream (\a -> display name a)
      
