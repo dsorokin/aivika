@@ -251,11 +251,13 @@ whether >?> process =
          -- ^ the resulting circuit that processes only the represented events
 (<?<) = flip (>?>)
 
--- | Filter the circuit.
+-- | Filter the circuit, calculating only those parts of the circuit that satisfy
+-- the specified predicate.
 filterCircuit :: (a -> Bool) -> Circuit a b -> Circuit a (Maybe b)
 filterCircuit pred = filterCircuitM (return . pred)
 
--- | Filter the circuit within the 'Event' computation.
+-- | Filter the circuit within the 'Event' computation, calculating only those parts
+-- of the circuit that satisfy the specified predicate.
 filterCircuitM :: (a -> Event Bool) -> Circuit a b -> Circuit a (Maybe b)
 filterCircuitM pred cir =
   Circuit $ \a ->
