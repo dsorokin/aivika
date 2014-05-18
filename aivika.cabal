@@ -158,6 +158,7 @@ library
                      Simulation.Aivika.SystemDynamics
                      Simulation.Aivika.Table
                      Simulation.Aivika.Task
+                     Simulation.Aivika.Transform
                      Simulation.Aivika.Unboxed
                      Simulation.Aivika.Var
                      Simulation.Aivika.Var.Unboxed
