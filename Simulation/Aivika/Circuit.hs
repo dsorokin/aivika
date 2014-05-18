@@ -30,6 +30,8 @@ module Simulation.Aivika.Circuit
         -- * Conditional Computation
         (<?<),
         (>?>),
+        filterCircuit,
+        filterCircuitM,
         -- * Converting to Signals and Processors
         circuitSignaling,
         circuitProcessor) where
@@ -248,3 +250,19 @@ whether >?> process =
          -> Circuit a (Maybe c)
          -- ^ the resulting circuit that processes only the represented events
 (<?<) = flip (>?>)
+
+-- | Filter the circuit.
+filterCircuit :: (a -> Bool) -> Circuit a b -> Circuit a (Maybe b)
+filterCircuit pred = filterCircuitM (return . pred)
+
+-- | Filter the circuit within the 'Event' computation.
+filterCircuitM :: (a -> Event Bool) -> Circuit a b -> Circuit a (Maybe b)
+filterCircuitM pred cir =
+  Circuit $ \a ->
+  Event $ \p ->
+  do x <- invokeEvent p (pred a)
+     if x
+       then do (cir', b) <- invokeEvent p (runCircuit cir a)
+               return (filterCircuitM pred cir', Just b)
+       else return (filterCircuitM pred cir, Nothing)
+       
