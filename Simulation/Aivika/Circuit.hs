@@ -37,7 +37,8 @@ module Simulation.Aivika.Circuit
         circuitSignaling,
         circuitProcessor,
         -- * Integrals and Difference Equations
-        integCircuit) where
+        integCircuit,
+        sumCircuit) where
 
 import qualified Control.Category as C
 import Control.Arrow
@@ -292,12 +293,13 @@ neverCircuit =
 -- specs to every 'Simulation', when running the model.
 --
 -- At the same time, the 'integCircuit' function has no mutable state
--- unlike the latter. The former consumes less memory but at the cost
+-- unlike the former. The latter consumes less memory but at the cost
 -- of inaccuracy and relatively more slow simulation, had we requested
 -- the integral in the same time points.
 --
 -- Regarding the recursive equations, the both functions allow defining them
--- but whithin different computations.
+-- but whithin different computations (either with help of the recursive
+-- do-notation or the proc-notation).
 integCircuit :: Double
                 -- ^ the initial value
                 -> Circuit Double Double
@@ -316,3 +318,32 @@ integCircuit init = start
              dt = t - t0
              v  = v0 + a0 * dt
          return (next t v a, v)
+
+-- | A sum of differences starting from the specified initial value.
+--
+-- Consider using the more accurate 'diffsum' function whener possible as
+-- it is calculated in every integration time point specified by specs
+-- passed in to every 'Simulation', when running the model.
+--
+-- At the same time, the 'sumCircuit' function has no mutable state and
+-- it consumes less memory than the former.
+--
+-- Regarding the recursive equations, the both functions allow defining them
+-- but whithin different computations (either with help of the recursive
+-- do-notation or the proc-notation).
+sumCircuit :: Num a =>
+              a
+              -- ^ the initial value
+              -> Circuit a a
+              -- ^ map the difference to a sum
+sumCircuit init = start
+  where
+    start = 
+      Circuit $ \a ->
+      Event $ \p ->
+      return (next init a, init)
+    next v0 a0 =
+      Circuit $ \a ->
+      Event $ \p ->
+      do let v = v0 + a0
+         return (next v a, v)
