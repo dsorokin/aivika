@@ -4,6 +4,9 @@
 -- results in the old example based on using the integ function, you should
 -- specify Euler's method in their specs in that file, although the Runge-Kutta
 -- method gives similar results too, which is expected.
+--
+-- Finally, the integ function can be significantly faster than integCircuit,
+-- although they have different purposes.
 
 {-# LANGUAGE Arrows #-}
 

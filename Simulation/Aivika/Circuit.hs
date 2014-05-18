@@ -321,7 +321,7 @@ integCircuit init = start
       do let t  = pointTime p
              dt = t - t0
              v  = v0 + a0 * dt
-         return (next t v a, v)
+         v `seq` return (next t v a, v)
 
 -- | A sum of differences starting from the specified initial value.
 --
@@ -350,7 +350,7 @@ sumCircuit init = start
       Circuit $ \a ->
       Event $ \p ->
       do let v = v0 + a0
-         return (next v a, v)
+         v `seq` return (next v a, v)
 
 -- | Approximate the circuit as a transform of time varying function,
 -- calculating the values in the integration time points and then
