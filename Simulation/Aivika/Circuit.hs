@@ -230,13 +230,15 @@ timeCircuit =
          -> Circuit a (Maybe c)
          -- ^ the resulting circuit that processes only the represented events
 whether >?> process =
-  proc a -> do
-    b <- whether -< a
-    case b of
-      Nothing ->
-        returnA -< Nothing
-      Just b ->
-        arr Just <<< process -< b
+  Circuit $ \a ->
+  Event $ \p ->
+  do (whether', b) <- invokeEvent p (runCircuit whether a)
+     case b of
+       Nothing ->
+         return (whether' >?> process, Nothing)
+       Just b  ->
+         do (process', c) <- invokeEvent p (runCircuit process b)
+            return (whether' >?> process', Just c)
 
 -- | Like '<<<' but processes only the represented events.
 (<?<) :: Circuit b c
