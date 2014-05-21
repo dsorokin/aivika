@@ -48,7 +48,7 @@ import Control.Monad.Trans
 import Control.Monad.Fix
 
 import Data.IORef
-import qualified Data.Map as M
+import qualified Data.IntMap as M
 import Data.Array
 
 import Simulation.Aivika.Generator
