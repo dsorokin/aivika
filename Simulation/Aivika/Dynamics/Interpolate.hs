@@ -12,11 +12,22 @@
 --
 
 module Simulation.Aivika.Dynamics.Interpolate
-       (discreteDynamics,
+       (initDynamics,
+        discreteDynamics,
         interpolateDynamics) where
 
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Dynamics
+
+-- | Return the initial value.
+initDynamics :: Dynamics a -> Dynamics a
+{-# INLINE initDynamics #-}
+initDynamics (Dynamics m) =
+  Dynamics $ \p ->
+  let sc = pointSpecs p
+  in m $ p { pointTime = basicTime sc 0 0,
+             pointIteration = 0,
+             pointPhase = 0 }
 
 -- | Discretize the computation in the integration time points.
 discreteDynamics :: Dynamics a -> Dynamics a
