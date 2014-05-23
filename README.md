@@ -33,6 +33,8 @@ the following features:
   can remind of their high-level graphical representation on the
   diagram used by visual simulation software tools;
 
+* allows simulating circuits with recursive links and delays;
+
 * supports the activity-oriented paradigm of DES;
 
 * supports the basic constructs for the agent-based modeling;
