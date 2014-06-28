@@ -21,7 +21,6 @@ module Simulation.Aivika.Stream
         concatQueuedStreams,
         concatPriorityStreams,
         splitStream,
-        splitStreamQueuing,
         splitStreamQueueing,
         splitStreamPrioritising,
         -- * Specifying Identifier
@@ -300,19 +299,6 @@ splitStreamQueueing s n x =
               liftIO $ writeIORef ref xs
               return a
      return $ map (\i -> repeatProcess reader) [1..n]
-
--- | It was renamed to 'splitStreamQueueing'.
-{-# DEPRECATED splitStreamQueuing "Use splitStreamQueueing instead" #-}
-splitStreamQueuing :: EnqueueStrategy s q
-                      => s
-                      -- ^ the strategy applied for enqueuing the output requests
-                      -> Int
-                      -- ^ the number of output streams
-                      -> Stream a
-                      -- ^ the input stream
-                      -> Simulation [Stream a]
-                      -- ^ the splitted output streams
-splitStreamQueuing = splitStreamQueueing
 
 -- | Split the input stream into a list of output streams
 -- using the specified priorities.

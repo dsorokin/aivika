@@ -16,8 +16,6 @@ module Simulation.Aivika.Processor
         emptyProcessor,
         arrProcessor,
         accumProcessor,
-        simpleProcessor,
-        statefulProcessor,
         -- * Specifying Identifier
         processorUsingId,
         -- * Prefetch Processor
@@ -141,18 +139,6 @@ accumProcessor f acc =
       do (a, xs') <- runStream xs
          (acc', b) <- f acc a
          return (b, Cons $ loop xs' acc') 
-
--- | Create a simple processor by the specified handling function
--- that runs the discontinuous process for each input value to get the output.
-simpleProcessor :: (a -> Process b) -> Processor a b
-{-# DEPRECATED simpleProcessor "Use arrProcessor instead" #-}
-simpleProcessor = Processor . mapStreamM
-
--- | Like 'simpleProcessor' but allows creating a processor that has a state
--- which is passed in to every new iteration.
-statefulProcessor :: s -> ((s, a) -> Process (s, b)) -> Processor a b
-{-# DEPRECATED statefulProcessor "Use accumProcessor instead" #-}
-statefulProcessor s f = accumProcessor (\acc a -> f (s, a)) s
 
 -- | Create a processor that will use the specified process identifier.
 -- It can be useful to refer to the underlying 'Process' computation which

@@ -13,7 +13,6 @@ module Simulation.Aivika.Server
         Server,
         newServer,
         newStateServer,
-        newServerWithState,
         -- * Processing
         serverProcessor,
         -- * Server Properties and Activities
@@ -111,7 +110,7 @@ newServer :: (a -> Process b)
              -- ^ provide an output by the specified input
              -> Simulation (Server () a b)
 newServer provide =
-  newServerWithState () $ \(s, a) ->
+  flip newStateServer () $ \s a ->
   do b <- provide a
      return (s, b)
 
@@ -148,18 +147,6 @@ newStateServer provide state =
                            serverTaskProcessedSource = s2,
                            serverOutputProvidedSource = s3 }
      return server
-
--- | Create a new server that can provide output @b@ by input @a@
--- starting from state @s@. Also it returns the corresponded processor
--- that being applied updates the server state.
-newServerWithState :: s
-                      -- ^ the initial state
-                      -> ((s, a) -> Process (s, b))
-                      -- ^ provide an output by the specified input
-                      -- and update the state 
-                      -> Simulation (Server s a b)
-{-# DEPRECATED newServerWithState "Use newStateServer instead" #-}
-newServerWithState state provide = newStateServer (curry provide) state
 
 -- | Return a processor for the specified server.
 --
