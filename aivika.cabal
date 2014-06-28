@@ -104,7 +104,6 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/TimeOut.hs
                      examples/TimeOutInt.hs
                      examples/TimeOutWait.hs
-                     examples/README
 
 library
 
