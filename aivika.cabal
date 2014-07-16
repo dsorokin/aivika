@@ -1,5 +1,5 @@
 name:            aivika
-version:         1.3
+version:         1.3.5
 synopsis:        A multi-paradigm simulation library
 description:
     Aivika is a multi-paradigm simulation library with a strong emphasis
@@ -133,6 +133,7 @@ library
                      Simulation.Aivika.Ref
                      Simulation.Aivika.Ref.Light
                      Simulation.Aivika.Resource
+                     Simulation.Aivika.Result
                      Simulation.Aivika.Server
                      Simulation.Aivika.Signal
                      Simulation.Aivika.Simulation
@@ -164,10 +165,12 @@ library
     build-depends:   base >= 4.5.0.0 && < 6,
                      mtl >= 2.1.1,
                      array >= 0.3.0.0,
+                     vector >= 0.10.0.1,
                      containers >= 0.4.0.0,
                      random >= 1.0.0.3
 
     extensions:      FlexibleContexts,
+                     FlexibleInstances,
                      BangPatterns,
                      RecursiveDo,
                      Arrows,
