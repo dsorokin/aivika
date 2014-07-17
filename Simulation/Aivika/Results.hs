@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 -- |
--- Module     : Simulation.Aivika.Result
+-- Module     : Simulation.Aivika.Results
 -- Copyright  : Copyright (c) 2009-2014, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -11,7 +11,7 @@
 --
 -- The module allows exporting the simulation results from the model.
 --
-module Simulation.Aivika.Result where
+module Simulation.Aivika.Results where
 
 import Control.Monad
 
