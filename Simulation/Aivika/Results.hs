@@ -673,7 +673,7 @@ hPrintResultOutputIndented :: Handle
                               -> ResultOutput
                               -- ^ the output to represent
                               -> Int
-                              -- ^ an ident
+                              -- ^ an indent
                               -> Event ()
 hPrintResultOutputIndented h loc output@(ResultItemOutput x) =
   hPrintResultOutputLabeledIndented h (resultItemName x) loc output
@@ -692,7 +692,7 @@ hPrintResultOutputLabeledIndented :: Handle
                                      -> ResultOutput
                                      -- ^ the output to represent
                                      -> Int
-                                     -- ^ an ident
+                                     -- ^ an indent
                                      -> Event ()
 hPrintResultOutputLabeledIndented h label loc (ResultItemOutput x) indent =
   case resultItemData x of
@@ -748,7 +748,7 @@ printResultOutputIndented :: ResultLocalisation
                              -> ResultOutput
                              -- ^ the output to represent
                              -> Int
-                             -- ^ an ident
+                             -- ^ an indent
                              -> Event ()
 printResultOutputIndented = hPrintResultOutputIndented stdout
 
@@ -776,7 +776,7 @@ showResultOutputIndented :: ResultLocalisation
                             -> ResultOutput
                             -- ^ the output to represent
                             -> Int
-                            -- ^ an ident
+                            -- ^ an indent
                             -> Event ShowS
 showResultOutputIndented loc output@(ResultItemOutput x) =
   showResultOutputLabeledIndented (resultItemName x) loc output
@@ -793,7 +793,7 @@ showResultOutputLabeledIndented :: String
                                    -> ResultOutput
                                    -- ^ the output to represent
                                    -> Int
-                                   -- ^ an ident
+                                   -- ^ an indent
                                    -> Event ShowS
 showResultOutputLabeledIndented label loc (ResultItemOutput x) indent =
   case resultItemData x of
