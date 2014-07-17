@@ -707,7 +707,7 @@ hPrintResultOutputLabeledIndented h label loc (ResultItemOutput x) indent =
     _ ->
       error $
       "Expected to see a string value for variable " ++
-      (resultItemName x) ++ ": hPrintLabeledLocalisedResultOutput"
+      (resultItemName x) ++ ": hPrintResultOutputLabeledIndented"
 hPrintResultOutputLabeledIndented h label loc (ResultVectorOutput x) indent =
   do let tab = replicate indent ' '
      liftIO $
@@ -769,6 +769,94 @@ printResultOutput :: ResultLocalisation
                      -- ^ the output to represent
                      -> Event ()
 printResultOutput = hPrintResultOutput stdout
+
+-- | Show a localised text representation of the specified output with the given indent.
+showResultOutputIndented :: ResultLocalisation
+                            -- ^ a localisation
+                            -> ResultOutput
+                            -- ^ the output to represent
+                            -> Int
+                            -- ^ an ident
+                            -> Event ShowS
+showResultOutputIndented loc output@(ResultItemOutput x) =
+  showResultOutputLabeledIndented (resultItemName x) loc output
+showResultOutputIndented loc output@(ResultVectorOutput x) =
+  showResultOutputLabeledIndented (resultVectorName x) loc output
+showResultOutputIndented loc output@(ResultObjectOutput x) =
+  showResultOutputLabeledIndented (resultObjectName x) loc output
+
+-- | Show a labeled and indented text representation of the specified output.
+showResultOutputLabeledIndented :: String
+                                   -- ^ a label
+                                   -> ResultLocalisation
+                                   -- ^ a localisation
+                                   -> ResultOutput
+                                   -- ^ the output to represent
+                                   -> Int
+                                   -- ^ an ident
+                                   -> Event ShowS
+showResultOutputLabeledIndented label loc (ResultItemOutput x) indent =
+  case resultItemData x of
+    StringResultData m ->
+      do a <- m
+         let tab = replicate indent ' '
+         return $
+           showString tab .
+           showString label .
+           showString " = " .
+           showString (show a) .
+           showString "\n"
+    _ ->
+      error $
+      "Expected to see a string value for variable " ++
+      (resultItemName x) ++ ": showResultOutputLabeledIndented"
+showResultOutputLabeledIndented label loc (ResultVectorOutput x) indent =
+  do let tab = replicate indent ' '
+         items = V.toList (resultVectorItems x)
+         subscript = V.toList (resultVectorSubscript x)
+     contents <-
+       forM (zip items subscript) $ \(i, s) ->
+       showResultOutputLabeledIndented (label ++ s) loc i (indent + 2)
+     let showContents = foldr (.) id contents
+     return $
+       showString tab .
+       showString label .
+       showString ":\n\n" .
+       showContents
+showResultOutputLabeledIndented label loc (ResultObjectOutput x) indent =
+  do let tab = replicate indent ' '
+     contents <-
+       forM (resultObjectProperties x) $ \p ->
+       do let indent' = 2 + indent
+              tab'    = "  " ++ tab
+              label'  = resultPropertyLabel p
+              output' = resultPropertyOutput p
+          showProperties <-
+            showResultOutputLabeledIndented label' loc output' indent'
+          return $
+            showString tab' .
+            showString "-- " .
+            showString (loc $ resultPropertyId p) .
+            showString "\n" .
+            showProperties
+     let showContents = foldr (.) id contents
+     return $
+       showString tab .
+       showString "-- " .
+       showString (loc $ resultObjectId x) .
+       showString "\n" .
+       showString tab .
+       showString label .
+       showString ":\n\n" .
+       showContents
+
+-- | Show a localised text representation of the specified output.
+showResultOutput :: ResultLocalisation
+                    -- ^ a localisation
+                    -> ResultOutput
+                    -- ^ the output to represent
+                    -> Event ShowS
+showResultOutput loc output = showResultOutputIndented loc output 0
 
 -- | The Russian locale.
 russianResultLocale :: ResultLocale
