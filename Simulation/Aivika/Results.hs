@@ -14,6 +14,7 @@
 module Simulation.Aivika.Results where
 
 import Control.Monad
+import Control.Monad.Trans
 
 import qualified Data.Map as M
 import qualified Data.Vector as V
@@ -22,6 +23,8 @@ import qualified Data.Array as A
 import Data.Ix
 import Data.Maybe
 import Data.Monoid
+
+import System.IO
 
 import Simulation.Aivika.Parameter
 import Simulation.Aivika.Simulation
@@ -34,7 +37,12 @@ import qualified Simulation.Aivika.Ref.Light as LR
 import Simulation.Aivika.Var
 
 -- | A locale to output the simulation results.
+--
+-- Examples are: @\"ru\", @\"en\" etc.
 type ResultLocale = String
+
+-- | It localises the output of simulation results.
+type ResultLocalisation = ResultId -> String
 
 -- | A lable used for indentifying the results when generating output.
 type ResultLabel = String
@@ -56,8 +64,8 @@ data ResultId = SamplingStatsId
                 -- ^ Property 'samplingStatsVariance'.
               | SamplingStatsDeviationId
                 -- ^ Property 'samplingStatsDeviation'.
-              | SomeResultId (M.Map ResultLocale String)
-                -- ^ Unknown property with the specified localisation of names.
+              | LocalisedResultId (M.Map ResultLocale String)
+                -- ^ A localised property or object name.
 
 -- | Represents a provider of the simulation results. It is usually something, or
 -- an array of something, or a list of such values which can be simulated to get data.
@@ -656,3 +664,128 @@ instance ResultComputation m => ResultProvider (m (V.Vector Int)) where
       makeResultItemOutput name m (StringResultData . fmap show)
     f DefaultResultType =
       makeResultItemOutput name m (IntListResultData . fmap V.toList)
+
+-- | Print a localised text representation of the specified output with the given indent.
+hPrintResultOutputIndented :: Handle
+                              -- ^ a handle
+                              -> ResultLocalisation
+                              -- ^ a localisation
+                              -> ResultOutput
+                              -- ^ the output to represent
+                              -> Int
+                              -- ^ an ident
+                              -> Event ()
+hPrintResultOutputIndented h loc output@(ResultItemOutput x) =
+  hPrintResultOutputLabeledIndented h (resultItemName x) loc output
+hPrintResultOutputIndented h loc output@(ResultVectorOutput x) =
+  hPrintResultOutputLabeledIndented h (resultVectorName x) loc output
+hPrintResultOutputIndented h loc output@(ResultObjectOutput x) =
+  hPrintResultOutputLabeledIndented h (resultObjectName x) loc output
+
+-- | Print a labeled and indented text representation of the specified output.
+hPrintResultOutputLabeledIndented :: Handle
+                                     -- ^ a handle
+                                     -> String
+                                     -- ^ a label
+                                     -> ResultLocalisation
+                                     -- ^ a localisation
+                                     -> ResultOutput
+                                     -- ^ the output to represent
+                                     -> Int
+                                     -- ^ an ident
+                                     -> Event ()
+hPrintResultOutputLabeledIndented h label loc (ResultItemOutput x) indent =
+  case resultItemData x of
+    StringResultData m ->
+      do a <- m
+         let tab = replicate indent ' '
+         liftIO $
+           do hPutStr h tab
+              hPutStr h label
+              hPutStr h " = "
+              hPutStrLn h (show a)
+    _ ->
+      error $
+      "Expected to see a string value for variable " ++
+      (resultItemName x) ++ ": hPrintLabeledLocalisedResultOutput"
+hPrintResultOutputLabeledIndented h label loc (ResultVectorOutput x) indent =
+  do let tab = replicate indent ' '
+     liftIO $
+       do hPutStr h tab
+          hPutStr h label
+          hPutStrLn h ":"
+          hPutStrLn h ""
+     let items = V.toList (resultVectorItems x)
+         subscript = V.toList (resultVectorSubscript x)
+     forM_ (zip items subscript) $ \(i, s) ->
+       hPrintResultOutputLabeledIndented h (label ++ s) loc i (indent + 2)
+hPrintResultOutputLabeledIndented h label loc (ResultObjectOutput x) indent =
+  do let tab = replicate indent ' '
+     liftIO $
+       do hPutStr h tab
+          hPutStr h "-- "
+          hPutStr h (loc $ resultObjectId x)
+          hPutStrLn h ""
+          hPutStr h tab
+          hPutStr h label
+          hPutStrLn h ":"
+          hPutStrLn h ""
+     forM_ (resultObjectProperties x) $ \p ->
+       do let indent' = 2 + indent
+              tab'    = "  " ++ tab
+              label'  = resultPropertyLabel p
+              output' = resultPropertyOutput p
+          liftIO $
+            do hPutStr h tab'
+               hPutStr h "-- "
+               hPutStr h (loc $ resultPropertyId p)
+               hPutStrLn h ""
+          hPrintResultOutputLabeledIndented h label' loc output' indent'
+
+-- | Print a localised text representation of the specified output with the given indent.
+printResultOutputIndented :: ResultLocalisation
+                             -- ^ a localisation
+                             -> ResultOutput
+                             -- ^ the output to represent
+                             -> Int
+                             -- ^ an ident
+                             -> Event ()
+printResultOutputIndented = hPrintResultOutputIndented stdout
+
+-- | Print a localised text representation of the specified output.
+hPrintResultOutput :: Handle
+                      -- ^ a handle
+                      -> ResultLocalisation
+                      -- ^ a localisation
+                      -> ResultOutput
+                      -- ^ the output to represent
+                      -> Event ()
+hPrintResultOutput h loc output = hPrintResultOutputIndented h loc output 0
+
+-- | Print a localised text representation of the specified output.
+printResultOutput :: ResultLocalisation
+                     -- ^ a localisation
+                     -> ResultOutput
+                     -- ^ the output to represent
+                     -> Event ()
+printResultOutput = hPrintResultOutput stdout
+
+-- | The Russian locale.
+russianResultLocale :: ResultLocale
+russianResultLocale = "ru"
+
+-- | The English locale.
+englishResultLocale :: ResultLocale
+englishResultLocale = "en"
+
+-- | The Russian localisation of the simulation results.
+russianResultLocalisation :: ResultLocalisation
+russianResultLocalisation = lookupResultLocalisation russianResultLocale
+
+-- | The English localisation of the simulation results.
+englishResultLocalisation :: ResultLocalisation
+englishResultLocalisation = lookupResultLocalisation englishResultLocale
+
+-- | Lookup the localisation by the specified locale.
+lookupResultLocalisation :: ResultLocale -> ResultLocalisation
+lookupResultLocalisation = undefined
