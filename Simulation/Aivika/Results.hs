@@ -40,7 +40,24 @@ type ResultLocale = String
 type ResultLabel = String
 
 -- | The result entity identifier.
-type ResultId = String
+data ResultId = SamplingStatsId
+                -- ^ A 'SamplingStats' value.
+              | SamplingStatsCountId
+                -- ^ Property 'samplingStatsCount'.
+              | SamplingStatsMinId
+                -- ^ Property 'samplingStatsMin'.
+              | SamplingStatsMaxId
+                -- ^ Property 'samplingStatsMax'.
+              | SamplingStatsMeanId
+                -- ^ Property 'samplingStatsMean'.
+              | SamplingStatsMean2Id
+                -- ^ Property 'samplingStatsMean2'.
+              | SamplingStatsVarianceId
+                -- ^ Property 'samplingStatsVariance'.
+              | SamplingStatsDeviationId
+                -- ^ Property 'samplingStatsDeviation'.
+              | SomeResultId (M.Map ResultLocale String)
+                -- ^ Unknown property with the specified localisation of names.
 
 -- | Represents a provider of the simulation results. It is usually something, or
 -- an array of something, or a list of such values which can be simulated to get data.
@@ -283,6 +300,56 @@ makeResultItemOutput name m f =
                resultItemData   = f $ resultComputationData m,
                resultItemSignal = resultComputationSignal m }
 
+-- | Output the specified statistics.
+makeSamplingStatsOutput :: (Show a, ResultComputation m)
+                           => String
+                           -- ^ the result name
+                           -> m (SamplingStats a)
+                           -- ^ the statistics
+                           -> ResultOutput
+makeSamplingStatsOutput name m =
+  let f g = StringResultData . fmap (show . g)
+  in ResultObjectOutput $
+     ResultObject {
+       resultObjectName = name,
+       resultObjectId = SamplingStatsId,
+       resultObjectProperties = [
+         ResultProperty {
+            resultPropertyLabel = "count",
+            resultPropertyId = SamplingStatsCountId,
+            resultPropertyOutput =
+              makeResultItemOutput (name ++ ".count") m (f samplingStatsCount) },
+         ResultProperty {
+           resultPropertyLabel = "mean",
+           resultPropertyId = SamplingStatsMeanId,
+           resultPropertyOutput =
+             makeResultItemOutput (name ++ ".mean") m (f samplingStatsMean) },
+         ResultProperty {
+           resultPropertyLabel = "mean2",
+           resultPropertyId = SamplingStatsMean2Id,
+           resultPropertyOutput =
+             makeResultItemOutput (name ++ ".mean2") m (f samplingStatsMean2) },
+         ResultProperty {
+           resultPropertyLabel = "std",
+           resultPropertyId = SamplingStatsDeviationId,
+           resultPropertyOutput =
+             makeResultItemOutput (name ++ ".std") m (f samplingStatsDeviation) },
+         ResultProperty {
+           resultPropertyLabel = "var",
+           resultPropertyId = SamplingStatsVarianceId,
+           resultPropertyOutput =
+             makeResultItemOutput (name ++ ".var") m (f samplingStatsVariance) },
+         ResultProperty {
+           resultPropertyLabel = "min",
+           resultPropertyId = SamplingStatsMinId,
+           resultPropertyOutput =
+             makeResultItemOutput (name ++ ".min") m (f samplingStatsMin) },
+         ResultProperty {
+           resultPropertyLabel = "max",
+           resultPropertyId = SamplingStatsMaxId,
+           resultPropertyOutput =
+             makeResultItemOutput (name ++ ".max") m (f samplingStatsMax) } ] }
+
 -- | Make an integer subscript
 makeIntSubscript :: Show a => a -> String
 makeIntSubscript i = "[" ++ show i ++ "]"
@@ -343,7 +410,7 @@ instance ResultComputation m => ResultProvider (m (SamplingStats Double)) where
     f IntStatsResultType =
       makeResultItemOutput name m (const NoResultData)
     f StringResultType =
-      makeResultItemOutput name m (StringResultData . fmap show)   -- TODO
+      makeSamplingStatsOutput name m
     f DefaultResultType =
       makeResultItemOutput name m DoubleStatsResultData
 
@@ -403,7 +470,7 @@ instance ResultComputation m => ResultProvider (m (SamplingStats Int)) where
     f IntStatsResultType =
       makeResultItemOutput name m IntStatsResultData
     f StringResultType =
-      makeResultItemOutput name m (StringResultData . fmap show)   -- TODO
+      makeSamplingStatsOutput name m
     f DefaultResultType =
       makeResultItemOutput name m IntStatsResultData
 
