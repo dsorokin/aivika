@@ -665,36 +665,40 @@ instance ResultComputation m => ResultProvider (m (V.Vector Int)) where
     f DefaultResultType =
       makeResultItemOutput name m (IntListResultData . fmap V.toList)
 
+-- | This is a function that shows the result output within
+-- the 'Event' computation synchronized with the event queue.
+type ResultOutputShowS = ResultOutput -> Event ShowS
+
+-- | This is a function that prints the result output within
+-- the 'Event' computation synchronized with the event queue.
+type ResultOutputPrint = ResultOutput -> Event ()
+
 -- | Print a localised text representation of the specified output with the given indent.
 hPrintResultOutputIndented :: Handle
                               -- ^ a handle
-                              -> ResultLocalisation
-                              -- ^ a localisation
-                              -> ResultOutput
-                              -- ^ the output to represent
                               -> Int
                               -- ^ an indent
-                              -> Event ()
-hPrintResultOutputIndented h loc output@(ResultItemOutput x) =
-  hPrintResultOutputLabeledIndented h (resultItemName x) loc output
-hPrintResultOutputIndented h loc output@(ResultVectorOutput x) =
-  hPrintResultOutputLabeledIndented h (resultVectorName x) loc output
-hPrintResultOutputIndented h loc output@(ResultObjectOutput x) =
-  hPrintResultOutputLabeledIndented h (resultObjectName x) loc output
+                              -> ResultLocalisation
+                              -- ^ a localisation
+                              -> ResultOutputPrint
+hPrintResultOutputIndented h indent loc output@(ResultItemOutput x) =
+  hPrintResultOutputIndentedLabelled h indent (resultItemName x) loc output
+hPrintResultOutputIndented h indent loc output@(ResultVectorOutput x) =
+  hPrintResultOutputIndentedLabelled h indent (resultVectorName x) loc output
+hPrintResultOutputIndented h indent loc output@(ResultObjectOutput x) =
+  hPrintResultOutputIndentedLabelled h indent (resultObjectName x) loc output
 
--- | Print a labeled and indented text representation of the specified output.
-hPrintResultOutputLabeledIndented :: Handle
-                                     -- ^ a handle
-                                     -> String
-                                     -- ^ a label
-                                     -> ResultLocalisation
-                                     -- ^ a localisation
-                                     -> ResultOutput
-                                     -- ^ the output to represent
-                                     -> Int
-                                     -- ^ an indent
-                                     -> Event ()
-hPrintResultOutputLabeledIndented h label loc (ResultItemOutput x) indent =
+-- | Print an indented and labelled text representation of the specified output.
+hPrintResultOutputIndentedLabelled :: Handle
+                                      -- ^ a handle
+                                      -> Int
+                                      -- ^ an indent
+                                      -> String
+                                      -- ^ a label
+                                      -> ResultLocalisation
+                                      -- ^ a localisation
+                                      -> ResultOutputPrint
+hPrintResultOutputIndentedLabelled h indent label loc (ResultItemOutput x) =
   case resultItemData x of
     StringResultData m ->
       do a <- m
@@ -707,8 +711,8 @@ hPrintResultOutputLabeledIndented h label loc (ResultItemOutput x) indent =
     _ ->
       error $
       "Expected to see a string value for variable " ++
-      (resultItemName x) ++ ": hPrintResultOutputLabeledIndented"
-hPrintResultOutputLabeledIndented h label loc (ResultVectorOutput x) indent =
+      (resultItemName x) ++ ": hPrintResultOutputIndentedLabelled"
+hPrintResultOutputIndentedLabelled h indent label loc (ResultVectorOutput x) =
   do let tab = replicate indent ' '
      liftIO $
        do hPutStr h tab
@@ -718,8 +722,8 @@ hPrintResultOutputLabeledIndented h label loc (ResultVectorOutput x) indent =
      let items = V.toList (resultVectorItems x)
          subscript = V.toList (resultVectorSubscript x)
      forM_ (zip items subscript) $ \(i, s) ->
-       hPrintResultOutputLabeledIndented h (label ++ s) loc i (indent + 2)
-hPrintResultOutputLabeledIndented h label loc (ResultObjectOutput x) indent =
+       hPrintResultOutputIndentedLabelled h (indent + 2) (label ++ s) loc i
+hPrintResultOutputIndentedLabelled h indent label loc (ResultObjectOutput x) =
   do let tab = replicate indent ' '
      liftIO $
        do hPutStr h tab
@@ -740,16 +744,14 @@ hPrintResultOutputLabeledIndented h label loc (ResultObjectOutput x) indent =
                hPutStr h "-- "
                hPutStr h (loc $ resultPropertyId p)
                hPutStrLn h ""
-          hPrintResultOutputLabeledIndented h label' loc output' indent'
+          hPrintResultOutputIndentedLabelled h indent' label' loc output'
 
 -- | Print a localised text representation of the specified output with the given indent.
-printResultOutputIndented :: ResultLocalisation
-                             -- ^ a localisation
-                             -> ResultOutput
-                             -- ^ the output to represent
-                             -> Int
+printResultOutputIndented :: Int
                              -- ^ an indent
-                             -> Event ()
+                             -> ResultLocalisation
+                             -- ^ a localisation
+                             -> ResultOutputPrint
 printResultOutputIndented = hPrintResultOutputIndented stdout
 
 -- | Print a localised text representation of the specified output.
@@ -757,45 +759,37 @@ hPrintResultOutput :: Handle
                       -- ^ a handle
                       -> ResultLocalisation
                       -- ^ a localisation
-                      -> ResultOutput
-                      -- ^ the output to represent
-                      -> Event ()
-hPrintResultOutput h loc output = hPrintResultOutputIndented h loc output 0
+                      -> ResultOutputPrint
+hPrintResultOutput h = hPrintResultOutputIndented h 0
 
 -- | Print a localised text representation of the specified output.
 printResultOutput :: ResultLocalisation
                      -- ^ a localisation
-                     -> ResultOutput
-                     -- ^ the output to represent
-                     -> Event ()
+                     -> ResultOutputPrint
 printResultOutput = hPrintResultOutput stdout
 
 -- | Show a localised text representation of the specified output with the given indent.
-showResultOutputIndented :: ResultLocalisation
-                            -- ^ a localisation
-                            -> ResultOutput
-                            -- ^ the output to represent
-                            -> Int
+showResultOutputIndented :: Int
                             -- ^ an indent
-                            -> Event ShowS
-showResultOutputIndented loc output@(ResultItemOutput x) =
-  showResultOutputLabeledIndented (resultItemName x) loc output
-showResultOutputIndented loc output@(ResultVectorOutput x) =
-  showResultOutputLabeledIndented (resultVectorName x) loc output
-showResultOutputIndented loc output@(ResultObjectOutput x) =
-  showResultOutputLabeledIndented (resultObjectName x) loc output
+                            -> ResultLocalisation
+                            -- ^ a localisation
+                            -> ResultOutputShowS
+showResultOutputIndented indent loc output@(ResultItemOutput x) =
+  showResultOutputIndentedLabelled indent (resultItemName x) loc output
+showResultOutputIndented indent loc output@(ResultVectorOutput x) =
+  showResultOutputIndentedLabelled indent (resultVectorName x) loc output
+showResultOutputIndented indent loc output@(ResultObjectOutput x) =
+  showResultOutputIndentedLabelled indent (resultObjectName x) loc output
 
--- | Show a labeled and indented text representation of the specified output.
-showResultOutputLabeledIndented :: String
+-- | Show an indented and labelled text representation of the specified output.
+showResultOutputIndentedLabelled :: Int
+                                   -- ^ an indent
+                                   -> String
                                    -- ^ a label
                                    -> ResultLocalisation
                                    -- ^ a localisation
-                                   -> ResultOutput
-                                   -- ^ the output to represent
-                                   -> Int
-                                   -- ^ an indent
-                                   -> Event ShowS
-showResultOutputLabeledIndented label loc (ResultItemOutput x) indent =
+                                   -> ResultOutputShowS
+showResultOutputIndentedLabelled indent label loc (ResultItemOutput x) =
   case resultItemData x of
     StringResultData m ->
       do a <- m
@@ -809,21 +803,21 @@ showResultOutputLabeledIndented label loc (ResultItemOutput x) indent =
     _ ->
       error $
       "Expected to see a string value for variable " ++
-      (resultItemName x) ++ ": showResultOutputLabeledIndented"
-showResultOutputLabeledIndented label loc (ResultVectorOutput x) indent =
+      (resultItemName x) ++ ": showResultOutputIndentedLabelled"
+showResultOutputIndentedLabelled indent label loc (ResultVectorOutput x) =
   do let tab = replicate indent ' '
          items = V.toList (resultVectorItems x)
          subscript = V.toList (resultVectorSubscript x)
      contents <-
        forM (zip items subscript) $ \(i, s) ->
-       showResultOutputLabeledIndented (label ++ s) loc i (indent + 2)
+       showResultOutputIndentedLabelled (indent + 2) (label ++ s) loc i
      let showContents = foldr (.) id contents
      return $
        showString tab .
        showString label .
        showString ":\n\n" .
        showContents
-showResultOutputLabeledIndented label loc (ResultObjectOutput x) indent =
+showResultOutputIndentedLabelled indent label loc (ResultObjectOutput x) =
   do let tab = replicate indent ' '
      contents <-
        forM (resultObjectProperties x) $ \p ->
@@ -832,7 +826,7 @@ showResultOutputLabeledIndented label loc (ResultObjectOutput x) indent =
               label'  = resultPropertyLabel p
               output' = resultPropertyOutput p
           showProperties <-
-            showResultOutputLabeledIndented label' loc output' indent'
+            showResultOutputIndentedLabelled indent' label' loc output'
           return $
             showString tab' .
             showString "-- " .
@@ -853,10 +847,28 @@ showResultOutputLabeledIndented label loc (ResultObjectOutput x) indent =
 -- | Show a localised text representation of the specified output.
 showResultOutput :: ResultLocalisation
                     -- ^ a localisation
-                    -> ResultOutput
-                    -- ^ the output to represent
-                    -> Event ShowS
-showResultOutput loc output = showResultOutputIndented loc output 0
+                    -> ResultOutputShowS
+showResultOutput = showResultOutputIndented 0
+
+-- | Output the results using the desired data type.
+outputResults :: Results
+                 -- ^ the simulation results
+                 -> ResultType
+                 -- ^ the data type in which we are going to receive an output
+                 -> [ResultOutput]
+outputResults results t = ys where
+  xs = M.elems (resultSources results)
+  ys = map (flip resultOutput StringResultType) xs
+
+-- | Print the simulation results in start time.
+printResultsInStartTime :: Results -> ResultOutputPrint -> Simulation ()
+printResultsInStartTime results output =
+  runEventInStartTime (mapM_ output $ outputResults results StringResultType)
+
+-- | Print the simulation results in stop time.
+printResultsInStopTime :: Results -> ResultOutputPrint -> Simulation ()
+printResultsInStopTime results output =
+  runEventInStartTime (mapM_ output $ outputResults results StringResultType)
 
 -- | The Russian locale.
 russianResultLocale :: ResultLocale
