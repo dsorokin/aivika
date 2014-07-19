@@ -795,6 +795,22 @@ printResultOutput :: ResultLocalisation
                      -> ResultOutputPrint
 printResultOutput = hPrintResultOutput stdout
 
+-- | Print a text representation of the specified output in Russian.
+hPrintResultOutputInRussian :: Handle -> ResultOutputPrint
+hPrintResultOutputInRussian h = hPrintResultOutput h russianResultLocalisation
+
+-- | Print a text representation of the specified output in English.
+hPrintResultOutputInEnglish :: Handle -> ResultOutputPrint
+hPrintResultOutputInEnglish h = hPrintResultOutput h englishResultLocalisation
+
+-- | Print a text representation of the specified output in Russian.
+printResultOutputInRussian :: ResultOutputPrint
+printResultOutputInRussian = hPrintResultOutputInRussian stdout
+
+-- | Print a text representation of the specified output in English.
+printResultOutputInEnglish :: ResultOutputPrint
+printResultOutputInEnglish = hPrintResultOutputInEnglish stdout
+
 -- | Show a localised text representation of the specified output with the given indent.
 showResultOutputIndented :: Int
                             -- ^ an indent
@@ -882,6 +898,14 @@ showResultOutput :: ResultLocalisation
                     -- ^ a localisation
                     -> ResultOutputShowS
 showResultOutput = showResultOutputIndented 0
+
+-- | Show a text representation of the specified output in Russian.
+showResultOutputInRussian :: ResultOutputShowS
+showResultOutputInRussian = showResultOutput russianResultLocalisation
+
+-- | Show a text representation of the specified output in English.
+showResultOutputInEnglish :: ResultOutputShowS
+showResultOutputInEnglish = showResultOutput englishResultLocalisation
 
 -- | Output the results using the desired data type.
 outputResults :: Results
