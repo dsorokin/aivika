@@ -894,35 +894,35 @@ outputResults results t = ys where
   ys = map (flip resultOutput StringResultType) xs
 
 -- | Print the results with the information about the modeling time.
-printResultsWithTime :: Results -> ResultOutputPrint -> Event ()
-printResultsWithTime results =
-  let y1 = makeTextOutput "----------"
-      y2 = timeOutput
-      y3 = makeTextOutput ""
-      ys = outputResults results StringResultType
-  in \print -> do print y1
-                  print y2
-                  print y3
-                  mapM_ print ys
-                  print y3
+printResultsWithTime :: ResultOutputPrint -> Results -> Event ()
+printResultsWithTime print results =
+  do let y1 = makeTextOutput "----------"
+         y2 = timeOutput
+         y3 = makeTextOutput ""
+         ys = outputResults results StringResultType
+     print y1
+     print y2
+     print y3
+     mapM_ print ys
+     print y3
 
 -- | Print the simulation results in start time.
-printResultsInStartTime :: Results -> ResultOutputPrint -> Simulation ()
-printResultsInStartTime results output =
-  runEventInStartTime $ printResultsWithTime results output
+printResultsInStartTime :: ResultOutputPrint -> Results -> Simulation ()
+printResultsInStartTime print results =
+  runEventInStartTime $ printResultsWithTime print results
 
 -- | Print the simulation results in stop time.
-printResultsInStopTime :: Results -> ResultOutputPrint -> Simulation ()
-printResultsInStopTime results output =
-  runEventInStopTime $ printResultsWithTime results output
+printResultsInStopTime :: ResultOutputPrint -> Results -> Simulation ()
+printResultsInStopTime print results =
+  runEventInStopTime $ printResultsWithTime print results
 
 -- | Print the simulation results in integration time points.
-printResultsInIntegTimes :: Results -> ResultOutputPrint -> Simulation ()
-printResultsInIntegTimes results output =
+printResultsInIntegTimes :: ResultOutputPrint -> Results -> Simulation ()
+printResultsInIntegTimes print results =
   do let loop (m : ms) = m >> loop ms
          loop [] = return ()
      ms <- runDynamicsInIntegTimes $ runEvent $
-           printResultsWithTime results output
+           printResultsWithTime print results
      liftIO $ loop ms
 
 -- | The Russian locale.
