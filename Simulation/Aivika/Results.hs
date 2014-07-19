@@ -744,6 +744,8 @@ hPrintResultOutputIndentedLabelled h indent label loc (ResultVectorOutput x) =
          subscript = V.toList (resultVectorSubscript x)
      forM_ (zip items subscript) $ \(i, s) ->
        hPrintResultOutputIndentedLabelled h (indent + 2) (label ++ s) loc i
+     liftIO $
+       hPutStrLn h ""
 hPrintResultOutputIndentedLabelled h indent label loc (ResultObjectOutput x) =
   do let tab = replicate indent ' '
      liftIO $
@@ -766,6 +768,8 @@ hPrintResultOutputIndentedLabelled h indent label loc (ResultObjectOutput x) =
                hPutStr h (loc $ resultPropertyId p)
                hPutStrLn h ""
           hPrintResultOutputIndentedLabelled h indent' label' loc output'
+          liftIO $
+            hPutStrLn h ""
 hPrintResultOutputIndentedLabelled h indent label loc (ResultSeparatorOutput x) =
   do let tab = replicate indent ' '
      liftIO $
@@ -859,7 +863,8 @@ showResultOutputIndentedLabelled indent label loc (ResultVectorOutput x) =
        showString tab .
        showString label .
        showString ":\n\n" .
-       showContents
+       showContents .
+       showString "\n"
 showResultOutputIndentedLabelled indent label loc (ResultObjectOutput x) =
   do let tab = replicate indent ' '
      contents <-
@@ -885,7 +890,8 @@ showResultOutputIndentedLabelled indent label loc (ResultObjectOutput x) =
        showString tab .
        showString label .
        showString ":\n\n" .
-       showContents
+       showContents .
+       showString "\n"
 showResultOutputIndentedLabelled indent label loc (ResultSeparatorOutput x) =
   do let tab = replicate indent ' '
      return $
