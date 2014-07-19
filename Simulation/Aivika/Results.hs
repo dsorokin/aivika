@@ -129,6 +129,8 @@ data ResultOutput = ResultItemOutput ResultItem
                     -- ^ The object output.
                   | ResultVectorOutput ResultVector
                     -- ^ The vector output.
+                  | ResultSeparatorOutput ResultSeparator
+                    -- ^ This is a separator output.
 
 -- | The simulation results represented by a single item.
 data ResultItem =
@@ -170,6 +172,12 @@ data ResultVector =
                  -- ^ The subscript used as a suffix to create item names.
                }
 
+-- | It separates the simulation results when printing.
+data ResultSeparator =
+  ResultSeparator { resultSeparatorText :: String
+                    -- ^ The separator text.
+                  }
+
 -- | Flatten the result items.
 flattenResultItems :: ResultOutput -> [ResultItem]
 flattenResultItems (ResultItemOutput x) = [x]
@@ -177,6 +185,7 @@ flattenResultItems (ResultObjectOutput x) =
   concat $ map (flattenResultItems . resultPropertyOutput) $ resultObjectProperties x
 flattenResultItems (ResultVectorOutput x) =
   concat $ map flattenResultItems $ V.toList $ resultVectorItems x
+flattenResultItems (ResultSeparatorOutput x) = []
 
 -- | It contains the results of simulation.
 data Results =
@@ -357,6 +366,16 @@ makeSamplingStatsOutput name m =
            resultPropertyId = SamplingStatsMaxId,
            resultPropertyOutput =
              makeResultItemOutput (name ++ ".max") m (f samplingStatsMax) } ] }
+
+-- | Output the modeling time.
+timeOutput :: ResultOutput
+timeOutput = resultOutput (resultSource "t" time) StringResultType
+
+-- | Output an arbitrary text as a separator.
+makeTextOutput :: String -> ResultOutput
+makeTextOutput text =
+  ResultSeparatorOutput $
+  ResultSeparator { resultSeparatorText = text }
 
 -- | Make an integer subscript
 makeIntSubscript :: Show a => a -> String
@@ -687,6 +706,8 @@ hPrintResultOutputIndented h indent loc output@(ResultVectorOutput x) =
   hPrintResultOutputIndentedLabelled h indent (resultVectorName x) loc output
 hPrintResultOutputIndented h indent loc output@(ResultObjectOutput x) =
   hPrintResultOutputIndentedLabelled h indent (resultObjectName x) loc output
+hPrintResultOutputIndented h indent loc output@(ResultSeparatorOutput x) =
+  hPrintResultOutputIndentedLabelled h indent (resultSeparatorText x) loc output
 
 -- | Print an indented and labelled text representation of the specified output.
 hPrintResultOutputIndentedLabelled :: Handle
@@ -745,6 +766,12 @@ hPrintResultOutputIndentedLabelled h indent label loc (ResultObjectOutput x) =
                hPutStr h (loc $ resultPropertyId p)
                hPutStrLn h ""
           hPrintResultOutputIndentedLabelled h indent' label' loc output'
+hPrintResultOutputIndentedLabelled h indent label loc (ResultSeparatorOutput x) =
+  do let tab = replicate indent ' '
+     liftIO $
+       do hPutStr h tab
+          hPutStr h label
+          hPutStrLn h ""
 
 -- | Print a localised text representation of the specified output with the given indent.
 printResultOutputIndented :: Int
@@ -843,6 +870,12 @@ showResultOutputIndentedLabelled indent label loc (ResultObjectOutput x) =
        showString label .
        showString ":\n\n" .
        showContents
+showResultOutputIndentedLabelled indent label loc (ResultSeparatorOutput x) =
+  do let tab = replicate indent ' '
+     return $
+       showString tab .
+       showString label .
+       showString "\n"
 
 -- | Show a localised text representation of the specified output.
 showResultOutput :: ResultLocalisation
@@ -860,15 +893,37 @@ outputResults results t = ys where
   xs = M.elems (resultSources results)
   ys = map (flip resultOutput StringResultType) xs
 
+-- | Print the results with the information about the modeling time.
+printResultsWithTime :: Results -> ResultOutputPrint -> Event ()
+printResultsWithTime results =
+  let y1 = makeTextOutput "----------"
+      y2 = timeOutput
+      y3 = makeTextOutput ""
+      ys = outputResults results StringResultType
+  in \print -> do print y1
+                  print y2
+                  print y3
+                  mapM_ print ys
+                  print y3
+
 -- | Print the simulation results in start time.
 printResultsInStartTime :: Results -> ResultOutputPrint -> Simulation ()
 printResultsInStartTime results output =
-  runEventInStartTime (mapM_ output $ outputResults results StringResultType)
+  runEventInStartTime $ printResultsWithTime results output
 
 -- | Print the simulation results in stop time.
 printResultsInStopTime :: Results -> ResultOutputPrint -> Simulation ()
 printResultsInStopTime results output =
-  runEventInStartTime (mapM_ output $ outputResults results StringResultType)
+  runEventInStopTime $ printResultsWithTime results output
+
+-- | Print the simulation results in integration time points.
+printResultsInIntegTimes :: Results -> ResultOutputPrint -> Simulation ()
+printResultsInIntegTimes results output =
+  do let loop (m : ms) = m >> loop ms
+         loop [] = return ()
+     ms <- runDynamicsInIntegTimes $ runEvent $
+           printResultsWithTime results output
+     liftIO $ loop ms
 
 -- | The Russian locale.
 russianResultLocale :: ResultLocale
