@@ -35,6 +35,8 @@ import Simulation.Aivika.Statistics
 import Simulation.Aivika.Ref
 import qualified Simulation.Aivika.Ref.Light as LR
 import Simulation.Aivika.Var
+import qualified Simulation.Aivika.Queue as Q
+import qualified Simulation.Aivika.Queue.Infinite as IQ
 
 -- | A locale to output the simulation results.
 --
@@ -64,6 +66,48 @@ data ResultId = SamplingStatsId
                 -- ^ Property 'samplingStatsVariance'.
               | SamplingStatsDeviationId
                 -- ^ Property 'samplingStatsDeviation'.
+              | EnqueueStrategyId
+                -- ^ Property 'Q.enqueueStrategy'.
+              | EnqueueStoringStrategyId
+                -- ^ Property 'Q.enqueueStoringStrategy'.
+              | DequeueStrategyId
+                -- ^ Property 'Q.dequeueStrategy'.
+              | QueueNullId
+                -- ^ Property 'Q.queueNull'.
+              | QueueFullId
+                -- ^ Property 'Q.queueFull'.
+              | QueueMaxCountId
+                -- ^ Property 'Q.queueMaxCount'.
+              | QueueCountId
+                -- ^ Property 'Q.queueCount'.
+              | EnqueueCountId
+                -- ^ Property 'Q.enqueueCount'.
+              | EnqueueLostCountId
+                -- ^ Property 'Q.enqueueLostCount'.
+              | EnqueueStoreCountId
+                -- ^ Property 'Q.enqueueStoreCount'.
+              | DequeueCountId
+                -- ^ Property 'Q.dequeueCount'.
+              | DequeueExtractCountId
+                -- ^ Property 'Q.dequeueExtractCount'.
+              | QueueLoadFactorId
+                -- ^ Property 'Q.queueLoadFactor'.
+              | EnqueueRateId
+                -- ^ Property 'Q.enqueueRate'.
+              | EnqueueStoreRateId
+                -- ^ Property 'Q.enqueueStoreRate'.
+              | DequeueRateId
+                -- ^ Property 'Q.dequeueRate'.
+              | DequeueExtractRateId
+                -- ^ Property 'Q.dequeueExtractRate'.
+              | QueueWaitTimeId
+                -- ^ Property 'Q.queueWaitTime'.
+              | QueueTotalWaitTimeId
+                -- ^ Property 'Q.queueTotalWaitTime'.
+              | EnqueueWaitTimeId
+                -- ^ Property 'Q.enqueueWaitTime'.
+              | DequeueWaitTimeId
+                -- ^ Property 'Q.dequeueWaitTime'.
               | LocalisedResultId (M.Map ResultLocale String)
                 -- ^ A localised property or object name.
 
@@ -998,6 +1042,27 @@ russianResultLocalisation SamplingStatsMeanId = "среднее значение
 russianResultLocalisation SamplingStatsMean2Id = "среднее квадратов"
 russianResultLocalisation SamplingStatsVarianceId = "дисперсия"
 russianResultLocalisation SamplingStatsDeviationId = "среднеквадратическое отклонение"
+russianResultLocalisation EnqueueStrategyId = "стратегия добавления элементов"
+russianResultLocalisation EnqueueStoringStrategyId = "стратегия хранения элементов"
+russianResultLocalisation DequeueStrategyId = "стратегия извлечения элементов"
+russianResultLocalisation QueueNullId = "очередь пуста?"
+russianResultLocalisation QueueFullId = "очередь заполнена?"
+russianResultLocalisation QueueMaxCountId = "емкость очереди"
+russianResultLocalisation QueueCountId = "размер очереди"
+russianResultLocalisation EnqueueCountId = "общее количество попыток добавить элементы"
+russianResultLocalisation EnqueueLostCountId = "общее количество неудачных попыток добавить элементы"
+russianResultLocalisation EnqueueStoreCountId = "общее количество сохраненных элементов"
+russianResultLocalisation DequeueCountId = "общее количество запросов на извлечение элементов"
+russianResultLocalisation DequeueExtractCountId = "общее количество извлеченных элементов"
+russianResultLocalisation QueueLoadFactorId = "коэфф. загрузки (размер, поделенный на емкость)"
+russianResultLocalisation EnqueueRateId = "количество попыток добавить на ед. времени"
+russianResultLocalisation EnqueueStoreRateId = "количество сохраненных на ед. времени"
+russianResultLocalisation DequeueRateId = "количество запросов на извлечение в ед. времени"
+russianResultLocalisation DequeueExtractRateId = "количество извлеченных на ед. времени"
+russianResultLocalisation QueueWaitTimeId = "время ожидания (сохранили -> извлекли)"
+russianResultLocalisation QueueTotalWaitTimeId = "общее время ожидания (попытались добавить -> извлекли)"
+russianResultLocalisation EnqueueWaitTimeId = "время ожидания добавления (попытались добавить -> сохранили)"
+russianResultLocalisation DequeueWaitTimeId = "время ожидания извлечения (запросили извлечь -> извлекли)"
 russianResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation russianResultLocale x
 
@@ -1011,6 +1076,27 @@ englishResultLocalisation SamplingStatsMeanId = "mean"
 englishResultLocalisation SamplingStatsMean2Id = "mean square"
 englishResultLocalisation SamplingStatsVarianceId = "variance"
 englishResultLocalisation SamplingStatsDeviationId = "deviation"
+englishResultLocalisation EnqueueStrategyId = "the enqueueing strategy"
+englishResultLocalisation EnqueueStoringStrategyId = "the storing strategy"
+englishResultLocalisation DequeueStrategyId = "the dequeueing strategy"
+englishResultLocalisation QueueNullId = "is the queue empty?"
+englishResultLocalisation QueueFullId = "is the queue full?"
+englishResultLocalisation QueueMaxCountId = "the queue capacity"
+englishResultLocalisation QueueCountId = "the queue size"
+englishResultLocalisation EnqueueCountId = "a total number of attempts to enqueue the items"
+englishResultLocalisation EnqueueLostCountId = "a total number of the lost items when trying to enqueue"
+englishResultLocalisation EnqueueStoreCountId = "a total number of the stored items"
+englishResultLocalisation DequeueCountId = "a total number of requests for dequeueing"
+englishResultLocalisation DequeueExtractCountId = "a total number of the dequeued items"
+englishResultLocalisation QueueLoadFactorId = "the queue load (its size divided by its capacity)"
+englishResultLocalisation EnqueueRateId = "how many attempts to enqueue per time?"
+englishResultLocalisation EnqueueStoreRateId = "how many items were stored per time?"
+englishResultLocalisation DequeueRateId = "how many requests for dequeueing per time?"
+englishResultLocalisation DequeueExtractRateId = "how many items were dequeued per time?"
+englishResultLocalisation QueueWaitTimeId = "the wait time (stored -> dequeued)"
+englishResultLocalisation QueueTotalWaitTimeId = "the total wait time (tried to enqueue -> dequeued)"
+englishResultLocalisation EnqueueWaitTimeId = "the enqueue wait time (tried to enqueue -> stored)"
+englishResultLocalisation DequeueWaitTimeId = "the dequeue wait time (requested for dequeueing -> dequeued)"
 englishResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation englishResultLocale x
 
