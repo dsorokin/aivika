@@ -728,7 +728,7 @@ hPrintResultOutputIndentedLabelled h indent label loc (ResultItemOutput x) =
            do hPutStr h tab
               hPutStr h label
               hPutStr h " = "
-              hPutStrLn h (show a)
+              hPutStrLn h a
     _ ->
       error $
       "Expected to see a string value for variable " ++
@@ -841,7 +841,7 @@ showResultOutputIndentedLabelled indent label loc (ResultItemOutput x) =
            showString tab .
            showString label .
            showString " = " .
-           showString (show a) .
+           showString a .
            showString "\n"
     _ ->
       error $
