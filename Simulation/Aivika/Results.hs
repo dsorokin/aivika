@@ -949,6 +949,14 @@ printResultsInIntegTimes print results =
            printResultsWithTime print results
      liftIO $ loop ms
 
+-- | Print in Russian the simulation results in stop time.
+printFinalResultsInRussian :: Results -> Simulation ()
+printFinalResultsInRussian = printResultsInStopTime  printResultOutputInRussian
+
+-- | Print in English the simulation results in stop time.
+printFinalResultsInEnglish :: Results -> Simulation ()
+printFinalResultsInEnglish = printResultsInStopTime  printResultOutputInEnglish
+
 -- | The Russian locale.
 russianResultLocale :: ResultLocale
 russianResultLocale = "ru"
