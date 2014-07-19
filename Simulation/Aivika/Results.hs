@@ -990,12 +990,40 @@ englishResultLocale = "en"
 
 -- | The Russian localisation of the simulation results.
 russianResultLocalisation :: ResultLocalisation
-russianResultLocalisation = lookupResultLocalisation russianResultLocale
+russianResultLocalisation SamplingStatsId = "сводная статистика"
+russianResultLocalisation SamplingStatsCountId = "количество"
+russianResultLocalisation SamplingStatsMinId = "минимальное значение"
+russianResultLocalisation SamplingStatsMaxId = "максимальное значение"
+russianResultLocalisation SamplingStatsMeanId = "среднее значение"
+russianResultLocalisation SamplingStatsMean2Id = "среднее квадратов"
+russianResultLocalisation SamplingStatsVarianceId = "дисперсия"
+russianResultLocalisation SamplingStatsDeviationId = "среднеквадратическое отклонение"
+russianResultLocalisation x@(LocalisedResultId m) =
+  lookupResultLocalisation russianResultLocale x
 
 -- | The English localisation of the simulation results.
 englishResultLocalisation :: ResultLocalisation
-englishResultLocalisation = lookupResultLocalisation englishResultLocale
+englishResultLocalisation SamplingStatsId = "statistics summary"
+englishResultLocalisation SamplingStatsCountId = "count"
+englishResultLocalisation SamplingStatsMinId = "minimum"
+englishResultLocalisation SamplingStatsMaxId = "maximum"
+englishResultLocalisation SamplingStatsMeanId = "mean"
+englishResultLocalisation SamplingStatsMean2Id = "mean square"
+englishResultLocalisation SamplingStatsVarianceId = "variance"
+englishResultLocalisation SamplingStatsDeviationId = "deviation"
+englishResultLocalisation x@(LocalisedResultId m) =
+  lookupResultLocalisation englishResultLocale x
 
 -- | Lookup the localisation by the specified locale.
 lookupResultLocalisation :: ResultLocale -> ResultLocalisation
-lookupResultLocalisation = undefined
+lookupResultLocalisation loc (LocalisedResultId m) =
+  case M.lookup loc m of
+    Just x -> x
+    Nothing ->
+      case M.lookup russianResultLocale m of
+        Just x -> x
+        Nothing ->
+          case M.lookup englishResultLocale m of
+            Just x -> x
+            Nothing -> ""
+lookupResultLocalisation loc resultId = russianResultLocalisation resultId
