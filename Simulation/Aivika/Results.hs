@@ -323,49 +323,50 @@ makeSamplingStatsOutput :: (Show a, ResultComputation m)
                            -- ^ the result name
                            -> m (SamplingStats a)
                            -- ^ the statistics
+                           -> (Event a -> ResultData)
+                           -- ^ transformation
                            -> ResultOutput
-makeSamplingStatsOutput name m =
-  let f g = StringResultData . fmap (show . g)
-  in ResultObjectOutput $
-     ResultObject {
-       resultObjectName = name,
-       resultObjectId = SamplingStatsId,
-       resultObjectProperties = [
-         ResultProperty {
-            resultPropertyLabel = "count",
-            resultPropertyId = SamplingStatsCountId,
-            resultPropertyOutput =
-              makeResultItemOutput (name ++ ".count") m (f samplingStatsCount) },
-         ResultProperty {
-           resultPropertyLabel = "mean",
-           resultPropertyId = SamplingStatsMeanId,
-           resultPropertyOutput =
-             makeResultItemOutput (name ++ ".mean") m (f samplingStatsMean) },
-         ResultProperty {
-           resultPropertyLabel = "mean2",
-           resultPropertyId = SamplingStatsMean2Id,
-           resultPropertyOutput =
-             makeResultItemOutput (name ++ ".mean2") m (f samplingStatsMean2) },
-         ResultProperty {
-           resultPropertyLabel = "std",
-           resultPropertyId = SamplingStatsDeviationId,
-           resultPropertyOutput =
-             makeResultItemOutput (name ++ ".std") m (f samplingStatsDeviation) },
-         ResultProperty {
-           resultPropertyLabel = "var",
-           resultPropertyId = SamplingStatsVarianceId,
-           resultPropertyOutput =
-             makeResultItemOutput (name ++ ".var") m (f samplingStatsVariance) },
-         ResultProperty {
-           resultPropertyLabel = "min",
-           resultPropertyId = SamplingStatsMinId,
-           resultPropertyOutput =
-             makeResultItemOutput (name ++ ".min") m (f samplingStatsMin) },
-         ResultProperty {
-           resultPropertyLabel = "max",
-           resultPropertyId = SamplingStatsMaxId,
-           resultPropertyOutput =
-             makeResultItemOutput (name ++ ".max") m (f samplingStatsMax) } ] }
+makeSamplingStatsOutput name m f =
+  ResultObjectOutput $
+  ResultObject {
+    resultObjectName = name,
+    resultObjectId = SamplingStatsId,
+    resultObjectProperties = [
+      ResultProperty {
+         resultPropertyLabel = "count",
+         resultPropertyId = SamplingStatsCountId,
+         resultPropertyOutput =
+           makeResultItemOutput (name ++ ".count") m (IntResultData . fmap samplingStatsCount) },
+      ResultProperty {
+        resultPropertyLabel = "mean",
+        resultPropertyId = SamplingStatsMeanId,
+        resultPropertyOutput =
+          makeResultItemOutput (name ++ ".mean") m (DoubleResultData . fmap samplingStatsMean) },
+      ResultProperty {
+        resultPropertyLabel = "mean2",
+        resultPropertyId = SamplingStatsMean2Id,
+        resultPropertyOutput =
+          makeResultItemOutput (name ++ ".mean2") m (DoubleResultData . fmap samplingStatsMean2) },
+      ResultProperty {
+        resultPropertyLabel = "std",
+        resultPropertyId = SamplingStatsDeviationId,
+        resultPropertyOutput =
+          makeResultItemOutput (name ++ ".std") m (DoubleResultData . fmap samplingStatsDeviation) },
+      ResultProperty {
+        resultPropertyLabel = "var",
+        resultPropertyId = SamplingStatsVarianceId,
+        resultPropertyOutput =
+          makeResultItemOutput (name ++ ".var") m (DoubleResultData . fmap samplingStatsVariance) },
+      ResultProperty {
+        resultPropertyLabel = "min",
+        resultPropertyId = SamplingStatsMinId,
+        resultPropertyOutput =
+          makeResultItemOutput (name ++ ".min") m (f . fmap samplingStatsMin) },
+      ResultProperty {
+        resultPropertyLabel = "max",
+        resultPropertyId = SamplingStatsMaxId,
+        resultPropertyOutput =
+          makeResultItemOutput (name ++ ".max") m (f . fmap samplingStatsMax) } ] }
 
 -- | Output the modeling time.
 timeOutput :: ResultOutput
@@ -437,7 +438,7 @@ instance ResultComputation m => ResultProvider (m (SamplingStats Double)) where
     f IntStatsResultType =
       makeResultItemOutput name m (const NoResultData)
     f StringResultType =
-      makeSamplingStatsOutput name m
+      makeSamplingStatsOutput name m DoubleResultData
     f DefaultResultType =
       makeResultItemOutput name m DoubleStatsResultData
 
@@ -497,7 +498,7 @@ instance ResultComputation m => ResultProvider (m (SamplingStats Int)) where
     f IntStatsResultType =
       makeResultItemOutput name m IntStatsResultData
     f StringResultType =
-      makeSamplingStatsOutput name m
+      makeSamplingStatsOutput name m IntResultData
     f DefaultResultType =
       makeResultItemOutput name m IntStatsResultData
 
