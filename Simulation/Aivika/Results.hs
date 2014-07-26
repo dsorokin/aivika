@@ -236,6 +236,94 @@ flattenResultItems (ResultVectorOutput x) =
   concat $ map flattenResultItems $ V.toList $ resultVectorItems x
 flattenResultItems (ResultSeparatorOutput x) = []
 
+-- | Transform the result items using the specified function.
+mapResultItems :: (ResultItem -> ResultOutput) -> ResultOutput -> ResultOutput
+mapResultItems f (ResultItemOutput x) = f x
+mapResultItems f (ResultObjectOutput x) =
+  ResultObjectOutput $
+  x { resultObjectProperties =
+         flip map (resultObjectProperties x) $ \p ->
+         p { resultPropertyOutput = mapResultItems f (resultPropertyOutput p) }
+    }
+mapResultItems f (ResultVectorOutput x) =
+  ResultVectorOutput $
+  x { resultVectorItems =
+         V.map (mapResultItems f) (resultVectorItems x)
+    }
+mapResultItems f z@(ResultSeparatorOutput x) = z
+
+-- | Retype the result item changing the data type and probably even the data structure. 
+retypeResultItem :: ResultType -> ResultItem -> ResultOutput
+retypeResultItem DoubleResultType z = ResultItemOutput $ tr z
+  where
+    tr z@(ResultItem n (DoubleResultData x) s) = z
+    tr z@(ResultItem n (DoubleListResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleStatsResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntResultData x) s) = z { resultItemData = DoubleResultData $ fmap fromIntegral x }
+    tr z@(ResultItem n (IntListResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntStatsResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (StringResultData x) s) = z { resultItemData = NoResultData }
+retypeResultItem DoubleListResultType z = ResultItemOutput $ tr z
+  where
+    tr z@(ResultItem n (DoubleResultData x) s) = z { resultItemData = DoubleListResultData $ fmap return x }
+    tr z@(ResultItem n (DoubleListResultData x) s) = z
+    tr z@(ResultItem n (DoubleStatsResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntResultData x) s) = z { resultItemData = DoubleListResultData $ fmap (return . fromIntegral) x }
+    tr z@(ResultItem n (IntListResultData x) s) = z { resultItemData = DoubleListResultData $ fmap (fmap fromIntegral) x }
+    tr z@(ResultItem n (IntStatsResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (StringResultData x) s) = z { resultItemData = NoResultData }
+retypeResultItem DoubleStatsResultType z = ResultItemOutput $ tr z
+  where
+    tr z@(ResultItem n (DoubleResultData x) s) = z { resultItemData = DoubleStatsResultData $ fmap returnSamplingStats x }
+    tr z@(ResultItem n (DoubleListResultData x) s) = z { resultItemData = DoubleStatsResultData $ fmap listSamplingStats x }
+    tr z@(ResultItem n (DoubleStatsResultData x) s) = z
+    tr z@(ResultItem n (IntResultData x) s) = z { resultItemData = DoubleStatsResultData $ fmap (fromIntSamplingStats . returnSamplingStats) x }
+    tr z@(ResultItem n (IntListResultData x) s) = z { resultItemData = DoubleStatsResultData $ fmap (fromIntSamplingStats . listSamplingStats) x }
+    tr z@(ResultItem n (IntStatsResultData x) s) = z { resultItemData = DoubleStatsResultData $ fmap fromIntSamplingStats x }
+    tr z@(ResultItem n (StringResultData x) s) = z { resultItemData = NoResultData }
+retypeResultItem IntResultType z = ResultItemOutput $ tr z
+  where
+    tr z@(ResultItem n (DoubleResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleListResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleStatsResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntResultData x) s) = z
+    tr z@(ResultItem n (IntListResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntStatsResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (StringResultData x) s) = z { resultItemData = NoResultData }
+retypeResultItem IntListResultType z = ResultItemOutput $ tr z
+  where
+    tr z@(ResultItem n (DoubleResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleListResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleStatsResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntResultData x) s) = z { resultItemData = IntListResultData $ fmap return x }
+    tr z@(ResultItem n (IntListResultData x) s) = z
+    tr z@(ResultItem n (IntStatsResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (StringResultData x) s) = z { resultItemData = NoResultData }
+retypeResultItem IntStatsResultType z = ResultItemOutput $ tr z
+  where
+    tr z@(ResultItem n (DoubleResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleListResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleStatsResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntResultData x) s) = z { resultItemData = IntStatsResultData $ fmap returnSamplingStats x }
+    tr z@(ResultItem n (IntListResultData x) s) = z { resultItemData = IntStatsResultData $ fmap listSamplingStats x }
+    tr z@(ResultItem n (IntStatsResultData x) s) = z
+    tr z@(ResultItem n (StringResultData x) s) = z { resultItemData = NoResultData }
+retypeResultItem StringResultType z@(ResultItem n (DoubleStatsResultData x) s) =
+  mapResultItems (retypeResultItem StringResultType) $
+  mapResultItems (\x -> ResultItemOutput x { resultItemSignal = s }) $
+  makeSamplingStatsOutput n x DoubleResultData
+retypeResultItem StringResultType z@(ResultItem n (IntStatsResultData x) s) =
+  mapResultItems (retypeResultItem StringResultType) $
+  mapResultItems (\x -> ResultItemOutput x { resultItemSignal = s }) $
+  makeSamplingStatsOutput n x IntResultData
+retypeResultItem StringResultType z = ResultItemOutput $ tr z
+  where
+    tr z@(ResultItem n (DoubleResultData x) s) = z { resultItemData = StringResultData $ fmap show x }
+    tr z@(ResultItem n (DoubleListResultData x) s) = z { resultItemData = StringResultData $ fmap show x }
+    tr z@(ResultItem n (IntResultData x) s) = z { resultItemData = StringResultData $ fmap show x }
+    tr z@(ResultItem n (IntListResultData x) s) = z { resultItemData = StringResultData $ fmap show x }
+    tr z@(ResultItem n (StringResultData x) s) = z
+
 -- | It contains the results of simulation.
 data Results =
   Results { resultPredefinedSignals :: ResultPredefinedSignals,
