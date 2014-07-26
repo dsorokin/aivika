@@ -13,7 +13,7 @@ specs = Specs { spcStartTime = 0,
                 spcMethod = RungeKutta4,
                 spcGeneratorType = SimpleGenerator }
 
-model :: Simulation Double
+model :: Simulation Results
 model =
   mdo let annualProfit = profit
           area = 100
@@ -46,6 +46,13 @@ model =
       totalProfit <- integ annualProfit 0
       let totalCatchPerYear = maxDynamics 0 (ships * catchPerShip)
       -- results --
-      runDynamicsInStopTime annualProfit
+      resultsFromStartTime
+        [("fish", resultSource "fish" fish),
+         ("annualProfit", resultSource "annual profit" annualProfit),
+         ("totalProfit", resultSource "total profit" totalProfit)]
 
-main = runSimulation model specs >>= print
+main =
+  flip runSimulation specs $
+  model >>= \results -> do
+    printInitResultsInEnglish results
+    printFinalResultsInEnglish results

@@ -78,7 +78,7 @@ activatePersons :: Array Int Person -> Event ()
 activatePersons ps =
   forM_ (elems ps) $ \p -> activatePerson p
 
-model :: Simulation [IO [Int]]
+model :: Simulation Results
 model =
   do potentialAdopters <- newRef 0
      adopters <- newRef 0
@@ -86,12 +86,10 @@ model =
      definePersons ps potentialAdopters adopters
      runEventInStartTime $
        activatePersons ps
-     runDynamicsInIntegTimes $
-       runEvent $
-       do i1 <- readRef potentialAdopters
-          i2 <- readRef adopters
-          return [i1, i2]
+     resultsFromStartTime
+       [("potentialAdopter",
+         resultSource "potential adopters" potentialAdopters),
+        ("adopters",
+         resultSource "adopters" adopters)]
 
-main = 
-  do xs <- runSimulation model specs
-     forM_ xs $ \x -> x >>= print
+main = outputIntegResultsInEnglish model specs
