@@ -26,6 +26,7 @@ import Data.Monoid
 
 import System.IO
 
+import Simulation.Aivika.Specs
 import Simulation.Aivika.Parameter
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
@@ -1197,6 +1198,48 @@ printIntegResultsInRussian = printResultsInIntegTimes  printResultOutputInRussia
 -- | Print in English the simulation results in integration time points.
 printIntegResultsInEnglish :: Results -> Simulation ()
 printIntegResultsInEnglish = printResultsInIntegTimes  printResultOutputInEnglish
+
+-- | Run the simulation and output to the results in the start time.
+outputResultsInStartTime :: ResultOutputPrint -> Simulation Results -> Specs -> IO ()
+outputResultsInStartTime print model specs =
+  flip runSimulation specs $
+  model >>= printResultsInStartTime print
+
+-- | Run the simulation and output to the results in the final time.
+outputResultsInStopTime :: ResultOutputPrint -> Simulation Results -> Specs -> IO ()
+outputResultsInStopTime print model specs =
+  flip runSimulation specs $
+  model >>= printResultsInStopTime print
+
+-- | Run the simulation and output to the results in the integration time points.
+outputResultsInIntegTimes :: ResultOutputPrint -> Simulation Results -> Specs -> IO ()
+outputResultsInIntegTimes print model specs =
+  flip runSimulation specs $
+  model >>= printResultsInIntegTimes print
+
+-- | Run the simulation and output in Russian the results in the start time.
+outputInitResultsInRussian :: Simulation Results -> Specs -> IO ()
+outputInitResultsInRussian = outputResultsInStartTime printResultOutputInRussian
+
+-- | Run the simulation and output in English the results in the start time.
+outputInitResultsInEnglish :: Simulation Results -> Specs -> IO ()
+outputInitResultsInEnglish = outputResultsInStartTime printResultOutputInEnglish
+
+-- | Run the simulation and output in Russian the results in the final time.
+outputFinalResultsInRussian :: Simulation Results -> Specs -> IO ()
+outputFinalResultsInRussian = outputResultsInStopTime printResultOutputInRussian
+
+-- | Run the simulation and output in English the results in the final time.
+outputFinalResultsInEnglish :: Simulation Results -> Specs -> IO ()
+outputFinalResultsInEnglish = outputResultsInStopTime printResultOutputInEnglish
+
+-- | Run the simulation and output in Russian the results in the integration time points.
+outputIntegResultsInRussian :: Simulation Results -> Specs -> IO ()
+outputIntegResultsInRussian = outputResultsInIntegTimes printResultOutputInRussian
+
+-- | Run the simulation and output in English the results in the integration time points.
+outputIntegResultsInEnglish :: Simulation Results -> Specs -> IO ()
+outputIntegResultsInEnglish = outputResultsInIntegTimes printResultOutputInEnglish
 
 -- | The Russian locale.
 russianResultLocale :: ResultLocale
