@@ -66,6 +66,10 @@ data ResultId = SamplingStatsId
                 -- ^ Property 'samplingStatsVariance'.
               | SamplingStatsDeviationId
                 -- ^ Property 'samplingStatsDeviation'.
+              | FiniteQueueId
+                -- ^ A finite Q.Queue value.
+              | InfiniteQueueId
+                -- ^ An infinite IQ.Queue value.
               | EnqueueStrategyId
                 -- ^ Property 'Q.enqueueStrategy'.
               | EnqueueStoringStrategyId
@@ -411,6 +415,176 @@ makeSamplingStatsOutput name m f =
         resultPropertyId = SamplingStatsMaxId,
         resultPropertyOutput =
           makeResultItemOutput (name ++ ".max") m (f . fmap samplingStatsMax) } ] }
+
+-- | Output the specified (finite) queue.
+makeQueueOutput :: (Show si, Show sm, Show so, ResultComputation m)
+                   => String
+                   -- ^ the result name
+                   -> Q.Queue si qi sm qm so qo a
+                   -- ^ the queue
+                   -> ResultOutput
+makeQueueOutput name queue =
+  ResultObjectOutput $
+  ResultObject {
+    resultObjectName = name,
+    resultObjectId = FiniteQueueId,
+    resultObjectProperties = [
+      ResultProperty {
+         resultPropertyLabel = "enqueueStrategy",
+         resultPropertyId = EnqueueStrategyId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".enqueueStrategy") getEnqueueStrategy enqueueStrategySignal  },
+      ResultProperty {
+         resultPropertyLabel = "enqueueStoringStrategy",
+         resultPropertyId = EnqueueStoringStrategyId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".enqueueStoringStrategy") getEnqueueStoringStrategy enqueueStoringStrategySignal},
+      ResultProperty {
+         resultPropertyLabel = "dequeueStrategy",
+         resultPropertyId = DequeueStrategyId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".dequeueStrategy") getDequeueStrategy dequeueStrategySignal },
+      ResultProperty {
+         resultPropertyLabel = "queueNull",
+         resultPropertyId = QueueNullId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".queueNull") whetherIsEmpty whetherIsEmptySignal },
+      ResultProperty {
+         resultPropertyLabel = "queueFull",
+         resultPropertyId = QueueFullId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".queueFull") whetherIsFull whetherIsFullSignal },
+      ResultProperty {
+         resultPropertyLabel = "queueMaxCount",
+         resultPropertyId = QueueMaxCountId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".queueMaxCount") getMaxCount maxCountSignal },
+      ResultProperty {
+         resultPropertyLabel = "queueCount",
+         resultPropertyId = QueueCountId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".queueCount") getCount countSignal },
+      ResultProperty {
+         resultPropertyLabel = "enqueueCount",
+         resultPropertyId = EnqueueCountId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".enqueueCount") getEnqueueCount enqueueCountSignal },
+      ResultProperty {
+         resultPropertyLabel = "enqueueLostCount",
+         resultPropertyId = EnqueueLostCountId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".enqueueLostCount") getEnqueueLostCount enqueueLostCountSignal },
+      ResultProperty {
+         resultPropertyLabel = "enqueueStoreCount",
+         resultPropertyId = EnqueueStoreCountId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".enqueueStoreCount") getEnqueueStoreCount enqueueStoreCountSignal },
+      ResultProperty {
+         resultPropertyLabel = "dequeueCount",
+         resultPropertyId = DequeueCountId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".dequeueCount") getDequeueCount dequeueCountSignal },
+      ResultProperty {
+         resultPropertyLabel = "dequeueExtractCount",
+         resultPropertyId = DequeueExtractCountId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".dequeueExtractCount") getDequeueExtractCount dequeueExtractCountSignal },
+      ResultProperty {
+         resultPropertyLabel = "queueLoadFactor",
+         resultPropertyId = QueueLoadFactorId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".queueLoadFactor") getLoadFactor loadFactorSignal },
+      ResultProperty {
+         resultPropertyLabel = "enqueueRate",
+         resultPropertyId = EnqueueRateId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".enqueueRate") getEnqueueRate enqueueRateSignal },
+      ResultProperty {
+         resultPropertyLabel = "enqueueStoreRate",
+         resultPropertyId = EnqueueStoreRateId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".enqueueStoreRate") getEnqueueStoreRate enqueueStoreRateSignal },
+      ResultProperty {
+         resultPropertyLabel = "dequeueRate",
+         resultPropertyId = DequeueRateId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".dequeueRate") getDequeueRate dequeueRateSignal },
+      ResultProperty {
+         resultPropertyLabel = "dequeueExtractRate",
+         resultPropertyId = DequeueExtractRateId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".dequeueExtractRate") getDequeueExtractRate dequeueExtractRateSignal },
+      ResultProperty {
+         resultPropertyLabel = "queueWaitTime",
+         resultPropertyId = QueueWaitTimeId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".queueWaitTime") getWaitTime waitTimeSignal },
+      ResultProperty {
+         resultPropertyLabel = "queueTotalWaitTime",
+         resultPropertyId = QueueTotalWaitTimeId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".queueTotalWaitTime") getTotalWaitTime totalWaitTimeSignal },
+      ResultProperty {
+         resultPropertyLabel = "enqueueWaitTime",
+         resultPropertyId = EnqueueWaitTimeId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".enqueueWaitTime") getEnqueueWaitTime enqueueWaitTimeSignal },
+      ResultProperty {
+         resultPropertyLabel = "dequeueWaitTime",
+         resultPropertyId = DequeueWaitTimeId,
+         resultPropertyOutput =
+           makeOutput (name ++ ".dequeueWaitTime") getDequeueWaitTime dequeueWaitTimeSignal }
+      ]
+    }
+  where makeOutput name' f g =
+          ResultItemOutput $
+          ResultItem { resultItemName   = name',
+                       resultItemData   = f queue,
+                       resultItemSignal = g queue }
+        -- properties
+        getEnqueueStrategy = StringResultData . return . show . Q.enqueueStrategy
+        getEnqueueStoringStrategy = StringResultData . return . show . Q.enqueueStoringStrategy
+        getDequeueStrategy = StringResultData . return . show . Q.dequeueStrategy
+        whetherIsEmpty = StringResultData . fmap show . Q.queueNull
+        whetherIsFull = StringResultData . fmap show . Q.queueFull
+        getMaxCount = IntResultData . return . Q.queueMaxCount
+        getCount = IntResultData . Q.queueCount
+        getEnqueueCount = IntResultData . Q.enqueueCount
+        getEnqueueLostCount = IntResultData . Q.enqueueLostCount
+        getEnqueueStoreCount = IntResultData . Q.enqueueStoreCount
+        getDequeueCount = IntResultData . Q.dequeueCount
+        getDequeueExtractCount = IntResultData . Q.dequeueExtractCount
+        getLoadFactor = DoubleResultData . Q.queueLoadFactor
+        getEnqueueRate = DoubleResultData . Q.enqueueRate
+        getEnqueueStoreRate = DoubleResultData . Q.enqueueStoreRate
+        getDequeueRate = DoubleResultData . Q.dequeueRate
+        getDequeueExtractRate = DoubleResultData . Q.dequeueExtractRate
+        getWaitTime = DoubleStatsResultData . Q.queueWaitTime
+        getTotalWaitTime = DoubleStatsResultData . Q.queueTotalWaitTime
+        getEnqueueWaitTime = DoubleStatsResultData . Q.enqueueWaitTime
+        getDequeueWaitTime = DoubleStatsResultData . Q.dequeueWaitTime
+        -- signals
+        enqueueStrategySignal = const Nothing
+        enqueueStoringStrategySignal = const Nothing
+        dequeueStrategySignal = const Nothing
+        whetherIsEmptySignal = Just . Q.queueNullChanged_
+        whetherIsFullSignal = Just . Q.queueFullChanged_
+        maxCountSignal = const Nothing
+        countSignal = Just . Q.queueCountChanged_
+        enqueueCountSignal = Just . Q.enqueueCountChanged_
+        enqueueLostCountSignal = Just . Q.enqueueLostCountChanged_
+        enqueueStoreCountSignal = Just . Q.enqueueStoreCountChanged_
+        dequeueCountSignal = Just . Q.dequeueCountChanged_
+        dequeueExtractCountSignal = Just . Q.dequeueExtractCountChanged_
+        loadFactorSignal = Just . Q.queueLoadFactorChanged_
+        enqueueRateSignal = const Nothing
+        enqueueStoreRateSignal = const Nothing
+        dequeueRateSignal = const Nothing
+        dequeueExtractRateSignal = const Nothing
+        waitTimeSignal = Just . Q.queueWaitTimeChanged_
+        totalWaitTimeSignal = Just . Q.queueTotalWaitTimeChanged_
+        enqueueWaitTimeSignal = Just . Q.enqueueWaitTimeChanged_
+        dequeueWaitTimeSignal = Just . Q.dequeueWaitTimeChanged_
 
 -- | Output the modeling time.
 timeOutput :: ResultOutput
@@ -1042,6 +1216,8 @@ russianResultLocalisation SamplingStatsMeanId = "среднее значение
 russianResultLocalisation SamplingStatsMean2Id = "среднее квадратов"
 russianResultLocalisation SamplingStatsVarianceId = "дисперсия"
 russianResultLocalisation SamplingStatsDeviationId = "среднеквадратическое отклонение"
+russianResultLocalisation FiniteQueueId = "конечная очередь"
+russianResultLocalisation InfiniteQueueId = "бесконечная очередь"
 russianResultLocalisation EnqueueStrategyId = "стратегия добавления элементов"
 russianResultLocalisation EnqueueStoringStrategyId = "стратегия хранения элементов"
 russianResultLocalisation DequeueStrategyId = "стратегия извлечения элементов"
@@ -1076,6 +1252,8 @@ englishResultLocalisation SamplingStatsMeanId = "mean"
 englishResultLocalisation SamplingStatsMean2Id = "mean square"
 englishResultLocalisation SamplingStatsVarianceId = "variance"
 englishResultLocalisation SamplingStatsDeviationId = "deviation"
+englishResultLocalisation FiniteQueueId = "the finite queue"
+englishResultLocalisation InfiniteQueueId = "the infinite queue"
 englishResultLocalisation EnqueueStrategyId = "the enqueueing strategy"
 englishResultLocalisation EnqueueStoringStrategyId = "the storing strategy"
 englishResultLocalisation DequeueStrategyId = "the dequeueing strategy"
