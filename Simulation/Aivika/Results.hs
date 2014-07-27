@@ -727,6 +727,113 @@ makeQueueSource name queue =
         enqueueWaitTimeSignal = Just . Q.enqueueWaitTimeChanged_
         dequeueWaitTimeSignal = Just . Q.dequeueWaitTimeChanged_
 
+-- | Return the source by the specified (infinite) queue.
+makeInfiniteQueueSource :: (Show sm, Show so)
+                           => String
+                           -- ^ the result name
+                           -> IQ.Queue sm qm so qo a
+                           -- ^ the queue
+                           -> ResultSource
+makeInfiniteQueueSource name queue =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = name,
+    resultObjectId = InfiniteQueueId,
+    resultObjectProperties = [
+      ResultProperty {
+         resultPropertyLabel = "enqueueStoringStrategy",
+         resultPropertyId = EnqueueStoringStrategyId,
+         resultPropertySource =
+           makeSource (name ++ ".enqueueStoringStrategy") getEnqueueStoringStrategy enqueueStoringStrategySignal},
+      ResultProperty {
+         resultPropertyLabel = "dequeueStrategy",
+         resultPropertyId = DequeueStrategyId,
+         resultPropertySource =
+           makeSource (name ++ ".dequeueStrategy") getDequeueStrategy dequeueStrategySignal },
+      ResultProperty {
+         resultPropertyLabel = "queueNull",
+         resultPropertyId = QueueNullId,
+         resultPropertySource =
+           makeSource (name ++ ".queueNull") whetherIsEmpty whetherIsEmptySignal },
+      ResultProperty {
+         resultPropertyLabel = "queueCount",
+         resultPropertyId = QueueCountId,
+         resultPropertySource =
+           makeSource (name ++ ".queueCount") getCount countSignal },
+      ResultProperty {
+         resultPropertyLabel = "enqueueStoreCount",
+         resultPropertyId = EnqueueStoreCountId,
+         resultPropertySource =
+           makeSource (name ++ ".enqueueStoreCount") getEnqueueStoreCount enqueueStoreCountSignal },
+      ResultProperty {
+         resultPropertyLabel = "dequeueCount",
+         resultPropertyId = DequeueCountId,
+         resultPropertySource =
+           makeSource (name ++ ".dequeueCount") getDequeueCount dequeueCountSignal },
+      ResultProperty {
+         resultPropertyLabel = "dequeueExtractCount",
+         resultPropertyId = DequeueExtractCountId,
+         resultPropertySource =
+           makeSource (name ++ ".dequeueExtractCount") getDequeueExtractCount dequeueExtractCountSignal },
+      ResultProperty {
+         resultPropertyLabel = "enqueueStoreRate",
+         resultPropertyId = EnqueueStoreRateId,
+         resultPropertySource =
+           makeSource (name ++ ".enqueueStoreRate") getEnqueueStoreRate enqueueStoreRateSignal },
+      ResultProperty {
+         resultPropertyLabel = "dequeueRate",
+         resultPropertyId = DequeueRateId,
+         resultPropertySource =
+           makeSource (name ++ ".dequeueRate") getDequeueRate dequeueRateSignal },
+      ResultProperty {
+         resultPropertyLabel = "dequeueExtractRate",
+         resultPropertyId = DequeueExtractRateId,
+         resultPropertySource =
+           makeSource (name ++ ".dequeueExtractRate") getDequeueExtractRate dequeueExtractRateSignal },
+      ResultProperty {
+         resultPropertyLabel = "queueWaitTime",
+         resultPropertyId = QueueWaitTimeId,
+         resultPropertySource =
+           makeSource (name ++ ".queueWaitTime") getWaitTime waitTimeSignal },
+      ResultProperty {
+         resultPropertyLabel = "dequeueWaitTime",
+         resultPropertyId = DequeueWaitTimeId,
+         resultPropertySource =
+           makeSource (name ++ ".dequeueWaitTime") getDequeueWaitTime dequeueWaitTimeSignal }
+      ]
+    }
+  where makeSource name' f g =
+          ResultItemSource $
+          ResultItem { resultItemName   = name',
+                       resultItemData   = f queue,
+                       resultItemSignal = g queue }
+        -- properties
+        getEnqueueStoringStrategy = StringResultData . return . show . IQ.enqueueStoringStrategy
+        getDequeueStrategy = StringResultData . return . show . IQ.dequeueStrategy
+        whetherIsEmpty = StringResultData . fmap show . IQ.queueNull
+        getCount = IntResultData . IQ.queueCount
+        getEnqueueStoreCount = IntResultData . IQ.enqueueStoreCount
+        getDequeueCount = IntResultData . IQ.dequeueCount
+        getDequeueExtractCount = IntResultData . IQ.dequeueExtractCount
+        getEnqueueStoreRate = DoubleResultData . IQ.enqueueStoreRate
+        getDequeueRate = DoubleResultData . IQ.dequeueRate
+        getDequeueExtractRate = DoubleResultData . IQ.dequeueExtractRate
+        getWaitTime = DoubleStatsResultData . IQ.queueWaitTime
+        getDequeueWaitTime = DoubleStatsResultData . IQ.dequeueWaitTime
+        -- signals
+        enqueueStoringStrategySignal = const Nothing
+        dequeueStrategySignal = const Nothing
+        whetherIsEmptySignal = Just . IQ.queueNullChanged_
+        countSignal = Just . IQ.queueCountChanged_
+        enqueueStoreCountSignal = Just . IQ.enqueueStoreCountChanged_
+        dequeueCountSignal = Just . IQ.dequeueCountChanged_
+        dequeueExtractCountSignal = Just . IQ.dequeueExtractCountChanged_
+        enqueueStoreRateSignal = const Nothing
+        dequeueRateSignal = const Nothing
+        dequeueExtractRateSignal = const Nothing
+        waitTimeSignal = Just . IQ.queueWaitTimeChanged_
+        dequeueWaitTimeSignal = Just . IQ.dequeueWaitTimeChanged_
+
 -- | Return an arbitrary text as a separator source.
 makeTextSource :: String -> ResultSource
 makeTextSource text =
@@ -854,3 +961,7 @@ instance ResultComputation m => ResultProvider (m (V.Vector Int)) where
 instance (Show si, Show sm, Show so) => ResultProvider (Q.Queue si qi sm qm so qo a) where
 
   resultSource = makeQueueSource
+
+instance (Show sm, Show so) => ResultProvider (IQ.Queue sm qm so qo a) where
+
+  resultSource = makeInfiniteQueueSource
