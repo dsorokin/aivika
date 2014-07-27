@@ -1,4 +1,10 @@
 
+-- This is a model of the Furnace. It is described in different sources [1, 2].
+--
+-- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
+--
+-- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
+
 import Data.Maybe
 import System.Random
 import Control.Monad
