@@ -262,13 +262,18 @@ showResultSourceInEnglish = showResultSource englishResultLocalisation
 -- | Print the results with the information about the modeling time.
 printResultsWithTime :: ResultSourcePrint -> Results -> Event ()
 printResultsWithTime print results =
-  do let y1 = makeTextSource "----------"
-         y2 = timeSource
-         y3 = makeTextSource ""
-         ys = retypeResults StringResultType results
+  do let x1 = makeTextSource "----------"
+         x2 = timeSource
+         x3 = makeTextSource ""
+         xs = results
+         tr = mapResultItems (retypeResultItem StringResultType)
+         y1 = tr x1
+         y2 = tr x2
+         y3 = tr x3
+         ys = retypeResults StringResultType xs
      print y1
      print y2
-     print y3
+     -- print y3
      mapM_ print ys
      print y3
 
