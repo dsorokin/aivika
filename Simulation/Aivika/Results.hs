@@ -484,6 +484,11 @@ instance ResultComputation Signalable where
   resultComputationData = readSignalable
   resultComputationSignal = Just . signalableChanged_
 
+-- | Generate the result source by output retyping and restructuring the data if required.
+generateResultSource :: (String -> a -> ResultOutput) -> (String -> a -> ResultSource)
+generateResultSource f name m =
+  ResultSource $ \t -> mapResultItems (retypeResultItem t) (f name m)
+
 -- | Make the result source by the specified transformation function.
 makeResultSource :: ResultComputation m
                     => (Event a -> ResultData)
@@ -493,10 +498,7 @@ makeResultSource :: ResultComputation m
                     -> m a
                     -- ^ the result computation
                     -> ResultSource
-makeResultSource f name m =
-  ResultSource $ \t ->
-  mapResultItems (retypeResultItem t) $
-  makeResultItemOutput f name m
+makeResultSource f = generateResultSource $ makeResultItemOutput f
 
 -- | Make a result item output. 
 makeResultItemOutput :: ResultComputation m
@@ -570,7 +572,7 @@ makeSamplingStatsOutput f name m =
                        resultItemSignal = resultComputationSignal m }
 
 -- | Output the specified (finite) queue.
-makeQueueOutput :: (Show si, Show sm, Show so, ResultComputation m)
+makeQueueOutput :: (Show si, Show sm, Show so)
                    => String
                    -- ^ the result name
                    -> Q.Queue si qi sm qm so qo a
@@ -862,3 +864,7 @@ instance ResultComputation m => ResultProvider (m (V.Vector Double)) where
 instance ResultComputation m => ResultProvider (m (V.Vector Int)) where
 
   resultSource = makeResultSource (IntListResultData . fmap V.toList)
+
+instance (Show si, Show sm, Show so) => ResultProvider (Q.Queue si qi sm qm so qo a) where
+
+  resultSource = generateResultSource makeQueueOutput
