@@ -157,12 +157,16 @@ data ResultType = DoubleResultType
                   -- ^ Return lists of double numbers in time points.
                 | DoubleStatsResultType
                   -- ^ Return statistics based on double numbers.
+                | DoubleTimingStatsResultType
+                  -- ^ Return a timing statistics based on double numbers.
                 | IntResultType
                   -- ^ Return integer numbers in time points.
                 | IntListResultType
                   -- ^ Return lists of integer numbers in time points.
                 | IntStatsResultType
                   -- ^ Return statistics based on integer numbers.
+                | IntTimingStatsResultType
+                  -- ^ Return a timing statistics based on integer numbers.
                 | StringResultType
                   -- ^ Return string representations in time points.
                 | DefaultResultType
@@ -175,12 +179,16 @@ data ResultData = DoubleResultData (Event Double)
                   -- ^ Contains the lists of double numbers in time points.
                 | DoubleStatsResultData (Event (SamplingStats Double))
                   -- ^ Contains the statistics based on double numbers.
+                | DoubleTimingStatsResultData (Event (TimingStats Double))
+                  -- ^ Contains the timing statistics based on double numbers.
                 | IntResultData (Event Int)
                   -- ^ Contains the integer numbers in time points.
                 | IntListResultData (Event [Int])
                   -- ^ Contains the lists of integer numbers in time points.
                 | IntStatsResultData (Event (SamplingStats Int))
                   -- ^ Contains the statistics based on integer numbers.
+                | IntTimingStatsResultData (Event (TimingStats Int))
+                  -- ^ Contains the timing statistics based on integer numbers.
                 | StringResultData (Event String)
                   -- ^ Contains the string representations in time.
                 | NoResultData
@@ -281,11 +289,15 @@ retypeResultItem DoubleResultType z = ResultItemSource $ tr z
       z { resultItemData = NoResultData }
     tr z@(ResultItem n (DoubleStatsResultData x) s) =
       z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+      z { resultItemData = NoResultData }
     tr z@(ResultItem n (IntResultData x) s) =
       z { resultItemData = DoubleResultData $ fmap fromIntegral x }
     tr z@(ResultItem n (IntListResultData x) s) =
       z { resultItemData = NoResultData }
     tr z@(ResultItem n (IntStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
     tr z@(ResultItem n (StringResultData x) s) =
       z { resultItemData = NoResultData }
@@ -297,11 +309,15 @@ retypeResultItem DoubleListResultType z = ResultItemSource $ tr z
       z
     tr z@(ResultItem n (DoubleStatsResultData x) s) =
       z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+      z { resultItemData = NoResultData }
     tr z@(ResultItem n (IntResultData x) s) =
       z { resultItemData = DoubleListResultData $ fmap (return . fromIntegral) x }
     tr z@(ResultItem n (IntListResultData x) s) =
       z { resultItemData = DoubleListResultData $ fmap (fmap fromIntegral) x }
     tr z@(ResultItem n (IntStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
     tr z@(ResultItem n (StringResultData x) s) =
       z { resultItemData = NoResultData }
@@ -313,12 +329,36 @@ retypeResultItem DoubleStatsResultType z = ResultItemSource $ tr z
       z { resultItemData = DoubleStatsResultData $ fmap listSamplingStats x }
     tr z@(ResultItem n (DoubleStatsResultData x) s) =
       z
+    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+      z { resultItemData = NoResultData }
     tr z@(ResultItem n (IntResultData x) s) =
       z { resultItemData = DoubleStatsResultData $ fmap (fromIntSamplingStats . returnSamplingStats) x }
     tr z@(ResultItem n (IntListResultData x) s) =
       z { resultItemData = DoubleStatsResultData $ fmap (fromIntSamplingStats . listSamplingStats) x }
     tr z@(ResultItem n (IntStatsResultData x) s) =
       z { resultItemData = DoubleStatsResultData $ fmap fromIntSamplingStats x }
+    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (StringResultData x) s) =
+      z { resultItemData = NoResultData }
+retypeResultItem DoubleTimingStatsResultType z = ResultItemSource $ tr z
+  where
+    tr z@(ResultItem n (DoubleResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleListResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+      z
+    tr z@(ResultItem n (IntResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntListResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
+      z { resultItemData = DoubleTimingStatsResultData $ fmap fromIntTimingStats x }
     tr z@(ResultItem n (StringResultData x) s) =
       z { resultItemData = NoResultData }
 retypeResultItem IntResultType z = ResultItemSource $ tr z
@@ -329,11 +369,15 @@ retypeResultItem IntResultType z = ResultItemSource $ tr z
       z { resultItemData = NoResultData }
     tr z@(ResultItem n (DoubleStatsResultData x) s) =
       z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+      z { resultItemData = NoResultData }
     tr z@(ResultItem n (IntResultData x) s) =
       z
     tr z@(ResultItem n (IntListResultData x) s) =
       z { resultItemData = NoResultData }
     tr z@(ResultItem n (IntStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
     tr z@(ResultItem n (StringResultData x) s) =
       z { resultItemData = NoResultData }
@@ -345,11 +389,15 @@ retypeResultItem IntListResultType z = ResultItemSource $ tr z
       z { resultItemData = NoResultData }
     tr z@(ResultItem n (DoubleStatsResultData x) s) =
       z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+      z { resultItemData = NoResultData }
     tr z@(ResultItem n (IntResultData x) s) =
       z { resultItemData = IntListResultData $ fmap return x }
     tr z@(ResultItem n (IntListResultData x) s) =
       z
     tr z@(ResultItem n (IntStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
     tr z@(ResultItem n (StringResultData x) s) =
       z { resultItemData = NoResultData }
@@ -361,11 +409,35 @@ retypeResultItem IntStatsResultType z = ResultItemSource $ tr z
       z { resultItemData = NoResultData }
     tr z@(ResultItem n (DoubleStatsResultData x) s) =
       z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+      z { resultItemData = NoResultData }
     tr z@(ResultItem n (IntResultData x) s) =
       z { resultItemData = IntStatsResultData $ fmap returnSamplingStats x }
     tr z@(ResultItem n (IntListResultData x) s) =
       z { resultItemData = IntStatsResultData $ fmap listSamplingStats x }
     tr z@(ResultItem n (IntStatsResultData x) s) =
+      z
+    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (StringResultData x) s) =
+      z { resultItemData = NoResultData }
+retypeResultItem IntTimingStatsResultType z = ResultItemSource $ tr z
+  where
+    tr z@(ResultItem n (DoubleResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleListResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntListResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
       z
     tr z@(ResultItem n (StringResultData x) s) =
       z { resultItemData = NoResultData }
@@ -373,10 +445,18 @@ retypeResultItem StringResultType z@(ResultItem n (DoubleStatsResultData x) s) =
   mapResultItems (retypeResultItem StringResultType) $
   mapResultItems (\x -> ResultItemSource x { resultItemSignal = s }) $
   makeSamplingStatsSource DoubleResultData n x
+retypeResultItem StringResultType z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+  mapResultItems (retypeResultItem StringResultType) $
+  mapResultItems (\x -> ResultItemSource x { resultItemSignal = s }) $
+  makeTimingStatsSource DoubleResultData n x
 retypeResultItem StringResultType z@(ResultItem n (IntStatsResultData x) s) =
   mapResultItems (retypeResultItem StringResultType) $
   mapResultItems (\x -> ResultItemSource x { resultItemSignal = s }) $
   makeSamplingStatsSource IntResultData n x
+retypeResultItem StringResultType z@(ResultItem n (IntTimingStatsResultData x) s) =
+  mapResultItems (retypeResultItem StringResultType) $
+  mapResultItems (\x -> ResultItemSource x { resultItemSignal = s }) $
+  makeTimingStatsSource IntResultData n x
 retypeResultItem StringResultType z = ResultItemSource $ tr z
   where
     tr z@(ResultItem n (DoubleResultData x) s) =
@@ -589,6 +669,17 @@ makeSamplingStatsSource f name m =
           ResultItem { resultItemName   = name',
                        resultItemData   = f $ resultComputationData m,
                        resultItemSignal = resultComputationSignal m }
+
+-- | Return the source by the specified timing statistics.
+makeTimingStatsSource :: (Show a, TimingData a, ResultComputation m)
+                         => (Event a -> ResultData)
+                         -- ^ transformation
+                         -> String
+                         -- ^ the result name
+                         -> m (TimingStats a)
+                         -- ^ the statistics
+                         -> ResultSource
+makeTimingStatsSource f name m = undefined
 
 -- | Return the source by the specified (finite) queue.
 makeQueueSource :: (Show si, Show sm, Show so)
