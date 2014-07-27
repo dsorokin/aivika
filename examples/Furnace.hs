@@ -293,28 +293,26 @@ model =
 
      -- return the simulation results
      resultsFromStartTime
-       [("inputIngotCount",
-         resultSource "the input ingot count" $
-         enqueueStoreCount (furnaceQueue furnace)),
-        ("loadedIngotCount",
-         resultSource "the loaded ingot count" $
-         dequeueCount (furnaceQueue furnace)),
-        ("outputIngotCount",
-         resultSource "the output ingot count" $
-         furnaceReadyCount furnace),
-        ("outputIngotTemp",
-         resultSource "the output ingot temperature" $
-         fmap listSamplingStats $ readRef $
-         furnaceReadyTemps furnace),
-        ("heatingTime",
-         resultSource "the heating time" $
-         furnaceHeatingTime furnace),
-        ("pitCount",
-         resultSource "the number of ingots in pits" $
-         furnacePitCount furnace),
-        ("furnaceQueue",
-         resultSource "the furnace queue" $
-         furnaceQueue furnace)]
+       [resultSource "inputIngotCount" "the input ingot count" $
+        enqueueStoreCount (furnaceQueue furnace),
+        --
+        resultSource "loadedIngotCount" "the loaded ingot count" $
+        dequeueCount (furnaceQueue furnace),
+        --
+        resultSource "outputIngotCount" "the output ingot count" $
+        furnaceReadyCount furnace,
+        --
+        resultSource "outputIngotTemp" "the output ingot temperature" $
+        fmap listSamplingStats $ readRef $ furnaceReadyTemps furnace,
+        --
+        resultSource "heatingTime" "the heating time" $
+        furnaceHeatingTime furnace,
+        --
+        resultSource "pitCount" "the number of ingots in pits" $
+        furnacePitCount furnace,
+        --
+        resultSource "furnaceQueue" "the furnace queue" $
+        furnaceQueue furnace]
 
 -- | The main program.
 -- main = outputFinalResultsInRussian model specs

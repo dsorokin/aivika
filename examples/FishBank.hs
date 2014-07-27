@@ -47,9 +47,9 @@ model =
       let totalCatchPerYear = maxDynamics 0 (ships * catchPerShip)
       -- results --
       resultsFromStartTime
-        [("fish", resultSource "fish" fish),
-         ("annualProfit", resultSource "annual profit" annualProfit),
-         ("totalProfit", resultSource "total profit" totalProfit)]
+        [resultSource "fish" "fish" fish,
+         resultSource "annualProfit" "the annual profit" annualProfit,
+         resultSource "totalProfit" "the total profit" totalProfit]
 
 main =
   flip runSimulation specs $

@@ -87,9 +87,7 @@ model =
      runEventInStartTime $
        activatePersons ps
      resultsFromStartTime
-       [("potentialAdopter",
-         resultSource "potential adopters" potentialAdopters),
-        ("adopters",
-         resultSource "adopters" adopters)]
+       [resultSource "potentialAdopter" "potential adopters" potentialAdopters,
+        resultSource "adopters" "adopters" adopters]
 
 main = outputIntegResultsInEnglish model specs

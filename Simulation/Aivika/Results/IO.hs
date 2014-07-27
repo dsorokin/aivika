@@ -275,7 +275,7 @@ printResultsWithTime print results =
      print y2
      -- print y3
      mapM_ print ys
-     print y3
+     -- print y3
 
 -- | Print the simulation results in start time.
 printResultsInStartTime :: ResultSourcePrint -> Results -> Simulation ()

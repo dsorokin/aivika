@@ -20,8 +20,8 @@ model =
       let ka = 1
           kb = 1
       resultsFromStartTime
-        [("a", resultSource "A" a),
-         ("b", resultSource "B" b),
-         ("c", resultSource "C" c)]
+        [resultSource "a" "variable A" a,
+         resultSource "b" "variable B" b,
+         resultSource "c" "variable C" c]
 
 main = outputFinalResultsInEnglish model specs
