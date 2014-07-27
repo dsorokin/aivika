@@ -1142,13 +1142,3 @@ instance ResultProvider ArrivalTimer where
 instance Show s => ResultProvider (Server s a b) where
 
   resultSource' = makeServerSource
-
-instance ResultProvider (TimingStatsAccumulator Double) where
-
-  resultSource' name i m =
-    resultSource' name i (timingStatsAccumulated m)
-
-instance ResultProvider (TimingStatsAccumulator Int) where
-
-  resultSource' name i m =
-    resultSource' name i (timingStatsAccumulated m)

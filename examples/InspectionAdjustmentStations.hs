@@ -103,7 +103,7 @@ newAdjustmentStation =
         randomUniform minAdjustmentTime maxAdjustmentTime)
      return a
   
-model :: Simulation ()
+model :: Simulation Results
 model = mdo
   -- to count the arrived TV sets for inspecting and adjusting
   inputArrivalTimer <- newArrivalTimer
@@ -158,58 +158,38 @@ model = mdo
   -- start simulating the model
   runProcessInStartTime $
     sinkStream $ runProcessor entireProcessor inputStream
-  -- show the results in the final time
-  runEventInStopTime $
-    do let indent = 2
-       inspectionQueueSum <- queueSummary inspectionQueue indent
-       adjustmentQueueSum <- queueSummary adjustmentQueue indent
-       inspectionStationSums <- 
-         forM inspectionStations $ \x -> serverSummary x indent
-       adjustmentStationSums <- 
-         forM adjustmentStations $ \x -> serverSummary x indent
-       inputProcessingTime  <- arrivalProcessingTime inputArrivalTimer
-       outputProcessingTime <- arrivalProcessingTime outputArrivalTimer
-       inspectionQueueSize <- timingStatsAccumulated inspectionQueueSizeAcc
-       adjustmentQueueSize <- timingStatsAccumulated adjustmentQueueSizeAcc
-       liftIO $
-         do putStrLn ""
-            putStrLn "--- the inspection stations' queue summary (in the final time) ---"
-            putStrLn ""
-            putStrLn $ inspectionQueueSum []
-            putStrLn ""
-            forM_ (zip [1..] inspectionStationSums) $ \(i, x) ->
-              do putStrLn $ "--- the inspection station no. "
-                   ++ show i ++ " (in the final time) ---"
-                 putStrLn ""
-                 putStrLn $ x []
-                 putStrLn ""
-            putStrLn "--- the adjustment stations' queue summary (in the final time) ---"
-            putStrLn ""
-            putStrLn $ adjustmentQueueSum []
-            putStrLn ""
-            forM_ (zip [1..] adjustmentStationSums) $ \(i, x) ->
-              do putStrLn $ "--- the adjustment station no. "
-                   ++ show i ++ " (in the final time) ---"
-                 putStrLn ""
-                 putStrLn $ x []
-                 putStrLn ""
-            putStrLn "--- the input arrival time summary (we are interested in their count) ---"
-            putStrLn ""
-            putStrLn $ samplingStatsSummary inputProcessingTime indent []
-            putStrLn ""
-            putStrLn "--- the arrival processing time summary ---"
-            putStrLn ""
-            putStrLn $ samplingStatsSummary outputProcessingTime indent []
-            putStrLn ""
-            putStrLn $ "--- the inspection stations' queue size summary "
-              ++ "(updated when enqueueing and dequeueing) ---"
-            putStrLn ""
-            putStrLn $ timingStatsSummary inspectionQueueSize indent []
-            putStrLn ""
-            putStrLn $ "--- the adjustment stations' queue size summary "
-              ++ "(updated when enqueueing and dequeueing) ---"
-            putStrLn ""
-            putStrLn $ timingStatsSummary adjustmentQueueSize indent []
-            putStrLn ""
+  -- return the simulation results in start time
+  resultsFromStartTime
+    [resultSource
+     "inspectionQueue" "the inspection queue"
+     inspectionQueue,
+     --
+     resultSource
+     "adjustmentQueue" "the adjustment queue"
+     adjustmentQueue,
+     --
+     resultSource
+     "inputArrivalTimer" "the input arrival timer"
+     inputArrivalTimer,
+     --
+     resultSource
+     "outputArrivalTimer" "the output arrival timer"
+     outputArrivalTimer,
+     --
+     resultSource
+     "inspectionQueueSizeAcc" "the inspection queue size accumulator" $
+     timingStatsAccumulated inspectionQueueSizeAcc,
+     --
+     resultSource
+     "adjustmentQueueSizeAcc" "the adjustment queue size accumulator" $
+     timingStatsAccumulated adjustmentQueueSizeAcc,
+     --
+     resultSource
+     "inspectionStations" "the inspection stations"
+     inspectionStations,
+     --
+     resultSource
+     "adjustmentStations" "the adjustment stations"
+     adjustmentStations]
 
-main = runSimulation model specs
+main = outputFinalResultsInEnglish model specs
