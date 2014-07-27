@@ -26,33 +26,35 @@ import Simulation.Aivika.Event
 import Simulation.Aivika.Results
 import Simulation.Aivika.Results.Locale
 
--- | This is a function that shows the result output within
+-- | This is a function that shows the simulation results within
 -- the 'Event' computation synchronized with the event queue.
-type ResultOutputShowS = ResultOutput -> Event ShowS
+type ResultSourceShowS = ResultSource -> Event ShowS
 
--- | This is a function that prints the result output within
+-- | This is a function that prints the simulation results within
 -- the 'Event' computation synchronized with the event queue.
-type ResultOutputPrint = ResultOutput -> Event ()
+type ResultSourcePrint = ResultSource -> Event ()
 
--- | Print a localised text representation of the specified output with the given indent.
-hPrintResultOutputIndented :: Handle
+-- | Print a localised text representation of the results by the specified source
+-- and with the given indent.
+hPrintResultSourceIndented :: Handle
                               -- ^ a handle
                               -> Int
                               -- ^ an indent
                               -> ResultLocalisation
                               -- ^ a localisation
-                              -> ResultOutputPrint
-hPrintResultOutputIndented h indent loc output@(ResultItemOutput x) =
-  hPrintResultOutputIndentedLabelled h indent (resultItemName x) loc output
-hPrintResultOutputIndented h indent loc output@(ResultVectorOutput x) =
-  hPrintResultOutputIndentedLabelled h indent (resultVectorName x) loc output
-hPrintResultOutputIndented h indent loc output@(ResultObjectOutput x) =
-  hPrintResultOutputIndentedLabelled h indent (resultObjectName x) loc output
-hPrintResultOutputIndented h indent loc output@(ResultSeparatorOutput x) =
-  hPrintResultOutputIndentedLabelled h indent (resultSeparatorText x) loc output
+                              -> ResultSourcePrint
+hPrintResultSourceIndented h indent loc source@(ResultItemSource x) =
+  hPrintResultSourceIndentedLabelled h indent (resultItemName x) loc source
+hPrintResultSourceIndented h indent loc source@(ResultVectorSource x) =
+  hPrintResultSourceIndentedLabelled h indent (resultVectorName x) loc source
+hPrintResultSourceIndented h indent loc source@(ResultObjectSource x) =
+  hPrintResultSourceIndentedLabelled h indent (resultObjectName x) loc source
+hPrintResultSourceIndented h indent loc source@(ResultSeparatorSource x) =
+  hPrintResultSourceIndentedLabelled h indent (resultSeparatorText x) loc source
 
--- | Print an indented and labelled text representation of the specified output.
-hPrintResultOutputIndentedLabelled :: Handle
+-- | Print an indented and labelled text representation of the results by
+-- the specified source.
+hPrintResultSourceIndentedLabelled :: Handle
                                       -- ^ a handle
                                       -> Int
                                       -- ^ an indent
@@ -60,8 +62,8 @@ hPrintResultOutputIndentedLabelled :: Handle
                                       -- ^ a label
                                       -> ResultLocalisation
                                       -- ^ a localisation
-                                      -> ResultOutputPrint
-hPrintResultOutputIndentedLabelled h indent label loc (ResultItemOutput x) =
+                                      -> ResultSourcePrint
+hPrintResultSourceIndentedLabelled h indent label loc (ResultItemSource x) =
   case resultItemData x of
     StringResultData m ->
       do a <- m
@@ -74,8 +76,8 @@ hPrintResultOutputIndentedLabelled h indent label loc (ResultItemOutput x) =
     _ ->
       error $
       "Expected to see a string value for variable " ++
-      (resultItemName x) ++ ": hPrintResultOutputIndentedLabelled"
-hPrintResultOutputIndentedLabelled h indent label loc (ResultVectorOutput x) =
+      (resultItemName x) ++ ": hPrintResultSourceIndentedLabelled"
+hPrintResultSourceIndentedLabelled h indent label loc (ResultVectorSource x) =
   do let tab = replicate indent ' '
      liftIO $
        do hPutStr h tab
@@ -85,10 +87,10 @@ hPrintResultOutputIndentedLabelled h indent label loc (ResultVectorOutput x) =
      let items = V.toList (resultVectorItems x)
          subscript = V.toList (resultVectorSubscript x)
      forM_ (zip items subscript) $ \(i, s) ->
-       hPrintResultOutputIndentedLabelled h (indent + 2) (label ++ s) loc i
+       hPrintResultSourceIndentedLabelled h (indent + 2) (label ++ s) loc i
      liftIO $
        hPutStrLn h ""
-hPrintResultOutputIndentedLabelled h indent label loc (ResultObjectOutput x) =
+hPrintResultSourceIndentedLabelled h indent label loc (ResultObjectSource x) =
   do let tab = replicate indent ' '
      liftIO $
        do hPutStr h tab
@@ -103,82 +105,84 @@ hPrintResultOutputIndentedLabelled h indent label loc (ResultObjectOutput x) =
        do let indent' = 2 + indent
               tab'    = "  " ++ tab
               label'  = resultPropertyLabel p
-              output' = resultPropertyOutput p
+              source' = resultPropertySource p
           liftIO $
             do hPutStr h tab'
                hPutStr h "-- "
                hPutStr h (loc $ resultPropertyId p)
                hPutStrLn h ""
-          hPrintResultOutputIndentedLabelled h indent' label' loc output'
+          hPrintResultSourceIndentedLabelled h indent' label' loc source'
           liftIO $
             hPutStrLn h ""
-hPrintResultOutputIndentedLabelled h indent label loc (ResultSeparatorOutput x) =
+hPrintResultSourceIndentedLabelled h indent label loc (ResultSeparatorSource x) =
   do let tab = replicate indent ' '
      liftIO $
        do hPutStr h tab
           hPutStr h label
           hPutStrLn h ""
 
--- | Print a localised text representation of the specified output with the given indent.
-printResultOutputIndented :: Int
+-- | Print a localised text representation of the results by the specified source
+-- and with the given indent.
+printResultSourceIndented :: Int
                              -- ^ an indent
                              -> ResultLocalisation
                              -- ^ a localisation
-                             -> ResultOutputPrint
-printResultOutputIndented = hPrintResultOutputIndented stdout
+                             -> ResultSourcePrint
+printResultSourceIndented = hPrintResultSourceIndented stdout
 
--- | Print a localised text representation of the specified output.
-hPrintResultOutput :: Handle
+-- | Print a localised text representation of the results by the specified source.
+hPrintResultSource :: Handle
                       -- ^ a handle
                       -> ResultLocalisation
                       -- ^ a localisation
-                      -> ResultOutputPrint
-hPrintResultOutput h = hPrintResultOutputIndented h 0
+                      -> ResultSourcePrint
+hPrintResultSource h = hPrintResultSourceIndented h 0
 
--- | Print a localised text representation of the specified output.
-printResultOutput :: ResultLocalisation
+-- | Print a localised text representation of the results by the specified source.
+printResultSource :: ResultLocalisation
                      -- ^ a localisation
-                     -> ResultOutputPrint
-printResultOutput = hPrintResultOutput stdout
+                     -> ResultSourcePrint
+printResultSource = hPrintResultSource stdout
 
--- | Print a text representation of the specified output in Russian.
-hPrintResultOutputInRussian :: Handle -> ResultOutputPrint
-hPrintResultOutputInRussian h = hPrintResultOutput h russianResultLocalisation
+-- | Print in Russian a text representation of the results by the specified source.
+hPrintResultSourceInRussian :: Handle -> ResultSourcePrint
+hPrintResultSourceInRussian h = hPrintResultSource h russianResultLocalisation
 
--- | Print a text representation of the specified output in English.
-hPrintResultOutputInEnglish :: Handle -> ResultOutputPrint
-hPrintResultOutputInEnglish h = hPrintResultOutput h englishResultLocalisation
+-- | Print in English a text representation of the results by the specified source.
+hPrintResultSourceInEnglish :: Handle -> ResultSourcePrint
+hPrintResultSourceInEnglish h = hPrintResultSource h englishResultLocalisation
 
--- | Print a text representation of the specified output in Russian.
-printResultOutputInRussian :: ResultOutputPrint
-printResultOutputInRussian = hPrintResultOutputInRussian stdout
+-- | Print in Russian a text representation of the results by the specified source.
+printResultSourceInRussian :: ResultSourcePrint
+printResultSourceInRussian = hPrintResultSourceInRussian stdout
 
--- | Print a text representation of the specified output in English.
-printResultOutputInEnglish :: ResultOutputPrint
-printResultOutputInEnglish = hPrintResultOutputInEnglish stdout
+-- | Print in English a text representation of the results by the specified source.
+printResultSourceInEnglish :: ResultSourcePrint
+printResultSourceInEnglish = hPrintResultSourceInEnglish stdout
 
--- | Show a localised text representation of the specified output with the given indent.
-showResultOutputIndented :: Int
+-- | Show a localised text representation of the results by the specified source
+-- and with the given indent.
+showResultSourceIndented :: Int
                             -- ^ an indent
                             -> ResultLocalisation
                             -- ^ a localisation
-                            -> ResultOutputShowS
-showResultOutputIndented indent loc output@(ResultItemOutput x) =
-  showResultOutputIndentedLabelled indent (resultItemName x) loc output
-showResultOutputIndented indent loc output@(ResultVectorOutput x) =
-  showResultOutputIndentedLabelled indent (resultVectorName x) loc output
-showResultOutputIndented indent loc output@(ResultObjectOutput x) =
-  showResultOutputIndentedLabelled indent (resultObjectName x) loc output
+                            -> ResultSourceShowS
+showResultSourceIndented indent loc source@(ResultItemSource x) =
+  showResultSourceIndentedLabelled indent (resultItemName x) loc source
+showResultSourceIndented indent loc source@(ResultVectorSource x) =
+  showResultSourceIndentedLabelled indent (resultVectorName x) loc source
+showResultSourceIndented indent loc source@(ResultObjectSource x) =
+  showResultSourceIndentedLabelled indent (resultObjectName x) loc source
 
--- | Show an indented and labelled text representation of the specified output.
-showResultOutputIndentedLabelled :: Int
+-- | Show an indented and labelled text representation of the results by the specified source.
+showResultSourceIndentedLabelled :: Int
                                    -- ^ an indent
                                    -> String
                                    -- ^ a label
                                    -> ResultLocalisation
                                    -- ^ a localisation
-                                   -> ResultOutputShowS
-showResultOutputIndentedLabelled indent label loc (ResultItemOutput x) =
+                                   -> ResultSourceShowS
+showResultSourceIndentedLabelled indent label loc (ResultItemSource x) =
   case resultItemData x of
     StringResultData m ->
       do a <- m
@@ -192,14 +196,14 @@ showResultOutputIndentedLabelled indent label loc (ResultItemOutput x) =
     _ ->
       error $
       "Expected to see a string value for variable " ++
-      (resultItemName x) ++ ": showResultOutputIndentedLabelled"
-showResultOutputIndentedLabelled indent label loc (ResultVectorOutput x) =
+      (resultItemName x) ++ ": showResultSourceIndentedLabelled"
+showResultSourceIndentedLabelled indent label loc (ResultVectorSource x) =
   do let tab = replicate indent ' '
          items = V.toList (resultVectorItems x)
          subscript = V.toList (resultVectorSubscript x)
      contents <-
        forM (zip items subscript) $ \(i, s) ->
-       showResultOutputIndentedLabelled (indent + 2) (label ++ s) loc i
+       showResultSourceIndentedLabelled (indent + 2) (label ++ s) loc i
      let showContents = foldr (.) id contents
      return $
        showString tab .
@@ -207,16 +211,16 @@ showResultOutputIndentedLabelled indent label loc (ResultVectorOutput x) =
        showString ":\n\n" .
        showContents .
        showString "\n"
-showResultOutputIndentedLabelled indent label loc (ResultObjectOutput x) =
+showResultSourceIndentedLabelled indent label loc (ResultObjectSource x) =
   do let tab = replicate indent ' '
      contents <-
        forM (resultObjectProperties x) $ \p ->
        do let indent' = 2 + indent
               tab'    = "  " ++ tab
               label'  = resultPropertyLabel p
-              output' = resultPropertyOutput p
+              output' = resultPropertySource p
           showProperties <-
-            showResultOutputIndentedLabelled indent' label' loc output'
+            showResultSourceIndentedLabelled indent' label' loc output'
           return $
             showString tab' .
             showString "-- " .
@@ -234,44 +238,34 @@ showResultOutputIndentedLabelled indent label loc (ResultObjectOutput x) =
        showString ":\n\n" .
        showContents .
        showString "\n"
-showResultOutputIndentedLabelled indent label loc (ResultSeparatorOutput x) =
+showResultSourceIndentedLabelled indent label loc (ResultSeparatorSource x) =
   do let tab = replicate indent ' '
      return $
        showString tab .
        showString label .
        showString "\n"
 
--- | Show a localised text representation of the specified output.
-showResultOutput :: ResultLocalisation
+-- | Show a localised text representation of the results by the specified source.
+showResultSource :: ResultLocalisation
                     -- ^ a localisation
-                    -> ResultOutputShowS
-showResultOutput = showResultOutputIndented 0
+                    -> ResultSourceShowS
+showResultSource = showResultSourceIndented 0
 
--- | Show a text representation of the specified output in Russian.
-showResultOutputInRussian :: ResultOutputShowS
-showResultOutputInRussian = showResultOutput russianResultLocalisation
+-- | Show in Russian a text representation of the results by the specified source.
+showResultSourceInRussian :: ResultSourceShowS
+showResultSourceInRussian = showResultSource russianResultLocalisation
 
--- | Show a text representation of the specified output in English.
-showResultOutputInEnglish :: ResultOutputShowS
-showResultOutputInEnglish = showResultOutput englishResultLocalisation
-
--- | Output the results using the desired data type.
-outputResults :: Results
-                 -- ^ the simulation results
-                 -> ResultType
-                 -- ^ the data type in which we are going to receive an output
-                 -> [ResultOutput]
-outputResults results t = ys where
-  xs = M.elems (resultSources results)
-  ys = map (flip resultOutput StringResultType) xs
+-- | Show in English a text representation of the results by the specified source.
+showResultSourceInEnglish :: ResultSourceShowS
+showResultSourceInEnglish = showResultSource englishResultLocalisation
 
 -- | Print the results with the information about the modeling time.
-printResultsWithTime :: ResultOutputPrint -> Results -> Event ()
+printResultsWithTime :: ResultSourcePrint -> Results -> Event ()
 printResultsWithTime print results =
-  do let y1 = makeTextOutput "----------"
-         y2 = timeOutput
-         y3 = makeTextOutput ""
-         ys = outputResults results StringResultType
+  do let y1 = makeTextSource "----------"
+         y2 = timeSource
+         y3 = makeTextSource ""
+         ys = retypeResults StringResultType results
      print y1
      print y2
      print y3
@@ -279,17 +273,17 @@ printResultsWithTime print results =
      print y3
 
 -- | Print the simulation results in start time.
-printResultsInStartTime :: ResultOutputPrint -> Results -> Simulation ()
+printResultsInStartTime :: ResultSourcePrint -> Results -> Simulation ()
 printResultsInStartTime print results =
   runEventInStartTime $ printResultsWithTime print results
 
 -- | Print the simulation results in stop time.
-printResultsInStopTime :: ResultOutputPrint -> Results -> Simulation ()
+printResultsInStopTime :: ResultSourcePrint -> Results -> Simulation ()
 printResultsInStopTime print results =
   runEventInStopTime $ printResultsWithTime print results
 
 -- | Print the simulation results in integration time points.
-printResultsInIntegTimes :: ResultOutputPrint -> Results -> Simulation ()
+printResultsInIntegTimes :: ResultSourcePrint -> Results -> Simulation ()
 printResultsInIntegTimes print results =
   do let loop (m : ms) = m >> loop ms
          loop [] = return ()
@@ -299,66 +293,66 @@ printResultsInIntegTimes print results =
 
 -- | Print in Russian the simulation results in start time.
 printInitResultsInRussian :: Results -> Simulation ()
-printInitResultsInRussian = printResultsInStartTime  printResultOutputInRussian
+printInitResultsInRussian = printResultsInStartTime  printResultSourceInRussian
 
 -- | Print in English the simulation results in start time.
 printInitResultsInEnglish :: Results -> Simulation ()
-printInitResultsInEnglish = printResultsInStartTime  printResultOutputInEnglish
+printInitResultsInEnglish = printResultsInStartTime  printResultSourceInEnglish
 
 -- | Print in Russian the simulation results in stop time.
 printFinalResultsInRussian :: Results -> Simulation ()
-printFinalResultsInRussian = printResultsInStopTime  printResultOutputInRussian
+printFinalResultsInRussian = printResultsInStopTime  printResultSourceInRussian
 
 -- | Print in English the simulation results in stop time.
 printFinalResultsInEnglish :: Results -> Simulation ()
-printFinalResultsInEnglish = printResultsInStopTime  printResultOutputInEnglish
+printFinalResultsInEnglish = printResultsInStopTime  printResultSourceInEnglish
 
 -- | Print in Russian the simulation results in integration time points.
 printIntegResultsInRussian :: Results -> Simulation ()
-printIntegResultsInRussian = printResultsInIntegTimes  printResultOutputInRussian
+printIntegResultsInRussian = printResultsInIntegTimes  printResultSourceInRussian
 
 -- | Print in English the simulation results in integration time points.
 printIntegResultsInEnglish :: Results -> Simulation ()
-printIntegResultsInEnglish = printResultsInIntegTimes  printResultOutputInEnglish
+printIntegResultsInEnglish = printResultsInIntegTimes  printResultSourceInEnglish
 
 -- | Run the simulation and output to the results in the start time.
-outputResultsInStartTime :: ResultOutputPrint -> Simulation Results -> Specs -> IO ()
+outputResultsInStartTime :: ResultSourcePrint -> Simulation Results -> Specs -> IO ()
 outputResultsInStartTime print model specs =
   flip runSimulation specs $
   model >>= printResultsInStartTime print
 
 -- | Run the simulation and output to the results in the final time.
-outputResultsInStopTime :: ResultOutputPrint -> Simulation Results -> Specs -> IO ()
+outputResultsInStopTime :: ResultSourcePrint -> Simulation Results -> Specs -> IO ()
 outputResultsInStopTime print model specs =
   flip runSimulation specs $
   model >>= printResultsInStopTime print
 
 -- | Run the simulation and output to the results in the integration time points.
-outputResultsInIntegTimes :: ResultOutputPrint -> Simulation Results -> Specs -> IO ()
+outputResultsInIntegTimes :: ResultSourcePrint -> Simulation Results -> Specs -> IO ()
 outputResultsInIntegTimes print model specs =
   flip runSimulation specs $
   model >>= printResultsInIntegTimes print
 
 -- | Run the simulation and output in Russian the results in the start time.
 outputInitResultsInRussian :: Simulation Results -> Specs -> IO ()
-outputInitResultsInRussian = outputResultsInStartTime printResultOutputInRussian
+outputInitResultsInRussian = outputResultsInStartTime printResultSourceInRussian
 
 -- | Run the simulation and output in English the results in the start time.
 outputInitResultsInEnglish :: Simulation Results -> Specs -> IO ()
-outputInitResultsInEnglish = outputResultsInStartTime printResultOutputInEnglish
+outputInitResultsInEnglish = outputResultsInStartTime printResultSourceInEnglish
 
 -- | Run the simulation and output in Russian the results in the final time.
 outputFinalResultsInRussian :: Simulation Results -> Specs -> IO ()
-outputFinalResultsInRussian = outputResultsInStopTime printResultOutputInRussian
+outputFinalResultsInRussian = outputResultsInStopTime printResultSourceInRussian
 
 -- | Run the simulation and output in English the results in the final time.
 outputFinalResultsInEnglish :: Simulation Results -> Specs -> IO ()
-outputFinalResultsInEnglish = outputResultsInStopTime printResultOutputInEnglish
+outputFinalResultsInEnglish = outputResultsInStopTime printResultSourceInEnglish
 
 -- | Run the simulation and output in Russian the results in the integration time points.
 outputIntegResultsInRussian :: Simulation Results -> Specs -> IO ()
-outputIntegResultsInRussian = outputResultsInIntegTimes printResultOutputInRussian
+outputIntegResultsInRussian = outputResultsInIntegTimes printResultSourceInRussian
 
 -- | Run the simulation and output in English the results in the integration time points.
 outputIntegResultsInEnglish :: Simulation Results -> Specs -> IO ()
-outputIntegResultsInEnglish = outputResultsInIntegTimes printResultOutputInEnglish
+outputIntegResultsInEnglish = outputResultsInIntegTimes printResultSourceInEnglish
