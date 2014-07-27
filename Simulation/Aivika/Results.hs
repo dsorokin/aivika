@@ -65,9 +65,9 @@ data ResultId = SamplingStatsId
               | SamplingStatsDeviationId
                 -- ^ Property 'samplingStatsDeviation'.
               | FiniteQueueId
-                -- ^ A finite Q.Queue value.
+                -- ^ A finite 'Q.Queue'.
               | InfiniteQueueId
-                -- ^ An infinite IQ.Queue value.
+                -- ^ An infinite 'IQ.Queue'.
               | EnqueueStrategyId
                 -- ^ Property 'Q.enqueueStrategy'.
               | EnqueueStoringStrategyId
