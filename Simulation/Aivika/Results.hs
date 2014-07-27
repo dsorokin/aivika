@@ -30,6 +30,7 @@ import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Event
 import Simulation.Aivika.Signal
 import Simulation.Aivika.Statistics
+import Simulation.Aivika.Statistics.Accumulator
 import Simulation.Aivika.Ref
 import qualified Simulation.Aivika.Ref.Light as LR
 import Simulation.Aivika.Var
@@ -1324,3 +1325,13 @@ instance ResultProvider ArrivalTimer where
 instance Show s => ResultProvider (Server s a b) where
 
   resultSource = makeServerSource
+
+instance ResultProvider (TimingStatsAccumulator Double) where
+
+  resultSource name m =
+    resultSource name (timingStatsAccumulated m)
+
+instance ResultProvider (TimingStatsAccumulator Int) where
+
+  resultSource name m =
+    resultSource name (timingStatsAccumulated m)
