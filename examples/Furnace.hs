@@ -268,7 +268,7 @@ initializeFurnace furnace =
      writeRef (furnaceTemp furnace) 1650.0
      
 -- | The simulation model.
-model :: Simulation ()
+model :: Simulation Results
 model =
   do furnace <- newFurnace
   
@@ -284,67 +284,32 @@ model =
      -- load permanently the input ingots in the furnace
      runProcessInStartTime $
        loadingProcess furnace
-     
-     -- run the model in the final time point
-     runEventInStopTime $
-       do -- the ingots
-          c0 <- enqueueStoreCount (furnaceQueue furnace)
-          c1 <- dequeueCount (furnaceQueue furnace)
-          c2 <- readRef (furnaceReadyCount furnace)
-              
-          liftIO $ do
-            putStrLn "The count of ingots:"
-            putStrLn ""
-            putStrLn $ "  total  = " ++ show c0
-            putStrLn $ "  loaded = " ++ show c1
-            putStrLn $ "  ready  = " ++ show c2
-            putStrLn ""
-         
-          -- the temperature of the ready ingots
-          temps <- readRef (furnaceReadyTemps furnace)
-            
-          liftIO $ do 
-            putStrLn "The temperature of ready ingots:"
-            putStrLn ""
-            putStrLn $ samplingStatsSummary (listSamplingStats temps) 2 []
-            putStrLn ""
-              
-          -- the mean heating time
-          r5 <- readRef (furnaceHeatingTime furnace)
-            
-          liftIO $ do
-            putStrLn "The heating time:"
-            putStrLn ""
-            putStrLn $ samplingStatsSummary r5 2 []
-            putStrLn ""
-                
-          -- the ingots in pits
-          r2 <- readRef (furnacePitCount furnace)
-              
-          liftIO $ do
-            putStr "The ingots in pits (in the final time): "
-            putStrLn $ show r2
-            putStrLn ""
-              
-          -- the queue size and mean wait time
-          r3 <- queueCount (furnaceQueue furnace)
-          
-          r4 <- fmap samplingStatsMean $
-                queueWaitTime (furnaceQueue furnace) 
-     
-          liftIO $ do
-            putStrLn "The queue summary: "
-            putStrLn ""
-            putStrLn $ "  size (in the final time) = " ++ show r3
-            putStrLn $ "  mean wait time = " ++ show r4
-            putStrLn ""
 
-          summary <- queueSummary (furnaceQueue furnace) 2
-
-          liftIO $ do
-            putStrLn "The detailed info about the queue (in the final time): "
-            putStrLn ""
-            putStrLn $ summary []
+     -- return the simulation results
+     resultsFromStartTime
+       [("inputIngotCount",
+         resultSource "the input ingot count" $
+         enqueueStoreCount (furnaceQueue furnace)),
+        ("loadedIngotCount",
+         resultSource "the loaded ingot count" $
+         dequeueCount (furnaceQueue furnace)),
+        ("outputIngotCount",
+         resultSource "the output ingot count" $
+         furnaceReadyCount furnace),
+        ("outputIngotTemp",
+         resultSource "the output ingot temperature" $
+         fmap listSamplingStats $ readRef $
+         furnaceReadyTemps furnace),
+        ("heatingTime",
+         resultSource "the heating time" $
+         furnaceHeatingTime furnace),
+        ("pitCount",
+         resultSource "the number of ingots in pits" $
+         furnacePitCount furnace),
+        ("furnaceQueue",
+         resultSource "the furnace queue" $
+         furnaceQueue furnace)]
 
 -- | The main program.
-main = runSimulation model specs
+-- main = outputFinalResultsInRussian model specs
+main = outputFinalResultsInEnglish model specs
