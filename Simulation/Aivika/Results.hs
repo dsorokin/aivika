@@ -496,18 +496,18 @@ makeResultSource :: ResultComputation m
 makeResultSource f name m =
   ResultSource $ \t ->
   mapResultItems (retypeResultItem t) $
-  makeResultItemOutput name m f
+  makeResultItemOutput f name m
 
 -- | Make a result item output. 
 makeResultItemOutput :: ResultComputation m
-                        => String
+                        => (Event a -> ResultData)
+                        -- ^ transformation
+                        -> String
                         -- ^ the result name
                         -> m a
                         -- ^ the result computation
-                        -> (Event a -> ResultData)
-                        -- ^ transformation
                         -> ResultOutput
-makeResultItemOutput name m f =
+makeResultItemOutput f name m =
   ResultItemOutput $
   ResultItem { resultItemName   = name,
                resultItemData   = f $ resultComputationData m,
@@ -532,37 +532,42 @@ makeSamplingStatsOutput f name m =
          resultPropertyLabel = "count",
          resultPropertyId = SamplingStatsCountId,
          resultPropertyOutput =
-           makeResultItemOutput (name ++ ".count") m (IntResultData . fmap samplingStatsCount) },
+           makeOutput (name ++ ".count") (IntResultData . fmap samplingStatsCount) },
       ResultProperty {
         resultPropertyLabel = "mean",
         resultPropertyId = SamplingStatsMeanId,
         resultPropertyOutput =
-          makeResultItemOutput (name ++ ".mean") m (DoubleResultData . fmap samplingStatsMean) },
+          makeOutput (name ++ ".mean") (DoubleResultData . fmap samplingStatsMean) },
       ResultProperty {
         resultPropertyLabel = "mean2",
         resultPropertyId = SamplingStatsMean2Id,
         resultPropertyOutput =
-          makeResultItemOutput (name ++ ".mean2") m (DoubleResultData . fmap samplingStatsMean2) },
+          makeOutput (name ++ ".mean2") (DoubleResultData . fmap samplingStatsMean2) },
       ResultProperty {
         resultPropertyLabel = "std",
         resultPropertyId = SamplingStatsDeviationId,
         resultPropertyOutput =
-          makeResultItemOutput (name ++ ".std") m (DoubleResultData . fmap samplingStatsDeviation) },
+          makeOutput (name ++ ".std") (DoubleResultData . fmap samplingStatsDeviation) },
       ResultProperty {
         resultPropertyLabel = "var",
         resultPropertyId = SamplingStatsVarianceId,
         resultPropertyOutput =
-          makeResultItemOutput (name ++ ".var") m (DoubleResultData . fmap samplingStatsVariance) },
+          makeOutput (name ++ ".var") (DoubleResultData . fmap samplingStatsVariance) },
       ResultProperty {
         resultPropertyLabel = "min",
         resultPropertyId = SamplingStatsMinId,
         resultPropertyOutput =
-          makeResultItemOutput (name ++ ".min") m (f . fmap samplingStatsMin) },
+          makeOutput (name ++ ".min") (f . fmap samplingStatsMin) },
       ResultProperty {
         resultPropertyLabel = "max",
         resultPropertyId = SamplingStatsMaxId,
         resultPropertyOutput =
-          makeResultItemOutput (name ++ ".max") m (f . fmap samplingStatsMax) } ] }
+          makeOutput (name ++ ".max") (f . fmap samplingStatsMax) } ] }
+  where makeOutput name' f =
+          ResultItemOutput $
+          ResultItem { resultItemName   = name',
+                       resultItemData   = f $ resultComputationData m,
+                       resultItemSignal = resultComputationSignal m }
 
 -- | Output the specified (finite) queue.
 makeQueueOutput :: (Show si, Show sm, Show so, ResultComputation m)
