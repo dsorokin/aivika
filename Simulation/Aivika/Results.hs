@@ -1011,6 +1011,208 @@ makeTextSource text =
 timeSource :: ResultSource
 timeSource = resultSource' "t" TimeId time
 
+-- | Return the summary by the specified statistics.
+makeSamplingStatsSummary :: (Show a, ResultComputation m)
+                            => ResultName
+                            -- ^ the result name
+                            -> ResultId
+                            -- ^ the result indentifier
+                            -> m (SamplingStats a)
+                            -- ^ the statistics
+                           -> ResultSource
+makeSamplingStatsSummary =
+  makeResultItemSource (StringResultData . fmap show)
+
+-- | Return the summary by the specified timing statistics.
+makeTimingStatsSummary :: (Show a, TimingData a, ResultComputation m)
+                          => ResultName
+                          -- ^ the result name
+                          -> ResultId
+                          -- ^ the result indentifier
+                          -> m (TimingStats a)
+                          -- ^ the statistics
+                          -> ResultSource
+makeTimingStatsSummary =
+  makeResultItemSource (StringResultData . fmap show)
+  
+-- | Return the summary by the specified (finite) queue.
+makeQueueSummary :: (Show si, Show sm, Show so)
+                    => ResultName
+                    -- ^ the result name
+                    -> ResultId
+                    -- ^ the result identifier
+                    -> Q.Queue si qi sm qm so qo a
+                    -- ^ the queue
+                    -> ResultSource
+makeQueueSummary name i m =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = name,
+    resultObjectId = i,
+    resultObjectTypeId = FiniteQueueId,
+    resultObjectProperties = [
+      makeProperty "queueMaxCount" QueueMaxCountId getMaxCount maxCountSignal,
+      makeProperty "queueCount" QueueCountId getCount countSignal,
+      makeProperty "enqueueCount" EnqueueCountId getEnqueueCount enqueueCountSignal,
+      makeProperty "enqueueLostCount" EnqueueLostCountId getEnqueueLostCount enqueueLostCountSignal,
+      makeProperty "enqueueStoreCount" EnqueueStoreCountId getEnqueueStoreCount enqueueStoreCountSignal,
+      makeProperty "dequeueCount" DequeueCountId getDequeueCount dequeueCountSignal,
+      makeProperty "dequeueExtractCount" DequeueExtractCountId getDequeueExtractCount dequeueExtractCountSignal,
+      makeProperty "queueLoadFactor" QueueLoadFactorId getLoadFactor loadFactorSignal,
+      makeProperty "queueWaitTime" QueueWaitTimeId getWaitTime waitTimeSignal ] }
+  where makeProperty name' i f g =
+          ResultProperty { resultPropertyLabel = name',
+                           resultPropertyId = i,
+                           resultPropertySource = makeSource name' i f g }
+        makeSource name' i f g =
+          ResultItemSource $
+          ResultItem { resultItemName   = name ++ "." ++ name',
+                       resultItemId     = i,
+                       resultItemData   = f m,
+                       resultItemSignal = g m }
+        -- properties
+        getMaxCount = IntResultData . return . Q.queueMaxCount
+        getCount = IntResultData . Q.queueCount
+        getEnqueueCount = IntResultData . Q.enqueueCount
+        getEnqueueLostCount = IntResultData . Q.enqueueLostCount
+        getEnqueueStoreCount = IntResultData . Q.enqueueStoreCount
+        getDequeueCount = IntResultData . Q.dequeueCount
+        getDequeueExtractCount = IntResultData . Q.dequeueExtractCount
+        getLoadFactor = DoubleResultData . Q.queueLoadFactor
+        getWaitTime = StringResultData . fmap show . Q.queueWaitTime
+        -- signals
+        maxCountSignal = const Nothing
+        countSignal = Just . Q.queueCountChanged_
+        enqueueCountSignal = Just . Q.enqueueCountChanged_
+        enqueueLostCountSignal = Just . Q.enqueueLostCountChanged_
+        enqueueStoreCountSignal = Just . Q.enqueueStoreCountChanged_
+        dequeueCountSignal = Just . Q.dequeueCountChanged_
+        dequeueExtractCountSignal = Just . Q.dequeueExtractCountChanged_
+        loadFactorSignal = Just . Q.queueLoadFactorChanged_
+        waitTimeSignal = Just . Q.queueWaitTimeChanged_
+  
+-- | Return the summary by the specified (infinite) queue.
+makeInfiniteQueueSummary :: (Show sm, Show so)
+                            => ResultName
+                            -- ^ the result name
+                            -> ResultId
+                            -- ^ the result identifier
+                            -> IQ.Queue sm qm so qo a
+                            -- ^ the queue
+                            -> ResultSource
+makeInfiniteQueueSummary name i m =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = name,
+    resultObjectId = i,
+    resultObjectTypeId = InfiniteQueueId,
+    resultObjectProperties = [
+      makeProperty "queueCount" QueueCountId getCount countSignal,
+      makeProperty "enqueueStoreCount" EnqueueStoreCountId getEnqueueStoreCount enqueueStoreCountSignal,
+      makeProperty "dequeueCount" DequeueCountId getDequeueCount dequeueCountSignal,
+      makeProperty "dequeueExtractCount" DequeueExtractCountId getDequeueExtractCount dequeueExtractCountSignal,
+      makeProperty "queueWaitTime" QueueWaitTimeId getWaitTime waitTimeSignal ] }
+  where makeProperty name' i f g =
+          ResultProperty { resultPropertyLabel = name',
+                           resultPropertyId = i,
+                           resultPropertySource = makeSource name' i f g }
+        makeSource name' i f g =
+          ResultItemSource $
+          ResultItem { resultItemName   = name ++ "." ++ name',
+                       resultItemId     = i,
+                       resultItemData   = f m,
+                       resultItemSignal = g m }
+        -- properties
+        getCount = IntResultData . IQ.queueCount
+        getEnqueueStoreCount = IntResultData . IQ.enqueueStoreCount
+        getDequeueCount = IntResultData . IQ.dequeueCount
+        getDequeueExtractCount = IntResultData . IQ.dequeueExtractCount
+        getWaitTime = StringResultData . fmap show . IQ.queueWaitTime
+        -- signals
+        countSignal = Just . IQ.queueCountChanged_
+        enqueueStoreCountSignal = Just . IQ.enqueueStoreCountChanged_
+        dequeueCountSignal = Just . IQ.dequeueCountChanged_
+        dequeueExtractCountSignal = Just . IQ.dequeueExtractCountChanged_
+        waitTimeSignal = Just . IQ.queueWaitTimeChanged_
+  
+-- | Return the summary by the specified arrival timer.
+makeArrivalTimerSummary :: ResultName
+                           -- ^ the result name
+                           -> ResultId
+                           -- ^ the result identifier
+                           -> ArrivalTimer
+                           -- ^ the arrival timer
+                           -> ResultSource
+makeArrivalTimerSummary name i m =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = name,
+    resultObjectId = i,
+    resultObjectTypeId = ArrivalTimerId,
+    resultObjectProperties = [
+      makeProperty "processingTime" ArrivalProcessingTimeId getProcessingTime processingTimeChanged ] }
+  where makeProperty name' i f g =
+          ResultProperty { resultPropertyLabel = name',
+                           resultPropertyId = i,
+                           resultPropertySource = makeSource name' i f g }
+        makeSource name' i f g =
+          ResultItemSource $
+          ResultItem { resultItemName   = name ++ "." ++ name',
+                       resultItemId     = i,
+                       resultItemData   = f m,
+                       resultItemSignal = g m }
+        -- properties
+        getProcessingTime = StringResultData . fmap show . arrivalProcessingTime
+        -- signals
+        processingTimeChanged = Just . arrivalProcessingTimeChanged_
+
+-- | Return the summary by the specified server.
+makeServerSummary :: Show s
+                     => ResultName
+                     -- ^ the result name
+                     -> ResultId
+                     -- ^ the result identifier
+                     -> Server s a b
+                     -- ^ the server
+                     -> ResultSource
+makeServerSummary name i m =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = name,
+    resultObjectId = i,
+    resultObjectTypeId = ServerId,
+    resultObjectProperties = [
+      makeProperty "inputWaitTime" ServerInputWaitTimeId getInputWaitTime inputWaitTimeChanged,
+      makeProperty "processingTime" ServerProcessingTimeId getProcessingTime processingTimeChanged,
+      makeProperty "outputWaitTime" ServerOutputWaitTimeId getOutputWaitTime outputWaitTimeChanged,
+      makeProperty "inputWaitFactor" ServerInputWaitFactorId getInputWaitFactor inputWaitFactorChanged,
+      makeProperty "processingFactor" ServerProcessingFactorId getProcessingFactor processingFactorChanged,
+      makeProperty "outputWaitFactor" ServerOutputWaitFactorId getOutputWaitFactor outputWaitFactorChanged ] }
+  where makeProperty name' i f g =
+          ResultProperty { resultPropertyLabel = name',
+                           resultPropertyId = i,
+                           resultPropertySource = makeSource name' i f g }
+        makeSource name' i f g =
+          ResultItemSource $
+          ResultItem { resultItemName   = name ++ "." ++ name',
+                       resultItemId     = i,
+                       resultItemData   = f m,
+                       resultItemSignal = g m }
+        -- properties
+        getInputWaitTime = StringResultData . fmap show . serverInputWaitTime
+        getProcessingTime = StringResultData . fmap show . serverProcessingTime
+        getOutputWaitTime = StringResultData . fmap show . serverOutputWaitTime
+        getInputWaitFactor = DoubleResultData . serverInputWaitFactor
+        getProcessingFactor = DoubleResultData . serverProcessingFactor
+        getOutputWaitFactor = DoubleResultData . serverOutputWaitFactor
+        -- signals
+        inputWaitTimeChanged = Just . serverInputWaitTimeChanged_
+        processingTimeChanged = Just . serverProcessingTimeChanged_
+        outputWaitTimeChanged = Just . serverOutputWaitTimeChanged_
+        inputWaitFactorChanged = Just . serverInputWaitFactorChanged_
+        processingFactorChanged = Just . serverProcessingFactorChanged_
+        outputWaitFactorChanged = Just . serverOutputWaitFactorChanged_
+
 -- | Make an integer subscript
 makeIntSubscript :: Show a => a -> String
 makeIntSubscript i = "[" ++ show i ++ "]"
