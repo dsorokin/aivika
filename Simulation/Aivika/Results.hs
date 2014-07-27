@@ -761,23 +761,7 @@ instance ResultComputation m => ResultProvider (m [Double]) where
 
 instance ResultComputation m => ResultProvider (m (SamplingStats Double)) where
 
-  resultSource name m = ResultSource f where
-    f DoubleResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleListResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleStatsResultType =
-      makeResultItemOutput name m DoubleStatsResultData
-    f IntResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntListResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntStatsResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f StringResultType =
-      makeSamplingStatsOutput DoubleResultData name m
-    f DefaultResultType =
-      makeResultItemOutput name m DoubleStatsResultData
+  resultSource = makeResultSource DoubleStatsResultData
 
 instance ResultComputation m => ResultProvider (m Int) where
 
@@ -789,23 +773,7 @@ instance ResultComputation m => ResultProvider (m [Int]) where
 
 instance ResultComputation m => ResultProvider (m (SamplingStats Int)) where
 
-  resultSource name m = ResultSource f where
-    f DoubleResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleListResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleStatsResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntListResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntStatsResultType =
-      makeResultItemOutput name m IntStatsResultData
-    f StringResultType =
-      makeSamplingStatsOutput IntResultData name m
-    f DefaultResultType =
-      makeResultItemOutput name m IntStatsResultData
+  resultSource = makeResultSource IntStatsResultData
 
 instance ResultComputation m => ResultProvider (m String) where
 
