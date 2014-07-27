@@ -256,73 +256,121 @@ mapResultItems f z@(ResultSeparatorOutput x) = z
 retypeResultItem :: ResultType -> ResultItem -> ResultOutput
 retypeResultItem DoubleResultType z = ResultItemOutput $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) = z
-    tr z@(ResultItem n (DoubleListResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleStatsResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntResultData x) s) = z { resultItemData = DoubleResultData $ fmap fromIntegral x }
-    tr z@(ResultItem n (IntListResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntStatsResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (StringResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleResultData x) s) =
+      z
+    tr z@(ResultItem n (DoubleListResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntResultData x) s) =
+      z { resultItemData = DoubleResultData $ fmap fromIntegral x }
+    tr z@(ResultItem n (IntListResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (StringResultData x) s) =
+      z { resultItemData = NoResultData }
 retypeResultItem DoubleListResultType z = ResultItemOutput $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) = z { resultItemData = DoubleListResultData $ fmap return x }
-    tr z@(ResultItem n (DoubleListResultData x) s) = z
-    tr z@(ResultItem n (DoubleStatsResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntResultData x) s) = z { resultItemData = DoubleListResultData $ fmap (return . fromIntegral) x }
-    tr z@(ResultItem n (IntListResultData x) s) = z { resultItemData = DoubleListResultData $ fmap (fmap fromIntegral) x }
-    tr z@(ResultItem n (IntStatsResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (StringResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleResultData x) s) =
+      z { resultItemData = DoubleListResultData $ fmap return x }
+    tr z@(ResultItem n (DoubleListResultData x) s) =
+      z
+    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntResultData x) s) =
+      z { resultItemData = DoubleListResultData $ fmap (return . fromIntegral) x }
+    tr z@(ResultItem n (IntListResultData x) s) =
+      z { resultItemData = DoubleListResultData $ fmap (fmap fromIntegral) x }
+    tr z@(ResultItem n (IntStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (StringResultData x) s) =
+      z { resultItemData = NoResultData }
 retypeResultItem DoubleStatsResultType z = ResultItemOutput $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) = z { resultItemData = DoubleStatsResultData $ fmap returnSamplingStats x }
-    tr z@(ResultItem n (DoubleListResultData x) s) = z { resultItemData = DoubleStatsResultData $ fmap listSamplingStats x }
-    tr z@(ResultItem n (DoubleStatsResultData x) s) = z
-    tr z@(ResultItem n (IntResultData x) s) = z { resultItemData = DoubleStatsResultData $ fmap (fromIntSamplingStats . returnSamplingStats) x }
-    tr z@(ResultItem n (IntListResultData x) s) = z { resultItemData = DoubleStatsResultData $ fmap (fromIntSamplingStats . listSamplingStats) x }
-    tr z@(ResultItem n (IntStatsResultData x) s) = z { resultItemData = DoubleStatsResultData $ fmap fromIntSamplingStats x }
-    tr z@(ResultItem n (StringResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleResultData x) s) =
+      z { resultItemData = DoubleStatsResultData $ fmap returnSamplingStats x }
+    tr z@(ResultItem n (DoubleListResultData x) s) =
+      z { resultItemData = DoubleStatsResultData $ fmap listSamplingStats x }
+    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+      z
+    tr z@(ResultItem n (IntResultData x) s) =
+      z { resultItemData = DoubleStatsResultData $ fmap (fromIntSamplingStats . returnSamplingStats) x }
+    tr z@(ResultItem n (IntListResultData x) s) =
+      z { resultItemData = DoubleStatsResultData $ fmap (fromIntSamplingStats . listSamplingStats) x }
+    tr z@(ResultItem n (IntStatsResultData x) s) =
+      z { resultItemData = DoubleStatsResultData $ fmap fromIntSamplingStats x }
+    tr z@(ResultItem n (StringResultData x) s) =
+      z { resultItemData = NoResultData }
 retypeResultItem IntResultType z = ResultItemOutput $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleListResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleStatsResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntResultData x) s) = z
-    tr z@(ResultItem n (IntListResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntStatsResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (StringResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleListResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntResultData x) s) =
+      z
+    tr z@(ResultItem n (IntListResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (StringResultData x) s) =
+      z { resultItemData = NoResultData }
 retypeResultItem IntListResultType z = ResultItemOutput $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleListResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleStatsResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntResultData x) s) = z { resultItemData = IntListResultData $ fmap return x }
-    tr z@(ResultItem n (IntListResultData x) s) = z
-    tr z@(ResultItem n (IntStatsResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (StringResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleListResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntResultData x) s) =
+      z { resultItemData = IntListResultData $ fmap return x }
+    tr z@(ResultItem n (IntListResultData x) s) =
+      z
+    tr z@(ResultItem n (IntStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (StringResultData x) s) =
+      z { resultItemData = NoResultData }
 retypeResultItem IntStatsResultType z = ResultItemOutput $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleListResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleStatsResultData x) s) = z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntResultData x) s) = z { resultItemData = IntStatsResultData $ fmap returnSamplingStats x }
-    tr z@(ResultItem n (IntListResultData x) s) = z { resultItemData = IntStatsResultData $ fmap listSamplingStats x }
-    tr z@(ResultItem n (IntStatsResultData x) s) = z
-    tr z@(ResultItem n (StringResultData x) s) = z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleListResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+      z { resultItemData = NoResultData }
+    tr z@(ResultItem n (IntResultData x) s) =
+      z { resultItemData = IntStatsResultData $ fmap returnSamplingStats x }
+    tr z@(ResultItem n (IntListResultData x) s) =
+      z { resultItemData = IntStatsResultData $ fmap listSamplingStats x }
+    tr z@(ResultItem n (IntStatsResultData x) s) =
+      z
+    tr z@(ResultItem n (StringResultData x) s) =
+      z { resultItemData = NoResultData }
 retypeResultItem StringResultType z@(ResultItem n (DoubleStatsResultData x) s) =
   mapResultItems (retypeResultItem StringResultType) $
   mapResultItems (\x -> ResultItemOutput x { resultItemSignal = s }) $
-  makeSamplingStatsOutput n x DoubleResultData
+  makeSamplingStatsOutput DoubleResultData n x
 retypeResultItem StringResultType z@(ResultItem n (IntStatsResultData x) s) =
   mapResultItems (retypeResultItem StringResultType) $
   mapResultItems (\x -> ResultItemOutput x { resultItemSignal = s }) $
-  makeSamplingStatsOutput n x IntResultData
+  makeSamplingStatsOutput IntResultData n x
 retypeResultItem StringResultType z = ResultItemOutput $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) = z { resultItemData = StringResultData $ fmap show x }
-    tr z@(ResultItem n (DoubleListResultData x) s) = z { resultItemData = StringResultData $ fmap show x }
-    tr z@(ResultItem n (IntResultData x) s) = z { resultItemData = StringResultData $ fmap show x }
-    tr z@(ResultItem n (IntListResultData x) s) = z { resultItemData = StringResultData $ fmap show x }
-    tr z@(ResultItem n (StringResultData x) s) = z
+    tr z@(ResultItem n (DoubleResultData x) s) =
+      z { resultItemData = StringResultData $ fmap show x }
+    tr z@(ResultItem n (DoubleListResultData x) s) =
+      z { resultItemData = StringResultData $ fmap show x }
+    tr z@(ResultItem n (IntResultData x) s) =
+      z { resultItemData = StringResultData $ fmap show x }
+    tr z@(ResultItem n (IntListResultData x) s) =
+      z { resultItemData = StringResultData $ fmap show x }
+    tr z@(ResultItem n (StringResultData x) s) =
+      z
+retypeResultItem DefaultResultType z = ResultItemOutput z
 
 -- | It contains the results of simulation.
 data Results =
@@ -439,6 +487,20 @@ instance ResultComputation Signalable where
   resultComputationData = readSignalable
   resultComputationSignal = Just . signalableChanged_
 
+-- | Make the result source by the specified transformation function.
+makeResultSource :: ResultComputation m
+                    => (Event a -> ResultData)
+                    -- ^ transformation
+                    -> String
+                    -- ^ the result name
+                    -> m a
+                    -- ^ the result computation
+                    -> ResultSource
+makeResultSource f name m =
+  ResultSource $ \t ->
+  mapResultItems (retypeResultItem t) $
+  makeResultItemOutput name m f
+
 -- | Make a result item output. 
 makeResultItemOutput :: ResultComputation m
                         => String
@@ -456,14 +518,14 @@ makeResultItemOutput name m f =
 
 -- | Output the specified statistics.
 makeSamplingStatsOutput :: (Show a, ResultComputation m)
-                           => String
+                           => (Event a -> ResultData)
+                           -- ^ transformation
+                           -> String
                            -- ^ the result name
                            -> m (SamplingStats a)
                            -- ^ the statistics
-                           -> (Event a -> ResultData)
-                           -- ^ transformation
                            -> ResultOutput
-makeSamplingStatsOutput name m f =
+makeSamplingStatsOutput f name m =
   ResultObjectOutput $
   ResultObject {
     resultObjectName = name,
@@ -691,43 +753,11 @@ makeIntSubscript i = "[" ++ show i ++ "]"
 
 instance ResultComputation m => ResultProvider (m Double) where
 
-  resultSource name m = ResultSource f where
-    f DoubleResultType =
-      makeResultItemOutput name m DoubleResultData
-    f DoubleListResultType =
-      makeResultItemOutput name m (DoubleListResultData . fmap return)
-    f DoubleStatsResultType =
-      makeResultItemOutput name m (DoubleStatsResultData . fmap returnSamplingStats)
-    f IntResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntListResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntStatsResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f StringResultType =
-      makeResultItemOutput name m (StringResultData . fmap show)
-    f DefaultResultType =
-      makeResultItemOutput name m DoubleResultData
+  resultSource = makeResultSource DoubleResultData
 
 instance ResultComputation m => ResultProvider (m [Double]) where
 
-  resultSource name m = ResultSource f where
-    f DoubleResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleListResultType =
-      makeResultItemOutput name m DoubleListResultData
-    f DoubleStatsResultType =
-      makeResultItemOutput name m (DoubleStatsResultData . fmap listSamplingStats)
-    f IntResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntListResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntStatsResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f StringResultType =
-      makeResultItemOutput name m (StringResultData . fmap show)
-    f DefaultResultType =
-      makeResultItemOutput name m DoubleListResultData
+  resultSource = makeResultSource DoubleListResultData
 
 instance ResultComputation m => ResultProvider (m (SamplingStats Double)) where
 
@@ -745,49 +775,17 @@ instance ResultComputation m => ResultProvider (m (SamplingStats Double)) where
     f IntStatsResultType =
       makeResultItemOutput name m (const NoResultData)
     f StringResultType =
-      makeSamplingStatsOutput name m DoubleResultData
+      makeSamplingStatsOutput DoubleResultData name m
     f DefaultResultType =
       makeResultItemOutput name m DoubleStatsResultData
 
 instance ResultComputation m => ResultProvider (m Int) where
 
-  resultSource name m = ResultSource f where
-    f DoubleResultType =
-      makeResultItemOutput name m (DoubleResultData . fmap fromIntegral)
-    f DoubleListResultType =
-      makeResultItemOutput name m (DoubleListResultData . fmap (return . fromIntegral))
-    f DoubleStatsResultType =
-      makeResultItemOutput name m (DoubleStatsResultData . fmap (fromIntSamplingStats . returnSamplingStats))
-    f IntResultType =
-      makeResultItemOutput name m IntResultData
-    f IntListResultType =
-      makeResultItemOutput name m (IntListResultData . fmap return)
-    f IntStatsResultType =
-      makeResultItemOutput name m (IntStatsResultData . fmap returnSamplingStats)
-    f StringResultType =
-      makeResultItemOutput name m (StringResultData . fmap show)
-    f DefaultResultType =
-      makeResultItemOutput name m IntResultData
+  resultSource = makeResultSource IntResultData
 
 instance ResultComputation m => ResultProvider (m [Int]) where
 
-  resultSource name m = ResultSource f where
-    f DoubleResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleListResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleStatsResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntListResultType =
-      makeResultItemOutput name m IntListResultData
-    f IntStatsResultType =
-      makeResultItemOutput name m (IntStatsResultData . fmap listSamplingStats)
-    f StringResultType =
-      makeResultItemOutput name m (StringResultData . fmap show)
-    f DefaultResultType =
-      makeResultItemOutput name m IntListResultData
+  resultSource = makeResultSource IntListResultData
 
 instance ResultComputation m => ResultProvider (m (SamplingStats Int)) where
 
@@ -805,29 +803,13 @@ instance ResultComputation m => ResultProvider (m (SamplingStats Int)) where
     f IntStatsResultType =
       makeResultItemOutput name m IntStatsResultData
     f StringResultType =
-      makeSamplingStatsOutput name m IntResultData
+      makeSamplingStatsOutput IntResultData name m
     f DefaultResultType =
       makeResultItemOutput name m IntStatsResultData
 
 instance ResultComputation m => ResultProvider (m String) where
 
-  resultSource name m = ResultSource f where
-    f DoubleResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleListResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleStatsResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntListResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntStatsResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f StringResultType =
-      makeResultItemOutput name m StringResultData
-    f DefaultResultType =
-      makeResultItemOutput name m StringResultData
+  resultSource = makeResultSource StringResultData
 
 instance ResultProvider p => ResultProvider [p] where
 
@@ -914,83 +896,19 @@ instance ResultProvider p => ResultProvider (ResultVectorWithSubscript p) where
 
 instance (Ix i, Show i, ResultComputation m) => ResultProvider (m (A.Array i Double)) where
 
-  resultSource name m = ResultSource f where
-    f DoubleResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleListResultType =
-      makeResultItemOutput name m (DoubleListResultData . fmap A.elems)
-    f DoubleStatsResultType =
-      makeResultItemOutput name m (DoubleStatsResultData . fmap (listSamplingStats . A.elems))
-    f IntResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntListResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntStatsResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f StringResultType =
-      makeResultItemOutput name m (StringResultData . fmap show)
-    f DefaultResultType =
-      makeResultItemOutput name m (DoubleListResultData . fmap A.elems)
+  resultSource = makeResultSource (DoubleListResultData . fmap A.elems)
 
 instance (Ix i, Show i, ResultComputation m) => ResultProvider (m (A.Array i Int)) where
 
-  resultSource name m = ResultSource f where
-    f DoubleResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleListResultType =
-      makeResultItemOutput name m (DoubleListResultData . fmap (map fromIntegral . A.elems))
-    f DoubleStatsResultType =
-      makeResultItemOutput name m (DoubleStatsResultData . fmap (fromIntSamplingStats . listSamplingStats . A.elems))
-    f IntResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntListResultType =
-      makeResultItemOutput name m (IntListResultData . fmap A.elems)
-    f IntStatsResultType =
-      makeResultItemOutput name m (IntStatsResultData . fmap (listSamplingStats . A.elems))
-    f StringResultType =
-      makeResultItemOutput name m (StringResultData . fmap show)
-    f DefaultResultType =
-      makeResultItemOutput name m (IntListResultData . fmap A.elems)
+  resultSource = makeResultSource (IntListResultData . fmap A.elems)
 
 instance ResultComputation m => ResultProvider (m (V.Vector Double)) where
 
-  resultSource name m = ResultSource f where
-    f DoubleResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleListResultType =
-      makeResultItemOutput name m (DoubleListResultData . fmap V.toList)
-    f DoubleStatsResultType =
-      makeResultItemOutput name m (DoubleStatsResultData . fmap (listSamplingStats . V.toList))
-    f IntResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntListResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntStatsResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f StringResultType =
-      makeResultItemOutput name m (StringResultData . fmap show)
-    f DefaultResultType =
-      makeResultItemOutput name m (DoubleListResultData . fmap V.toList)
+  resultSource = makeResultSource (DoubleListResultData . fmap V.toList)
 
 instance ResultComputation m => ResultProvider (m (V.Vector Int)) where
 
-  resultSource name m = ResultSource f where
-    f DoubleResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f DoubleListResultType =
-      makeResultItemOutput name m (DoubleListResultData . fmap (map fromIntegral . V.toList))
-    f DoubleStatsResultType =
-      makeResultItemOutput name m (DoubleStatsResultData . fmap (fromIntSamplingStats . listSamplingStats . V.toList))
-    f IntResultType =
-      makeResultItemOutput name m (const NoResultData)
-    f IntListResultType =
-      makeResultItemOutput name m (IntListResultData . fmap V.toList)
-    f IntStatsResultType =
-      makeResultItemOutput name m (IntStatsResultData . fmap (listSamplingStats . V.toList))
-    f StringResultType =
-      makeResultItemOutput name m (StringResultData . fmap show)
-    f DefaultResultType =
-      makeResultItemOutput name m (IntListResultData . fmap V.toList)
+  resultSource = makeResultSource (IntListResultData . fmap V.toList)
 
 -- | This is a function that shows the result output within
 -- the 'Event' computation synchronized with the event queue.
