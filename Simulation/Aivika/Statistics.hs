@@ -187,11 +187,12 @@ fromIntSamplingStats stats =
 -- | Show the summary of the statistics.       
 showSamplingStats :: (Show a) => SamplingStats a -> ShowS
 showSamplingStats stats =
-  showString "count = " . shows (samplingStatsCount stats) . 
+  showString "{ count = " . shows (samplingStatsCount stats) . 
   showString ", mean = " . shows (samplingStatsMean stats) . 
   showString ", std = " . shows (samplingStatsDeviation stats) . 
   showString ", min = " . shows (samplingStatsMin stats) . 
-  showString ", max = " . shows (samplingStatsMax stats)
+  showString ", max = " . shows (samplingStatsMax stats) .
+  showString " }"
 
 instance Show a => Show (SamplingStats a) where
   showsPrec prec = showSamplingStats
@@ -369,7 +370,7 @@ fromIntTimingStats stats =
 -- | Show the summary of the statistics.       
 showTimingStats :: (Show a, TimingData a) => TimingStats a -> ShowS
 showTimingStats stats =
-  showString "count = " . shows (timingStatsCount stats) . 
+  showString "{ count = " . shows (timingStatsCount stats) . 
   showString ", mean = " . shows (timingStatsMean stats) . 
   showString ", std = " . shows (timingStatsDeviation stats) . 
   showString ", min = " . shows (timingStatsMin stats) . 
@@ -378,7 +379,7 @@ showTimingStats stats =
   showString " (t = " . shows (timingStatsMaxTime stats) .
   showString "), t in [" . shows (timingStatsStartTime stats) .
   showString ", " . shows (timingStatsLastTime stats) .
-  showString "]"
+  showString "] }"
 
 instance (Show a, TimingData a) => Show (TimingStats a) where
   showsPrec prec = showTimingStats
