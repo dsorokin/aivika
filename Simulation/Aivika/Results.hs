@@ -781,36 +781,16 @@ instance ResultComputation m => ResultProvider (m String) where
 
 instance ResultProvider p => ResultProvider [p] where
 
-  resultSource name m = ResultSource f where
-    f t =
-      ResultVectorOutput $
-      ResultVector { resultVectorName = name,
-                     resultVectorItems = V.fromList (items t),
-                     resultVectorSubscript = V.fromList (subscript t) }
-    subscript t =
-      flip map (zip [0..] m) $ \(i, x) ->
-      makeIntSubscript i
-    items t =
-      flip map (zip [0..] m) $ \(i, x) ->
-      let name' = name ++ makeIntSubscript i
-      in resultOutput (resultSource name' x) t
+  resultSource name m =
+    resultSource name $ ResultListWithSubscript m subscript where
+      subscript = map snd $ zip m $ map makeIntSubscript [0..]
 
 instance (Show i, Ix i, ResultProvider p) => ResultProvider (A.Array i p) where
 
-  resultSource name m = ResultSource f where
-    f t =
-      ResultVectorOutput $
-      ResultVector { resultVectorName = name,
-                     resultVectorItems = V.fromList (items t),
-                     resultVectorSubscript = V.fromList (subscript t) }
-    xs = A.assocs m
-    subscript t =
-      flip map xs $ \(i, x) ->
-      makeIntSubscript i
-    items t =
-      flip map xs $ \(i, x) ->
-      let name' = name ++ makeIntSubscript i
-      in resultOutput (resultSource name' x) t
+  resultSource name m =
+    resultSource name $ ResultListWithSubscript items subscript where
+      items = A.elems m
+      subscript = map show (A.indices m)
 
 instance ResultProvider p => ResultProvider (V.Vector p) where
 
