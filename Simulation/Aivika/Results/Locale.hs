@@ -32,6 +32,9 @@ englishResultLocale = "en"
 
 -- | The Russian localisation of the simulation results.
 russianResultLocalisation :: ResultLocalisation
+russianResultLocalisation TimeId = "модельное время"
+russianResultLocalisation VectorId = "вектор"
+russianResultLocalisation (VectorItemId x) = "элемент с индексом " ++ x
 russianResultLocalisation SamplingStatsId = "сводная статистика"
 russianResultLocalisation SamplingStatsCountId = "количество"
 russianResultLocalisation SamplingStatsMinId = "минимальное значение"
@@ -90,11 +93,15 @@ russianResultLocalisation ServerOutputWaitTimeId = "время блокиров�
 russianResultLocalisation ServerInputWaitFactorId = "относительное время блокировки в ожидании ввода (от 0 до 1)"
 russianResultLocalisation ServerProcessingFactorId = "относительное время, потраченное на саму обработку заданий (от 0 до 1)"
 russianResultLocalisation ServerOutputWaitFactorId = "относительное время блокировки при попытке доставить вывод (от 0 до 1)"
+russianResultLocalisation (UserDefinedResultId m) = m
 russianResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation russianResultLocale x
 
 -- | The English localisation of the simulation results.
 englishResultLocalisation :: ResultLocalisation
+englishResultLocalisation TimeId = "simulation time"
+englishResultLocalisation VectorId = "vector"
+englishResultLocalisation (VectorItemId x) = "item #" ++ x
 englishResultLocalisation SamplingStatsId = "statistics summary"
 englishResultLocalisation SamplingStatsCountId = "count"
 englishResultLocalisation SamplingStatsMinId = "minimum"
@@ -153,11 +160,13 @@ englishResultLocalisation ServerOutputWaitTimeId = "the lock time when trying to
 englishResultLocalisation ServerInputWaitFactorId = "the lock factor when awaiting the input (from 0 to 1)"
 englishResultLocalisation ServerProcessingFactorId = "the factor spent on actual processing the tasks (from 0 to 1)"
 englishResultLocalisation ServerOutputWaitFactorId = "the lock factor when trying to deliver the output (from 0 to 1)"
+englishResultLocalisation (UserDefinedResultId m) = m
 englishResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation englishResultLocale x
 
 -- | Lookup a localisation by the specified locale.
 lookupResultLocalisation :: ResultLocale -> ResultLocalisation
+lookupResultLocalisation loc (UserDefinedResultId m) = m
 lookupResultLocalisation loc (LocalisedResultId m) =
   case M.lookup loc m of
     Just x -> x

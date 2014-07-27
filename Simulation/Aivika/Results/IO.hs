@@ -58,7 +58,7 @@ hPrintResultSourceIndentedLabelled :: Handle
                                       -- ^ a handle
                                       -> Int
                                       -- ^ an indent
-                                      -> String
+                                      -> ResultName
                                       -- ^ a label
                                       -> ResultLocalisation
                                       -- ^ a localisation
@@ -70,6 +70,10 @@ hPrintResultSourceIndentedLabelled h indent label loc (ResultItemSource x) =
          let tab = replicate indent ' '
          liftIO $
            do hPutStr h tab
+              hPutStr h "-- "
+              hPutStr h (loc $ resultItemId x)
+              hPutStrLn h ""
+              hPutStr h tab
               hPutStr h label
               hPutStr h " = "
               hPutStrLn h a
@@ -82,6 +86,10 @@ hPrintResultSourceIndentedLabelled h indent label loc (ResultVectorSource x) =
   do let tab = replicate indent ' '
      liftIO $
        do hPutStr h tab
+          hPutStr h "-- "
+          hPutStr h (loc $ resultVectorId x)
+          hPutStrLn h ""
+          hPutStr h tab
           hPutStr h label
           hPutStrLn h ":"
           hPutStrLn h ""
@@ -105,11 +113,6 @@ hPrintResultSourceIndentedLabelled h indent label loc (ResultObjectSource x) =
               tab'    = "  " ++ tab
               label'  = resultPropertyLabel p
               source' = resultPropertySource p
-          liftIO $
-            do hPutStr h tab'
-               hPutStr h "-- "
-               hPutStr h (loc $ resultPropertyId p)
-               hPutStrLn h ""
           hPrintResultSourceIndentedLabelled h indent' label' loc source'
 hPrintResultSourceIndentedLabelled h indent label loc (ResultSeparatorSource x) =
   do let tab = replicate indent ' '
@@ -187,6 +190,10 @@ showResultSourceIndentedLabelled indent label loc (ResultItemSource x) =
          let tab = replicate indent ' '
          return $
            showString tab .
+           showString "-- " .
+           showString (loc $ resultItemId x) .
+           showString "\n" .
+           showString tab .
            showString label .
            showString " = " .
            showString a .
@@ -205,6 +212,10 @@ showResultSourceIndentedLabelled indent label loc (ResultVectorSource x) =
      let showContents = foldr (.) id contents
      return $
        showString tab .
+       showString "-- " .
+       showString (loc $ resultVectorId x) .
+       showString "\n" .
+       showString tab .
        showString label .
        showString ":\n\n" .
        showContents
@@ -216,14 +227,7 @@ showResultSourceIndentedLabelled indent label loc (ResultObjectSource x) =
               tab'    = "  " ++ tab
               label'  = resultPropertyLabel p
               output' = resultPropertySource p
-          showProperties <-
-            showResultSourceIndentedLabelled indent' label' loc output'
-          return $
-            showString tab' .
-            showString "-- " .
-            showString (loc $ resultPropertyId p) .
-            showString "\n" .
-            showProperties
+          showResultSourceIndentedLabelled indent' label' loc output'
      let showContents = foldr (.) id contents
      return $
        showString tab .

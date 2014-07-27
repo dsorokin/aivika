@@ -44,14 +44,23 @@ import Simulation.Aivika.Server
 -- Examples are: @\"ru\", @\"en\" etc.
 type ResultLocale = String
 
--- | It localises the output of simulation results.
-type ResultLocalisation = ResultId -> String
+-- | It localises the description of simulation results.
+type ResultLocalisation = ResultId -> ResultDescription
 
--- | A lable used for indentifying the results when generating output.
-type ResultLabel = String
+-- | A name used for indentifying the results when generating output.
+type ResultName = String
+
+-- | A description used for describing the results when generating output.
+type ResultDescription = String
 
 -- | The result entity identifier.
-data ResultId = SamplingStatsId
+data ResultId = TimeId
+                -- ^ A 'time' computation.
+              | VectorId
+                -- ^ Describes a vector.
+              | VectorItemId String
+                -- ^ Described a vector item with the specified subscript.
+              | SamplingStatsId
                 -- ^ A 'SamplingStats' value.
               | SamplingStatsCountId
                 -- ^ Property 'samplingStatsCount'.
@@ -167,15 +176,21 @@ data ResultId = SamplingStatsId
                 -- ^ Property 'serverProcessingFactor'.
               | ServerOutputWaitFactorId
                 -- ^ Property 'serverOutputWaitFactor'.
-              | LocalisedResultId (M.Map ResultLocale String)
+              | UserDefinedResultId ResultDescription
+                -- ^ An user defined description.
+              | LocalisedResultId (M.Map ResultLocale ResultDescription)
                 -- ^ A localised property or object name.
 
 -- | Represents a provider of the simulation results. It is usually something, or
 -- an array of something, or a list of such values which can be simulated to get data.
 class ResultProvider p where
   
-  -- | Return the source of simulation results with the specified name. 
-  resultSource :: String -> p -> ResultSource
+  -- | Return the source of simulation results by the specified name, description and provider. 
+  resultSource :: ResultName -> ResultDescription -> p -> ResultSource
+  resultSource name descr = resultSource' name (UserDefinedResultId descr)
+
+  -- | Return the source of simulation results by the specified name, identifier and provider. 
+  resultSource' :: ResultName -> ResultId -> p -> ResultSource
 
 -- | Specifies the type of results we want to receive.
 data ResultType = DoubleResultType
@@ -224,8 +239,8 @@ data ResultData = DoubleResultData (Event Double)
 -- | Whether an object containing the results emits a signal notifying about change of data.
 type ResultSignal = Maybe (Signal ())
                   
--- | It associates the result sources with their labels.
-type ResultSourceMap = M.Map ResultLabel ResultSource
+-- | It associates the result sources with their names.
+type ResultSourceMap = M.Map ResultName ResultSource
 
 -- | Defines a source that actually returns simulation results.
 data ResultSource = ResultItemSource ResultItem
@@ -239,8 +254,10 @@ data ResultSource = ResultItemSource ResultItem
 
 -- | The simulation results represented by a single item.
 data ResultItem =
-  ResultItem { resultItemName :: String,
+  ResultItem { resultItemName :: ResultName,
                -- ^ The item name.
+               resultItemId :: ResultId,
+               -- ^ The item identifier.
                resultItemData :: ResultData,
                -- ^ The item data.
                resultItemSignal :: ResultSignal
@@ -249,7 +266,7 @@ data ResultItem =
   
 -- | The simulation results represented by an object having properties.
 data ResultObject =
-  ResultObject { resultObjectName :: String,
+  ResultObject { resultObjectName :: ResultName,
                  -- ^ The object name.
                  resultObjectId :: ResultId,
                  -- ^ The object identifier.
@@ -257,20 +274,22 @@ data ResultObject =
                  -- ^ The object properties.
                }
 
--- | The simulation results represented by a property of the object.
+-- | The object property containing the simulation results.
 data ResultProperty =
-  ResultProperty { resultPropertyLabel :: String,
-                   -- ^ The property label.
+  ResultProperty { resultPropertyLabel :: ResultName,
+                   -- ^ The property short label.
                    resultPropertyId :: ResultId,
                    -- ^ The property identifier.
                    resultPropertySource :: ResultSource
-                   -- ^ The source supplied by the property.
+                   -- ^ The simulation results supplied by the property.
                  }
 
 -- | The simulation results represented by a vector.
 data ResultVector =
-  ResultVector { resultVectorName :: String,
+  ResultVector { resultVectorName :: ResultName,
                  -- ^ The vector name.
+                 resultVectorId :: ResultId,
+                 -- ^ The vector identifier.
                  resultVectorItems :: V.Vector ResultSource,
                  -- ^ The sources supplied by the vector items.
                  resultVectorSubscript :: V.Vector String
@@ -282,6 +301,13 @@ data ResultSeparator =
   ResultSeparator { resultSeparatorText :: String
                     -- ^ The separator text.
                   }
+
+-- | Return the result source name.
+resultSourceName :: ResultSource -> ResultName
+resultSourceName (ResultItemSource x) = resultItemName x
+resultSourceName (ResultObjectSource x) = resultObjectName x
+resultSourceName (ResultVectorSource x) = resultVectorName x
+resultSourceName (ResultSeparatorSource x) = []
 
 -- | Flatten the result items.
 flattenResultItems :: ResultSource -> [ResultItem]
@@ -299,7 +325,8 @@ mapResultItems f (ResultObjectSource x) =
   ResultObjectSource $
   x { resultObjectProperties =
          flip map (resultObjectProperties x) $ \p ->
-         p { resultPropertySource = mapResultItems f (resultPropertySource p) } }
+         p { resultPropertySource = 
+                mapResultItems f (resultPropertySource p) } }
 mapResultItems f (ResultVectorSource x) =
   ResultVectorSource $
   x { resultVectorItems =
@@ -310,191 +337,191 @@ mapResultItems f z@(ResultSeparatorSource x) = z
 retypeResultItem :: ResultType -> ResultItem -> ResultSource
 retypeResultItem DoubleResultType z = ResultItemSource $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) =
+    tr z@(ResultItem n i (DoubleResultData x) s) =
       z
-    tr z@(ResultItem n (DoubleListResultData x) s) =
+    tr z@(ResultItem n i (DoubleListResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntResultData x) s) =
+    tr z@(ResultItem n i (IntResultData x) s) =
       z { resultItemData = DoubleResultData $ fmap fromIntegral x }
-    tr z@(ResultItem n (IntListResultData x) s) =
+    tr z@(ResultItem n i (IntListResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntStatsResultData x) s) =
+    tr z@(ResultItem n i (IntStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (IntTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (StringResultData x) s) =
+    tr z@(ResultItem n i (StringResultData x) s) =
       z { resultItemData = NoResultData }
 retypeResultItem DoubleListResultType z = ResultItemSource $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) =
+    tr z@(ResultItem n i (DoubleResultData x) s) =
       z { resultItemData = DoubleListResultData $ fmap return x }
-    tr z@(ResultItem n (DoubleListResultData x) s) =
+    tr z@(ResultItem n i (DoubleListResultData x) s) =
       z
-    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntResultData x) s) =
+    tr z@(ResultItem n i (IntResultData x) s) =
       z { resultItemData = DoubleListResultData $ fmap (return . fromIntegral) x }
-    tr z@(ResultItem n (IntListResultData x) s) =
+    tr z@(ResultItem n i (IntListResultData x) s) =
       z { resultItemData = DoubleListResultData $ fmap (fmap fromIntegral) x }
-    tr z@(ResultItem n (IntStatsResultData x) s) =
+    tr z@(ResultItem n i (IntStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (IntTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (StringResultData x) s) =
+    tr z@(ResultItem n i (StringResultData x) s) =
       z { resultItemData = NoResultData }
 retypeResultItem DoubleStatsResultType z = ResultItemSource $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) =
+    tr z@(ResultItem n i (DoubleResultData x) s) =
       z { resultItemData = DoubleStatsResultData $ fmap returnSamplingStats x }
-    tr z@(ResultItem n (DoubleListResultData x) s) =
+    tr z@(ResultItem n i (DoubleListResultData x) s) =
       z { resultItemData = DoubleStatsResultData $ fmap listSamplingStats x }
-    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleStatsResultData x) s) =
       z
-    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntResultData x) s) =
+    tr z@(ResultItem n i (IntResultData x) s) =
       z { resultItemData = DoubleStatsResultData $ fmap (fromIntSamplingStats . returnSamplingStats) x }
-    tr z@(ResultItem n (IntListResultData x) s) =
+    tr z@(ResultItem n i (IntListResultData x) s) =
       z { resultItemData = DoubleStatsResultData $ fmap (fromIntSamplingStats . listSamplingStats) x }
-    tr z@(ResultItem n (IntStatsResultData x) s) =
+    tr z@(ResultItem n i (IntStatsResultData x) s) =
       z { resultItemData = DoubleStatsResultData $ fmap fromIntSamplingStats x }
-    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (IntTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (StringResultData x) s) =
+    tr z@(ResultItem n i (StringResultData x) s) =
       z { resultItemData = NoResultData }
 retypeResultItem DoubleTimingStatsResultType z = ResultItemSource $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) =
+    tr z@(ResultItem n i (DoubleResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleListResultData x) s) =
+    tr z@(ResultItem n i (DoubleListResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleTimingStatsResultData x) s) =
       z
-    tr z@(ResultItem n (IntResultData x) s) =
+    tr z@(ResultItem n i (IntResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntListResultData x) s) =
+    tr z@(ResultItem n i (IntListResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntStatsResultData x) s) =
+    tr z@(ResultItem n i (IntStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (IntTimingStatsResultData x) s) =
       z { resultItemData = DoubleTimingStatsResultData $ fmap fromIntTimingStats x }
-    tr z@(ResultItem n (StringResultData x) s) =
+    tr z@(ResultItem n i (StringResultData x) s) =
       z { resultItemData = NoResultData }
 retypeResultItem IntResultType z = ResultItemSource $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) =
+    tr z@(ResultItem n i (DoubleResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleListResultData x) s) =
+    tr z@(ResultItem n i (DoubleListResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntResultData x) s) =
+    tr z@(ResultItem n i (IntResultData x) s) =
       z
-    tr z@(ResultItem n (IntListResultData x) s) =
+    tr z@(ResultItem n i (IntListResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntStatsResultData x) s) =
+    tr z@(ResultItem n i (IntStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (IntTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (StringResultData x) s) =
+    tr z@(ResultItem n i (StringResultData x) s) =
       z { resultItemData = NoResultData }
 retypeResultItem IntListResultType z = ResultItemSource $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) =
+    tr z@(ResultItem n i (DoubleResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleListResultData x) s) =
+    tr z@(ResultItem n i (DoubleListResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntResultData x) s) =
+    tr z@(ResultItem n i (IntResultData x) s) =
       z { resultItemData = IntListResultData $ fmap return x }
-    tr z@(ResultItem n (IntListResultData x) s) =
+    tr z@(ResultItem n i (IntListResultData x) s) =
       z
-    tr z@(ResultItem n (IntStatsResultData x) s) =
+    tr z@(ResultItem n i (IntStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (IntTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (StringResultData x) s) =
+    tr z@(ResultItem n i (StringResultData x) s) =
       z { resultItemData = NoResultData }
 retypeResultItem IntStatsResultType z = ResultItemSource $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) =
+    tr z@(ResultItem n i (DoubleResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleListResultData x) s) =
+    tr z@(ResultItem n i (DoubleListResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntResultData x) s) =
+    tr z@(ResultItem n i (IntResultData x) s) =
       z { resultItemData = IntStatsResultData $ fmap returnSamplingStats x }
-    tr z@(ResultItem n (IntListResultData x) s) =
+    tr z@(ResultItem n i (IntListResultData x) s) =
       z { resultItemData = IntStatsResultData $ fmap listSamplingStats x }
-    tr z@(ResultItem n (IntStatsResultData x) s) =
+    tr z@(ResultItem n i (IntStatsResultData x) s) =
       z
-    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (IntTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (StringResultData x) s) =
+    tr z@(ResultItem n i (StringResultData x) s) =
       z { resultItemData = NoResultData }
 retypeResultItem IntTimingStatsResultType z = ResultItemSource $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) =
+    tr z@(ResultItem n i (DoubleResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleListResultData x) s) =
+    tr z@(ResultItem n i (DoubleListResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (DoubleTimingStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntResultData x) s) =
+    tr z@(ResultItem n i (IntResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntListResultData x) s) =
+    tr z@(ResultItem n i (IntListResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntStatsResultData x) s) =
+    tr z@(ResultItem n i (IntStatsResultData x) s) =
       z { resultItemData = NoResultData }
-    tr z@(ResultItem n (IntTimingStatsResultData x) s) =
+    tr z@(ResultItem n i (IntTimingStatsResultData x) s) =
       z
-    tr z@(ResultItem n (StringResultData x) s) =
+    tr z@(ResultItem n i (StringResultData x) s) =
       z { resultItemData = NoResultData }
-retypeResultItem StringResultType z@(ResultItem n (DoubleStatsResultData x) s) =
+retypeResultItem StringResultType z@(ResultItem n i (DoubleStatsResultData x) s) =
   mapResultItems (retypeResultItem StringResultType) $
   mapResultItems (\x -> ResultItemSource x { resultItemSignal = s }) $
-  makeSamplingStatsSource DoubleResultData n x
-retypeResultItem StringResultType z@(ResultItem n (DoubleTimingStatsResultData x) s) =
+  makeSamplingStatsSource DoubleResultData n i x
+retypeResultItem StringResultType z@(ResultItem n i (DoubleTimingStatsResultData x) s) =
   mapResultItems (retypeResultItem StringResultType) $
   mapResultItems (\x -> ResultItemSource x { resultItemSignal = s }) $
-  makeTimingStatsSource DoubleResultData n x
-retypeResultItem StringResultType z@(ResultItem n (IntStatsResultData x) s) =
+  makeTimingStatsSource DoubleResultData n i x
+retypeResultItem StringResultType z@(ResultItem n i (IntStatsResultData x) s) =
   mapResultItems (retypeResultItem StringResultType) $
   mapResultItems (\x -> ResultItemSource x { resultItemSignal = s }) $
-  makeSamplingStatsSource IntResultData n x
-retypeResultItem StringResultType z@(ResultItem n (IntTimingStatsResultData x) s) =
+  makeSamplingStatsSource IntResultData n i x
+retypeResultItem StringResultType z@(ResultItem n i (IntTimingStatsResultData x) s) =
   mapResultItems (retypeResultItem StringResultType) $
   mapResultItems (\x -> ResultItemSource x { resultItemSignal = s }) $
-  makeTimingStatsSource IntResultData n x
+  makeTimingStatsSource IntResultData n i x
 retypeResultItem StringResultType z = ResultItemSource $ tr z
   where
-    tr z@(ResultItem n (DoubleResultData x) s) =
+    tr z@(ResultItem n i (DoubleResultData x) s) =
       z { resultItemData = StringResultData $ fmap show x }
-    tr z@(ResultItem n (DoubleListResultData x) s) =
+    tr z@(ResultItem n i (DoubleListResultData x) s) =
       z { resultItemData = StringResultData $ fmap show x }
-    tr z@(ResultItem n (IntResultData x) s) =
+    tr z@(ResultItem n i (IntResultData x) s) =
       z { resultItemData = StringResultData $ fmap show x }
-    tr z@(ResultItem n (IntListResultData x) s) =
+    tr z@(ResultItem n i (IntListResultData x) s) =
       z { resultItemData = StringResultData $ fmap show x }
-    tr z@(ResultItem n (StringResultData x) s) =
+    tr z@(ResultItem n i (StringResultData x) s) =
       z
 retypeResultItem DefaultResultType z = ResultItemSource z
 
@@ -505,16 +532,15 @@ retypeResults :: ResultType
                  -- ^ the simulation results
                  -> [ResultSource]
 retypeResults t results =
-  map (mapResultItems $ retypeResultItem t) $
-  map snd (resultSourceList results)
+  map (mapResultItems $ retypeResultItem t) (resultSourceList results)
 
 -- | It contains the results of simulation.
 data Results =
   Results { resultPredefinedSignals :: ResultPredefinedSignals,
             -- ^ The predefined signals provided by every simulation model.
             resultSourceMap :: ResultSourceMap,
-            -- ^ The sources of simulation results as a map.
-            resultSourceList :: [(ResultLabel, ResultSource)]
+            -- ^ The sources of simulation results as a map of associated names.
+            resultSourceList :: [ResultSource]
             -- ^ The sources of simulation results as an ordered list.
           }
 
@@ -539,11 +565,11 @@ newResultPredefinedSignals = runDynamicsInStartTime $ runEventWith EarlierEvents
                                           resultSignalInStopTime   = signalInStopTime }
 
 -- | Prepare the simulation results starting from the initial modeling time.
-resultsFromStartTime :: [(ResultLabel, ResultSource)] -> Simulation Results
+resultsFromStartTime :: [ResultSource] -> Simulation Results
 resultsFromStartTime m =
   do s <- newResultPredefinedSignals
      return Results { resultPredefinedSignals = s,
-                      resultSourceMap         = M.fromList m,
+                      resultSourceMap         = M.fromList $ map (\x -> (resultSourceName x, x)) m,
                       resultSourceList        = m }
 
 -- | Return a mixed signal for the specified items received from 
@@ -566,15 +592,15 @@ mixedResultItemSignal rs xs =
       signal5 = void $ resultSignalInIntegTimes rs
   in signal1 <> signal2
 
--- | Lookup the mandatory result sources by the specified labels.
-lookupResultSources :: ResultSourceMap -> [ResultLabel] -> [ResultSource]
-lookupResultSources xs labels =
-  flip map labels $ \label ->
-  case M.lookup label xs of
+-- | Lookup the mandatory result sources by the specified names.
+lookupResultSources :: ResultSourceMap -> [ResultName] -> [ResultSource]
+lookupResultSources xs names =
+  flip map names $ \name ->
+  case M.lookup name xs of
     Nothing -> 
       error $ 
-      "No found result source with label " ++
-      label ++ ": lookupResultSources"
+      "No found result source with name " ++
+      name ++ ": lookupResultSources"
     Just x -> x
 
 -- | Represents a computation that can return the simulation data.
@@ -630,14 +656,17 @@ instance ResultComputation Signalable where
 makeResultItemSource :: ResultComputation m
                         => (Event a -> ResultData)
                         -- ^ transformation
-                        -> String
+                        -> ResultName
                         -- ^ the result name
+                        -> ResultId
+                        -- ^ the result identifier
                         -> m a
                         -- ^ the result computation
                         -> ResultSource
-makeResultItemSource f name m =
+makeResultItemSource f name i m =
   ResultItemSource $
   ResultItem { resultItemName   = name,
+               resultItemId     = i,
                resultItemData   = f $ resultComputationData m,
                resultItemSignal = resultComputationSignal m }
 
@@ -645,264 +674,125 @@ makeResultItemSource f name m =
 makeSamplingStatsSource :: (Show a, ResultComputation m)
                            => (Event a -> ResultData)
                            -- ^ transformation
-                           -> String
+                           -> ResultName
                            -- ^ the result name
+                           -> ResultId
+                           -- ^ the result indentifier
                            -> m (SamplingStats a)
                            -- ^ the statistics
                            -> ResultSource
-makeSamplingStatsSource f name m =
+makeSamplingStatsSource f name i m =
   ResultObjectSource $
   ResultObject {
     resultObjectName = name,
-    resultObjectId = SamplingStatsId,
+    resultObjectId = i,
     resultObjectProperties = [
-      ResultProperty {
-         resultPropertyLabel = "count",
-         resultPropertyId = SamplingStatsCountId,
-         resultPropertySource =
-           makeSource (name ++ ".count") (IntResultData . fmap samplingStatsCount) },
-      ResultProperty {
-        resultPropertyLabel = "mean",
-        resultPropertyId = SamplingStatsMeanId,
-        resultPropertySource =
-          makeSource (name ++ ".mean") (DoubleResultData . fmap samplingStatsMean) },
-      ResultProperty {
-        resultPropertyLabel = "mean2",
-        resultPropertyId = SamplingStatsMean2Id,
-        resultPropertySource =
-          makeSource (name ++ ".mean2") (DoubleResultData . fmap samplingStatsMean2) },
-      ResultProperty {
-        resultPropertyLabel = "std",
-        resultPropertyId = SamplingStatsDeviationId,
-        resultPropertySource =
-          makeSource (name ++ ".std") (DoubleResultData . fmap samplingStatsDeviation) },
-      ResultProperty {
-        resultPropertyLabel = "var",
-        resultPropertyId = SamplingStatsVarianceId,
-        resultPropertySource =
-          makeSource (name ++ ".var") (DoubleResultData . fmap samplingStatsVariance) },
-      ResultProperty {
-        resultPropertyLabel = "min",
-        resultPropertyId = SamplingStatsMinId,
-        resultPropertySource =
-          makeSource (name ++ ".min") (f . fmap samplingStatsMin) },
-      ResultProperty {
-        resultPropertyLabel = "max",
-        resultPropertyId = SamplingStatsMaxId,
-        resultPropertySource =
-          makeSource (name ++ ".max") (f . fmap samplingStatsMax) } ] }
-  where makeSource name' f =
-          ResultItemSource $
-          ResultItem { resultItemName   = name',
-                       resultItemData   = f $ resultComputationData m,
-                       resultItemSignal = resultComputationSignal m }
-
+      makeProperty "count" SamplingStatsCountId (IntResultData . fmap samplingStatsCount),
+      makeProperty "mean" SamplingStatsMeanId (DoubleResultData . fmap samplingStatsMean),
+      makeProperty "mean2" SamplingStatsMean2Id (DoubleResultData . fmap samplingStatsMean2),
+      makeProperty "std" SamplingStatsDeviationId (DoubleResultData . fmap samplingStatsDeviation),
+      makeProperty "var" SamplingStatsVarianceId (DoubleResultData . fmap samplingStatsVariance),
+      makeProperty "min" SamplingStatsMinId (f . fmap samplingStatsMin),
+      makeProperty "max" SamplingStatsMaxId (f . fmap samplingStatsMax) ] }
+  where
+    makeProperty name' i f =
+      ResultProperty { resultPropertyLabel = name',
+                       resultPropertyId = i,
+                       resultPropertySource = makeSource name' i f }
+    makeSource name' i f =
+      ResultItemSource $
+      ResultItem { resultItemName   = name ++ "." ++ name',
+                   resultItemId     = i,
+                   resultItemData   = f $ resultComputationData m,
+                   resultItemSignal = resultComputationSignal m }
+  
 -- | Return the source by the specified timing statistics.
 makeTimingStatsSource :: (Show a, TimingData a, ResultComputation m)
                          => (Event a -> ResultData)
                          -- ^ transformation
-                         -> String
+                         -> ResultName
                          -- ^ the result name
+                         -> ResultId
+                         -- ^ the result identifier
                          -> m (TimingStats a)
                          -- ^ the statistics
                          -> ResultSource
-makeTimingStatsSource f name m =
+makeTimingStatsSource f name i m =
   ResultObjectSource $
   ResultObject {
     resultObjectName = name,
-    resultObjectId = TimingStatsId,
+    resultObjectId = i,
     resultObjectProperties = [
-      ResultProperty {
-         resultPropertyLabel = "count",
-         resultPropertyId = TimingStatsCountId,
-         resultPropertySource =
-           makeSource (name ++ ".count") (IntResultData . fmap timingStatsCount) },
-      ResultProperty {
-        resultPropertyLabel = "mean",
-        resultPropertyId = TimingStatsMeanId,
-        resultPropertySource =
-          makeSource (name ++ ".mean") (DoubleResultData . fmap timingStatsMean) },
-      ResultProperty {
-        resultPropertyLabel = "std",
-        resultPropertyId = TimingStatsDeviationId,
-        resultPropertySource =
-          makeSource (name ++ ".std") (DoubleResultData . fmap timingStatsDeviation) },
-      ResultProperty {
-        resultPropertyLabel = "var",
-        resultPropertyId = TimingStatsVarianceId,
-        resultPropertySource =
-          makeSource (name ++ ".var") (DoubleResultData . fmap timingStatsVariance) },
-      ResultProperty {
-        resultPropertyLabel = "min",
-        resultPropertyId = TimingStatsMinId,
-        resultPropertySource =
-          makeSource (name ++ ".min") (f . fmap timingStatsMin) },
-      ResultProperty {
-        resultPropertyLabel = "max",
-        resultPropertyId = TimingStatsMaxId,
-        resultPropertySource =
-          makeSource (name ++ ".max") (f . fmap timingStatsMax) },
-      ResultProperty {
-        resultPropertyLabel = "minTime",
-        resultPropertyId = TimingStatsMinTimeId,
-        resultPropertySource =
-          makeSource (name ++ ".minTime") (DoubleResultData . fmap timingStatsMinTime) },
-      ResultProperty {
-        resultPropertyLabel = "maxTime",
-        resultPropertyId = TimingStatsMaxTimeId,
-        resultPropertySource =
-          makeSource (name ++ ".maxTime") (DoubleResultData . fmap timingStatsMaxTime) },
-      ResultProperty {
-        resultPropertyLabel = "startTime",
-        resultPropertyId = TimingStatsStartTimeId,
-        resultPropertySource =
-          makeSource (name ++ ".startTime") (DoubleResultData . fmap timingStatsStartTime) },
-      ResultProperty {
-        resultPropertyLabel = "lastTime",
-        resultPropertyId = TimingStatsLastTimeId,
-        resultPropertySource =
-          makeSource (name ++ ".lastTime") (DoubleResultData . fmap timingStatsLastTime) },
-      ResultProperty {
-        resultPropertyLabel = "sum",
-        resultPropertyId = TimingStatsSumId,
-        resultPropertySource =
-          makeSource (name ++ ".sum") (DoubleResultData . fmap timingStatsSum) },
-      ResultProperty {
-        resultPropertyLabel = "sum2",
-        resultPropertyId = TimingStatsSum2Id,
-        resultPropertySource =
-          makeSource (name ++ ".sum2") (DoubleResultData . fmap timingStatsSum2) } ] }
-  where makeSource name' f =
-          ResultItemSource $
-          ResultItem { resultItemName   = name',
-                       resultItemData   = f $ resultComputationData m,
-                       resultItemSignal = resultComputationSignal m }
-
+      makeProperty "count" TimingStatsCountId (IntResultData . fmap timingStatsCount),
+      makeProperty "mean" TimingStatsMeanId (DoubleResultData . fmap timingStatsMean),
+      makeProperty "std" TimingStatsDeviationId (DoubleResultData . fmap timingStatsDeviation),
+      makeProperty "var" TimingStatsVarianceId (DoubleResultData . fmap timingStatsVariance),
+      makeProperty "min" TimingStatsMinId (f . fmap timingStatsMin),
+      makeProperty "max" TimingStatsMaxId (f . fmap timingStatsMax),
+      makeProperty "minTime" TimingStatsMinTimeId (DoubleResultData . fmap timingStatsMinTime),
+      makeProperty "maxTime" TimingStatsMaxTimeId (DoubleResultData . fmap timingStatsMaxTime),
+      makeProperty "startTime" TimingStatsStartTimeId (DoubleResultData . fmap timingStatsStartTime),
+      makeProperty "lastTime" TimingStatsLastTimeId (DoubleResultData . fmap timingStatsLastTime),
+      makeProperty "sum" TimingStatsSumId (DoubleResultData . fmap timingStatsSum),
+      makeProperty "sum2" TimingStatsSum2Id (DoubleResultData . fmap timingStatsSum2) ] }
+  where
+    makeProperty name' i f =
+      ResultProperty { resultPropertyLabel = name',
+                       resultPropertyId = i,
+                       resultPropertySource = makeSource name' i f }
+    makeSource name' i f =
+      ResultItemSource $
+      ResultItem { resultItemName   = name ++ "." ++ name',
+                   resultItemId     = i,
+                   resultItemData   = f $ resultComputationData m,
+                   resultItemSignal = resultComputationSignal m }
+  
 -- | Return the source by the specified (finite) queue.
 makeQueueSource :: (Show si, Show sm, Show so)
-                   => String
+                   => ResultName
                    -- ^ the result name
+                   -> ResultId
+                   -- ^ the result identifier
                    -> Q.Queue si qi sm qm so qo a
                    -- ^ the queue
                    -> ResultSource
-makeQueueSource name queue =
+makeQueueSource name i m =
   ResultObjectSource $
   ResultObject {
     resultObjectName = name,
-    resultObjectId = FiniteQueueId,
+    resultObjectId = i,
     resultObjectProperties = [
-      ResultProperty {
-         resultPropertyLabel = "enqueueStrategy",
-         resultPropertyId = EnqueueStrategyId,
-         resultPropertySource =
-           makeSource (name ++ ".enqueueStrategy") getEnqueueStrategy enqueueStrategySignal  },
-      ResultProperty {
-         resultPropertyLabel = "enqueueStoringStrategy",
-         resultPropertyId = EnqueueStoringStrategyId,
-         resultPropertySource =
-           makeSource (name ++ ".enqueueStoringStrategy") getEnqueueStoringStrategy enqueueStoringStrategySignal},
-      ResultProperty {
-         resultPropertyLabel = "dequeueStrategy",
-         resultPropertyId = DequeueStrategyId,
-         resultPropertySource =
-           makeSource (name ++ ".dequeueStrategy") getDequeueStrategy dequeueStrategySignal },
-      ResultProperty {
-         resultPropertyLabel = "queueNull",
-         resultPropertyId = QueueNullId,
-         resultPropertySource =
-           makeSource (name ++ ".queueNull") whetherIsEmpty whetherIsEmptySignal },
-      ResultProperty {
-         resultPropertyLabel = "queueFull",
-         resultPropertyId = QueueFullId,
-         resultPropertySource =
-           makeSource (name ++ ".queueFull") whetherIsFull whetherIsFullSignal },
-      ResultProperty {
-         resultPropertyLabel = "queueMaxCount",
-         resultPropertyId = QueueMaxCountId,
-         resultPropertySource =
-           makeSource (name ++ ".queueMaxCount") getMaxCount maxCountSignal },
-      ResultProperty {
-         resultPropertyLabel = "queueCount",
-         resultPropertyId = QueueCountId,
-         resultPropertySource =
-           makeSource (name ++ ".queueCount") getCount countSignal },
-      ResultProperty {
-         resultPropertyLabel = "enqueueCount",
-         resultPropertyId = EnqueueCountId,
-         resultPropertySource =
-           makeSource (name ++ ".enqueueCount") getEnqueueCount enqueueCountSignal },
-      ResultProperty {
-         resultPropertyLabel = "enqueueLostCount",
-         resultPropertyId = EnqueueLostCountId,
-         resultPropertySource =
-           makeSource (name ++ ".enqueueLostCount") getEnqueueLostCount enqueueLostCountSignal },
-      ResultProperty {
-         resultPropertyLabel = "enqueueStoreCount",
-         resultPropertyId = EnqueueStoreCountId,
-         resultPropertySource =
-           makeSource (name ++ ".enqueueStoreCount") getEnqueueStoreCount enqueueStoreCountSignal },
-      ResultProperty {
-         resultPropertyLabel = "dequeueCount",
-         resultPropertyId = DequeueCountId,
-         resultPropertySource =
-           makeSource (name ++ ".dequeueCount") getDequeueCount dequeueCountSignal },
-      ResultProperty {
-         resultPropertyLabel = "dequeueExtractCount",
-         resultPropertyId = DequeueExtractCountId,
-         resultPropertySource =
-           makeSource (name ++ ".dequeueExtractCount") getDequeueExtractCount dequeueExtractCountSignal },
-      ResultProperty {
-         resultPropertyLabel = "queueLoadFactor",
-         resultPropertyId = QueueLoadFactorId,
-         resultPropertySource =
-           makeSource (name ++ ".queueLoadFactor") getLoadFactor loadFactorSignal },
-      ResultProperty {
-         resultPropertyLabel = "enqueueRate",
-         resultPropertyId = EnqueueRateId,
-         resultPropertySource =
-           makeSource (name ++ ".enqueueRate") getEnqueueRate enqueueRateSignal },
-      ResultProperty {
-         resultPropertyLabel = "enqueueStoreRate",
-         resultPropertyId = EnqueueStoreRateId,
-         resultPropertySource =
-           makeSource (name ++ ".enqueueStoreRate") getEnqueueStoreRate enqueueStoreRateSignal },
-      ResultProperty {
-         resultPropertyLabel = "dequeueRate",
-         resultPropertyId = DequeueRateId,
-         resultPropertySource =
-           makeSource (name ++ ".dequeueRate") getDequeueRate dequeueRateSignal },
-      ResultProperty {
-         resultPropertyLabel = "dequeueExtractRate",
-         resultPropertyId = DequeueExtractRateId,
-         resultPropertySource =
-           makeSource (name ++ ".dequeueExtractRate") getDequeueExtractRate dequeueExtractRateSignal },
-      ResultProperty {
-         resultPropertyLabel = "queueWaitTime",
-         resultPropertyId = QueueWaitTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".queueWaitTime") getWaitTime waitTimeSignal },
-      ResultProperty {
-         resultPropertyLabel = "queueTotalWaitTime",
-         resultPropertyId = QueueTotalWaitTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".queueTotalWaitTime") getTotalWaitTime totalWaitTimeSignal },
-      ResultProperty {
-         resultPropertyLabel = "enqueueWaitTime",
-         resultPropertyId = EnqueueWaitTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".enqueueWaitTime") getEnqueueWaitTime enqueueWaitTimeSignal },
-      ResultProperty {
-         resultPropertyLabel = "dequeueWaitTime",
-         resultPropertyId = DequeueWaitTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".dequeueWaitTime") getDequeueWaitTime dequeueWaitTimeSignal }
-      ]
-    }
-  where makeSource name' f g =
+      makeProperty "enqueueStrategy" EnqueueStrategyId getEnqueueStrategy enqueueStrategySignal,
+      makeProperty "enqueueStoringStrategy" EnqueueStoringStrategyId getEnqueueStoringStrategy enqueueStoringStrategySignal,
+      makeProperty "dequeueStrategy" DequeueStrategyId getDequeueStrategy dequeueStrategySignal,
+      makeProperty "queueNull" QueueNullId whetherIsEmpty whetherIsEmptySignal,
+      makeProperty "queueFull" QueueFullId whetherIsFull whetherIsFullSignal,
+      makeProperty "queueMaxCount" QueueMaxCountId getMaxCount maxCountSignal,
+      makeProperty "queueCount" QueueCountId getCount countSignal,
+      makeProperty "enqueueCount" EnqueueCountId getEnqueueCount enqueueCountSignal,
+      makeProperty "enqueueLostCount" EnqueueLostCountId getEnqueueLostCount enqueueLostCountSignal,
+      makeProperty "enqueueStoreCount" EnqueueStoreCountId getEnqueueStoreCount enqueueStoreCountSignal,
+      makeProperty "dequeueCount" DequeueCountId getDequeueCount dequeueCountSignal,
+      makeProperty "dequeueExtractCount" DequeueExtractCountId getDequeueExtractCount dequeueExtractCountSignal,
+      makeProperty "queueLoadFactor" QueueLoadFactorId getLoadFactor loadFactorSignal,
+      makeProperty "enqueueRate" EnqueueRateId getEnqueueRate enqueueRateSignal,
+      makeProperty "enqueueStoreRate" EnqueueStoreRateId getEnqueueStoreRate enqueueStoreRateSignal,
+      makeProperty "dequeueRate" DequeueRateId getDequeueRate dequeueRateSignal,
+      makeProperty "dequeueExtractRate" DequeueExtractRateId getDequeueExtractRate dequeueExtractRateSignal,
+      makeProperty "queueWaitTime" QueueWaitTimeId getWaitTime waitTimeSignal,
+      makeProperty "queueTotalWaitTime" QueueTotalWaitTimeId getTotalWaitTime totalWaitTimeSignal,
+      makeProperty "enqueueWaitTime" EnqueueWaitTimeId getEnqueueWaitTime enqueueWaitTimeSignal,
+      makeProperty "dequeueWaitTime" DequeueWaitTimeId getDequeueWaitTime dequeueWaitTimeSignal ] }
+  where makeProperty name' i f g =
+          ResultProperty { resultPropertyLabel = name',
+                           resultPropertyId = i,
+                           resultPropertySource = makeSource name' i f g }
+        makeSource name' i f g =
           ResultItemSource $
-          ResultItem { resultItemName   = name',
-                       resultItemData   = f queue,
-                       resultItemSignal = g queue }
+          ResultItem { resultItemName   = name ++ "." ++ name',
+                       resultItemId     = i,
+                       resultItemData   = f m,
+                       resultItemSignal = g m }
         -- properties
         getEnqueueStrategy = StringResultData . return . show . Q.enqueueStrategy
         getEnqueueStoringStrategy = StringResultData . return . show . Q.enqueueStoringStrategy
@@ -950,84 +840,41 @@ makeQueueSource name queue =
 
 -- | Return the source by the specified (infinite) queue.
 makeInfiniteQueueSource :: (Show sm, Show so)
-                           => String
+                           => ResultName
                            -- ^ the result name
+                           -> ResultId
+                           -- ^ the result identifier
                            -> IQ.Queue sm qm so qo a
                            -- ^ the queue
                            -> ResultSource
-makeInfiniteQueueSource name queue =
+makeInfiniteQueueSource name i m =
   ResultObjectSource $
   ResultObject {
     resultObjectName = name,
-    resultObjectId = InfiniteQueueId,
+    resultObjectId = i,
     resultObjectProperties = [
-      ResultProperty {
-         resultPropertyLabel = "enqueueStoringStrategy",
-         resultPropertyId = EnqueueStoringStrategyId,
-         resultPropertySource =
-           makeSource (name ++ ".enqueueStoringStrategy") getEnqueueStoringStrategy enqueueStoringStrategySignal},
-      ResultProperty {
-         resultPropertyLabel = "dequeueStrategy",
-         resultPropertyId = DequeueStrategyId,
-         resultPropertySource =
-           makeSource (name ++ ".dequeueStrategy") getDequeueStrategy dequeueStrategySignal },
-      ResultProperty {
-         resultPropertyLabel = "queueNull",
-         resultPropertyId = QueueNullId,
-         resultPropertySource =
-           makeSource (name ++ ".queueNull") whetherIsEmpty whetherIsEmptySignal },
-      ResultProperty {
-         resultPropertyLabel = "queueCount",
-         resultPropertyId = QueueCountId,
-         resultPropertySource =
-           makeSource (name ++ ".queueCount") getCount countSignal },
-      ResultProperty {
-         resultPropertyLabel = "enqueueStoreCount",
-         resultPropertyId = EnqueueStoreCountId,
-         resultPropertySource =
-           makeSource (name ++ ".enqueueStoreCount") getEnqueueStoreCount enqueueStoreCountSignal },
-      ResultProperty {
-         resultPropertyLabel = "dequeueCount",
-         resultPropertyId = DequeueCountId,
-         resultPropertySource =
-           makeSource (name ++ ".dequeueCount") getDequeueCount dequeueCountSignal },
-      ResultProperty {
-         resultPropertyLabel = "dequeueExtractCount",
-         resultPropertyId = DequeueExtractCountId,
-         resultPropertySource =
-           makeSource (name ++ ".dequeueExtractCount") getDequeueExtractCount dequeueExtractCountSignal },
-      ResultProperty {
-         resultPropertyLabel = "enqueueStoreRate",
-         resultPropertyId = EnqueueStoreRateId,
-         resultPropertySource =
-           makeSource (name ++ ".enqueueStoreRate") getEnqueueStoreRate enqueueStoreRateSignal },
-      ResultProperty {
-         resultPropertyLabel = "dequeueRate",
-         resultPropertyId = DequeueRateId,
-         resultPropertySource =
-           makeSource (name ++ ".dequeueRate") getDequeueRate dequeueRateSignal },
-      ResultProperty {
-         resultPropertyLabel = "dequeueExtractRate",
-         resultPropertyId = DequeueExtractRateId,
-         resultPropertySource =
-           makeSource (name ++ ".dequeueExtractRate") getDequeueExtractRate dequeueExtractRateSignal },
-      ResultProperty {
-         resultPropertyLabel = "queueWaitTime",
-         resultPropertyId = QueueWaitTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".queueWaitTime") getWaitTime waitTimeSignal },
-      ResultProperty {
-         resultPropertyLabel = "dequeueWaitTime",
-         resultPropertyId = DequeueWaitTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".dequeueWaitTime") getDequeueWaitTime dequeueWaitTimeSignal }
-      ]
-    }
-  where makeSource name' f g =
+      makeProperty "enqueueStoringStrategy" EnqueueStoringStrategyId getEnqueueStoringStrategy enqueueStoringStrategySignal,
+      makeProperty "dequeueStrategy" DequeueStrategyId getDequeueStrategy dequeueStrategySignal,
+      makeProperty "queueNull" QueueNullId whetherIsEmpty whetherIsEmptySignal,
+      makeProperty "queueCount" QueueCountId getCount countSignal,
+      makeProperty "enqueueStoreCount" EnqueueStoreCountId getEnqueueStoreCount enqueueStoreCountSignal,
+      makeProperty "dequeueCount" DequeueCountId getDequeueCount dequeueCountSignal,
+      makeProperty "dequeueExtractCount" DequeueExtractCountId getDequeueExtractCount dequeueExtractCountSignal,
+      makeProperty "enqueueStoreRate" EnqueueStoreRateId getEnqueueStoreRate enqueueStoreRateSignal,
+      makeProperty "dequeueRate" DequeueRateId getDequeueRate dequeueRateSignal,
+      makeProperty "dequeueExtractRate" DequeueExtractRateId getDequeueExtractRate dequeueExtractRateSignal,
+      makeProperty "queueWaitTime" QueueWaitTimeId getWaitTime waitTimeSignal,
+      makeProperty "dequeueWaitTime" DequeueWaitTimeId getDequeueWaitTime dequeueWaitTimeSignal ] }
+  where makeProperty name' i f g =
+          ResultProperty { resultPropertyLabel = name',
+                           resultPropertyId = i,
+                           resultPropertySource = makeSource name' i f g }
+        makeSource name' i f g =
           ResultItemSource $
-          ResultItem { resultItemName   = name',
-                       resultItemData   = f queue,
-                       resultItemSignal = g queue }
+          ResultItem { resultItemName   = name ++ "." ++ name',
+                       resultItemId     = i,
+                       resultItemData   = f m,
+                       resultItemSignal = g m }
         -- properties
         getEnqueueStoringStrategy = StringResultData . return . show . IQ.enqueueStoringStrategy
         getDequeueStrategy = StringResultData . return . show . IQ.dequeueStrategy
@@ -1054,103 +901,71 @@ makeInfiniteQueueSource name queue =
         dequeueExtractRateSignal = const Nothing
         waitTimeSignal = Just . IQ.queueWaitTimeChanged_
         dequeueWaitTimeSignal = Just . IQ.dequeueWaitTimeChanged_
-
+  
 -- | Return the source by the specified arrival timer.
-makeArrivalTimerSource :: String
+makeArrivalTimerSource :: ResultName
                           -- ^ the result name
+                          -> ResultId
+                          -- ^ the result identifier
                           -> ArrivalTimer
                           -- ^ the arrival timer
                           -> ResultSource
-makeArrivalTimerSource name m =
+makeArrivalTimerSource name i m =
   ResultObjectSource $
   ResultObject {
     resultObjectName = name,
-    resultObjectId = ArrivalTimerId,
+    resultObjectId = i,
     resultObjectProperties = [
-      ResultProperty {
-         resultPropertyLabel = "processingTime",
-         resultPropertyId = ArrivalProcessingTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".processingTime") getProcessingTime processingTimeChanged } ] }
-  where makeSource name' f g =
+      makeProperty "processingTime" ArrivalProcessingTimeId getProcessingTime processingTimeChanged ] }
+  where makeProperty name' i f g =
+          ResultProperty { resultPropertyLabel = name',
+                           resultPropertyId = i,
+                           resultPropertySource = makeSource name' i f g }
+        makeSource name' i f g =
           ResultItemSource $
-          ResultItem { resultItemName   = name',
+          ResultItem { resultItemName   = name ++ "." ++ name',
+                       resultItemId     = i,
                        resultItemData   = f m,
                        resultItemSignal = g m }
+        -- properties
         getProcessingTime = DoubleStatsResultData . arrivalProcessingTime
+        -- signals
         processingTimeChanged = Just . arrivalProcessingTimeChanged_
 
 -- | Return the source by the specified server.
 makeServerSource :: Show s
-                    => String
+                    => ResultName
                     -- ^ the result name
+                    -> ResultId
+                    -- ^ the result identifier
                     -> Server s a b
                     -- ^ the server
                     -> ResultSource
-makeServerSource name m =
+makeServerSource name i m =
   ResultObjectSource $
   ResultObject {
     resultObjectName = name,
-    resultObjectId = ArrivalTimerId,
+    resultObjectId = i,
     resultObjectProperties = [
-      ResultProperty {
-         resultPropertyLabel = "initState",
-         resultPropertyId = ServerInitStateId,
-         resultPropertySource =
-           makeSource (name ++ ".initState") getInitState initStateChanged },
-      ResultProperty {
-         resultPropertyLabel = "state",
-         resultPropertyId = ServerStateId,
-         resultPropertySource =
-           makeSource (name ++ ".state") getState stateChanged },
-      ResultProperty {
-         resultPropertyLabel = "totalInputWaitTime",
-         resultPropertyId = ServerTotalInputWaitTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".totalInputWaitTime") getTotalInputWaitTime totalInputWaitTimeChanged },
-      ResultProperty {
-         resultPropertyLabel = "totalProcessingTime",
-         resultPropertyId = ServerTotalProcessingTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".totalProcessingTime") getTotalProcessingTime totalProcessingTimeChanged },
-      ResultProperty {
-         resultPropertyLabel = "totalOutputWaitTime",
-         resultPropertyId = ServerTotalOutputWaitTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".totalOutputWaitTime") getTotalOutputWaitTime totalOutputWaitTimeChanged },
-      ResultProperty {
-         resultPropertyLabel = "inputWaitTime",
-         resultPropertyId = ServerInputWaitTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".inputWaitTime") getInputWaitTime inputWaitTimeChanged },
-      ResultProperty {
-         resultPropertyLabel = "processingTime",
-         resultPropertyId = ServerProcessingTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".processingTime") getProcessingTime processingTimeChanged },
-      ResultProperty {
-         resultPropertyLabel = "outputWaitTime",
-         resultPropertyId = ServerOutputWaitTimeId,
-         resultPropertySource =
-           makeSource (name ++ ".outputWaitTime") getOutputWaitTime outputWaitTimeChanged },
-      ResultProperty {
-         resultPropertyLabel = "inputWaitFactor",
-         resultPropertyId = ServerInputWaitFactorId,
-         resultPropertySource =
-           makeSource (name ++ ".inputWaitFactor") getInputWaitFactor inputWaitFactorChanged },
-      ResultProperty {
-         resultPropertyLabel = "processingFactor",
-         resultPropertyId = ServerProcessingFactorId,
-         resultPropertySource =
-           makeSource (name ++ ".processingFactor") getProcessingFactor processingFactorChanged },
-      ResultProperty {
-         resultPropertyLabel = "outputWaitFactor",
-         resultPropertyId = ServerOutputWaitFactorId,
-         resultPropertySource =
-           makeSource (name ++ ".outputWaitFactor") getOutputWaitFactor outputWaitFactorChanged } ] }
-  where makeSource name' f g =
+      makeProperty "initState" ServerInitStateId getInitState initStateChanged,
+      makeProperty "state" ServerStateId getState stateChanged,
+      makeProperty "totalInputWaitTime" ServerTotalInputWaitTimeId getTotalInputWaitTime totalInputWaitTimeChanged,
+      makeProperty "totalProcessingTime" ServerTotalProcessingTimeId getTotalProcessingTime totalProcessingTimeChanged,
+      makeProperty "totalOutputWaitTime" ServerTotalOutputWaitTimeId getTotalOutputWaitTime totalOutputWaitTimeChanged,
+      makeProperty "inputWaitTime" ServerInputWaitTimeId getInputWaitTime inputWaitTimeChanged,
+      makeProperty "processingTime" ServerProcessingTimeId getProcessingTime processingTimeChanged,
+      makeProperty "outputWaitTime" ServerOutputWaitTimeId getOutputWaitTime outputWaitTimeChanged,
+      makeProperty "inputWaitFactor" ServerInputWaitFactorId getInputWaitFactor inputWaitFactorChanged,
+      makeProperty "processingFactor" ServerProcessingFactorId getProcessingFactor processingFactorChanged,
+      makeProperty "outputWaitFactor" ServerOutputWaitFactorId getOutputWaitFactor outputWaitFactorChanged ] }
+  where makeProperty name' i f g =
+          ResultProperty { resultPropertyLabel = name',
+                           resultPropertyId = i,
+                           resultPropertySource = makeSource name' i f g }
+        makeSource name' i f g =
           ResultItemSource $
-          ResultItem { resultItemName   = name',
+          ResultItem { resultItemName   = name ++ "." ++ name',
+                       resultItemId     = i,
                        resultItemData   = f m,
                        resultItemSignal = g m }
         -- properties
@@ -1186,7 +1001,7 @@ makeTextSource text =
 
 -- | Return the source of the modeling time.
 timeSource :: ResultSource
-timeSource = resultSource "t" time
+timeSource = resultSource' "t" TimeId time
 
 -- | Make an integer subscript
 makeIntSubscript :: Show a => a -> String
@@ -1194,57 +1009,57 @@ makeIntSubscript i = "[" ++ show i ++ "]"
 
 instance ResultComputation m => ResultProvider (m Double) where
 
-  resultSource = makeResultItemSource DoubleResultData
+  resultSource' = makeResultItemSource DoubleResultData
 
 instance ResultComputation m => ResultProvider (m [Double]) where
 
-  resultSource = makeResultItemSource DoubleListResultData
+  resultSource' = makeResultItemSource DoubleListResultData
 
 instance ResultComputation m => ResultProvider (m (SamplingStats Double)) where
 
-  resultSource = makeResultItemSource DoubleStatsResultData
+  resultSource' = makeResultItemSource DoubleStatsResultData
 
 instance ResultComputation m => ResultProvider (m (TimingStats Double)) where
 
-  resultSource = makeResultItemSource DoubleTimingStatsResultData
+  resultSource' = makeResultItemSource DoubleTimingStatsResultData
 
 instance ResultComputation m => ResultProvider (m Int) where
 
-  resultSource = makeResultItemSource IntResultData
+  resultSource' = makeResultItemSource IntResultData
 
 instance ResultComputation m => ResultProvider (m [Int]) where
 
-  resultSource = makeResultItemSource IntListResultData
+  resultSource' = makeResultItemSource IntListResultData
 
 instance ResultComputation m => ResultProvider (m (SamplingStats Int)) where
 
-  resultSource = makeResultItemSource IntStatsResultData
+  resultSource' = makeResultItemSource IntStatsResultData
 
 instance ResultComputation m => ResultProvider (m (TimingStats Int)) where
 
-  resultSource = makeResultItemSource IntTimingStatsResultData
+  resultSource' = makeResultItemSource IntTimingStatsResultData
 
 instance ResultComputation m => ResultProvider (m String) where
 
-  resultSource = makeResultItemSource StringResultData
+  resultSource' = makeResultItemSource StringResultData
 
 instance ResultProvider p => ResultProvider [p] where
 
-  resultSource name m =
-    resultSource name $ ResultListWithSubscript m subscript where
+  resultSource' name i m =
+    resultSource' name i $ ResultListWithSubscript m subscript where
       subscript = map snd $ zip m $ map makeIntSubscript [0..]
 
 instance (Show i, Ix i, ResultProvider p) => ResultProvider (A.Array i p) where
 
-  resultSource name m =
-    resultSource name $ ResultListWithSubscript items subscript where
+  resultSource' name i m =
+    resultSource' name i $ ResultListWithSubscript items subscript where
       items = A.elems m
       subscript = map show (A.indices m)
 
 instance ResultProvider p => ResultProvider (V.Vector p) where
 
-  resultSource name m =
-    resultSource name $ ResultVectorWithSubscript m subscript where
+  resultSource' name i m =
+    resultSource' name i $ ResultVectorWithSubscript m subscript where
       subscript = V.imap (\i x -> makeIntSubscript i) m
 
 -- | Represents a list with the specified subscript.
@@ -1261,29 +1076,31 @@ data ResultVectorWithSubscript p =
 
 instance ResultProvider p => ResultProvider (ResultListWithSubscript p) where
 
-  resultSource name (ResultListWithSubscript xs ys) =
+  resultSource' name i (ResultListWithSubscript xs ys) =
     ResultVectorSource $
     ResultVector { resultVectorName = name,
+                   resultVectorId = i,
                    resultVectorItems = V.fromList items,
                    resultVectorSubscript = V.fromList ys }
     where
       items =
         flip map (zip ys xs) $ \(y, x) ->
         let name' = name ++ y
-        in resultSource name' x
+        in resultSource' name' (VectorItemId y) x
     
 instance (Show i, Ix i, ResultProvider p) => ResultProvider (ResultArrayWithSubscript i p) where
 
-  resultSource name (ResultArrayWithSubscript xs ys) =
-    resultSource name $ ResultListWithSubscript items subscript where
+  resultSource' name i (ResultArrayWithSubscript xs ys) =
+    resultSource' name i $ ResultListWithSubscript items subscript where
       items = A.elems xs
       subscript = A.elems ys
 
 instance ResultProvider p => ResultProvider (ResultVectorWithSubscript p) where
 
-  resultSource name (ResultVectorWithSubscript xs ys) =
+  resultSource' name i (ResultVectorWithSubscript xs ys) =
     ResultVectorSource $
     ResultVector { resultVectorName = name,
+                   resultVectorId = i,
                    resultVectorItems = items,
                    resultVectorSubscript = ys }
     where
@@ -1292,46 +1109,46 @@ instance ResultProvider p => ResultProvider (ResultVectorWithSubscript p) where
         let x = xs V.! i
             y = ys V.! i
             name' = name ++ y
-        in resultSource name' x
+        in resultSource' name' (VectorItemId y) x
 
 instance (Ix i, Show i, ResultComputation m) => ResultProvider (m (A.Array i Double)) where
 
-  resultSource = makeResultItemSource (DoubleListResultData . fmap A.elems)
+  resultSource' = makeResultItemSource (DoubleListResultData . fmap A.elems)
 
 instance (Ix i, Show i, ResultComputation m) => ResultProvider (m (A.Array i Int)) where
 
-  resultSource = makeResultItemSource (IntListResultData . fmap A.elems)
+  resultSource' = makeResultItemSource (IntListResultData . fmap A.elems)
 
 instance ResultComputation m => ResultProvider (m (V.Vector Double)) where
 
-  resultSource = makeResultItemSource (DoubleListResultData . fmap V.toList)
+  resultSource' = makeResultItemSource (DoubleListResultData . fmap V.toList)
 
 instance ResultComputation m => ResultProvider (m (V.Vector Int)) where
 
-  resultSource = makeResultItemSource (IntListResultData . fmap V.toList)
+  resultSource' = makeResultItemSource (IntListResultData . fmap V.toList)
 
 instance (Show si, Show sm, Show so) => ResultProvider (Q.Queue si qi sm qm so qo a) where
 
-  resultSource = makeQueueSource
+  resultSource' = makeQueueSource
 
 instance (Show sm, Show so) => ResultProvider (IQ.Queue sm qm so qo a) where
 
-  resultSource = makeInfiniteQueueSource
+  resultSource' = makeInfiniteQueueSource
 
 instance ResultProvider ArrivalTimer where
 
-  resultSource = makeArrivalTimerSource
+  resultSource' = makeArrivalTimerSource
 
 instance Show s => ResultProvider (Server s a b) where
 
-  resultSource = makeServerSource
+  resultSource' = makeServerSource
 
 instance ResultProvider (TimingStatsAccumulator Double) where
 
-  resultSource name m =
-    resultSource name (timingStatsAccumulated m)
+  resultSource' name i m =
+    resultSource' name i (timingStatsAccumulated m)
 
 instance ResultProvider (TimingStatsAccumulator Int) where
 
-  resultSource name m =
-    resultSource name (timingStatsAccumulated m)
+  resultSource' name i m =
+    resultSource' name i (timingStatsAccumulated m)
