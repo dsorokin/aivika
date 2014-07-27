@@ -73,6 +73,7 @@ hPrintResultSourceIndentedLabelled h indent label loc (ResultItemSource x) =
               hPutStr h label
               hPutStr h " = "
               hPutStrLn h a
+              hPutStrLn h ""
     _ ->
       error $
       "Expected to see a string value for variable " ++
@@ -88,8 +89,6 @@ hPrintResultSourceIndentedLabelled h indent label loc (ResultVectorSource x) =
          subscript = V.toList (resultVectorSubscript x)
      forM_ (zip items subscript) $ \(i, s) ->
        hPrintResultSourceIndentedLabelled h (indent + 2) (label ++ s) loc i
-     liftIO $
-       hPutStrLn h ""
 hPrintResultSourceIndentedLabelled h indent label loc (ResultObjectSource x) =
   do let tab = replicate indent ' '
      liftIO $
@@ -112,13 +111,12 @@ hPrintResultSourceIndentedLabelled h indent label loc (ResultObjectSource x) =
                hPutStr h (loc $ resultPropertyId p)
                hPutStrLn h ""
           hPrintResultSourceIndentedLabelled h indent' label' loc source'
-          liftIO $
-            hPutStrLn h ""
 hPrintResultSourceIndentedLabelled h indent label loc (ResultSeparatorSource x) =
   do let tab = replicate indent ' '
      liftIO $
        do hPutStr h tab
           hPutStr h label
+          hPutStrLn h ""
           hPutStrLn h ""
 
 -- | Print a localised text representation of the results by the specified source
@@ -192,7 +190,7 @@ showResultSourceIndentedLabelled indent label loc (ResultItemSource x) =
            showString label .
            showString " = " .
            showString a .
-           showString "\n"
+           showString "\n\n"
     _ ->
       error $
       "Expected to see a string value for variable " ++
@@ -209,8 +207,7 @@ showResultSourceIndentedLabelled indent label loc (ResultVectorSource x) =
        showString tab .
        showString label .
        showString ":\n\n" .
-       showContents .
-       showString "\n"
+       showContents
 showResultSourceIndentedLabelled indent label loc (ResultObjectSource x) =
   do let tab = replicate indent ' '
      contents <-
@@ -236,14 +233,13 @@ showResultSourceIndentedLabelled indent label loc (ResultObjectSource x) =
        showString tab .
        showString label .
        showString ":\n\n" .
-       showContents .
-       showString "\n"
+       showContents
 showResultSourceIndentedLabelled indent label loc (ResultSeparatorSource x) =
   do let tab = replicate indent ' '
      return $
        showString tab .
        showString label .
-       showString "\n"
+       showString "\n\n"
 
 -- | Show a localised text representation of the results by the specified source.
 showResultSource :: ResultLocalisation
