@@ -794,7 +794,9 @@ instance (Show i, Ix i, ResultProvider p) => ResultProvider (A.Array i p) where
 
 instance ResultProvider p => ResultProvider (V.Vector p) where
 
-  resultSource name m = resultSource name (V.toList m)
+  resultSource name m =
+    resultSource name $ ResultVectorWithSubscript m subscript where
+      subscript = V.imap (\i x -> makeIntSubscript i) m
 
 -- | Represents a list with the specified subscript.
 data ResultListWithSubscript p =
@@ -823,24 +825,25 @@ instance ResultProvider p => ResultProvider (ResultListWithSubscript p) where
     
 instance (Show i, Ix i, ResultProvider p) => ResultProvider (ResultArrayWithSubscript i p) where
 
-  resultSource name (ResultArrayWithSubscript xs ys) = ResultSource f where
-    f t =
-      ResultVectorOutput $
-      ResultVector { resultVectorName = name,
-                     resultVectorItems = V.fromList (items t),
-                     resultVectorSubscript = V.fromList (subscript t) }
-    xs' = A.elems xs
-    ys' = A.elems ys
-    subscript t = ys'
-    items t =
-      flip map (zip ys' xs') $ \(y, x) ->
-      let name' = name ++ y
-      in resultOutput (resultSource name' x) t
+  resultSource name (ResultArrayWithSubscript xs ys) =
+    resultSource name $ ResultListWithSubscript items subscript where
+      items = A.elems xs
+      subscript = A.elems ys
 
 instance ResultProvider p => ResultProvider (ResultVectorWithSubscript p) where
 
-  resultSource name (ResultVectorWithSubscript xs ys) =
-    resultSource name $ ResultListWithSubscript (V.toList xs) (V.toList ys)
+  resultSource name (ResultVectorWithSubscript xs ys) = ResultSource f where
+    f t =
+      ResultVectorOutput $
+      ResultVector { resultVectorName = name,
+                     resultVectorItems = items t,
+                     resultVectorSubscript = ys }
+    items t =
+      V.generate (V.length xs) $ \i ->
+      let x = xs V.! i
+          y = ys V.! i
+          name' = name ++ y
+      in resultOutput (resultSource name' x) t
 
 instance (Ix i, Show i, ResultComputation m) => ResultProvider (m (A.Array i Double)) where
 
