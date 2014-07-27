@@ -1203,6 +1203,10 @@ instance ResultComputation m => ResultProvider (m (SamplingStats Double)) where
 
   resultSource = makeResultItemSource DoubleStatsResultData
 
+instance ResultComputation m => ResultProvider (m (TimingStats Double)) where
+
+  resultSource = makeResultItemSource DoubleTimingStatsResultData
+
 instance ResultComputation m => ResultProvider (m Int) where
 
   resultSource = makeResultItemSource IntResultData
@@ -1214,6 +1218,10 @@ instance ResultComputation m => ResultProvider (m [Int]) where
 instance ResultComputation m => ResultProvider (m (SamplingStats Int)) where
 
   resultSource = makeResultItemSource IntStatsResultData
+
+instance ResultComputation m => ResultProvider (m (TimingStats Int)) where
+
+  resultSource = makeResultItemSource IntTimingStatsResultData
 
 instance ResultComputation m => ResultProvider (m String) where
 
