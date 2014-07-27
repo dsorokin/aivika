@@ -134,6 +134,7 @@ library
                      Simulation.Aivika.Ref.Light
                      Simulation.Aivika.Resource
                      Simulation.Aivika.Results
+                     Simulation.Aivika.Results.Locale
                      Simulation.Aivika.Results.IO
                      Simulation.Aivika.Server
                      Simulation.Aivika.Signal

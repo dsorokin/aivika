@@ -24,6 +24,7 @@ import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Event
 import Simulation.Aivika.Results
+import Simulation.Aivika.Results.Locale
 
 -- | This is a function that shows the result output within
 -- the 'Event' computation synchronized with the event queue.
