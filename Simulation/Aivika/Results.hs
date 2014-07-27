@@ -35,6 +35,7 @@ import qualified Simulation.Aivika.Ref.Light as LR
 import Simulation.Aivika.Var
 import qualified Simulation.Aivika.Queue as Q
 import qualified Simulation.Aivika.Queue.Infinite as IQ
+import Simulation.Aivika.Arrival
 
 -- | A locale to output the simulation results.
 --
@@ -110,6 +111,10 @@ data ResultId = SamplingStatsId
                 -- ^ Property 'Q.enqueueWaitTime'.
               | DequeueWaitTimeId
                 -- ^ Property 'Q.dequeueWaitTime'.
+              | ArrivalTimerId
+                -- ^ An 'ArrivalTimer'.
+              | ArrivalProcessingTimeId
+                -- ^ Property 'arrivalProcessingTime'.
               | LocalisedResultId (M.Map ResultLocale String)
                 -- ^ A localised property or object name.
 
@@ -834,6 +839,31 @@ makeInfiniteQueueSource name queue =
         waitTimeSignal = Just . IQ.queueWaitTimeChanged_
         dequeueWaitTimeSignal = Just . IQ.dequeueWaitTimeChanged_
 
+-- | Return the source by the specified arrival timer.
+makeArrivalTimerSource :: String
+                          -- ^ the result name
+                          -> ArrivalTimer
+                          -- ^ the arrival timer
+                          -> ResultSource
+makeArrivalTimerSource name m =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = name,
+    resultObjectId = ArrivalTimerId,
+    resultObjectProperties = [
+      ResultProperty {
+         resultPropertyLabel = "processingTime",
+         resultPropertyId = ArrivalProcessingTimeId,
+         resultPropertySource =
+           makeSource (name ++ ".processingTime") getProcessingTime processingTimeChanged } ] }
+  where makeSource name' f g =
+          ResultItemSource $
+          ResultItem { resultItemName   = name',
+                       resultItemData   = f m,
+                       resultItemSignal = g m }
+        getProcessingTime = DoubleStatsResultData . arrivalProcessingTime
+        processingTimeChanged = Just . arrivalProcessingTimeChanged_
+
 -- | Return an arbitrary text as a separator source.
 makeTextSource :: String -> ResultSource
 makeTextSource text =
@@ -965,3 +995,7 @@ instance (Show si, Show sm, Show so) => ResultProvider (Q.Queue si qi sm qm so q
 instance (Show sm, Show so) => ResultProvider (IQ.Queue sm qm so qo a) where
 
   resultSource = makeInfiniteQueueSource
+
+instance ResultProvider ArrivalTimer where
+
+  resultSource = makeArrivalTimerSource

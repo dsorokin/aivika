@@ -18,7 +18,9 @@ module Simulation.Aivika.Arrival
         ArrivalTimer,
         newArrivalTimer,
         arrivalTimerProcessor,
-        arrivalProcessingTime) where
+        arrivalProcessingTime,
+        arrivalProcessingTimeChanged,
+        arrivalProcessingTimeChanged_) where
 
 import Control.Monad
 import Control.Monad.Trans
@@ -30,21 +32,35 @@ import Simulation.Aivika.Processor
 import Simulation.Aivika.Stream
 import Simulation.Aivika.Statistics
 import Simulation.Aivika.Ref
+import Simulation.Aivika.Signal
 import Simulation.Aivika.Internal.Arrival
 
 -- | Accumulates the statistics about that how long the arrived events are processed.
 data ArrivalTimer =
-  ArrivalTimer { arrivalProcessingTimeRef :: Ref (SamplingStats Double) }
+  ArrivalTimer { arrivalProcessingTimeRef :: Ref (SamplingStats Double),
+                 arrivalProcessingTimeChangedSource :: SignalSource () }
 
 -- | Create a new timer that measures how long the arrived events are processed.
 newArrivalTimer :: Simulation ArrivalTimer
 newArrivalTimer =
   do r <- newRef emptySamplingStats
-     return ArrivalTimer { arrivalProcessingTimeRef = r }
+     s <- newSignalSource
+     return ArrivalTimer { arrivalProcessingTimeRef = r,
+                           arrivalProcessingTimeChangedSource = s }
 
 -- | Return the statistics about that how long the arrived events were processed.
 arrivalProcessingTime :: ArrivalTimer -> Event (SamplingStats Double)
 arrivalProcessingTime = readRef . arrivalProcessingTimeRef
+
+-- | Return a signal raised when the the processing time statistics changes.
+arrivalProcessingTimeChanged :: ArrivalTimer -> Signal (SamplingStats Double)
+arrivalProcessingTimeChanged timer =
+  mapSignalM (const $ arrivalProcessingTime timer) (arrivalProcessingTimeChanged_ timer)
+
+-- | Return a signal raised when the the processing time statistics changes.
+arrivalProcessingTimeChanged_ :: ArrivalTimer -> Signal ()
+arrivalProcessingTimeChanged_ timer =
+  publishSignal (arrivalProcessingTimeChangedSource timer)
 
 -- | Return a processor that actually measures how much time has passed from
 -- the time of arriving the events.
@@ -57,4 +73,5 @@ arrivalTimerProcessor timer =
            do t <- liftDynamics time
               modifyRef (arrivalProcessingTimeRef timer) $
                 addSamplingStats (t - arrivalTime a)
+              triggerSignal (arrivalProcessingTimeChangedSource timer) ()
          return (a, Cons $ loop xs)

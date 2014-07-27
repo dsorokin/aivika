@@ -63,6 +63,8 @@ russianResultLocalisation QueueWaitTimeId = "время ожидания (сох
 russianResultLocalisation QueueTotalWaitTimeId = "общее время ожидания (попытались добавить -> извлекли)"
 russianResultLocalisation EnqueueWaitTimeId = "время ожидания добавления (попытались добавить -> сохранили)"
 russianResultLocalisation DequeueWaitTimeId = "время ожидания извлечения (запросили извлечь -> извлекли)"
+russianResultLocalisation ArrivalTimerId = "как долго обрабатываются заявки?"
+russianResultLocalisation ArrivalProcessingTimeId = "время обработки заявки"
 russianResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation russianResultLocale x
 
@@ -99,6 +101,8 @@ englishResultLocalisation QueueWaitTimeId = "the wait time (stored -> dequeued)"
 englishResultLocalisation QueueTotalWaitTimeId = "the total wait time (tried to enqueue -> dequeued)"
 englishResultLocalisation EnqueueWaitTimeId = "the enqueue wait time (tried to enqueue -> stored)"
 englishResultLocalisation DequeueWaitTimeId = "the dequeue wait time (requested for dequeueing -> dequeued)"
+englishResultLocalisation ArrivalTimerId = "how long the arrivals are processed?"
+englishResultLocalisation ArrivalProcessingTimeId = "the arrival processing time"
 englishResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation englishResultLocale x
 
