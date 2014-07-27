@@ -31,6 +31,7 @@ module Simulation.Aivika
         module Simulation.Aivika.Ref,
         module Simulation.Aivika.Resource,
         module Simulation.Aivika.Results,
+        module Simulation.Aivika.Results.IO,
         module Simulation.Aivika.Server,
         module Simulation.Aivika.Signal,
         module Simulation.Aivika.Simulation,
@@ -62,6 +63,7 @@ import Simulation.Aivika.QueueStrategy
 import Simulation.Aivika.Ref
 import Simulation.Aivika.Resource
 import Simulation.Aivika.Results
+import Simulation.Aivika.Results.IO
 import Simulation.Aivika.Server
 import Simulation.Aivika.Signal
 import Simulation.Aivika.Simulation
