@@ -66,6 +66,32 @@ data ResultId = SamplingStatsId
                 -- ^ Property 'samplingStatsVariance'.
               | SamplingStatsDeviationId
                 -- ^ Property 'samplingStatsDeviation'.
+              | TimingStatsId
+                -- ^ A 'TimingStats' value.
+              | TimingStatsCountId
+                -- ^ Property 'timingStatsCount'.
+              | TimingStatsMinId
+                -- ^ Property 'timingStatsMin'.
+              | TimingStatsMaxId
+                -- ^ Property 'timingStatsMax'.
+              | TimingStatsMeanId
+                -- ^ Property 'timingStatsMean'.
+              | TimingStatsVarianceId
+                -- ^ Property 'timingStatsVariance'.
+              | TimingStatsDeviationId
+                -- ^ Property 'timingStatsDeviation'.
+              | TimingStatsMinTimeId
+                -- ^ Property 'timingStatsMinTime'.
+              | TimingStatsMaxTimeId
+                -- ^ Property 'timingStatsMaxTime'.
+              | TimingStatsStartTimeId
+                -- ^ Property 'timingStatsStartTime'.
+              | TimingStatsLastTimeId
+                -- ^ Property 'timingStatsLastTime'.
+              | TimingStatsSumId
+                -- ^ Property 'timingStatsSum'.
+              | TimingStatsSum2Id
+                -- ^ Property 'timingStatsSum2'.
               | FiniteQueueId
                 -- ^ A finite 'Q.Queue'.
               | InfiniteQueueId
@@ -679,7 +705,77 @@ makeTimingStatsSource :: (Show a, TimingData a, ResultComputation m)
                          -> m (TimingStats a)
                          -- ^ the statistics
                          -> ResultSource
-makeTimingStatsSource f name m = undefined
+makeTimingStatsSource f name m =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = name,
+    resultObjectId = TimingStatsId,
+    resultObjectProperties = [
+      ResultProperty {
+         resultPropertyLabel = "count",
+         resultPropertyId = TimingStatsCountId,
+         resultPropertySource =
+           makeSource (name ++ ".count") (IntResultData . fmap timingStatsCount) },
+      ResultProperty {
+        resultPropertyLabel = "mean",
+        resultPropertyId = TimingStatsMeanId,
+        resultPropertySource =
+          makeSource (name ++ ".mean") (DoubleResultData . fmap timingStatsMean) },
+      ResultProperty {
+        resultPropertyLabel = "std",
+        resultPropertyId = TimingStatsDeviationId,
+        resultPropertySource =
+          makeSource (name ++ ".std") (DoubleResultData . fmap timingStatsDeviation) },
+      ResultProperty {
+        resultPropertyLabel = "var",
+        resultPropertyId = TimingStatsVarianceId,
+        resultPropertySource =
+          makeSource (name ++ ".var") (DoubleResultData . fmap timingStatsVariance) },
+      ResultProperty {
+        resultPropertyLabel = "min",
+        resultPropertyId = TimingStatsMinId,
+        resultPropertySource =
+          makeSource (name ++ ".min") (f . fmap timingStatsMin) },
+      ResultProperty {
+        resultPropertyLabel = "max",
+        resultPropertyId = TimingStatsMaxId,
+        resultPropertySource =
+          makeSource (name ++ ".max") (f . fmap timingStatsMax) },
+      ResultProperty {
+        resultPropertyLabel = "minTime",
+        resultPropertyId = TimingStatsMinTimeId,
+        resultPropertySource =
+          makeSource (name ++ ".minTime") (DoubleResultData . fmap timingStatsMinTime) },
+      ResultProperty {
+        resultPropertyLabel = "maxTime",
+        resultPropertyId = TimingStatsMaxTimeId,
+        resultPropertySource =
+          makeSource (name ++ ".maxTime") (DoubleResultData . fmap timingStatsMaxTime) },
+      ResultProperty {
+        resultPropertyLabel = "startTime",
+        resultPropertyId = TimingStatsStartTimeId,
+        resultPropertySource =
+          makeSource (name ++ ".startTime") (DoubleResultData . fmap timingStatsStartTime) },
+      ResultProperty {
+        resultPropertyLabel = "lastTime",
+        resultPropertyId = TimingStatsLastTimeId,
+        resultPropertySource =
+          makeSource (name ++ ".lastTime") (DoubleResultData . fmap timingStatsLastTime) },
+      ResultProperty {
+        resultPropertyLabel = "sum",
+        resultPropertyId = TimingStatsSumId,
+        resultPropertySource =
+          makeSource (name ++ ".sum") (DoubleResultData . fmap timingStatsSum) },
+      ResultProperty {
+        resultPropertyLabel = "sum2",
+        resultPropertyId = TimingStatsSum2Id,
+        resultPropertySource =
+          makeSource (name ++ ".sum2") (DoubleResultData . fmap timingStatsSum2) } ] }
+  where makeSource name' f =
+          ResultItemSource $
+          ResultItem { resultItemName   = name',
+                       resultItemData   = f $ resultComputationData m,
+                       resultItemSignal = resultComputationSignal m }
 
 -- | Return the source by the specified (finite) queue.
 makeQueueSource :: (Show si, Show sm, Show so)
