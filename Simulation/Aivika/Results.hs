@@ -397,16 +397,18 @@ retypeResults :: ResultType
                  -> Results
                  -- ^ the simulation results
                  -> [ResultSource]
-retypeResults t results = ys where
-  xs = M.elems (resultSources results)
-  ys = map (mapResultItems $ retypeResultItem t) xs
+retypeResults t results =
+  map (mapResultItems $ retypeResultItem t) $
+  map snd (resultSourceList results)
 
 -- | It contains the results of simulation.
 data Results =
   Results { resultPredefinedSignals :: ResultPredefinedSignals,
             -- ^ The predefined signals provided by every simulation model.
-            resultSources :: ResultSourceMap
-            -- ^ The sources of simulation results.
+            resultSourceMap :: ResultSourceMap,
+            -- ^ The sources of simulation results as a map.
+            resultSourceList :: [(ResultLabel, ResultSource)]
+            -- ^ The sources of simulation results as an ordered list.
           }
 
 -- | It representes the predefined signals provided by every simulation model.
@@ -434,7 +436,8 @@ resultsFromStartTime :: [(ResultLabel, ResultSource)] -> Simulation Results
 resultsFromStartTime m =
   do s <- newResultPredefinedSignals
      return Results { resultPredefinedSignals = s,
-                      resultSources           = M.fromList m }
+                      resultSourceMap         = M.fromList m,
+                      resultSourceList        = m }
 
 -- | Return a mixed signal for the specified items received from 
 -- the provided simulation results.
