@@ -272,8 +272,10 @@ data ResultObject =
                  -- ^ The object identifier.
                  resultObjectTypeId :: ResultId,
                  -- ^ The object type identifier.
-                 resultObjectProperties :: [ResultProperty]
+                 resultObjectProperties :: [ResultProperty],
                  -- ^ The object properties.
+                 resultObjectSummary :: ResultSource
+                 -- ^ A short version of the object.
                }
 
 -- | The object property containing the simulation results.
@@ -689,6 +691,8 @@ makeSamplingStatsSource f name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = SamplingStatsId,
+    resultObjectSummary =
+      makeSamplingStatsSummary name i m,
     resultObjectProperties = [
       makeProperty "count" SamplingStatsCountId (IntResultData . fmap samplingStatsCount),
       makeProperty "mean" SamplingStatsMeanId (DoubleResultData . fmap samplingStatsMean),
@@ -726,6 +730,8 @@ makeTimingStatsSource f name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = TimingStatsId,
+    resultObjectSummary =
+      makeTimingStatsSummary name i m,
     resultObjectProperties = [
       makeProperty "count" TimingStatsCountId (IntResultData . fmap timingStatsCount),
       makeProperty "mean" TimingStatsMeanId (DoubleResultData . fmap timingStatsMean),
@@ -766,6 +772,8 @@ makeQueueSource name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = FiniteQueueId,
+    resultObjectSummary =
+      makeQueueSummary name i m,
     resultObjectProperties = [
       makeProperty "enqueueStrategy" EnqueueStrategyId getEnqueueStrategy enqueueStrategySignal,
       makeProperty "enqueueStoringStrategy" EnqueueStoringStrategyId getEnqueueStoringStrategy enqueueStoringStrategySignal,
@@ -858,6 +866,8 @@ makeInfiniteQueueSource name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = InfiniteQueueId,
+    resultObjectSummary =
+      makeInfiniteQueueSummary name i m,
     resultObjectProperties = [
       makeProperty "enqueueStoringStrategy" EnqueueStoringStrategyId getEnqueueStoringStrategy enqueueStoringStrategySignal,
       makeProperty "dequeueStrategy" DequeueStrategyId getDequeueStrategy dequeueStrategySignal,
@@ -922,6 +932,8 @@ makeArrivalTimerSource name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = ArrivalTimerId,
+    resultObjectSummary =
+      makeArrivalTimerSummary name i m,
     resultObjectProperties = [
       makeProperty "processingTime" ArrivalProcessingTimeId getProcessingTime processingTimeChanged ] }
   where makeProperty name' i f g =
@@ -954,6 +966,8 @@ makeServerSource name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = ServerId,
+    resultObjectSummary =
+      makeServerSummary name i m,
     resultObjectProperties = [
       makeProperty "initState" ServerInitStateId getInitState initStateChanged,
       makeProperty "state" ServerStateId getState stateChanged,
@@ -1050,6 +1064,8 @@ makeQueueSummary name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = FiniteQueueId,
+    resultObjectSummary =
+      makeQueueSummary name i m,
     resultObjectProperties = [
       makeProperty "queueMaxCount" QueueMaxCountId getMaxCount maxCountSignal,
       makeProperty "queueCount" QueueCountId getCount countSignal,
@@ -1106,6 +1122,8 @@ makeInfiniteQueueSummary name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = InfiniteQueueId,
+    resultObjectSummary =
+      makeInfiniteQueueSummary name i m,
     resultObjectProperties = [
       makeProperty "queueCount" QueueCountId getCount countSignal,
       makeProperty "enqueueStoreCount" EnqueueStoreCountId getEnqueueStoreCount enqueueStoreCountSignal,
@@ -1149,6 +1167,8 @@ makeArrivalTimerSummary name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = ArrivalTimerId,
+    resultObjectSummary =
+      makeArrivalTimerSummary name i m,
     resultObjectProperties = [
       makeProperty "processingTime" ArrivalProcessingTimeId getProcessingTime processingTimeChanged ] }
   where makeProperty name' i f g =
@@ -1181,6 +1201,8 @@ makeServerSummary name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = ServerId,
+    resultObjectSummary =
+      makeServerSummary name i m,
     resultObjectProperties = [
       makeProperty "inputWaitTime" ServerInputWaitTimeId getInputWaitTime inputWaitTimeChanged,
       makeProperty "processingTime" ServerProcessingTimeId getProcessingTime processingTimeChanged,
