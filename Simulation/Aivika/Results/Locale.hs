@@ -9,7 +9,14 @@
 --
 -- The module defines locales for outputting and printing the simulation results.
 --
-module Simulation.Aivika.Results.Locale where
+module Simulation.Aivika.Results.Locale
+       (-- * Locale Codes
+        russianResultLocale,
+        englishResultLocale,
+        -- * Localisations
+        lookupResultLocalisation,
+        russianResultLocalisation,
+        englishResultLocalisation) where
 
 import qualified Data.Map as M
 
@@ -95,7 +102,7 @@ englishResultLocalisation DequeueWaitTimeId = "the dequeue wait time (requested 
 englishResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation englishResultLocale x
 
--- | Lookup the localisation by the specified locale.
+-- | Lookup a localisation by the specified locale.
 lookupResultLocalisation :: ResultLocale -> ResultLocalisation
 lookupResultLocalisation loc (LocalisedResultId m) =
   case M.lookup loc m of
