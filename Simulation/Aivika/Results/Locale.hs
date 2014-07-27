@@ -65,6 +65,18 @@ russianResultLocalisation EnqueueWaitTimeId = "время ожидания до�
 russianResultLocalisation DequeueWaitTimeId = "время ожидания извлечения (запросили извлечь -> извлекли)"
 russianResultLocalisation ArrivalTimerId = "как долго обрабатываются заявки?"
 russianResultLocalisation ArrivalProcessingTimeId = "время обработки заявки"
+russianResultLocalisation ServerId = "сервер"
+russianResultLocalisation ServerInitStateId = "начальное состояние"
+russianResultLocalisation ServerStateId = "текущее состояние"
+russianResultLocalisation ServerTotalInputWaitTimeId = "общее время блокировки в ожидании ввода"
+russianResultLocalisation ServerTotalProcessingTimeId = "общее время, потраченное на саму обработку заданий"
+russianResultLocalisation ServerTotalOutputWaitTimeId = "общее время блокировки при попытке доставить вывод"
+russianResultLocalisation ServerInputWaitTimeId = "время блокировки в ожидании ввода"
+russianResultLocalisation ServerProcessingTimeId = "время, потраченное на саму обработку заданий"
+russianResultLocalisation ServerOutputWaitTimeId = "время блокировки при попытке доставить вывод"
+russianResultLocalisation ServerInputWaitFactorId = "относительное время блокировки в ожидании ввода (от 0 до 1)"
+russianResultLocalisation ServerProcessingFactorId = "относительное время, потраченное на саму обработку заданий (от 0 до 1)"
+russianResultLocalisation ServerOutputWaitFactorId = "относительное время блокировки при попытке доставить вывод (от 0 до 1)"
 russianResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation russianResultLocale x
 
@@ -103,6 +115,18 @@ englishResultLocalisation EnqueueWaitTimeId = "the enqueue wait time (tried to e
 englishResultLocalisation DequeueWaitTimeId = "the dequeue wait time (requested for dequeueing -> dequeued)"
 englishResultLocalisation ArrivalTimerId = "how long the arrivals are processed?"
 englishResultLocalisation ArrivalProcessingTimeId = "the arrival processing time"
+englishResultLocalisation ServerId = "the server"
+englishResultLocalisation ServerInitStateId = "the initial state"
+englishResultLocalisation ServerStateId = "the current state"
+englishResultLocalisation ServerTotalInputWaitTimeId = "the total lock time when awaiting the input"
+englishResultLocalisation ServerTotalProcessingTimeId = "the total time spent on actual processing the tasks"
+englishResultLocalisation ServerTotalOutputWaitTimeId = "the total lock time when trying to deliver the output"
+englishResultLocalisation ServerInputWaitTimeId = "the lock time when awaiting the input"
+englishResultLocalisation ServerProcessingTimeId = "the time spent on actual processing the tasks"
+englishResultLocalisation ServerOutputWaitTimeId = "the lock time when trying to deliver the output"
+englishResultLocalisation ServerInputWaitFactorId = "the lock factor when awaiting the input (from 0 to 1)"
+englishResultLocalisation ServerProcessingFactorId = "the factor spent on actual processing the tasks (from 0 to 1)"
+englishResultLocalisation ServerOutputWaitFactorId = "the lock factor when trying to deliver the output (from 0 to 1)"
 englishResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation englishResultLocale x
 

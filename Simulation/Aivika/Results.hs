@@ -36,6 +36,7 @@ import Simulation.Aivika.Var
 import qualified Simulation.Aivika.Queue as Q
 import qualified Simulation.Aivika.Queue.Infinite as IQ
 import Simulation.Aivika.Arrival
+import Simulation.Aivika.Server
 
 -- | A locale to output the simulation results.
 --
@@ -115,6 +116,30 @@ data ResultId = SamplingStatsId
                 -- ^ An 'ArrivalTimer'.
               | ArrivalProcessingTimeId
                 -- ^ Property 'arrivalProcessingTime'.
+              | ServerId
+                -- ^ Represents a 'Server'.
+              | ServerInitStateId
+                -- ^ Property 'serverInitState'.
+              | ServerStateId
+                -- ^ Property 'serverState'.
+              | ServerTotalInputWaitTimeId
+                -- ^ Property 'serverTotalInputWaitTime'.
+              | ServerTotalProcessingTimeId
+                -- ^ Property 'serverTotalProcessingTime'.
+              | ServerTotalOutputWaitTimeId
+                -- ^ Property 'serverTotalOutputWaitTime'.
+              | ServerInputWaitTimeId
+                -- ^ Property 'serverInputWaitTime'.
+              | ServerProcessingTimeId
+                -- ^ Property 'serverProcessingTime'.
+              | ServerOutputWaitTimeId
+                -- ^ Property 'serverOutputWaitTime'.
+              | ServerInputWaitFactorId
+                -- ^ Property 'serverInputWaitFactor'.
+              | ServerProcessingFactorId
+                -- ^ Property 'serverProcessingFactor'.
+              | ServerOutputWaitFactorId
+                -- ^ Property 'serverOutputWaitFactor'.
               | LocalisedResultId (M.Map ResultLocale String)
                 -- ^ A localised property or object name.
 
@@ -864,6 +889,104 @@ makeArrivalTimerSource name m =
         getProcessingTime = DoubleStatsResultData . arrivalProcessingTime
         processingTimeChanged = Just . arrivalProcessingTimeChanged_
 
+-- | Return the source by the specified server.
+makeServerSource :: Show s
+                    => String
+                    -- ^ the result name
+                    -> Server s a b
+                    -- ^ the server
+                    -> ResultSource
+makeServerSource name m =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = name,
+    resultObjectId = ArrivalTimerId,
+    resultObjectProperties = [
+      ResultProperty {
+         resultPropertyLabel = "initState",
+         resultPropertyId = ServerInitStateId,
+         resultPropertySource =
+           makeSource (name ++ ".initState") getInitState initStateChanged },
+      ResultProperty {
+         resultPropertyLabel = "state",
+         resultPropertyId = ServerStateId,
+         resultPropertySource =
+           makeSource (name ++ ".state") getState stateChanged },
+      ResultProperty {
+         resultPropertyLabel = "totalInputWaitTime",
+         resultPropertyId = ServerTotalInputWaitTimeId,
+         resultPropertySource =
+           makeSource (name ++ ".totalInputWaitTime") getTotalInputWaitTime totalInputWaitTimeChanged },
+      ResultProperty {
+         resultPropertyLabel = "totalProcessingTime",
+         resultPropertyId = ServerTotalProcessingTimeId,
+         resultPropertySource =
+           makeSource (name ++ ".totalProcessingTime") getTotalProcessingTime totalProcessingTimeChanged },
+      ResultProperty {
+         resultPropertyLabel = "totalOutputWaitTime",
+         resultPropertyId = ServerTotalOutputWaitTimeId,
+         resultPropertySource =
+           makeSource (name ++ ".totalOutputWaitTime") getTotalOutputWaitTime totalOutputWaitTimeChanged },
+      ResultProperty {
+         resultPropertyLabel = "inputWaitTime",
+         resultPropertyId = ServerInputWaitTimeId,
+         resultPropertySource =
+           makeSource (name ++ ".inputWaitTime") getInputWaitTime inputWaitTimeChanged },
+      ResultProperty {
+         resultPropertyLabel = "processingTime",
+         resultPropertyId = ServerProcessingTimeId,
+         resultPropertySource =
+           makeSource (name ++ ".processingTime") getProcessingTime processingTimeChanged },
+      ResultProperty {
+         resultPropertyLabel = "outputWaitTime",
+         resultPropertyId = ServerOutputWaitTimeId,
+         resultPropertySource =
+           makeSource (name ++ ".outputWaitTime") getOutputWaitTime outputWaitTimeChanged },
+      ResultProperty {
+         resultPropertyLabel = "inputWaitFactor",
+         resultPropertyId = ServerInputWaitFactorId,
+         resultPropertySource =
+           makeSource (name ++ ".inputWaitFactor") getInputWaitFactor inputWaitFactorChanged },
+      ResultProperty {
+         resultPropertyLabel = "processingFactor",
+         resultPropertyId = ServerProcessingFactorId,
+         resultPropertySource =
+           makeSource (name ++ ".processingFactor") getProcessingFactor processingFactorChanged },
+      ResultProperty {
+         resultPropertyLabel = "outputWaitFactor",
+         resultPropertyId = ServerOutputWaitFactorId,
+         resultPropertySource =
+           makeSource (name ++ ".outputWaitFactor") getOutputWaitFactor outputWaitFactorChanged } ] }
+  where makeSource name' f g =
+          ResultItemSource $
+          ResultItem { resultItemName   = name',
+                       resultItemData   = f m,
+                       resultItemSignal = g m }
+        -- properties
+        getInitState = StringResultData . return . show . serverInitState 
+        getState = StringResultData . fmap show . serverState
+        getTotalInputWaitTime = DoubleResultData . serverTotalInputWaitTime
+        getTotalProcessingTime = DoubleResultData . serverTotalProcessingTime
+        getTotalOutputWaitTime = DoubleResultData . serverTotalOutputWaitTime
+        getInputWaitTime = DoubleStatsResultData . serverInputWaitTime
+        getProcessingTime = DoubleStatsResultData . serverProcessingTime
+        getOutputWaitTime = DoubleStatsResultData . serverOutputWaitTime
+        getInputWaitFactor = DoubleResultData . serverInputWaitFactor
+        getProcessingFactor = DoubleResultData . serverProcessingFactor
+        getOutputWaitFactor = DoubleResultData . serverOutputWaitFactor
+        -- signals
+        initStateChanged = const Nothing
+        stateChanged = Just . serverStateChanged_
+        totalInputWaitTimeChanged = Just . serverTotalInputWaitTimeChanged_
+        totalProcessingTimeChanged = Just . serverTotalProcessingTimeChanged_
+        totalOutputWaitTimeChanged = Just . serverTotalOutputWaitTimeChanged_
+        inputWaitTimeChanged = Just . serverInputWaitTimeChanged_
+        processingTimeChanged = Just . serverProcessingTimeChanged_
+        outputWaitTimeChanged = Just . serverOutputWaitTimeChanged_
+        inputWaitFactorChanged = Just . serverInputWaitFactorChanged_
+        processingFactorChanged = Just . serverProcessingFactorChanged_
+        outputWaitFactorChanged = Just . serverOutputWaitFactorChanged_
+
 -- | Return an arbitrary text as a separator source.
 makeTextSource :: String -> ResultSource
 makeTextSource text =
@@ -999,3 +1122,7 @@ instance (Show sm, Show so) => ResultProvider (IQ.Queue sm qm so qo a) where
 instance ResultProvider ArrivalTimer where
 
   resultSource = makeArrivalTimerSource
+
+instance Show s => ResultProvider (Server s a b) where
+
+  resultSource = makeServerSource
