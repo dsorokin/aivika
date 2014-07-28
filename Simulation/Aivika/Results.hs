@@ -120,6 +120,8 @@ data ResultId = TimeId
                 -- ^ Property 'Q.queueMaxCount'.
               | QueueCountId
                 -- ^ Property 'Q.queueCount'.
+              | QueueCountStatsId
+                -- ^ Property 'Q.queueCountStats'.
               | EnqueueCountId
                 -- ^ Property 'Q.enqueueCount'.
               | EnqueueLostCountId
@@ -801,6 +803,7 @@ makeQueueSource name i m =
       makeProperty "queueFull" QueueFullId whetherIsFull whetherIsFullSignal,
       makeProperty "queueMaxCount" QueueMaxCountId getMaxCount maxCountSignal,
       makeProperty "queueCount" QueueCountId getCount countSignal,
+      makeProperty "queueCountStats" QueueCountStatsId getCountStats countStatsSignal,
       makeProperty "enqueueCount" EnqueueCountId getEnqueueCount enqueueCountSignal,
       makeProperty "enqueueLostCount" EnqueueLostCountId getEnqueueLostCount enqueueLostCountSignal,
       makeProperty "enqueueStoreCount" EnqueueStoreCountId getEnqueueStoreCount enqueueStoreCountSignal,
@@ -833,6 +836,7 @@ makeQueueSource name i m =
         whetherIsFull = StringResultData . fmap show . Q.queueFull
         getMaxCount = IntResultData . return . Q.queueMaxCount
         getCount = IntResultData . Q.queueCount
+        getCountStats = IntStatsResultData . Q.queueCountStats
         getEnqueueCount = IntResultData . Q.enqueueCount
         getEnqueueLostCount = IntResultData . Q.enqueueLostCount
         getEnqueueStoreCount = IntResultData . Q.enqueueStoreCount
@@ -855,6 +859,7 @@ makeQueueSource name i m =
         whetherIsFullSignal = Just . Q.queueFullChanged_
         maxCountSignal = const Nothing
         countSignal = Just . Q.queueCountChanged_
+        countStatsSignal = Just . Q.queueCountChanged_
         enqueueCountSignal = Just . Q.enqueueCountChanged_
         enqueueLostCountSignal = Just . Q.enqueueLostCountChanged_
         enqueueStoreCountSignal = Just . Q.enqueueStoreCountChanged_
@@ -892,6 +897,7 @@ makeInfiniteQueueSource name i m =
       makeProperty "dequeueStrategy" DequeueStrategyId getDequeueStrategy dequeueStrategySignal,
       makeProperty "queueNull" QueueNullId whetherIsEmpty whetherIsEmptySignal,
       makeProperty "queueCount" QueueCountId getCount countSignal,
+      makeProperty "queueCountStats" QueueCountStatsId getCountStats countStatsSignal,
       makeProperty "enqueueStoreCount" EnqueueStoreCountId getEnqueueStoreCount enqueueStoreCountSignal,
       makeProperty "dequeueCount" DequeueCountId getDequeueCount dequeueCountSignal,
       makeProperty "dequeueExtractCount" DequeueExtractCountId getDequeueExtractCount dequeueExtractCountSignal,
@@ -915,6 +921,7 @@ makeInfiniteQueueSource name i m =
         getDequeueStrategy = StringResultData . return . show . IQ.dequeueStrategy
         whetherIsEmpty = StringResultData . fmap show . IQ.queueNull
         getCount = IntResultData . IQ.queueCount
+        getCountStats = IntStatsResultData . IQ.queueCountStats
         getEnqueueStoreCount = IntResultData . IQ.enqueueStoreCount
         getDequeueCount = IntResultData . IQ.dequeueCount
         getDequeueExtractCount = IntResultData . IQ.dequeueExtractCount
@@ -928,6 +935,7 @@ makeInfiniteQueueSource name i m =
         dequeueStrategySignal = const Nothing
         whetherIsEmptySignal = Just . IQ.queueNullChanged_
         countSignal = Just . IQ.queueCountChanged_
+        countStatsSignal = Just . IQ.queueCountChanged_
         enqueueStoreCountSignal = Just . IQ.enqueueStoreCountChanged_
         dequeueCountSignal = Just . IQ.dequeueCountChanged_
         dequeueExtractCountSignal = Just . IQ.dequeueExtractCountChanged_
@@ -1087,7 +1095,7 @@ makeQueueSummary name i m =
       makeQueueSummary name i m,
     resultObjectProperties = [
       makeProperty "queueMaxCount" QueueMaxCountId getMaxCount maxCountSignal,
-      makeProperty "queueCount" QueueCountId getCount countSignal,
+      makeProperty "queueCountStats" QueueCountStatsId getCountStats countStatsSignal,
       makeProperty "enqueueCount" EnqueueCountId getEnqueueCount enqueueCountSignal,
       makeProperty "enqueueLostCount" EnqueueLostCountId getEnqueueLostCount enqueueLostCountSignal,
       makeProperty "enqueueStoreCount" EnqueueStoreCountId getEnqueueStoreCount enqueueStoreCountSignal,
@@ -1107,7 +1115,7 @@ makeQueueSummary name i m =
                        resultItemSignal = g m }
         -- properties
         getMaxCount = IntResultData . return . Q.queueMaxCount
-        getCount = IntResultData . Q.queueCount
+        getCountStats = IntStatsResultData . Q.queueCountStats
         getEnqueueCount = IntResultData . Q.enqueueCount
         getEnqueueLostCount = IntResultData . Q.enqueueLostCount
         getEnqueueStoreCount = IntResultData . Q.enqueueStoreCount
@@ -1117,7 +1125,7 @@ makeQueueSummary name i m =
         getWaitTime = StringResultData . fmap show . Q.queueWaitTime
         -- signals
         maxCountSignal = const Nothing
-        countSignal = Just . Q.queueCountChanged_
+        countStatsSignal = Just . Q.queueCountChanged_
         enqueueCountSignal = Just . Q.enqueueCountChanged_
         enqueueLostCountSignal = Just . Q.enqueueLostCountChanged_
         enqueueStoreCountSignal = Just . Q.enqueueStoreCountChanged_
@@ -1144,7 +1152,7 @@ makeInfiniteQueueSummary name i m =
     resultObjectSummary =
       makeInfiniteQueueSummary name i m,
     resultObjectProperties = [
-      makeProperty "queueCount" QueueCountId getCount countSignal,
+      makeProperty "queueCountStats" QueueCountStatsId getCountStats countStatsSignal,
       makeProperty "enqueueStoreCount" EnqueueStoreCountId getEnqueueStoreCount enqueueStoreCountSignal,
       makeProperty "dequeueCount" DequeueCountId getDequeueCount dequeueCountSignal,
       makeProperty "dequeueExtractCount" DequeueExtractCountId getDequeueExtractCount dequeueExtractCountSignal,
@@ -1160,13 +1168,13 @@ makeInfiniteQueueSummary name i m =
                        resultItemData   = f m,
                        resultItemSignal = g m }
         -- properties
-        getCount = IntResultData . IQ.queueCount
+        getCountStats = IntStatsResultData . IQ.queueCountStats
         getEnqueueStoreCount = IntResultData . IQ.enqueueStoreCount
         getDequeueCount = IntResultData . IQ.dequeueCount
         getDequeueExtractCount = IntResultData . IQ.dequeueExtractCount
         getWaitTime = StringResultData . fmap show . IQ.queueWaitTime
         -- signals
-        countSignal = Just . IQ.queueCountChanged_
+        countStatsSignal = Just . IQ.queueCountChanged_
         enqueueStoreCountSignal = Just . IQ.enqueueStoreCountChanged_
         dequeueCountSignal = Just . IQ.dequeueCountChanged_
         dequeueExtractCountSignal = Just . IQ.dequeueExtractCountChanged_
