@@ -558,9 +558,7 @@ retypeResults t results =
 
 -- | It contains the results of simulation.
 data Results =
-  Results { resultPredefinedSignals :: ResultPredefinedSignals,
-            -- ^ The predefined signals provided by every simulation model.
-            resultSourceMap :: ResultSourceMap,
+  Results { resultSourceMap :: ResultSourceMap,
             -- ^ The sources of simulation results as a map of associated names.
             resultSourceList :: [ResultSource]
             -- ^ The sources of simulation results as an ordered list.
@@ -586,13 +584,16 @@ newResultPredefinedSignals = runDynamicsInStartTime $ runEventWith EarlierEvents
                                           resultSignalInStartTime  = signalInStartTime,
                                           resultSignalInStopTime   = signalInStopTime }
 
--- | Prepare the simulation results starting from the initial modeling time.
-resultsFromStartTime :: [ResultSource] -> Simulation Results
-resultsFromStartTime m =
-  do s <- newResultPredefinedSignals
-     return Results { resultPredefinedSignals = s,
-                      resultSourceMap         = M.fromList $ map (\x -> (resultSourceName x, x)) m,
-                      resultSourceList        = m }
+-- | Prepare the simulation results.
+results :: [ResultSource] -> Results
+results m =
+  Results { resultSourceMap  = M.fromList $ map (\x -> (resultSourceName x, x)) m,
+            resultSourceList = m }
+
+-- | Return a short version of the simulation results, i.e. their summary.
+resultSummary :: Results -> Results
+resultSummary xs =
+  results (map resultSourceSummary $ resultSourceList xs)
 
 -- | Return a mixed signal for the specified items received from 
 -- the provided simulation results.
