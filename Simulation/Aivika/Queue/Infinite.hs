@@ -119,7 +119,7 @@ data Queue sm qm so qo a =
           queueStore :: qm (QueueItem a),
           dequeueRes :: Resource so qo,
           queueCountRef :: IORef Int,
-          queueCountStatsRef :: IORef (SamplingStats Int),
+          queueCountStatsRef :: IORef (TimingStats Int),
           enqueueStoreCountRef :: IORef Int,
           dequeueCountRef :: IORef Int,
           dequeueExtractCountRef :: IORef Int,
@@ -163,7 +163,7 @@ newQueue :: (QueueStrategy sm qm,
             -> Simulation (Queue sm qm so qo a)  
 newQueue sm so =
   do i  <- liftIO $ newIORef 0
-     is <- liftIO $ newIORef mempty
+     is <- liftIO $ newIORef emptyTimingStats
      cm <- liftIO $ newIORef 0
      cr <- liftIO $ newIORef 0
      co <- liftIO $ newIORef 0
@@ -215,7 +215,7 @@ queueCount q =
   Event $ \p -> readIORef (queueCountRef q)
 
 -- | Return the queue size statistics.
-queueCountStats :: Queue sm qm so qo a -> Event (SamplingStats Int)
+queueCountStats :: Queue sm qm so qo a -> Event (TimingStats Int)
 queueCountStats q =
   Event $ \p -> readIORef (queueCountStatsRef q)
   
@@ -441,8 +441,9 @@ enqueueStore q a =
        strategyEnqueue (enqueueStoringStrategy q) (queueStore q) i
      c <- readIORef (queueCountRef q)
      let c' = c + 1
+         t  = pointTime p
      c' `seq` writeIORef (queueCountRef q) c'
-     modifyIORef' (queueCountStatsRef q) (addSamplingStats c')
+     modifyIORef' (queueCountStatsRef q) (addTimingStats t c')
      modifyIORef' (enqueueStoreCountRef q) (+ 1)
      invokeEvent p $
        releaseResourceWithinEvent (dequeueRes q)
@@ -467,8 +468,9 @@ enqueueStoreWithPriority q pm a =
        strategyEnqueueWithPriority (enqueueStoringStrategy q) (queueStore q) pm i
      c <- readIORef (queueCountRef q)
      let c' = c + 1
+         t  = pointTime p
      c' `seq` writeIORef (queueCountRef q) c'
-     modifyIORef' (queueCountStatsRef q) (addSamplingStats c')
+     modifyIORef' (queueCountStatsRef q) (addTimingStats t c')
      modifyIORef' (enqueueStoreCountRef q) (+ 1)
      invokeEvent p $
        releaseResourceWithinEvent (dequeueRes q)
@@ -501,8 +503,9 @@ dequeueExtract q t' =
           strategyDequeue (enqueueStoringStrategy q) (queueStore q)
      c <- readIORef (queueCountRef q)
      let c' = c - 1
+         t  = pointTime p
      c' `seq` writeIORef (queueCountRef q) c'
-     modifyIORef' (queueCountStatsRef q) (addSamplingStats c')
+     modifyIORef' (queueCountStatsRef q) (addTimingStats t c')
      modifyIORef' (dequeueExtractCountRef q) (+ 1)
      invokeEvent p $
        dequeueStat q t' i
@@ -549,6 +552,7 @@ queueSummary q indent =
          so = dequeueStrategy q
      null <- queueNull q
      count <- queueCount q
+     countStats <- queueCountStats q
      enqueueStoreCount <- enqueueStoreCount q
      dequeueCount <- dequeueCount q
      dequeueExtractCount <- dequeueExtractCount q
@@ -572,9 +576,13 @@ queueSummary q indent =
        shows null .
        showString "\n" .
        showString tab .
-       showString "size = " .
+       showString "the current size = " .
        shows count .
        showString "\n" .
+       showString tab .
+       showString "the size statistics = \n\n" .
+       timingStatsSummary countStats (2 + indent) .
+       showString "\n\n" .
        showString tab .
        showString "the enqueue store count (number of the input items that were stored) = " .
        shows enqueueStoreCount .
