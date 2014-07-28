@@ -33,6 +33,7 @@ module Simulation.Aivika.Queue
         queueFull,
         queueMaxCount,
         queueCount,
+        queueCountStats,
         enqueueCount,
         enqueueLostCount,
         enqueueStoreCount,
@@ -159,6 +160,7 @@ data Queue si qi sm qm so qo a =
           queueStore :: qm (QueueItem a),
           dequeueRes :: Resource so qo,
           queueCountRef :: IORef Int,
+          queueCountStatsRef :: IORef (SamplingStats Int),
           enqueueCountRef :: IORef Int,
           enqueueLostCountRef :: IORef Int,
           enqueueStoreCountRef :: IORef Int,
@@ -217,6 +219,7 @@ newQueue :: (QueueStrategy si qi,
             -> Simulation (Queue si qi sm qm so qo a)  
 newQueue si sm so count =
   do i  <- liftIO $ newIORef 0
+     is <- liftIO $ newIORef mempty
      ci <- liftIO $ newIORef 0
      cl <- liftIO $ newIORef 0
      cm <- liftIO $ newIORef 0
@@ -242,6 +245,7 @@ newQueue si sm so count =
                     queueStore = qm,
                     dequeueRes = ro,
                     queueCountRef = i,
+                    queueCountStatsRef = is,
                     enqueueCountRef = ci,
                     enqueueLostCountRef = cl,
                     enqueueStoreCountRef = cm,
@@ -293,12 +297,17 @@ queueFullChanged q =
 queueFullChanged_ :: Queue si qi sm qm so qo a -> Signal ()
 queueFullChanged_ = queueCountChanged_
 
--- | Return the queue size.
+-- | Return the current queue size.
 --
--- See also 'queueCountChanged' and 'queueCountChanged_'.
+-- See also 'queueCountStats', 'queueCountChanged' and 'queueCountChanged_'.
 queueCount :: Queue si qi sm qm so qo a -> Event Int
 queueCount q =
   Event $ \p -> readIORef (queueCountRef q)
+
+-- | Return the queue size statistics.
+queueCountStats :: Queue si qi sm qm so qo a -> Event (SamplingStats Int)
+queueCountStats q =
+  Event $ \p -> readIORef (queueCountStatsRef q)
   
 -- | Signal when the 'queueCount' property value has changed.
 queueCountChanged :: Queue si qi sm qm so qo a -> Signal Int
@@ -798,7 +807,10 @@ enqueueStore q i =
   do let i' = i { itemStoringTime = pointTime p }  -- now we have the actual time of storing
      invokeEvent p $
        strategyEnqueue (enqueueStoringStrategy q) (queueStore q) i'
-     modifyIORef' (queueCountRef q) (+ 1)
+     c <- readIORef (queueCountRef q)
+     let c' = c + 1
+     c' `seq` writeIORef (queueCountRef q) c'
+     modifyIORef' (queueCountStatsRef q) (addSamplingStats c')
      modifyIORef' (enqueueStoreCountRef q) (+ 1)
      invokeEvent p $
        enqueueStat q i'
@@ -822,7 +834,10 @@ enqueueStoreWithPriority q pm i =
   do let i' = i { itemStoringTime = pointTime p }  -- now we have the actual time of storing
      invokeEvent p $
        strategyEnqueueWithPriority (enqueueStoringStrategy q) (queueStore q) pm i'
-     modifyIORef' (queueCountRef q) (+ 1)
+     c <- readIORef (queueCountRef q)
+     let c' = c + 1
+     c' `seq` writeIORef (queueCountRef q) c'
+     modifyIORef' (queueCountStatsRef q) (addSamplingStats c')
      modifyIORef' (enqueueStoreCountRef q) (+ 1)
      invokeEvent p $
        enqueueStat q i'
@@ -882,7 +897,10 @@ dequeueExtract q t' =
   Event $ \p ->
   do i <- invokeEvent p $
           strategyDequeue (enqueueStoringStrategy q) (queueStore q)
-     modifyIORef' (queueCountRef q) (+ (- 1))
+     c <- readIORef (queueCountRef q)
+     let c' = c - 1
+     c' `seq` writeIORef (queueCountRef q) c'
+     modifyIORef' (queueCountStatsRef q) (addSamplingStats c')
      modifyIORef' (dequeueExtractCountRef q) (+ 1)
      invokeEvent p $
        dequeueStat q t' i
@@ -947,6 +965,7 @@ queueSummary q indent =
      full <- queueFull q
      let maxCount = queueMaxCount q
      count <- queueCount q
+     countStats <- queueCountStats q
      enqueueCount <- enqueueCount q
      enqueueLostCount <- enqueueLostCount q
      enqueueStoreCount <- enqueueStoreCount q
@@ -991,6 +1010,10 @@ queueSummary q indent =
        showString "size = " .
        shows count .
        showString "\n" .
+       showString tab .
+       showString "the size statistics = \n\n" .
+       samplingStatsSummary countStats (2 + indent) .
+       showString "\n\n" .
        showString tab .
        showString "the enqueue count (number of the input items that were enqueued) = " .
        shows enqueueCount .

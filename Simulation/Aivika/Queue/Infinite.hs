@@ -27,6 +27,7 @@ module Simulation.Aivika.Queue.Infinite
         dequeueStrategy,
         queueNull,
         queueCount,
+        queueCountStats,
         enqueueStoreCount,
         dequeueCount,
         dequeueExtractCount,
@@ -118,6 +119,7 @@ data Queue sm qm so qo a =
           queueStore :: qm (QueueItem a),
           dequeueRes :: Resource so qo,
           queueCountRef :: IORef Int,
+          queueCountStatsRef :: IORef (SamplingStats Int),
           enqueueStoreCountRef :: IORef Int,
           dequeueCountRef :: IORef Int,
           dequeueExtractCountRef :: IORef Int,
@@ -161,6 +163,7 @@ newQueue :: (QueueStrategy sm qm,
             -> Simulation (Queue sm qm so qo a)  
 newQueue sm so =
   do i  <- liftIO $ newIORef 0
+     is <- liftIO $ newIORef mempty
      cm <- liftIO $ newIORef 0
      cr <- liftIO $ newIORef 0
      co <- liftIO $ newIORef 0
@@ -176,6 +179,7 @@ newQueue sm so =
                     queueStore = qm,
                     dequeueRes = ro,
                     queueCountRef = i,
+                    queueCountStatsRef = is,
                     enqueueStoreCountRef = cm,
                     dequeueCountRef = cr,
                     dequeueExtractCountRef = co,
@@ -203,12 +207,17 @@ queueNullChanged q =
 queueNullChanged_ :: Queue sm qm so qo a -> Signal ()
 queueNullChanged_ = queueCountChanged_
 
--- | Return the queue size.
+-- | Return the current queue size.
 --
--- See also 'queueCountChanged' and 'queueCountChanged_'.
+-- See also 'queueCountStats', 'queueCountChanged' and 'queueCountChanged_'.
 queueCount :: Queue sm qm so qo a -> Event Int
 queueCount q =
   Event $ \p -> readIORef (queueCountRef q)
+
+-- | Return the queue size statistics.
+queueCountStats :: Queue sm qm so qo a -> Event (SamplingStats Int)
+queueCountStats q =
+  Event $ \p -> readIORef (queueCountStatsRef q)
   
 -- | Signal when the 'queueCount' property value has changed.
 queueCountChanged :: Queue sm qm so qo a -> Signal Int
@@ -430,7 +439,10 @@ enqueueStore q a =
                          itemStoringTime = pointTime p }
      invokeEvent p $
        strategyEnqueue (enqueueStoringStrategy q) (queueStore q) i
-     modifyIORef' (queueCountRef q) (+ 1)
+     c <- readIORef (queueCountRef q)
+     let c' = c + 1
+     c' `seq` writeIORef (queueCountRef q) c'
+     modifyIORef' (queueCountStatsRef q) (addSamplingStats c')
      modifyIORef' (enqueueStoreCountRef q) (+ 1)
      invokeEvent p $
        releaseResourceWithinEvent (dequeueRes q)
@@ -453,7 +465,10 @@ enqueueStoreWithPriority q pm a =
                          itemStoringTime = pointTime p }
      invokeEvent p $
        strategyEnqueueWithPriority (enqueueStoringStrategy q) (queueStore q) pm i
-     modifyIORef' (queueCountRef q) (+ 1)
+     c <- readIORef (queueCountRef q)
+     let c' = c + 1
+     c' `seq` writeIORef (queueCountRef q) c'
+     modifyIORef' (queueCountStatsRef q) (addSamplingStats c')
      modifyIORef' (enqueueStoreCountRef q) (+ 1)
      invokeEvent p $
        releaseResourceWithinEvent (dequeueRes q)
@@ -484,7 +499,10 @@ dequeueExtract q t' =
   Event $ \p ->
   do i <- invokeEvent p $
           strategyDequeue (enqueueStoringStrategy q) (queueStore q)
-     modifyIORef' (queueCountRef q) (+ (- 1))
+     c <- readIORef (queueCountRef q)
+     let c' = c - 1
+     c' `seq` writeIORef (queueCountRef q) c'
+     modifyIORef' (queueCountStatsRef q) (addSamplingStats c')
      modifyIORef' (dequeueExtractCountRef q) (+ 1)
      invokeEvent p $
        dequeueStat q t' i
