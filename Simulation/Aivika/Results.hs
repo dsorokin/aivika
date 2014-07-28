@@ -313,6 +313,24 @@ resultSourceName (ResultObjectSource x) = resultObjectName x
 resultSourceName (ResultVectorSource x) = resultVectorName x
 resultSourceName (ResultSeparatorSource x) = []
 
+-- | Return a short version of the source, i.e. its summary.
+resultSourceSummary :: ResultSource -> ResultSource
+resultSourceSummary (ResultItemSource (ResultItem n i (DoubleStatsResultData x) s)) =
+  makeSamplingStatsSummary n i x
+resultSourceSummary (ResultItemSource (ResultItem n i (DoubleTimingStatsResultData x) s)) =
+  makeTimingStatsSummary n i x
+resultSourceSummary (ResultItemSource (ResultItem n i (IntStatsResultData x) s)) =
+  makeSamplingStatsSummary n i x
+resultSourceSummary (ResultItemSource (ResultItem n i (IntTimingStatsResultData x) s)) =
+  makeTimingStatsSummary n i x
+resultSourceSummary z@(ResultItemSource x) = z
+resultSourceSummary (ResultObjectSource x) = resultObjectSummary x
+resultSourceSummary (ResultVectorSource x) =
+  ResultVectorSource $
+  x { resultVectorItems =
+         V.map resultSourceSummary (resultVectorItems x) }
+resultSourceSummary z@(ResultSeparatorSource x) = z
+
 -- | Flatten the result items.
 flattenResultItems :: ResultSource -> [ResultItem]
 flattenResultItems (ResultItemSource x) = [x]
