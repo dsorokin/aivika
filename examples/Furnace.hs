@@ -292,7 +292,9 @@ model =
        loadingProcess furnace
 
      -- return the simulation results
-     resultsFromStartTime
+     return $
+       resultSummary $
+       results
        [resultSource "inputIngotCount" "the input ingot count" $
         enqueueStoreCount (furnaceQueue furnace),
         --

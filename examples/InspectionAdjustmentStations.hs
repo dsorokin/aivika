@@ -159,7 +159,9 @@ model = mdo
   runProcessInStartTime $
     sinkStream $ runProcessor entireProcessor inputStream
   -- return the simulation results in start time
-  resultsFromStartTime
+  return $
+    resultSummary $
+    results
     [resultSource
      "inspectionQueue" "the inspection queue"
      inspectionQueue,

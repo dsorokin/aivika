@@ -19,7 +19,7 @@ model =
       c <- integ (kb * b) 0
       let ka = 1
           kb = 1
-      resultsFromStartTime
+      return $ results
         [resultSource "a" "variable A" a,
          resultSource "b" "variable B" b,
          resultSource "c" "variable C" c]

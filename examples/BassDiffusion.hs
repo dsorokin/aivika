@@ -86,7 +86,7 @@ model =
      definePersons ps potentialAdopters adopters
      runEventInStartTime $
        activatePersons ps
-     resultsFromStartTime
+     return $ results
        [resultSource "potentialAdopter" "potential adopters" potentialAdopters,
         resultSource "adopters" "adopters" adopters]
 

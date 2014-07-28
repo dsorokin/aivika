@@ -46,7 +46,7 @@ model =
       totalProfit <- integ annualProfit 0
       let totalCatchPerYear = maxDynamics 0 (ships * catchPerShip)
       -- results --
-      resultsFromStartTime
+      return $ results
         [resultSource "fish" "fish" fish,
          resultSource "annualProfit" "the annual profit" annualProfit,
          resultSource "totalProfit" "the total profit" totalProfit]
