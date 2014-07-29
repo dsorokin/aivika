@@ -77,11 +77,6 @@ maxAdjustmentTime = 40
 -- how many are adjustment stations?
 adjustmentStationCount = 1
 
--- create an accumulator to gather the queue size statistics 
-newQueueSizeAccumulator queue =
-  newTimingStatsAccumulator $
-  Signalable (queueCount queue) (queueCountChanged_ queue)
-
 -- create an inspection station (server)
 newInspectionStation =
   newServer $ \a ->
@@ -113,17 +108,11 @@ model = mdo
   let inputStream =
         randomUniformStream minArrivalDelay maxArrivalDelay 
   -- create a queue before the inspection stations
-  inspectionQueue <- newFCFSQueue
+  inspectionQueue <-
+    runEventInStartTime newFCFSQueue
   -- create a queue before the adjustment stations
-  adjustmentQueue <- newFCFSQueue
-  -- the inspection stations' queue size statistics
-  inspectionQueueSizeAcc <- 
-    runEventInStartTime $
-    newQueueSizeAccumulator inspectionQueue
-  -- the adjustment stations' queue size statistics
-  adjustmentQueueSizeAcc <- 
-    runEventInStartTime $
-    newQueueSizeAccumulator adjustmentQueue
+  adjustmentQueue <-
+    runEventInStartTime newFCFSQueue
   -- create the inspection stations (servers)
   inspectionStations <-
     forM [1 .. inspectionStationCount] $ \_ ->
@@ -160,7 +149,6 @@ model = mdo
     sinkStream $ runProcessor entireProcessor inputStream
   -- return the simulation results in start time
   return $
-    resultSummary $
     results
     [resultSource
      "inspectionQueue" "the inspection queue"
@@ -179,14 +167,6 @@ model = mdo
      outputArrivalTimer,
      --
      resultSource
-     "inspectionQueueSizeAcc" "the inspection queue size accumulator" $
-     timingStatsAccumulated inspectionQueueSizeAcc,
-     --
-     resultSource
-     "adjustmentQueueSizeAcc" "the adjustment queue size accumulator" $
-     timingStatsAccumulated adjustmentQueueSizeAcc,
-     --
-     resultSource
      "inspectionStations" "the inspection stations"
      inspectionStations,
      --
@@ -194,4 +174,9 @@ model = mdo
      "adjustmentStations" "the adjustment stations"
      adjustmentStations]
 
-main = outputFinalResultsInEnglish model specs
+modelSummary :: Simulation Results
+modelSummary = fmap resultSummary model
+
+main =
+  -- outputFinalResultsInRussian modelSummary specs
+  outputFinalResultsInEnglish modelSummary specs
