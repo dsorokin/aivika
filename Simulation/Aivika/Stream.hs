@@ -494,7 +494,7 @@ prefetchStream s = Cons z where
 -- Cancel the stream's process to unsubscribe from the specified signal.
 signalStream :: Signal a -> Process (Stream a)
 signalStream s =
-  do q <- liftSimulation newFCFSQueue
+  do q <- liftEvent newFCFSQueue
      h <- liftEvent $
           handleSignal s $ 
           enqueue q

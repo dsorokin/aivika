@@ -41,7 +41,7 @@ roundRobbinProcessorUsingIds :: Processor (Process (Double, ProcessId), Process 
 roundRobbinProcessorUsingIds =
   Processor $ \xs ->
   Cons $
-  do q <- liftSimulation newFCFSQueue
+  do q <- liftEvent newFCFSQueue
      let process =
            do t@(x, p) <- dequeue q
               (timeout, pid) <- x

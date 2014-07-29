@@ -189,19 +189,19 @@ data QueueItem a =
             }
   
 -- | Create a new FCFS queue with the specified capacity.  
-newFCFSQueue :: Int -> Simulation (FCFSQueue a)  
+newFCFSQueue :: Int -> Event (FCFSQueue a)  
 newFCFSQueue = newQueue FCFS FCFS FCFS
   
 -- | Create a new LCFS queue with the specified capacity.  
-newLCFSQueue :: Int -> Simulation (LCFSQueue a)  
+newLCFSQueue :: Int -> Event (LCFSQueue a)  
 newLCFSQueue = newQueue FCFS LCFS FCFS
   
 -- | Create a new SIRO queue with the specified capacity.  
-newSIROQueue :: Int -> Simulation (SIROQueue a)  
+newSIROQueue :: Int -> Event (SIROQueue a)  
 newSIROQueue = newQueue FCFS SIRO FCFS
   
 -- | Create a new priority queue with the specified capacity.  
-newPriorityQueue :: Int -> Simulation (PriorityQueue a)  
+newPriorityQueue :: Int -> Event (PriorityQueue a)  
 newPriorityQueue = newQueue FCFS StaticPriorities FCFS
   
 -- | Create a new queue with the specified strategies and capacity.  
@@ -216,27 +216,28 @@ newQueue :: (QueueStrategy si qi,
             -- ^ the strategy applied to the dequeueing (output) processes when the queue is empty
             -> Int
             -- ^ the queue capacity
-            -> Simulation (Queue si qi sm qm so qo a)  
+            -> Event (Queue si qi sm qm so qo a)  
 newQueue si sm so count =
-  do i  <- liftIO $ newIORef 0
-     is <- liftIO $ newIORef emptyTimingStats
+  do t  <- liftDynamics time
+     i  <- liftIO $ newIORef 0
+     is <- liftIO $ newIORef $ returnTimingStats t 0
      ci <- liftIO $ newIORef 0
      cl <- liftIO $ newIORef 0
      cm <- liftIO $ newIORef 0
      cr <- liftIO $ newIORef 0
      co <- liftIO $ newIORef 0
-     ri <- newResourceWithMaxCount si count (Just count)
-     qm <- newStrategyQueue sm
-     ro <- newResourceWithMaxCount so 0 (Just count)
+     ri <- liftSimulation $ newResourceWithMaxCount si count (Just count)
+     qm <- liftSimulation $ newStrategyQueue sm
+     ro <- liftSimulation $ newResourceWithMaxCount so 0 (Just count)
      w  <- liftIO $ newIORef mempty
      wt <- liftIO $ newIORef mempty
      wi <- liftIO $ newIORef mempty
      wo <- liftIO $ newIORef mempty 
-     s1 <- newSignalSource
-     s2 <- newSignalSource
-     s3 <- newSignalSource
-     s4 <- newSignalSource
-     s5 <- newSignalSource
+     s1 <- liftSimulation $ newSignalSource
+     s2 <- liftSimulation $ newSignalSource
+     s3 <- liftSimulation $ newSignalSource
+     s4 <- liftSimulation $ newSignalSource
+     s5 <- liftSimulation $ newSignalSource
      return Queue { queueMaxCount = count,
                     enqueueStrategy = si,
                     enqueueStoringStrategy = sm,

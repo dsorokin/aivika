@@ -138,19 +138,19 @@ data QueueItem a =
             }
   
 -- | Create a new infinite FCFS queue.  
-newFCFSQueue :: Simulation (FCFSQueue a)  
+newFCFSQueue :: Event (FCFSQueue a)  
 newFCFSQueue = newQueue FCFS FCFS
   
 -- | Create a new infinite LCFS queue.  
-newLCFSQueue :: Simulation (LCFSQueue a)  
+newLCFSQueue :: Event (LCFSQueue a)  
 newLCFSQueue = newQueue LCFS FCFS
   
 -- | Create a new infinite SIRO queue.  
-newSIROQueue :: Simulation (SIROQueue a)  
+newSIROQueue :: Event (SIROQueue a)  
 newSIROQueue = newQueue SIRO FCFS
   
 -- | Create a new infinite priority queue.  
-newPriorityQueue :: Simulation (PriorityQueue a)  
+newPriorityQueue :: Event (PriorityQueue a)  
 newPriorityQueue = newQueue StaticPriorities FCFS
   
 -- | Create a new infinite queue with the specified strategies.  
@@ -160,20 +160,21 @@ newQueue :: (QueueStrategy sm qm,
             -- ^ the strategy applied when storing items in the queue
             -> so
             -- ^ the strategy applied to the dequeueing (output) processes when the queue is empty
-            -> Simulation (Queue sm qm so qo a)  
+            -> Event (Queue sm qm so qo a)  
 newQueue sm so =
-  do i  <- liftIO $ newIORef 0
-     is <- liftIO $ newIORef emptyTimingStats
+  do t  <- liftDynamics time
+     i  <- liftIO $ newIORef 0
+     is <- liftIO $ newIORef $ returnTimingStats t 0
      cm <- liftIO $ newIORef 0
      cr <- liftIO $ newIORef 0
      co <- liftIO $ newIORef 0
-     qm <- newStrategyQueue sm
-     ro <- newResourceWithMaxCount so 0 Nothing
+     qm <- liftSimulation $ newStrategyQueue sm
+     ro <- liftSimulation $ newResourceWithMaxCount so 0 Nothing
      w  <- liftIO $ newIORef mempty
      wo <- liftIO $ newIORef mempty 
-     s3 <- newSignalSource
-     s4 <- newSignalSource
-     s5 <- newSignalSource
+     s3 <- liftSimulation newSignalSource
+     s4 <- liftSimulation newSignalSource
+     s5 <- liftSimulation newSignalSource
      return Queue { enqueueStoringStrategy = sm,
                     dequeueStrategy = so,
                     queueStore = qm,
