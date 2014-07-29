@@ -21,6 +21,7 @@
 
 module Simulation.Aivika.Dynamics.Random
        (memoRandomUniformDynamics,
+        memoRandomUniformIntDynamics,
         memoRandomNormalDynamics,
         memoRandomExponentialDynamics,
         memoRandomErlangDynamics,
@@ -50,6 +51,19 @@ memoRandomUniformDynamics min max =
      min' <- invokeDynamics p min
      max' <- invokeDynamics p max
      generatorUniform g min' max'
+
+-- | Computation that generates random integer numbers distributed uniformly and
+-- memoizes them in the integration time points.
+memoRandomUniformIntDynamics :: Dynamics Int     -- ^ minimum
+                                -> Dynamics Int  -- ^ maximum
+                                -> Simulation (Dynamics Int)
+memoRandomUniformIntDynamics min max =
+  memo0Dynamics $
+  Dynamics $ \p ->
+  do let g = runGenerator $ pointRun p
+     min' <- invokeDynamics p min
+     max' <- invokeDynamics p max
+     generatorUniformInt g min' max'
 
 -- | Computation that generates random numbers distributed normally and
 -- memoizes them in the integration time points.

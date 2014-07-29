@@ -15,6 +15,7 @@ module Simulation.Aivika.Stream.Random
        (-- * Stream of Random Events
         randomStream,
         randomUniformStream,
+        randomUniformIntStream,
         randomNormalStream,
         randomExponentialStream,
         randomErlangStream,
@@ -75,6 +76,18 @@ randomUniformStream min max =
   randomStream $
   randomUniform min max >>= \x ->
   return (x, x)
+
+-- | Create a new stream with integer delays distributed uniformly.
+randomUniformIntStream :: Int
+                          -- ^ the minimum delay
+                          -> Int
+                          -- ^ the maximum delay
+                          -> Stream (Arrival Int)
+                          -- ^ the stream of random events with the delays generated
+randomUniformIntStream min max =
+  randomStream $
+  randomUniformInt min max >>= \x ->
+  return (fromIntegral x, x)
 
 -- | Create a new stream with delays distributed normally.
 randomNormalStream :: Double

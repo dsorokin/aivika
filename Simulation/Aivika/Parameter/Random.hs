@@ -21,6 +21,7 @@
 
 module Simulation.Aivika.Parameter.Random
        (randomUniform,
+        randomUniformInt,
         randomNormal,
         randomExponential,
         randomErlang,
@@ -47,6 +48,15 @@ randomUniform min max =
   Parameter $ \r ->
   let g = runGenerator r
   in generatorUniform g min max
+
+-- | Computation that generates a new random integer number distributed uniformly.
+randomUniformInt :: Int     -- ^ minimum
+                    -> Int  -- ^ maximum
+                    -> Parameter Int
+randomUniformInt min max =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generatorUniformInt g min max
 
 -- | Computation that generates a new random number distributed normally.
 randomNormal :: Double     -- ^ mean

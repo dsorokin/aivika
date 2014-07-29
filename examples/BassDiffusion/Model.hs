@@ -1,6 +1,12 @@
 
-import System.Random
+-- This is the Bass Diffusion model solved with help of 
+-- the Agent-based Modeling as described in the AnyLogic 
+-- documentation.
+
+module Model where
+
 import Data.Array
+
 import Control.Monad
 import Control.Monad.Trans
 
@@ -54,7 +60,8 @@ definePerson p ps potentialAdopters adopters =
           let t = liftParameter $
                   randomExponential (1 / contactRate)    -- many times!
           addTimer (personAdopter p) t $
-            do i <- liftIO $ getStdRandom $ randomR (1, n)
+            do i <- liftParameter $
+                    randomUniformInt 1 n
                let p' = ps ! i
                st <- selectedState (personAgent p')
                when (st == Just (personPotentialAdopter p')) $
@@ -86,8 +93,9 @@ model =
      definePersons ps potentialAdopters adopters
      runEventInStartTime $
        activatePersons ps
-     return $ results
-       [resultSource "potentialAdopter" "potential adopters" potentialAdopters,
-        resultSource "adopters" "adopters" adopters]
-
-main = outputIntegResultsInEnglish model specs
+     return $ 
+       results
+       [resultSource 
+        "potentialAdopter" "potential adopters" potentialAdopters,
+        resultSource 
+        "adopters" "adopters" adopters]

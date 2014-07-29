@@ -23,6 +23,9 @@ data Generator =
   Generator { generatorUniform :: Double -> Double -> IO Double,
               -- ^ Generate an uniform random number
               -- with the specified minimum and maximum.
+              generatorUniformInt :: Int -> Int -> IO Int,
+              -- ^ Generate an uniform integer random number
+              -- with the specified minimum and maximum.
               generatorNormal :: Double -> Double -> IO Double,
               -- ^ Generate the normal random number
               -- with the specified mean and deviation.
@@ -51,6 +54,20 @@ generateUniform :: IO Double
 generateUniform g min max =
   do x <- g
      return $ min + x * (max - min)
+
+-- | Generate the uniform random number with the specified minimum and maximum.
+generateUniformInt :: IO Double
+                      -- ^ the generator
+                      -> Int
+                      -- ^ minimum
+                      -> Int
+                      -- ^ maximum
+                      -> IO Int
+generateUniformInt g min max =
+  do x <- g
+     let min' = fromIntegral min
+         max' = fromIntegral max
+     return $ round (min' + x * (max' - min'))
 
 -- | Create a normal random number generator with mean 0 and variance 1
 -- by the specified generator of uniform random numbers from 0 to 1.
@@ -184,6 +201,7 @@ newRandomGenerator g =
            do x <- g2
               return $ mu + nu * x
      return Generator { generatorUniform = generateUniform g1,
+                        generatorUniformInt = generateUniformInt g1,
                         generatorNormal = g3,
                         generatorExponential = generateExponential g1,
                         generatorErlang = generateErlang g1,
