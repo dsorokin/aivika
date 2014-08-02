@@ -5,7 +5,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.6.3
+-- Tested with: GHC 7.8.3
 --
 -- The module defines the 'Dynamics' monad representing a time varying polymorphic function. 
 --

@@ -87,7 +87,7 @@ maintainer:      David Sorokin <david.sorokin@gmail.com>
 homepage:        http://github.com/dsorokin/aivika
 cabal-version:   >= 1.6
 build-type:      Simple
-tested-with:     GHC == 7.6.3
+tested-with:     GHC == 7.8.3
 
 extra-source-files:  examples/BassDiffusion/Model.hs
                      examples/BassDiffusion/Main.hs

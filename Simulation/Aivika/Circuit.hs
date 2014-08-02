@@ -7,7 +7,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.6.3
+-- Tested with: GHC 7.8.3
 --
 -- It represents a circuit synchronized with the event queue.
 -- Also it allows creating the recursive links with help of

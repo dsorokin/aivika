@@ -4,7 +4,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.6.3
+-- Tested with: GHC 7.8.3
 --
 -- The module defines the 'Parameter' monad that allows representing the model
 -- parameters. For example, they can be used when running the Monte-Carlo simulation.

@@ -5,7 +5,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.6.3
+-- Tested with: GHC 7.8.3
 --
 -- The 'Task' value represents a process that was already started in background.
 -- We can check the completion of the task, receive notifications about changing
