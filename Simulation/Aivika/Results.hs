@@ -239,8 +239,47 @@ data ResultData = DoubleResultData (Event Double)
                   -- ^ Cannot return data.
 
 -- | Whether an object containing the results emits a signal notifying about change of data.
-type ResultSignal = Maybe (Signal ())
-                  
+data ResultSignal = EmptyResultSignal
+                    -- ^ The signal is empty, which can take place for objects,
+                    -- vectors and constants.
+                  | AbsentResultSignal
+                    -- ^ A definitely absent signal, but the entity probably changes.
+                  | SpecifiedResultSignal (Signal ())
+                    -- ^ When the signal is strongly specified.
+                  | SemiSpecifiedResultSignal (Signal ())
+                    -- ^ When the specified signal was combined with its absence.
+
+instance Monoid ResultSignal where
+
+  mempty = EmptyResultSignal
+
+  mappend EmptyResultSignal z =
+    z
+  mappend AbsentResultSignal EmptyResultSignal =
+    AbsentResultSignal
+  mappend AbsentResultSignal AbsentResultSignal =
+    AbsentResultSignal
+  mappend AbsentResultSignal (SpecifiedResultSignal x) =
+    SemiSpecifiedResultSignal x
+  mappend AbsentResultSignal z@(SemiSpecifiedResultSignal x) =
+    z
+  mappend z@(SpecifiedResultSignal x) EmptyResultSignal =
+    z
+  mappend (SpecifiedResultSignal x) AbsentResultSignal =
+    SemiSpecifiedResultSignal x
+  mappend (SpecifiedResultSignal x) (SpecifiedResultSignal y) =
+    SpecifiedResultSignal (x <> y)
+  mappend (SpecifiedResultSignal x) (SemiSpecifiedResultSignal y) =
+    SemiSpecifiedResultSignal (x <> y)
+  mappend z@(SemiSpecifiedResultSignal x) EmptyResultSignal =
+    z
+  mappend z@(SemiSpecifiedResultSignal x) AbsentResultSignal =
+    z
+  mappend (SemiSpecifiedResultSignal x) (SpecifiedResultSignal y) =
+    SemiSpecifiedResultSignal (x <> y)
+  mappend (SemiSpecifiedResultSignal x) (SemiSpecifiedResultSignal y) =
+    SemiSpecifiedResultSignal (x <> y)
+
 -- | It associates the result sources with their names.
 type ResultSourceMap = M.Map ResultName ResultSource
 
@@ -276,8 +315,10 @@ data ResultObject =
                  -- ^ The object type identifier.
                  resultObjectProperties :: [ResultProperty],
                  -- ^ The object properties.
-                 resultObjectSummary :: ResultSource
+                 resultObjectSummary :: ResultSource,
                  -- ^ A short version of the object.
+                 resultObjectSignal :: ResultSignal
+                 -- ^ A common signal if present.
                }
 
 -- | The object property containing the simulation results.
@@ -298,8 +339,10 @@ data ResultVector =
                  -- ^ The vector identifier.
                  resultVectorItems :: V.Vector ResultSource,
                  -- ^ The sources supplied by the vector items.
-                 resultVectorSubscript :: V.Vector String
+                 resultVectorSubscript :: V.Vector String,
                  -- ^ The subscript used as a suffix to create item names.
+                 resultVectorSignal :: ResultSignal
+                 -- ^ A common signal if present.
                }
 
 -- | It separates the simulation results when printing.
@@ -332,6 +375,35 @@ resultSourceSummary (ResultVectorSource x) =
   x { resultVectorItems =
          V.map resultSourceSummary (resultVectorItems x) }
 resultSourceSummary z@(ResultSeparatorSource x) = z
+
+-- | Return a signal emitted by the source with eliminated
+-- 'EmptyResultSignal' as possible.
+resultSourceSignal :: ResultSource -> ResultSignal
+resultSourceSignal (ResultItemSource x) = resultItemSignal x
+resultSourceSignal (ResultObjectSource x) =
+  case resultObjectSignal x of
+    EmptyResultSignal ->
+      mconcat $
+      map (resultSourceSignal . resultPropertySource) $
+      resultObjectProperties x
+    s -> s
+resultSourceSignal (ResultVectorSource x) =
+  case resultVectorSignal x of
+    EmptyResultSignal ->
+      mconcat $
+      map resultSourceSignal $
+      V.toList (resultVectorItems x)
+    s -> s
+resultSourceSignal (ResultSeparatorSource x) = EmptyResultSignal
+
+-- | Memoize the source signal.
+memoSourceSignal :: ResultSource -> ResultSource
+memoSourceSignal z@(ResultItemSource x) = z
+memoSourceSignal z@(ResultObjectSource x) =
+  ResultObjectSource x { resultObjectSignal = resultSourceSignal z }
+memoSourceSignal z@(ResultVectorSource x) =
+  ResultVectorSource x { resultVectorSignal = resultSourceSignal z }
+memoSourceSignal z@(ResultSeparatorSource x) = z
 
 -- | Flatten the result items.
 flattenResultItems :: ResultSource -> [ResultItem]
@@ -522,19 +594,19 @@ retypeResultItem IntTimingStatsResultType z = ResultItemSource $ tr z
 retypeResultItem StringResultType z@(ResultItem n i (DoubleStatsResultData x) s) =
   mapResultItems (retypeResultItem StringResultType) $
   mapResultItems (\x -> ResultItemSource x { resultItemSignal = s }) $
-  makeSamplingStatsSource DoubleResultData n i x
+  makeSamplingStatsSource DoubleResultData n i (AppendedResultComputation x s)
 retypeResultItem StringResultType z@(ResultItem n i (DoubleTimingStatsResultData x) s) =
   mapResultItems (retypeResultItem StringResultType) $
   mapResultItems (\x -> ResultItemSource x { resultItemSignal = s }) $
-  makeTimingStatsSource DoubleResultData n i x
+  makeTimingStatsSource DoubleResultData n i (AppendedResultComputation x s)
 retypeResultItem StringResultType z@(ResultItem n i (IntStatsResultData x) s) =
   mapResultItems (retypeResultItem StringResultType) $
   mapResultItems (\x -> ResultItemSource x { resultItemSignal = s }) $
-  makeSamplingStatsSource IntResultData n i x
+  makeSamplingStatsSource IntResultData n i (AppendedResultComputation x s)
 retypeResultItem StringResultType z@(ResultItem n i (IntTimingStatsResultData x) s) =
   mapResultItems (retypeResultItem StringResultType) $
   mapResultItems (\x -> ResultItemSource x { resultItemSignal = s }) $
-  makeTimingStatsSource IntResultData n i x
+  makeTimingStatsSource IntResultData n i (AppendedResultComputation x s)
 retypeResultItem StringResultType z = ResultItemSource $ tr z
   where
     tr z@(ResultItem n i (DoubleResultData x) s) =
@@ -588,34 +660,35 @@ newResultPredefinedSignals = runDynamicsInStartTime $ runEventWith EarlierEvents
 
 -- | Prepare the simulation results.
 results :: [ResultSource] -> Results
-results m =
-  Results { resultSourceMap  = M.fromList $ map (\x -> (resultSourceName x, x)) m,
-            resultSourceList = m }
+results ms =
+  Results { resultSourceMap  = M.fromList $ map (\x -> (resultSourceName x, x)) ms',
+            resultSourceList = ms' }
+    where ms' = map memoSourceSignal ms
 
 -- | Return a short version of the simulation results, i.e. their summary.
 resultSummary :: Results -> Results
 resultSummary xs =
   results (map resultSourceSummary $ resultSourceList xs)
 
--- | Return a mixed signal for the specified items received from 
--- the provided simulation results.
+-- | Return a pure signal mixed with the predefined ones by
+-- the specified result signal provided by the sources.
 --
--- This signal is triggered when the item signals are triggered.
+-- This signal is triggered when the source signal is triggered.
 -- The mixed signal is also triggered in the integration time points
--- if there is at least one item without signal.
-mixedResultItemSignal :: ResultPredefinedSignals -> [ResultItem] -> Signal ()
-mixedResultItemSignal rs xs =
-  let xs0 = map resultItemSignal xs
-      xs1 = filter isJust xs0
-      xs2 = filter isNothing xs0
-      signal1 = mconcat $ map fromJust xs1
-      signal2 = if null xs2 
-                then signal3 <> signal4
-                else signal5
-      signal3 = void $ resultSignalInStartTime rs
-      signal4 = void $ resultSignalInStopTime rs
-      signal5 = void $ resultSignalInIntegTimes rs
-  in signal1 <> signal2
+-- if the source signal is absent or it was combined with an absent signal,
+-- when at least one result item had no signal.
+mixedResultSignal :: ResultPredefinedSignals -> ResultSignal -> Signal ()
+mixedResultSignal rs EmptyResultSignal =
+  void (resultSignalInStartTime rs)
+mixedResultSignal rs AbsentResultSignal =
+  void (resultSignalInIntegTimes rs)
+mixedResultSignal rs (SpecifiedResultSignal s) =
+  void (resultSignalInStartTime rs) <>
+  void (resultSignalInStopTime rs) <>
+  s
+mixedResultSignal rs (SemiSpecifiedResultSignal s) =
+  void (resultSignalInIntegTimes rs) <>
+  s
 
 -- | Lookup the mandatory result sources by the specified names.
 lookupResultSources :: ResultSourceMap -> [ResultName] -> [ResultSource]
@@ -640,43 +713,60 @@ class ResultComputation m where
 instance ResultComputation Parameter where
 
   resultComputationData = liftParameter
-  resultComputationSignal = const Nothing
+  resultComputationSignal = const AbsentResultSignal
 
 instance ResultComputation Simulation where
 
   resultComputationData = liftSimulation
-  resultComputationSignal = const Nothing
+  resultComputationSignal = const AbsentResultSignal
 
 instance ResultComputation Dynamics where
 
   resultComputationData = liftDynamics
-  resultComputationSignal = const Nothing
+  resultComputationSignal = const AbsentResultSignal
 
 instance ResultComputation Event where
 
   resultComputationData = id
-  resultComputationSignal = const Nothing
+  resultComputationSignal = const AbsentResultSignal
 
 instance ResultComputation Ref where
 
   resultComputationData = readRef
-  resultComputationSignal = Just . refChanged_
+  resultComputationSignal = SpecifiedResultSignal . refChanged_
 
 instance ResultComputation LR.Ref where
 
   resultComputationData = LR.readRef
-  resultComputationSignal = const Nothing
+  resultComputationSignal = const AbsentResultSignal
 
 instance ResultComputation Var where
 
   resultComputationData = readVar
-  resultComputationSignal = Just . varChanged_
+  resultComputationSignal = SpecifiedResultSignal . varChanged_
 
 instance ResultComputation Signalable where
 
   resultComputationData = readSignalable
-  resultComputationSignal = Just . signalableChanged_
+  resultComputationSignal = SpecifiedResultSignal . signalableChanged_
 
+-- | A result computation appended by the specified signal.
+data AppendedResultComputation m a =
+  AppendedResultComputation { appendedResultComputation :: m a,
+                              -- ^ Contains the source computation.
+                              appendedResultComputationSignal :: ResultSignal
+                              -- ^ Contains a signal to be combined with the computation signal.
+                            }
+
+instance ResultComputation m => ResultComputation (AppendedResultComputation m) where
+
+  resultComputationData =
+    resultComputationData . appendedResultComputation
+
+  resultComputationSignal m =
+    resultComputationSignal (appendedResultComputation m) <>
+    appendedResultComputationSignal m
+      
 -- | Make a result item source. 
 makeResultItemSource :: ResultComputation m
                         => (Event a -> ResultData)
@@ -712,6 +802,7 @@ makeSamplingStatsSource f name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = SamplingStatsId,
+    resultObjectSignal = resultComputationSignal m,
     resultObjectSummary =
       makeSamplingStatsSummary name i m,
     resultObjectProperties = [
@@ -751,6 +842,7 @@ makeTimingStatsSource f name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = TimingStatsId,
+    resultObjectSignal = resultComputationSignal m,
     resultObjectSummary =
       makeTimingStatsSummary name i m,
     resultObjectProperties = [
@@ -793,6 +885,7 @@ makeQueueSource name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = FiniteQueueId,
+    resultObjectSignal = EmptyResultSignal,
     resultObjectSummary =
       makeQueueSummary name i m,
     resultObjectProperties = [
@@ -852,28 +945,28 @@ makeQueueSource name i m =
         getEnqueueWaitTime = DoubleStatsResultData . Q.enqueueWaitTime
         getDequeueWaitTime = DoubleStatsResultData . Q.dequeueWaitTime
         -- signals
-        enqueueStrategySignal = const Nothing
-        enqueueStoringStrategySignal = const Nothing
-        dequeueStrategySignal = const Nothing
-        whetherIsEmptySignal = Just . Q.queueNullChanged_
-        whetherIsFullSignal = Just . Q.queueFullChanged_
-        maxCountSignal = const Nothing
-        countSignal = Just . Q.queueCountChanged_
-        countStatsSignal = Just . Q.queueCountChanged_
-        enqueueCountSignal = Just . Q.enqueueCountChanged_
-        enqueueLostCountSignal = Just . Q.enqueueLostCountChanged_
-        enqueueStoreCountSignal = Just . Q.enqueueStoreCountChanged_
-        dequeueCountSignal = Just . Q.dequeueCountChanged_
-        dequeueExtractCountSignal = Just . Q.dequeueExtractCountChanged_
-        loadFactorSignal = Just . Q.queueLoadFactorChanged_
-        enqueueRateSignal = const Nothing
-        enqueueStoreRateSignal = const Nothing
-        dequeueRateSignal = const Nothing
-        dequeueExtractRateSignal = const Nothing
-        waitTimeSignal = Just . Q.queueWaitTimeChanged_
-        totalWaitTimeSignal = Just . Q.queueTotalWaitTimeChanged_
-        enqueueWaitTimeSignal = Just . Q.enqueueWaitTimeChanged_
-        dequeueWaitTimeSignal = Just . Q.dequeueWaitTimeChanged_
+        enqueueStrategySignal = const EmptyResultSignal
+        enqueueStoringStrategySignal = const EmptyResultSignal
+        dequeueStrategySignal = const EmptyResultSignal
+        whetherIsEmptySignal = SpecifiedResultSignal . Q.queueNullChanged_
+        whetherIsFullSignal = SpecifiedResultSignal . Q.queueFullChanged_
+        maxCountSignal = const EmptyResultSignal
+        countSignal = SpecifiedResultSignal . Q.queueCountChanged_
+        countStatsSignal = SpecifiedResultSignal . Q.queueCountChanged_
+        enqueueCountSignal = SpecifiedResultSignal . Q.enqueueCountChanged_
+        enqueueLostCountSignal = SpecifiedResultSignal . Q.enqueueLostCountChanged_
+        enqueueStoreCountSignal = SpecifiedResultSignal . Q.enqueueStoreCountChanged_
+        dequeueCountSignal = SpecifiedResultSignal . Q.dequeueCountChanged_
+        dequeueExtractCountSignal = SpecifiedResultSignal . Q.dequeueExtractCountChanged_
+        loadFactorSignal = SpecifiedResultSignal . Q.queueLoadFactorChanged_
+        enqueueRateSignal = const EmptyResultSignal
+        enqueueStoreRateSignal = const EmptyResultSignal
+        dequeueRateSignal = const EmptyResultSignal
+        dequeueExtractRateSignal = const EmptyResultSignal
+        waitTimeSignal = SpecifiedResultSignal . Q.queueWaitTimeChanged_
+        totalWaitTimeSignal = SpecifiedResultSignal . Q.queueTotalWaitTimeChanged_
+        enqueueWaitTimeSignal = SpecifiedResultSignal . Q.enqueueWaitTimeChanged_
+        dequeueWaitTimeSignal = SpecifiedResultSignal . Q.dequeueWaitTimeChanged_
 
 -- | Return the source by the specified (infinite) queue.
 makeInfiniteQueueSource :: (Show sm, Show so)
@@ -890,6 +983,7 @@ makeInfiniteQueueSource name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = InfiniteQueueId,
+    resultObjectSignal = EmptyResultSignal,
     resultObjectSummary =
       makeInfiniteQueueSummary name i m,
     resultObjectProperties = [
@@ -931,19 +1025,19 @@ makeInfiniteQueueSource name i m =
         getWaitTime = DoubleStatsResultData . IQ.queueWaitTime
         getDequeueWaitTime = DoubleStatsResultData . IQ.dequeueWaitTime
         -- signals
-        enqueueStoringStrategySignal = const Nothing
-        dequeueStrategySignal = const Nothing
-        whetherIsEmptySignal = Just . IQ.queueNullChanged_
-        countSignal = Just . IQ.queueCountChanged_
-        countStatsSignal = Just . IQ.queueCountChanged_
-        enqueueStoreCountSignal = Just . IQ.enqueueStoreCountChanged_
-        dequeueCountSignal = Just . IQ.dequeueCountChanged_
-        dequeueExtractCountSignal = Just . IQ.dequeueExtractCountChanged_
-        enqueueStoreRateSignal = const Nothing
-        dequeueRateSignal = const Nothing
-        dequeueExtractRateSignal = const Nothing
-        waitTimeSignal = Just . IQ.queueWaitTimeChanged_
-        dequeueWaitTimeSignal = Just . IQ.dequeueWaitTimeChanged_
+        enqueueStoringStrategySignal = const EmptyResultSignal
+        dequeueStrategySignal = const EmptyResultSignal
+        whetherIsEmptySignal = SpecifiedResultSignal . IQ.queueNullChanged_
+        countSignal = SpecifiedResultSignal . IQ.queueCountChanged_
+        countStatsSignal = SpecifiedResultSignal . IQ.queueCountChanged_
+        enqueueStoreCountSignal = SpecifiedResultSignal . IQ.enqueueStoreCountChanged_
+        dequeueCountSignal = SpecifiedResultSignal . IQ.dequeueCountChanged_
+        dequeueExtractCountSignal = SpecifiedResultSignal . IQ.dequeueExtractCountChanged_
+        enqueueStoreRateSignal = const EmptyResultSignal
+        dequeueRateSignal = const EmptyResultSignal
+        dequeueExtractRateSignal = const EmptyResultSignal
+        waitTimeSignal = SpecifiedResultSignal . IQ.queueWaitTimeChanged_
+        dequeueWaitTimeSignal = SpecifiedResultSignal . IQ.dequeueWaitTimeChanged_
   
 -- | Return the source by the specified arrival timer.
 makeArrivalTimerSource :: ResultName
@@ -959,6 +1053,7 @@ makeArrivalTimerSource name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = ArrivalTimerId,
+    resultObjectSignal = EmptyResultSignal,
     resultObjectSummary =
       makeArrivalTimerSummary name i m,
     resultObjectProperties = [
@@ -976,7 +1071,7 @@ makeArrivalTimerSource name i m =
         -- properties
         getProcessingTime = DoubleStatsResultData . arrivalProcessingTime
         -- signals
-        processingTimeChanged = Just . arrivalProcessingTimeChanged_
+        processingTimeChanged = SpecifiedResultSignal . arrivalProcessingTimeChanged_
 
 -- | Return the source by the specified server.
 makeServerSource :: Show s
@@ -993,6 +1088,7 @@ makeServerSource name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = ServerId,
+    resultObjectSignal = EmptyResultSignal,
     resultObjectSummary =
       makeServerSummary name i m,
     resultObjectProperties = [
@@ -1030,17 +1126,17 @@ makeServerSource name i m =
         getProcessingFactor = DoubleResultData . serverProcessingFactor
         getOutputWaitFactor = DoubleResultData . serverOutputWaitFactor
         -- signals
-        initStateChanged = const Nothing
-        stateChanged = Just . serverStateChanged_
-        totalInputWaitTimeChanged = Just . serverTotalInputWaitTimeChanged_
-        totalProcessingTimeChanged = Just . serverTotalProcessingTimeChanged_
-        totalOutputWaitTimeChanged = Just . serverTotalOutputWaitTimeChanged_
-        inputWaitTimeChanged = Just . serverInputWaitTimeChanged_
-        processingTimeChanged = Just . serverProcessingTimeChanged_
-        outputWaitTimeChanged = Just . serverOutputWaitTimeChanged_
-        inputWaitFactorChanged = Just . serverInputWaitFactorChanged_
-        processingFactorChanged = Just . serverProcessingFactorChanged_
-        outputWaitFactorChanged = Just . serverOutputWaitFactorChanged_
+        initStateChanged = const EmptyResultSignal
+        stateChanged = SpecifiedResultSignal . serverStateChanged_
+        totalInputWaitTimeChanged = SpecifiedResultSignal . serverTotalInputWaitTimeChanged_
+        totalProcessingTimeChanged = SpecifiedResultSignal . serverTotalProcessingTimeChanged_
+        totalOutputWaitTimeChanged = SpecifiedResultSignal . serverTotalOutputWaitTimeChanged_
+        inputWaitTimeChanged = SpecifiedResultSignal . serverInputWaitTimeChanged_
+        processingTimeChanged = SpecifiedResultSignal . serverProcessingTimeChanged_
+        outputWaitTimeChanged = SpecifiedResultSignal . serverOutputWaitTimeChanged_
+        inputWaitFactorChanged = SpecifiedResultSignal . serverInputWaitFactorChanged_
+        processingFactorChanged = SpecifiedResultSignal . serverProcessingFactorChanged_
+        outputWaitFactorChanged = SpecifiedResultSignal . serverOutputWaitFactorChanged_
 
 -- | Return an arbitrary text as a separator source.
 makeTextSource :: String -> ResultSource
@@ -1091,6 +1187,7 @@ makeQueueSummary name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = FiniteQueueId,
+    resultObjectSignal = EmptyResultSignal,
     resultObjectSummary =
       makeQueueSummary name i m,
     resultObjectProperties = [
@@ -1124,15 +1221,15 @@ makeQueueSummary name i m =
         getLoadFactor = DoubleResultData . Q.queueLoadFactor
         getWaitTime = StringResultData . fmap show . Q.queueWaitTime
         -- signals
-        maxCountSignal = const Nothing
-        countStatsSignal = Just . Q.queueCountChanged_
-        enqueueCountSignal = Just . Q.enqueueCountChanged_
-        enqueueLostCountSignal = Just . Q.enqueueLostCountChanged_
-        enqueueStoreCountSignal = Just . Q.enqueueStoreCountChanged_
-        dequeueCountSignal = Just . Q.dequeueCountChanged_
-        dequeueExtractCountSignal = Just . Q.dequeueExtractCountChanged_
-        loadFactorSignal = Just . Q.queueLoadFactorChanged_
-        waitTimeSignal = Just . Q.queueWaitTimeChanged_
+        maxCountSignal = const EmptyResultSignal
+        countStatsSignal = SpecifiedResultSignal . Q.queueCountChanged_
+        enqueueCountSignal = SpecifiedResultSignal . Q.enqueueCountChanged_
+        enqueueLostCountSignal = SpecifiedResultSignal . Q.enqueueLostCountChanged_
+        enqueueStoreCountSignal = SpecifiedResultSignal . Q.enqueueStoreCountChanged_
+        dequeueCountSignal = SpecifiedResultSignal . Q.dequeueCountChanged_
+        dequeueExtractCountSignal = SpecifiedResultSignal . Q.dequeueExtractCountChanged_
+        loadFactorSignal = SpecifiedResultSignal . Q.queueLoadFactorChanged_
+        waitTimeSignal = SpecifiedResultSignal . Q.queueWaitTimeChanged_
   
 -- | Return the summary by the specified (infinite) queue.
 makeInfiniteQueueSummary :: (Show sm, Show so)
@@ -1149,6 +1246,7 @@ makeInfiniteQueueSummary name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = InfiniteQueueId,
+    resultObjectSignal = EmptyResultSignal,
     resultObjectSummary =
       makeInfiniteQueueSummary name i m,
     resultObjectProperties = [
@@ -1174,11 +1272,11 @@ makeInfiniteQueueSummary name i m =
         getDequeueExtractCount = IntResultData . IQ.dequeueExtractCount
         getWaitTime = StringResultData . fmap show . IQ.queueWaitTime
         -- signals
-        countStatsSignal = Just . IQ.queueCountChanged_
-        enqueueStoreCountSignal = Just . IQ.enqueueStoreCountChanged_
-        dequeueCountSignal = Just . IQ.dequeueCountChanged_
-        dequeueExtractCountSignal = Just . IQ.dequeueExtractCountChanged_
-        waitTimeSignal = Just . IQ.queueWaitTimeChanged_
+        countStatsSignal = SpecifiedResultSignal . IQ.queueCountChanged_
+        enqueueStoreCountSignal = SpecifiedResultSignal . IQ.enqueueStoreCountChanged_
+        dequeueCountSignal = SpecifiedResultSignal . IQ.dequeueCountChanged_
+        dequeueExtractCountSignal = SpecifiedResultSignal . IQ.dequeueExtractCountChanged_
+        waitTimeSignal = SpecifiedResultSignal . IQ.queueWaitTimeChanged_
   
 -- | Return the summary by the specified arrival timer.
 makeArrivalTimerSummary :: ResultName
@@ -1194,6 +1292,7 @@ makeArrivalTimerSummary name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = ArrivalTimerId,
+    resultObjectSignal = EmptyResultSignal,
     resultObjectSummary =
       makeArrivalTimerSummary name i m,
     resultObjectProperties = [
@@ -1211,7 +1310,7 @@ makeArrivalTimerSummary name i m =
         -- properties
         getProcessingTime = StringResultData . fmap show . arrivalProcessingTime
         -- signals
-        processingTimeChanged = Just . arrivalProcessingTimeChanged_
+        processingTimeChanged = SpecifiedResultSignal . arrivalProcessingTimeChanged_
 
 -- | Return the summary by the specified server.
 makeServerSummary :: Show s
@@ -1228,6 +1327,7 @@ makeServerSummary name i m =
     resultObjectName = name,
     resultObjectId = i,
     resultObjectTypeId = ServerId,
+    resultObjectSignal = EmptyResultSignal,
     resultObjectSummary =
       makeServerSummary name i m,
     resultObjectProperties = [
@@ -1255,12 +1355,12 @@ makeServerSummary name i m =
         getProcessingFactor = DoubleResultData . serverProcessingFactor
         getOutputWaitFactor = DoubleResultData . serverOutputWaitFactor
         -- signals
-        inputWaitTimeChanged = Just . serverInputWaitTimeChanged_
-        processingTimeChanged = Just . serverProcessingTimeChanged_
-        outputWaitTimeChanged = Just . serverOutputWaitTimeChanged_
-        inputWaitFactorChanged = Just . serverInputWaitFactorChanged_
-        processingFactorChanged = Just . serverProcessingFactorChanged_
-        outputWaitFactorChanged = Just . serverOutputWaitFactorChanged_
+        inputWaitTimeChanged = SpecifiedResultSignal . serverInputWaitTimeChanged_
+        processingTimeChanged = SpecifiedResultSignal . serverProcessingTimeChanged_
+        outputWaitTimeChanged = SpecifiedResultSignal . serverOutputWaitTimeChanged_
+        inputWaitFactorChanged = SpecifiedResultSignal . serverInputWaitFactorChanged_
+        processingFactorChanged = SpecifiedResultSignal . serverProcessingFactorChanged_
+        outputWaitFactorChanged = SpecifiedResultSignal . serverOutputWaitFactorChanged_
 
 -- | Make an integer subscript
 makeIntSubscript :: Show a => a -> String
@@ -1340,7 +1440,8 @@ instance ResultProvider p => ResultProvider (ResultListWithSubscript p) where
     ResultVector { resultVectorName = name,
                    resultVectorId = i,
                    resultVectorItems = V.fromList items,
-                   resultVectorSubscript = V.fromList ys }
+                   resultVectorSubscript = V.fromList ys,
+                   resultVectorSignal = EmptyResultSignal }
     where
       items =
         flip map (zip ys xs) $ \(y, x) ->
@@ -1361,7 +1462,8 @@ instance ResultProvider p => ResultProvider (ResultVectorWithSubscript p) where
     ResultVector { resultVectorName = name,
                    resultVectorId = i,
                    resultVectorItems = items,
-                   resultVectorSubscript = ys }
+                   resultVectorSubscript = ys,
+                   resultVectorSignal = EmptyResultSignal }
     where
       items =
         V.generate (V.length xs) $ \i ->
