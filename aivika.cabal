@@ -89,7 +89,9 @@ cabal-version:   >= 1.6
 build-type:      Simple
 tested-with:     GHC == 7.6.3
 
-extra-source-files:  examples/BassDiffusion.hs
+extra-source-files:  examples/BassDiffusion/Model.hs
+                     examples/BassDiffusion/Main.hs
+                     examples/BassDiffusion/README.hs
                      examples/ChemicalReaction.hs
                      examples/ChemicalReactionCircuit.hs
                      examples/FishBank.hs
