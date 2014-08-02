@@ -78,7 +78,7 @@ newFurnace :: Simulation Furnace
 newFurnace =
   do pits <- sequence [newPit | i <- [1..10]]
      pitCount <- newRef 0
-     queue <- newFCFSQueue
+     queue <- runEventInStartTime newFCFSQueue
      heatingTime <- newRef emptySamplingStats
      h <- newRef 1650.0
      readyCount <- newRef 0

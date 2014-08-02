@@ -36,6 +36,7 @@ module Simulation.Aivika.Queue.Infinite
         dequeueExtractRate,
         queueWaitTime,
         dequeueWaitTime,
+        estimatedQueueArrivalRate,
         -- * Dequeuing and Enqueuing
         dequeue,
         dequeueWithOutputPriority,
@@ -59,6 +60,8 @@ module Simulation.Aivika.Queue.Infinite
         queueWaitTimeChanged_,
         dequeueWaitTimeChanged,
         dequeueWaitTimeChanged_,
+        estimatedQueueArrivalRateChanged,
+        estimatedQueueArrivalRateChanged_,
         -- * Basic Signals
         enqueueStored,
         dequeueRequested,
@@ -349,6 +352,28 @@ dequeueWaitTimeChanged q =
 -- | Signal when the 'dequeueWaitTime' property value has changed.
 dequeueWaitTimeChanged_ :: Queue sm qm so qo a -> Signal ()
 dequeueWaitTimeChanged_ q =
+  mapSignal (const ()) (dequeueExtracted q)
+
+-- | Return an estimated long-term average effective arrival rate according
+-- Little's law.
+--
+-- See also 'estimatedQueueArrivalRateChanged' and 'estimatedQueueArrivalRateChanged_'.
+estimatedQueueArrivalRate :: Queue sm qm so qo a -> Event Double
+estimatedQueueArrivalRate q =
+  Event $ \p ->
+  do x <- readIORef (queueCountStatsRef q)
+     y <- readIORef (queueWaitTimeRef q)
+     return (timingStatsMean x / samplingStatsMean y) 
+      
+-- | Signal when the 'estimatedQueueArrivalRate' property value has changed.
+estimatedQueueArrivalRateChanged :: Queue sm qm so qo a -> Signal Double
+estimatedQueueArrivalRateChanged q =
+  mapSignalM (const $ estimatedQueueArrivalRate q) (estimatedQueueArrivalRateChanged_ q)
+      
+-- | Signal when the 'estimatedQueueArrivalRate' property value has changed.
+estimatedQueueArrivalRateChanged_ :: Queue sm qm so qo a -> Signal ()
+estimatedQueueArrivalRateChanged_ q =
+  mapSignal (const ()) (enqueueStored q) <>
   mapSignal (const ()) (dequeueExtracted q)
   
 -- | Dequeue suspending the process if the queue is empty.
