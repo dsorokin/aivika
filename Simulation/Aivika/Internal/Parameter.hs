@@ -46,6 +46,7 @@ import Control.Concurrent.MVar
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+import Control.Applicative
 
 import Data.IORef
 import qualified Data.IntMap as M
@@ -118,6 +119,10 @@ generatorParameter = Parameter $ return . runGenerator
 
 instance Functor Parameter where
   fmap = liftMP
+
+instance Applicative Parameter where
+  pure = return
+  (<*>) = ap
 
 instance Eq (Parameter a) where
   x == y = error "Can't compare parameters." 

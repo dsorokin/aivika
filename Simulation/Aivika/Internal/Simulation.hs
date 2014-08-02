@@ -34,6 +34,7 @@ import Control.Exception (IOException, throw, finally)
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+import Control.Applicative
 
 import Data.IORef
 
@@ -90,6 +91,10 @@ simulationEventQueue = Simulation $ return . runEventQueue
 
 instance Functor Simulation where
   fmap = liftMS
+
+instance Applicative Simulation where
+  pure = return
+  (<*>) = ap
 
 liftMS :: (a -> b) -> Simulation a -> Simulation b
 {-# INLINE liftMS #-}

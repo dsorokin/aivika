@@ -79,9 +79,11 @@ module Simulation.Aivika.Internal.Process
 
 import Data.Maybe
 import Data.IORef
+
 import Control.Exception (IOException, throw)
 import Control.Monad
 import Control.Monad.Trans
+import Control.Applicative
 
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Parameter
@@ -322,6 +324,10 @@ instance Monad Process where
 
 instance Functor Process where
   fmap = liftM
+
+instance Applicative Process where
+  pure = return
+  (<*>) = ap
 
 instance ParameterLift Process where
   liftParameter = liftPP

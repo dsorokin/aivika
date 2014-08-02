@@ -47,6 +47,7 @@ import Control.Exception (IOException, throw)
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Applicative
 
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Parameter
@@ -196,6 +197,10 @@ instance EventLift Cont where
 
 instance Functor Cont where
   fmap = liftM
+
+instance Applicative Cont where
+  pure = return
+  (<*>) = ap
 
 instance MonadIO Cont where
   liftIO = liftIOC 

@@ -51,6 +51,7 @@ import Control.Exception (IOException, throw, finally)
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+import Control.Applicative
 
 import qualified Simulation.Aivika.PriorityQueue as PQ
 
@@ -81,6 +82,10 @@ bindE (Event m) k =
 
 instance Functor Event where
   fmap = liftME
+
+instance Applicative Event where
+  pure = return
+  (<*>) = ap
 
 liftME :: (a -> b) -> Event a -> Event b
 {-# INLINE liftME #-}

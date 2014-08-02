@@ -37,6 +37,7 @@ import Control.Exception (IOException, throw, finally)
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+import Control.Applicative
 
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Parameter
@@ -88,6 +89,10 @@ runDynamicsInTimes ts (Dynamics m) =
 
 instance Functor Dynamics where
   fmap = liftMD
+
+instance Applicative Dynamics where
+  pure = return
+  (<*>) = ap
 
 instance Eq (Dynamics a) where
   x == y = error "Can't compare dynamics." 
