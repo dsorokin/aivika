@@ -640,6 +640,9 @@ data Results =
             -- ^ The sources of simulation results as an ordered list.
           }
 
+-- | It transforms the results of simulation.
+type ResultTransform = Results -> Results
+
 -- | It representes the predefined signals provided by every simulation model.
 data ResultPredefinedSignals =
   ResultPredefinedSignals { resultSignalInIntegTimes :: Signal Double,
@@ -668,9 +671,47 @@ results ms =
     where ms' = map memoSourceSignal ms
 
 -- | Return a short version of the simulation results, i.e. their summary.
-resultSummary :: Results -> Results
+resultSummary :: ResultTransform
 resultSummary xs =
   results (map resultSourceSummary $ resultSourceList xs)
+
+-- | Take a result by its name.
+resultByName :: ResultName -> ResultTransform
+resultByName name rs =
+  case M.lookup name (resultSourceMap rs) of
+    Just x -> results [x]
+    Nothing ->
+      error $
+      "Not found result source with name " ++ name ++
+      ": resultByName"
+
+-- | Take a result from the object with the specified property label.
+resultByProperty :: ResultName -> ResultTransform
+resultByProperty label rs =
+  flip composeResults rs $ \x ->
+  case x of
+    ResultObjectSource s ->
+      let ps =
+            flip filter (resultObjectProperties s) $ \p ->
+            resultPropertyLabel p == label
+      in case ps of
+        [] ->
+          error $
+          "Not found property " ++ label ++
+          " for object " ++ resultObjectName s ++
+          ": resultByProperty"
+        ps ->
+          map resultPropertySource ps
+    x ->
+      error $
+      "Result source " ++ resultSourceName x ++
+      " is not an object" ++
+      ": resultByProperty"
+
+-- | Compose the results using the specified transformation function.
+composeResults :: (ResultSource -> [ResultSource]) -> ResultTransform
+composeResults pred xs =
+  results $ mconcat $ map pred $ resultSourceList xs
 
 -- | Return a pure signal mixed with the predefined ones by
 -- the specified result signal provided by the sources.
@@ -691,17 +732,6 @@ mixedResultSignal rs (SpecifiedResultSignal s) =
 mixedResultSignal rs (SemiSpecifiedResultSignal s) =
   void (resultSignalInIntegTimes rs) <>
   s
-
--- | Lookup the mandatory result sources by the specified names.
-lookupResultSources :: ResultSourceMap -> [ResultName] -> [ResultSource]
-lookupResultSources xs names =
-  flip map names $ \name ->
-  case M.lookup name xs of
-    Nothing -> 
-      error $ 
-      "No found result source with name " ++
-      name ++ ": lookupResultSources"
-    Just x -> x
 
 -- | Represents a computation that can return the simulation data.
 class ResultComputation m where
