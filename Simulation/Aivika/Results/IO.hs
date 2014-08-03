@@ -270,7 +270,7 @@ printResultsWithTime print results =
          y1 = tr x1
          y2 = tr x2
          y3 = tr x3
-         ys = retypeResults StringResultType xs
+         ys = resultSourceList (retypeResults StringResultType xs)
      print y1
      print y2
      -- print y3

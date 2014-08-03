@@ -623,14 +623,12 @@ retypeResultItem StringResultType z = ResultItemSource $ tr z
       z
 retypeResultItem DefaultResultType z = ResultItemSource z
 
--- | Return the sources by the results using the desired data type.
+-- | Transform the results using the desired data type.
 retypeResults :: ResultType
                  -- ^ the data type in which we are going to receive the sources
-                 -> Results
-                 -- ^ the simulation results
-                 -> [ResultSource]
-retypeResults t results =
-  map (mapResultItems $ retypeResultItem t) (resultSourceList results)
+                 -> ResultTransform
+retypeResults t rs =
+  results $ map (mapResultItems $ retypeResultItem t) (resultSourceList rs)
 
 -- | It contains the results of simulation.
 data Results =
