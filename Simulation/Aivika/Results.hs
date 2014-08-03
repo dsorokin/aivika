@@ -150,8 +150,8 @@ data ResultId = TimeId
                 -- ^ Property 'Q.enqueueWaitTime'.
               | DequeueWaitTimeId
                 -- ^ Property 'Q.dequeueWaitTime'.
-              | EstimatedQueueArrivalRateId
-                -- ^ Property 'Q.estimatedQueueArrivalRate'.
+              | QueueRateId
+                -- ^ Property 'Q.queueRate'.
               | ArrivalTimerId
                 -- ^ An 'ArrivalTimer'.
               | ArrivalProcessingTimeId
@@ -913,7 +913,7 @@ makeQueueSource name i m =
       makeProperty "queueTotalWaitTime" QueueTotalWaitTimeId getTotalWaitTime totalWaitTimeSignal,
       makeProperty "enqueueWaitTime" EnqueueWaitTimeId getEnqueueWaitTime enqueueWaitTimeSignal,
       makeProperty "dequeueWaitTime" DequeueWaitTimeId getDequeueWaitTime dequeueWaitTimeSignal,
-      makeProperty "estimatedQueueArrivalRate" EstimatedQueueArrivalRateId getArrivalRate arrivalRateSignal ] }
+      makeProperty "queueRate" QueueRateId getRate rateSignal ] }
   where makeProperty name' i f g =
           ResultProperty { resultPropertyLabel = name',
                            resultPropertyId = i,
@@ -947,7 +947,7 @@ makeQueueSource name i m =
         getTotalWaitTime = DoubleStatsResultData . Q.queueTotalWaitTime
         getEnqueueWaitTime = DoubleStatsResultData . Q.enqueueWaitTime
         getDequeueWaitTime = DoubleStatsResultData . Q.dequeueWaitTime
-        getArrivalRate = DoubleResultData . Q.estimatedQueueArrivalRate
+        getRate = DoubleResultData . Q.queueRate
         -- signals
         enqueueStrategySignal = const EmptyResultSignal
         enqueueStoringStrategySignal = const EmptyResultSignal
@@ -971,7 +971,7 @@ makeQueueSource name i m =
         totalWaitTimeSignal = SpecifiedResultSignal . Q.queueTotalWaitTimeChanged_
         enqueueWaitTimeSignal = SpecifiedResultSignal . Q.enqueueWaitTimeChanged_
         dequeueWaitTimeSignal = SpecifiedResultSignal . Q.dequeueWaitTimeChanged_
-        arrivalRateSignal = SpecifiedResultSignal . Q.estimatedQueueArrivalRateChanged_
+        rateSignal = SpecifiedResultSignal . Q.queueRateChanged_
 
 -- | Return the source by the specified (infinite) queue.
 makeInfiniteQueueSource :: (Show sm, Show so)
@@ -1005,7 +1005,7 @@ makeInfiniteQueueSource name i m =
       makeProperty "dequeueExtractRate" DequeueExtractRateId getDequeueExtractRate dequeueExtractRateSignal,
       makeProperty "queueWaitTime" QueueWaitTimeId getWaitTime waitTimeSignal,
       makeProperty "dequeueWaitTime" DequeueWaitTimeId getDequeueWaitTime dequeueWaitTimeSignal,
-      makeProperty "estimatedQueueArrivalRate" EstimatedQueueArrivalRateId getArrivalRate arrivalRateSignal ] }
+      makeProperty "queueRate" QueueRateId getRate rateSignal ] }
   where makeProperty name' i f g =
           ResultProperty { resultPropertyLabel = name',
                            resultPropertyId = i,
@@ -1030,7 +1030,7 @@ makeInfiniteQueueSource name i m =
         getDequeueExtractRate = DoubleResultData . IQ.dequeueExtractRate
         getWaitTime = DoubleStatsResultData . IQ.queueWaitTime
         getDequeueWaitTime = DoubleStatsResultData . IQ.dequeueWaitTime
-        getArrivalRate = DoubleResultData . IQ.estimatedQueueArrivalRate
+        getRate = DoubleResultData . IQ.queueRate
         -- signals
         enqueueStoringStrategySignal = const EmptyResultSignal
         dequeueStrategySignal = const EmptyResultSignal
@@ -1045,7 +1045,7 @@ makeInfiniteQueueSource name i m =
         dequeueExtractRateSignal = const EmptyResultSignal
         waitTimeSignal = SpecifiedResultSignal . IQ.queueWaitTimeChanged_
         dequeueWaitTimeSignal = SpecifiedResultSignal . IQ.dequeueWaitTimeChanged_
-        arrivalRateSignal = SpecifiedResultSignal . IQ.estimatedQueueArrivalRateChanged_
+        rateSignal = SpecifiedResultSignal . IQ.queueRateChanged_
   
 -- | Return the source by the specified arrival timer.
 makeArrivalTimerSource :: ResultName
@@ -1208,7 +1208,7 @@ makeQueueSummary name i m =
       makeProperty "dequeueExtractCount" DequeueExtractCountId getDequeueExtractCount dequeueExtractCountSignal,
       makeProperty "queueLoadFactor" QueueLoadFactorId getLoadFactor loadFactorSignal,
       makeProperty "queueWaitTime" QueueWaitTimeId getWaitTime waitTimeSignal,
-      makeProperty "estimatedQueueArrivalRate" EstimatedQueueArrivalRateId getArrivalRate arrivalRateSignal ] }
+      makeProperty "queueRate" QueueRateId getRate rateSignal ] }
   where makeProperty name' i f g =
           ResultProperty { resultPropertyLabel = name',
                            resultPropertyId = i,
@@ -1229,7 +1229,7 @@ makeQueueSummary name i m =
         getDequeueExtractCount = IntResultData . Q.dequeueExtractCount
         getLoadFactor = DoubleResultData . Q.queueLoadFactor
         getWaitTime = StringResultData . fmap show . Q.queueWaitTime
-        getArrivalRate = StringResultData . fmap show . Q.estimatedQueueArrivalRate
+        getRate = StringResultData . fmap show . Q.queueRate
         -- signals
         maxCountSignal = const EmptyResultSignal
         countStatsSignal = SpecifiedResultSignal . Q.queueCountChanged_
@@ -1240,7 +1240,7 @@ makeQueueSummary name i m =
         dequeueExtractCountSignal = SpecifiedResultSignal . Q.dequeueExtractCountChanged_
         loadFactorSignal = SpecifiedResultSignal . Q.queueLoadFactorChanged_
         waitTimeSignal = SpecifiedResultSignal . Q.queueWaitTimeChanged_
-        arrivalRateSignal = SpecifiedResultSignal . Q.estimatedQueueArrivalRateChanged_
+        rateSignal = SpecifiedResultSignal . Q.queueRateChanged_
   
 -- | Return the summary by the specified (infinite) queue.
 makeInfiniteQueueSummary :: (Show sm, Show so)
@@ -1266,7 +1266,7 @@ makeInfiniteQueueSummary name i m =
       makeProperty "dequeueCount" DequeueCountId getDequeueCount dequeueCountSignal,
       makeProperty "dequeueExtractCount" DequeueExtractCountId getDequeueExtractCount dequeueExtractCountSignal,
       makeProperty "queueWaitTime" QueueWaitTimeId getWaitTime waitTimeSignal,
-      makeProperty "estimatedQueueArrivalRate" EstimatedQueueArrivalRateId getArrivalRate arrivalRateSignal ] }
+      makeProperty "queueRate" QueueRateId getRate rateSignal ] }
   where makeProperty name' i f g =
           ResultProperty { resultPropertyLabel = name',
                            resultPropertyId = i,
@@ -1283,14 +1283,14 @@ makeInfiniteQueueSummary name i m =
         getDequeueCount = IntResultData . IQ.dequeueCount
         getDequeueExtractCount = IntResultData . IQ.dequeueExtractCount
         getWaitTime = StringResultData . fmap show . IQ.queueWaitTime
-        getArrivalRate = StringResultData . fmap show . IQ.estimatedQueueArrivalRate
+        getRate = StringResultData . fmap show . IQ.queueRate
         -- signals
         countStatsSignal = SpecifiedResultSignal . IQ.queueCountChanged_
         enqueueStoreCountSignal = SpecifiedResultSignal . IQ.enqueueStoreCountChanged_
         dequeueCountSignal = SpecifiedResultSignal . IQ.dequeueCountChanged_
         dequeueExtractCountSignal = SpecifiedResultSignal . IQ.dequeueExtractCountChanged_
         waitTimeSignal = SpecifiedResultSignal . IQ.queueWaitTimeChanged_
-        arrivalRateSignal = SpecifiedResultSignal . IQ.estimatedQueueArrivalRateChanged_
+        rateSignal = SpecifiedResultSignal . IQ.queueRateChanged_
   
 -- | Return the summary by the specified arrival timer.
 makeArrivalTimerSummary :: ResultName

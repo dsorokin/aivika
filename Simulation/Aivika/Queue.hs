@@ -48,7 +48,7 @@ module Simulation.Aivika.Queue
         queueTotalWaitTime,
         enqueueWaitTime,
         dequeueWaitTime,
-        estimatedQueueArrivalRate,
+        queueRate,
         -- * Dequeuing and Enqueuing
         dequeue,
         dequeueWithOutputPriority,
@@ -94,8 +94,8 @@ module Simulation.Aivika.Queue
         enqueueWaitTimeChanged_,
         dequeueWaitTimeChanged,
         dequeueWaitTimeChanged_,
-        estimatedQueueArrivalRateChanged,
-        estimatedQueueArrivalRateChanged_,
+        queueRateChanged,
+        queueRateChanged_,
         -- * Basic Signals
         enqueueInitiated,
         enqueueStored,
@@ -547,25 +547,28 @@ dequeueWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
 dequeueWaitTimeChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
 
--- | Return an estimated long-term average effective arrival rate.
--- This is not the same that Little's law says, for the queue is finite.
+-- | Return a long-term average queue rate calculated as
+-- the average queue size divided by the average wait time.
 --
--- See also 'estimatedQueueArrivalRateChanged' and 'estimatedQueueArrivalRateChanged_'.
-estimatedQueueArrivalRate :: Queue si qi sm qm so qo a -> Event Double
-estimatedQueueArrivalRate q =
+-- This value may be less than the actual arrival rate as the queue is
+-- finite and new arrivals may be locked while the queue remains full.
+--
+-- See also 'queueRateChanged' and 'queueRateChanged_'.
+queueRate :: Queue si qi sm qm so qo a -> Event Double
+queueRate q =
   Event $ \p ->
   do x <- readIORef (queueCountStatsRef q)
      y <- readIORef (queueWaitTimeRef q)
      return (timingStatsMean x / samplingStatsMean y) 
       
--- | Signal when the 'estimatedQueueArrivalRate' property value has changed.
-estimatedQueueArrivalRateChanged :: Queue si qi sm qm so qo a -> Signal Double
-estimatedQueueArrivalRateChanged q =
-  mapSignalM (const $ estimatedQueueArrivalRate q) (estimatedQueueArrivalRateChanged_ q)
+-- | Signal when the 'queueRate' property value has changed.
+queueRateChanged :: Queue si qi sm qm so qo a -> Signal Double
+queueRateChanged q =
+  mapSignalM (const $ queueRate q) (queueRateChanged_ q)
       
--- | Signal when the 'estimatedQueueArrivalRate' property value has changed.
-estimatedQueueArrivalRateChanged_ :: Queue si qi sm qm so qo a -> Signal ()
-estimatedQueueArrivalRateChanged_ q =
+-- | Signal when the 'queueRate' property value has changed.
+queueRateChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueRateChanged_ q =
   mapSignal (const ()) (enqueueStored q) <>
   mapSignal (const ()) (dequeueExtracted q)
 
