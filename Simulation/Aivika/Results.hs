@@ -11,7 +11,49 @@
 --
 -- The module allows exporting the simulation results from the model.
 --
-module Simulation.Aivika.Results where
+module Simulation.Aivika.Results
+       (ResultLocale(..),
+        ResultLocalisation(..),
+        ResultName(..),
+        ResultDescription(..),
+        ResultId(..),
+        ResultProvider(..),
+        ResultType(..),
+        ResultData(..),
+        ResultSignal(..),
+        ResultSourceMap(..),
+        ResultSource(..),
+        ResultItem(..),
+        ResultObject(..),
+        ResultProperty(..),
+        ResultVector(..),
+        ResultSeparator(..),
+        resultSourceName,
+        resultSourceSummary,
+        resultSourceSignal,
+        memoSourceSignal,
+        flattenResultItems,
+        mapResultItems,
+        retypeResultItem,
+        Results(..),
+        ResultTransform(..),
+        ResultPredefinedSignals(..),
+        newResultPredefinedSignals,
+        results,
+        resultSignal,
+        retypeResults,
+        resultSummary,
+        resultByName,
+        resultByProperty,
+        composeResults,
+        mixedResultSignal,
+        ResultComputation(..),
+        makeResultItemSource,
+        makeTextSource,
+        timeSource,
+        ResultListWithSubscript(..),
+        ResultArrayWithSubscript(..),
+        ResultVectorWithSubscript(..)) where
 
 import Control.Monad
 import Control.Monad.Trans
