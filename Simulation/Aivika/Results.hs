@@ -668,6 +668,10 @@ results ms =
             resultSourceList = ms' }
     where ms' = map memoSourceSignal ms
 
+-- | Return a signal emitted by the specified results.
+resultSignal :: Results -> ResultSignal
+resultSignal = mconcat . map resultSourceSignal . resultSourceList
+
 -- | Return a short version of the simulation results, i.e. their summary.
 resultSummary :: ResultTransform
 resultSummary xs =
