@@ -59,7 +59,7 @@ data ResultId = TimeId
               | VectorId
                 -- ^ Describes a vector.
               | VectorItemId String
-                -- ^ Described a vector item with the specified subscript.
+                -- ^ Describes a vector item with the specified subscript.
               | SamplingStatsId
                 -- ^ A 'SamplingStats' value.
               | SamplingStatsCountId
