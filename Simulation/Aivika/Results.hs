@@ -449,6 +449,60 @@ memoSourceSignal z@(ResultVectorSource x) =
   ResultVectorSource x { resultVectorSignal = resultSourceSignal z }
 memoSourceSignal z@(ResultSeparatorSource x) = z
 
+-- | Try to represent the specified result item as a provider of double values.
+resultItemToDouble :: ResultItem -> Maybe (Event Double)
+resultItemToDouble = convert . retypeResultItem DoubleResultType where
+  convert (ResultItemSource (ResultItem n i (DoubleResultData x) s)) = Just x
+  convert _ = Nothing
+
+-- | Try to represent the specified result item as a provider of lists of double values.
+resultItemToDoubleList :: ResultItem -> Maybe (Event [Double])
+resultItemToDoubleList = convert . retypeResultItem DoubleListResultType where
+  convert (ResultItemSource (ResultItem n i (DoubleListResultData x) s)) = Just x
+  convert _ = Nothing
+
+-- | Try to represent the specified result item as a provider of statistics based on double values.
+resultItemToDoubleStats :: ResultItem -> Maybe (Event (SamplingStats Double))
+resultItemToDoubleStats = convert . retypeResultItem DoubleStatsResultType where
+  convert (ResultItemSource (ResultItem n i (DoubleStatsResultData x) s)) = Just x
+  convert _ = Nothing
+
+-- | Try to represent the specified result item as a provider of timing statistics based on double values.
+resultItemToDoubleTimingStats :: ResultItem -> Maybe (Event (TimingStats Double))
+resultItemToDoubleTimingStats = convert . retypeResultItem DoubleTimingStatsResultType where
+  convert (ResultItemSource (ResultItem n i (DoubleTimingStatsResultData x) s)) = Just x
+  convert _ = Nothing
+
+-- | Try to represent the specified result item as a provider of integer values.
+resultItemToInt :: ResultItem -> Maybe (Event Int)
+resultItemToInt = convert . retypeResultItem IntResultType where
+  convert (ResultItemSource (ResultItem n i (IntResultData x) s)) = Just x
+  convert _ = Nothing
+
+-- | Try to represent the specified result item as a provider of lists of integer values.
+resultItemToIntList :: ResultItem -> Maybe (Event [Int])
+resultItemToIntList = convert . retypeResultItem IntListResultType where
+  convert (ResultItemSource (ResultItem n i (IntListResultData x) s)) = Just x
+  convert _ = Nothing
+
+-- | Try to represent the specified result item as a provider of statistics based on integer values.
+resultItemToIntStats :: ResultItem -> Maybe (Event (SamplingStats Int))
+resultItemToIntStats = convert . retypeResultItem IntStatsResultType where
+  convert (ResultItemSource (ResultItem n i (IntStatsResultData x) s)) = Just x
+  convert _ = Nothing
+
+-- | Try to represent the specified result item as a provider of timing statistics based on integer values.
+resultItemToIntTimingStats :: ResultItem -> Maybe (Event (TimingStats Int))
+resultItemToIntTimingStats = convert . retypeResultItem IntTimingStatsResultType where
+  convert (ResultItemSource (ResultItem n i (IntTimingStatsResultData x) s)) = Just x
+  convert _ = Nothing
+
+-- | Try to represent the specified result item as a provider of 'String' values.
+resultItemToString :: ResultItem -> Maybe (Event String)
+resultItemToString = convert . retypeResultItem StringResultType where
+  convert (ResultItemSource (ResultItem n i (StringResultData x) s)) = Just x
+  convert _ = Nothing
+
 -- | Flatten the result items.
 flattenResultItems :: ResultSource -> [ResultItem]
 flattenResultItems (ResultItemSource x) = [x]
