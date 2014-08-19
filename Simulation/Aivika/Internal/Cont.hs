@@ -700,7 +700,7 @@ contAwait signal =
                 \p -> do x <- readIORef r
                          case x of
                            Nothing ->
-                             error "The signal was lost: awaitSignal."
+                             error "The signal was lost: contAwait."
                            Just x ->
                              do invokeEvent p x
                                 c <- invokeEvent p c
