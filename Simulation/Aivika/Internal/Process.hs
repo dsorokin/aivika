@@ -400,7 +400,7 @@ throwProcess = liftIO . throw
 -- | Execute the specified computations in parallel within
 -- the current computation and return their results. The cancellation
 -- of any of the nested computations affects the current computation.
--- The exception raised in any of the nested computations is propogated
+-- The exception raised in any of the nested computations is propagated
 -- to the current computation as well.
 --
 -- Here word @parallel@ literally means that the computations are
