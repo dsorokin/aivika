@@ -176,6 +176,9 @@ data GeneratorType = SimpleGenerator
                      -- ^ The simple random number generator with the specified seed.
                    | CustomGenerator (IO Generator)
                      -- ^ The custom random number generator.
+                   | CustomGenerator01 (IO Double)
+                     -- ^ The custom random number generator by the specified uniform
+                     -- generator of numbers from 0 to 1.
 
 -- | Create a new random number generator by the specified type.
 newGenerator :: GeneratorType -> IO Generator
@@ -187,6 +190,8 @@ newGenerator tp =
       newRandomGenerator $ mkStdGen x
     CustomGenerator g ->
       g
+    CustomGenerator01 g ->
+      newRandomGenerator01 g
 
 -- | Create a new random generator by the specified standard generator.
 newRandomGenerator :: RandomGen g => g -> IO Generator
@@ -196,6 +201,12 @@ newRandomGenerator g =
                  let (x, g') = random g
                  writeIORef r g'
                  return x
+     newRandomGenerator01 g1
+
+-- | Create a new random generator by the specified uniform generator of numbers from 0 to 1.
+newRandomGenerator01 :: IO Double -> IO Generator
+newRandomGenerator01 g =
+  do let g1 = g
      g2 <- newNormalGenerator g1
      let g3 mu nu =
            do x <- g2
