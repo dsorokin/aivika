@@ -205,10 +205,12 @@ instance Applicative Cont where
 instance MonadIO Cont where
   liftIO = liftIOC 
 
+-- | Invoke the computation.
 invokeCont :: ContParams a -> Cont a -> Event ()
 {-# INLINE invokeCont #-}
 invokeCont p (Cont m) = m p
 
+-- | Cancel the computation.
 cancelCont :: Point -> ContParams a -> IO ()
 {-# NOINLINE cancelCont #-}
 cancelCont p c =
