@@ -65,60 +65,60 @@ import Simulation.Aivika.Processor
 -- the proc-notation.
 --
 newtype Circuit a b =
-  Circuit { runCircuit :: a -> Event (Circuit a b, b)
+  Circuit { runCircuit :: a -> Event (b, Circuit a b)
             -- ^ Run the circuit.
           }
 
 instance C.Category Circuit where
 
-  id = Circuit $ \a -> return (C.id, a)
+  id = Circuit $ \a -> return (a, C.id)
 
   (.) = dot
     where 
       (Circuit g) `dot` (Circuit f) =
         Circuit $ \a ->
         Event $ \p ->
-        do (cir1, b) <- invokeEvent p (f a)
-           (cir2, c) <- invokeEvent p (g b)
-           return (cir2 `dot` cir1, c)
+        do (b, cir1) <- invokeEvent p (f a)
+           (c, cir2) <- invokeEvent p (g b)
+           return (c, cir2 `dot` cir1)
 
 instance Arrow Circuit where
 
-  arr f = Circuit $ \a -> return (arr f, f a)
+  arr f = Circuit $ \a -> return (f a, arr f)
 
   first (Circuit f) =
     Circuit $ \(b, d) ->
     Event $ \p ->
-    do (cir, c) <- invokeEvent p (f b)
-       return (first cir, (c, d))
+    do (c, cir) <- invokeEvent p (f b)
+       return ((c, d), first cir)
 
   second (Circuit f) =
     Circuit $ \(d, b) ->
     Event $ \p ->
-    do (cir, c) <- invokeEvent p (f b)
-       return (second cir, (d, c))
+    do (c, cir) <- invokeEvent p (f b)
+       return ((d, c), second cir)
 
   (Circuit f) *** (Circuit g) =
     Circuit $ \(b, b') ->
     Event $ \p ->
-    do (cir1, c) <- invokeEvent p (f b)
-       (cir2, c') <- invokeEvent p (g b')
-       return (cir1 *** cir2, (c, c'))
+    do (c, cir1) <- invokeEvent p (f b)
+       (c', cir2) <- invokeEvent p (g b')
+       return ((c, c'), cir1 *** cir2)
        
   (Circuit f) &&& (Circuit g) =
     Circuit $ \b ->
     Event $ \p ->
-    do (cir1, c) <- invokeEvent p (f b)
-       (cir2, c') <- invokeEvent p (g b)
-       return (cir1 &&& cir2, (c, c'))
+    do (c, cir1) <- invokeEvent p (f b)
+       (c', cir2) <- invokeEvent p (g b)
+       return ((c, c'), cir1 &&& cir2)
 
 instance ArrowLoop Circuit where
 
   loop (Circuit f) =
     Circuit $ \b ->
     Event $ \p ->
-    do rec (cir, (c, d)) <- invokeEvent p (f (b, d))
-       return (loop cir, c)
+    do rec ((c, d), cir) <- invokeEvent p (f (b, d))
+       return (c, loop cir)
 
 instance ArrowChoice Circuit where
 
@@ -127,42 +127,42 @@ instance ArrowChoice Circuit where
     Event $ \p ->
     case ebd of
       Left b ->
-        do (cir, c) <- invokeEvent p (f b)
-           return (left cir, Left c)
+        do (c, cir) <- invokeEvent p (f b)
+           return (Left c, left cir)
       Right d ->
-        return (left x, Right d)
+        return (Right d, left x)
 
   right x@(Circuit f) =
     Circuit $ \edb ->
     Event $ \p ->
     case edb of
       Right b ->
-        do (cir, c) <- invokeEvent p (f b)
-           return (right cir, Right c)
+        do (c, cir) <- invokeEvent p (f b)
+           return (Right c, right cir)
       Left d ->
-        return (right x, Left d)
+        return (Left d, right x)
 
   x@(Circuit f) +++ y@(Circuit g) =
     Circuit $ \ebb' ->
     Event $ \p ->
     case ebb' of
       Left b ->
-        do (cir1, c) <- invokeEvent p (f b)
-           return (cir1 +++ y, Left c)
+        do (c, cir1) <- invokeEvent p (f b)
+           return (Left c, cir1 +++ y)
       Right b' ->
-        do (cir2, c') <- invokeEvent p (g b')
-           return (x +++ cir2, Right c')
+        do (c', cir2) <- invokeEvent p (g b')
+           return (Right c', x +++ cir2)
 
   x@(Circuit f) ||| y@(Circuit g) =
     Circuit $ \ebc ->
     Event $ \p ->
     case ebc of
       Left b ->
-        do (cir1, d) <- invokeEvent p (f b)
-           return (cir1 ||| y, d)
+        do (d, cir1) <- invokeEvent p (f b)
+           return (d, cir1 ||| y)
       Right b' ->
-        do (cir2, d) <- invokeEvent p (g b')
-           return (x ||| cir2, d)
+        do (d, cir2) <- invokeEvent p (g b')
+           return (d, x ||| cir2)
 
 -- | Get a signal transform by the specified circuit.
 circuitSignaling :: Circuit a b -> Signal a -> Signal b
@@ -174,7 +174,7 @@ circuitSignaling (Circuit cir) sa =
                  handleSignal sa $ \a ->
                  Event $ \p ->
                  do cir <- readIORef r
-                    (Circuit cir', b) <- invokeEvent p (cir a)
+                    (b, Circuit cir') <- invokeEvent p (cir a)
                     writeIORef r cir'
                     invokeEvent p (f b) }
 
@@ -183,7 +183,7 @@ circuitProcessor :: Circuit a b -> Processor a b
 circuitProcessor (Circuit cir) = Processor $ \sa ->
   Cons $
   do (a, xs) <- runStream sa
-     (cir', b) <- liftEvent (cir a)
+     (b, cir') <- liftEvent (cir a)
      let f = runProcessor (circuitProcessor cir')
      return (b, f xs)
 
@@ -194,7 +194,7 @@ arrCircuit f =
         Circuit $ \a ->
         Event $ \p ->
         do b <- invokeEvent p (f a)
-           return (x, b)
+           return (b, x)
   in x
 
 -- | Accumulator that outputs a value determined by the supplied function.
@@ -203,7 +203,7 @@ accumCircuit f acc =
   Circuit $ \a ->
   Event $ \p ->
   do (acc', b) <- invokeEvent p (f acc a)
-     return (accumCircuit f acc', b) 
+     return (b, accumCircuit f acc') 
 
 -- | A circuit that adds the information about the time points at which 
 -- the values were received.
@@ -219,21 +219,21 @@ arrivalCircuit =
                             case t0 of
                               Nothing -> 0
                               Just t0 -> t - t0 }
-        in return (loop $ Just t, b)
+        in return (b, loop $ Just t)
   in loop Nothing
 
 -- | Delay the input by one step using the specified initial value.
 delayCircuit :: a -> Circuit a a
 delayCircuit a0 =
   Circuit $ \a ->
-  return (delayCircuit a, a0)
+  return (a0, delayCircuit a)
 
 -- | A circuit that returns the current modeling time.
 timeCircuit :: Circuit a Double
 timeCircuit =
   Circuit $ \a ->
   Event $ \p ->
-  return (timeCircuit, pointTime p)
+  return (pointTime p, timeCircuit)
 
 -- | Like '>>>' but processes only the represented events.
 (>?>) :: Circuit a (Maybe b)
@@ -245,13 +245,13 @@ timeCircuit =
 whether >?> process =
   Circuit $ \a ->
   Event $ \p ->
-  do (whether', b) <- invokeEvent p (runCircuit whether a)
+  do (b, whether') <- invokeEvent p (runCircuit whether a)
      case b of
        Nothing ->
-         return (whether' >?> process, Nothing)
+         return (Nothing, whether' >?> process)
        Just b  ->
-         do (process', c) <- invokeEvent p (runCircuit process b)
-            return (whether' >?> process', Just c)
+         do (c, process') <- invokeEvent p (runCircuit process b)
+            return (Just c, whether' >?> process')
 
 -- | Like '<<<' but processes only the represented events.
 (<?<) :: Circuit b c
@@ -275,14 +275,14 @@ filterCircuitM pred cir =
   Event $ \p ->
   do x <- invokeEvent p (pred a)
      if x
-       then do (cir', b) <- invokeEvent p (runCircuit cir a)
-               return (filterCircuitM pred cir', Just b)
-       else return (filterCircuitM pred cir, Nothing)
+       then do (b, cir') <- invokeEvent p (runCircuit cir a)
+               return (Just b, filterCircuitM pred cir')
+       else return (Nothing, filterCircuitM pred cir)
 
 -- | The source of events that never occur.
 neverCircuit :: Circuit a (Maybe b)
 neverCircuit =
-  Circuit $ \a -> return (neverCircuit, Nothing)
+  Circuit $ \a -> return (Nothing, neverCircuit)
 
 -- | An approximation of the integral using Euler's method.
 --
@@ -314,14 +314,14 @@ integCircuit init = start
       Circuit $ \a ->
       Event $ \p ->
       do let t = pointTime p
-         return (next t init a, init)
+         return (init, next t init a)
     next t0 v0 a0 =
       Circuit $ \a ->
       Event $ \p ->
       do let t  = pointTime p
              dt = t - t0
              v  = v0 + a0 * dt
-         v `seq` return (next t v a, v)
+         v `seq` return (v, next t v a)
 
 -- | A sum of differences starting from the specified initial value.
 --
@@ -345,12 +345,12 @@ sumCircuit init = start
     start = 
       Circuit $ \a ->
       Event $ \p ->
-      return (next init a, init)
+      return (init, next init a)
     next v0 a0 =
       Circuit $ \a ->
       Event $ \p ->
       do let v = v0 + a0
-         v `seq` return (next v a, v)
+         v `seq` return (v, next v a)
 
 -- | Approximate the circuit as a transform of time varying function,
 -- calculating the values in the integration time points and then
@@ -371,7 +371,7 @@ circuitTransform cir = Transform start
       Dynamics $ \p ->
       do a <- invokeDynamics p m
          cir <- readIORef ref
-         (cir', b) <-
+         (b, cir') <-
            invokeDynamics p $
            runEvent (runCircuit cir a)
          writeIORef ref cir'
