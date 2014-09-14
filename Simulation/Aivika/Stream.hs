@@ -25,8 +25,9 @@ module Simulation.Aivika.Stream
         splitStreamPrioritising,
         -- * Specifying Identifier
         streamUsingId,
-        -- * Prefetching Stream
+        -- * Prefetching and Delaying Stream
         prefetchStream,
+        delayStream,
         -- * Stream Arriving
         arrivalStream,
         -- * Memoizing, Zipping and Uzipping Stream
@@ -526,3 +527,7 @@ arrivalStream s = Cons z where
                                    arrivalTime  = t,
                                    arrivalDelay = t - t0 }
                  return (b, Cons $ loop xs t)
+
+-- | Delay the stream by one step using the specified initial value.
+delayStream :: a -> Stream a -> Stream a
+delayStream a0 s = Cons $ return (a0, s)

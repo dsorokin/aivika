@@ -18,8 +18,9 @@ module Simulation.Aivika.Processor
         accumProcessor,
         -- * Specifying Identifier
         processorUsingId,
-        -- * Prefetch Processor
+        -- * Prefetch and Delay Processors
         prefetchProcessor,
+        delayProcessor,
         -- * Buffer Processor
         bufferProcessor,
         bufferProcessorLoop,
@@ -451,3 +452,7 @@ processorSignaling (Processor f) sa =
 -- the original stream items were received by demand.
 arrivalProcessor :: Processor a (Arrival a)
 arrivalProcessor = Processor arrivalStream
+
+-- | A processor that delays the input stream by one step using the specified initial value.
+delayProcessor :: a -> Processor a a
+delayProcessor a0 = Processor $ delayStream a0
