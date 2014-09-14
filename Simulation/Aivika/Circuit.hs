@@ -187,7 +187,8 @@ circuitProcessor (Circuit cir) = Processor $ \sa ->
      let f = runProcessor (circuitProcessor cir')
      return (b, f xs)
 
--- | Lift the 'Event' function to a curcuit.
+-- | Create a simple circuit by the specified handling function
+-- that runs the computation for each input value to get an output.
 arrCircuit :: (a -> Event b) -> Circuit a b
 arrCircuit f =
   let x =
