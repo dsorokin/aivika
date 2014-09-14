@@ -33,7 +33,7 @@ data Arrival a =
             -- ^ the data we received with the event
             arrivalTime :: Double,
             -- ^ the simulation time at which the event has arrived
-            arrivalDelay :: Double
+            arrivalDelay :: Maybe Double
             -- ^ the delay time which has passed from the time of
             -- arriving the previous event
           } deriving (Eq, Ord, Show)

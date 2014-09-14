@@ -362,15 +362,18 @@ arrivalSignal :: Signal a -> Signal (Arrival a)
 arrivalSignal m = 
   Signal { handleSignal = \h ->
              Event $ \p ->
-             do r <- newIORef (pointTime p)
+             do r <- newIORef Nothing
                 invokeEvent p $
                   handleSignal m $ \a ->
                   Event $ \p ->
                   do t0 <- readIORef r
                      let t = pointTime p
-                     writeIORef r t
+                     writeIORef r (Just t)
                      invokeEvent p $
                        h Arrival { arrivalValue = a,
                                    arrivalTime  = t,
-                                   arrivalDelay = t - t0 } 
+                                   arrivalDelay =
+                                     case t0 of
+                                       Nothing -> Nothing
+                                       Just t0 -> Just (t - t0) }
          }

@@ -44,26 +44,29 @@ randomStream :: Parameter (Double, a)
                 -- ^ compute a pair of the delay and event of type @a@
                 -> Stream (Arrival a)
                 -- ^ a stream of delayed events
-randomStream delay = Cons z0 where
-  z0 =
-    do t0 <- liftDynamics time
-       loop t0
+randomStream delay = Cons $ loop Nothing where
   loop t0 =
     do t1 <- liftDynamics time
-       when (t1 /= t0) $
-         error $
-         "The time of requesting for a new random event is different from " ++
-         "the time when the previous event has arrived. Probably, your model " ++
-         "contains a logical error. The random events should be requested permanently. " ++
-         "At least, they can be lost, for example, when trying to enqueue them, but " ++
-         "the random stream itself must always work: randomStream."
+       case t0 of
+         Nothing -> return ()
+         Just t0 ->
+           when (t1 /= t0) $
+           error $
+           "The time of requesting for a new random event is different from " ++
+           "the time when the previous event has arrived. Probably, your model " ++
+           "contains a logical error. The random events should be requested permanently. " ++
+           "At least, they can be lost, for example, when trying to enqueue them, but " ++
+           "the random stream itself must always work: randomStream."
        (delay, a) <- liftParameter delay
        holdProcess delay
        t2 <- liftDynamics time
        let arrival = Arrival { arrivalValue = a,
                                arrivalTime  = t2,
-                               arrivalDelay = delay }
-       return (arrival, Cons $ loop t2)
+                               arrivalDelay =
+                                 case t0 of
+                                   Nothing -> Nothing
+                                   Just t0 -> Just delay }
+       return (arrival, Cons $ loop (Just t2))
 
 -- | Create a new stream with delays distributed uniformly.
 randomUniformStream :: Double

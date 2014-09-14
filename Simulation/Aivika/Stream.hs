@@ -518,15 +518,16 @@ streamSignal z =
 -- saving the information about the time points at which the original stream items 
 -- were received by demand.
 arrivalStream :: Stream a -> Stream (Arrival a)
-arrivalStream s = Cons z where
-  z = do t <- liftDynamics time
-         loop s t
+arrivalStream s = Cons $ loop s Nothing where
   loop s t0 = do (a, xs) <- runStream s
                  t <- liftDynamics time
                  let b = Arrival { arrivalValue = a,
                                    arrivalTime  = t,
-                                   arrivalDelay = t - t0 }
-                 return (b, Cons $ loop xs t)
+                                   arrivalDelay =
+                                     case t0 of
+                                       Nothing -> Nothing
+                                       Just t0 -> Just (t - t0) }
+                 return (b, Cons $ loop xs (Just t))
 
 -- | Delay the stream by one step using the specified initial value.
 delayStream :: a -> Stream a -> Stream a

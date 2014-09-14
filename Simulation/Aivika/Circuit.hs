@@ -218,8 +218,8 @@ arrivalCircuit =
                           arrivalTime  = t,
                           arrivalDelay = 
                             case t0 of
-                              Nothing -> 0
-                              Just t0 -> t - t0 }
+                              Nothing -> Nothing
+                              Just t0 -> Just (t - t0) }
         in return (b, loop $ Just t)
   in loop Nothing
 
