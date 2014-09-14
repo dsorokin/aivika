@@ -175,14 +175,14 @@ netUsingId pid (Net f) =
 
 -- | Transform the net to an equivalent processor (a rather cheap transformation).
 netProcessor :: Net a b -> Processor a b
-netProcessor x = Processor $ loop x
+netProcessor = Processor . loop
   where loop x as =
           Cons $
           do (a, as') <- runStream as
              (b, x') <- runNet x a
              return (b, loop x' as')
 
--- | Transfrom the processor to a similar net (a more costly transformation).
+-- | Transform the processor to a similar net (a more costly transformation).
 processorNet :: Processor a b -> Net a b
 processorNet x =
   Net $ \a ->
