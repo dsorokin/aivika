@@ -22,6 +22,7 @@ module Simulation.Aivika
         module Simulation.Aivika.Dynamics.Random,
         module Simulation.Aivika.Event,
         module Simulation.Aivika.Generator,
+        module Simulation.Aivika.Net,
         module Simulation.Aivika.Parameter,
         module Simulation.Aivika.Parameter.Random,
         module Simulation.Aivika.Process,
@@ -55,6 +56,7 @@ import Simulation.Aivika.Dynamics.Memo.Unboxed
 import Simulation.Aivika.Dynamics.Random
 import Simulation.Aivika.Event
 import Simulation.Aivika.Generator
+import Simulation.Aivika.Net
 import Simulation.Aivika.Parameter
 import Simulation.Aivika.Parameter.Random
 import Simulation.Aivika.Process
