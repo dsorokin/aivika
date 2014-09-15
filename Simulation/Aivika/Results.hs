@@ -512,6 +512,14 @@ resultItemToString = convert . retypeResultItem StringResultType where
   convert (ResultItemSource (ResultItem n i (StringResultData x) s)) = Just x
   convert _ = Nothing
 
+-- | Select the result items.
+selectResultItems :: ResultType -> Results -> [ResultItem]
+selectResultItems tp =
+  concat .
+  map flattenResultItems .
+  resultSourceList .
+  retypeResults tp
+
 -- | Flatten the result items.
 flattenResultItems :: ResultSource -> [ResultItem]
 flattenResultItems (ResultItemSource x) = [x]
@@ -817,8 +825,13 @@ resultByProperty label rs =
 
 -- | Compose the results using the specified transformation function.
 composeResults :: (ResultSource -> [ResultSource]) -> ResultTransform
-composeResults pred xs =
-  results $ mconcat $ map pred $ resultSourceList xs
+composeResults pred =
+  results . concat . map pred . resultSourceList
+
+-- | Concatenate the results using the specified list of transformation functions.
+concatResults :: [ResultTransform] -> ResultTransform
+concatResults trs rs =
+  results $ concat $ map (\tr -> resultSourceList $ tr rs) trs
 
 -- | Return a pure signal mixed with the predefined ones by
 -- the specified result signal provided by the sources.
