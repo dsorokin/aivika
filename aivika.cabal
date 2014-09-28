@@ -176,11 +176,13 @@ library
 
     extensions:      FlexibleContexts,
                      FlexibleInstances,
+                     UndecidableInstances,
                      BangPatterns,
                      RecursiveDo,
                      Arrows,
                      MultiParamTypeClasses,
-                     FunctionalDependencies
+                     FunctionalDependencies,
+                     ExistentialQuantification
                      
     ghc-options:     -O2
 

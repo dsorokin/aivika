@@ -15,7 +15,7 @@ import Control.Monad
 import Control.Monad.Trans
 
 import qualified Data.Map as M
-import qualified Data.Vector as V
+import qualified Data.Array as A
 
 import System.IO
 
@@ -43,7 +43,7 @@ hPrintResultSourceIndented :: Handle
                               -> ResultLocalisation
                               -- ^ a localisation
                               -> ResultSourcePrint
-hPrintResultSourceIndented h indent loc source@(ResultItemSource x) =
+hPrintResultSourceIndented h indent loc source@(ResultItemSource (ResultItem x)) =
   hPrintResultSourceIndentedLabelled h indent (resultItemName x) loc source
 hPrintResultSourceIndented h indent loc source@(ResultVectorSource x) =
   hPrintResultSourceIndentedLabelled h indent (resultVectorName x) loc source
@@ -63,9 +63,9 @@ hPrintResultSourceIndentedLabelled :: Handle
                                       -> ResultLocalisation
                                       -- ^ a localisation
                                       -> ResultSourcePrint
-hPrintResultSourceIndentedLabelled h indent label loc (ResultItemSource x) =
-  case resultItemData x of
-    StringResultData m ->
+hPrintResultSourceIndentedLabelled h indent label loc (ResultItemSource (ResultItem x)) =
+  case resultValueData (resultItemToStringValue x) of
+    Just m ->
       do a <- m
          let tab = replicate indent ' '
          liftIO $
@@ -93,8 +93,8 @@ hPrintResultSourceIndentedLabelled h indent label loc (ResultVectorSource x) =
           hPutStr h label
           hPutStrLn h ":"
           hPutStrLn h ""
-     let items = V.toList (resultVectorItems x)
-         subscript = V.toList (resultVectorSubscript x)
+     let items = A.elems (resultVectorItems x)
+         subscript = A.elems (resultVectorSubscript x)
      forM_ (zip items subscript) $ \(i, s) ->
        hPrintResultSourceIndentedLabelled h (indent + 2) (label ++ s) loc i
 hPrintResultSourceIndentedLabelled h indent label loc (ResultObjectSource x) =
@@ -168,7 +168,7 @@ showResultSourceIndented :: Int
                             -> ResultLocalisation
                             -- ^ a localisation
                             -> ResultSourceShowS
-showResultSourceIndented indent loc source@(ResultItemSource x) =
+showResultSourceIndented indent loc source@(ResultItemSource (ResultItem x)) =
   showResultSourceIndentedLabelled indent (resultItemName x) loc source
 showResultSourceIndented indent loc source@(ResultVectorSource x) =
   showResultSourceIndentedLabelled indent (resultVectorName x) loc source
@@ -183,9 +183,9 @@ showResultSourceIndentedLabelled :: Int
                                    -> ResultLocalisation
                                    -- ^ a localisation
                                    -> ResultSourceShowS
-showResultSourceIndentedLabelled indent label loc (ResultItemSource x) =
-  case resultItemData x of
-    StringResultData m ->
+showResultSourceIndentedLabelled indent label loc (ResultItemSource (ResultItem x)) =
+  case resultValueData (resultItemToStringValue x) of
+    Just m ->
       do a <- m
          let tab = replicate indent ' '
          return $
@@ -204,8 +204,8 @@ showResultSourceIndentedLabelled indent label loc (ResultItemSource x) =
       (resultItemName x) ++ ": showResultSourceIndentedLabelled"
 showResultSourceIndentedLabelled indent label loc (ResultVectorSource x) =
   do let tab = replicate indent ' '
-         items = V.toList (resultVectorItems x)
-         subscript = V.toList (resultVectorSubscript x)
+         items = A.elems (resultVectorItems x)
+         subscript = A.elems (resultVectorSubscript x)
      contents <-
        forM (zip items subscript) $ \(i, s) ->
        showResultSourceIndentedLabelled (indent + 2) (label ++ s) loc i
@@ -262,20 +262,15 @@ showResultSourceInEnglish = showResultSource englishResultLocalisation
 -- | Print the results with the information about the modeling time.
 printResultsWithTime :: ResultSourcePrint -> Results -> Event ()
 printResultsWithTime print results =
-  do let x1 = makeTextSource "----------"
-         x2 = timeSource
-         x3 = makeTextSource ""
-         xs = results
-         tr = mapResultItems (retypeResultItem StringResultType)
-         y1 = tr x1
-         y2 = tr x2
-         y3 = tr x3
-         ys = resultSourceList (retypeResults StringResultType xs)
-     print y1
-     print y2
-     -- print y3
-     mapM_ print ys
-     -- print y3
+  do let x1 = textResultSource "----------"
+         x2 = timeResultSource
+         x3 = textResultSource ""
+         xs = resultSourceList results
+     print x1
+     print x2
+     -- print x3
+     mapM_ print xs
+     -- print x3
 
 -- | Print the simulation results in start time.
 printResultsInStartTime :: ResultSourcePrint -> Results -> Simulation ()
