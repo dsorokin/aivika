@@ -320,8 +320,8 @@ resultContainerMapProperty cont name i f =
       resultContainerPropertySource cont name i (fmap $ fmap f) (const $ resultContainerSignal cont) }
 
 -- | Convert the result value to a container with the specified object identifier. 
-resultValueToContainer :: ResultId -> ResultValue a -> ResultContainer (ResultData a)
-resultValueToContainer i x =
+resultValueToContainer :: ResultValue a -> ResultContainer (ResultData a)
+resultValueToContainer x =
   ResultContainer {
     resultContainerName   = resultValueName x,
     resultContainerId     = resultValueId x,
@@ -1014,25 +1014,15 @@ samplingStatsResultSource x =
     resultObjectSignal    = resultValueSignal x,
     resultObjectSummary   = samplingStatsResultSummary x,
     resultObjectProperties = [
-      makeProperty "count" SamplingStatsCountId samplingStatsCount,
-      makeProperty "mean" SamplingStatsMeanId samplingStatsMean,
-      makeProperty "mean2" SamplingStatsMean2Id samplingStatsMean2,
-      makeProperty "std" SamplingStatsDeviationId samplingStatsDeviation,
-      makeProperty "var" SamplingStatsVarianceId samplingStatsVariance,
-      makeProperty "min" SamplingStatsMinId samplingStatsMin,
-      makeProperty "max" SamplingStatsMaxId samplingStatsMax ] }
+      resultContainerMapProperty c "count" SamplingStatsCountId samplingStatsCount,
+      resultContainerMapProperty c "mean" SamplingStatsMeanId samplingStatsMean,
+      resultContainerMapProperty c "mean2" SamplingStatsMean2Id samplingStatsMean2,
+      resultContainerMapProperty c "std" SamplingStatsDeviationId samplingStatsDeviation,
+      resultContainerMapProperty c "var" SamplingStatsVarianceId samplingStatsVariance,
+      resultContainerMapProperty c "min" SamplingStatsMinId samplingStatsMin,
+      resultContainerMapProperty c "max" SamplingStatsMaxId samplingStatsMax ] }
   where
-    makeProperty name' i f =
-      ResultProperty { resultPropertyLabel  = name',
-                       resultPropertyId     = i,
-                       resultPropertySource = makeSource name' i f }
-    makeSource name' i f =
-      ResultItemSource $
-      ResultItem $
-      ResultValue { resultValueName   = resultValueName x ++ "." ++ name',
-                    resultValueId     = i,
-                    resultValueData   = fmap (fmap f) $ resultValueData x,
-                    resultValueSignal = resultValueSignal x }
+    c = resultValueToContainer x
   
 -- | Return a source by the specified timing statistics.
 timingStatsResultSource :: (TimingData a,
@@ -1050,30 +1040,20 @@ timingStatsResultSource x =
     resultObjectSignal    = resultValueSignal x,
     resultObjectSummary   = timingStatsResultSummary x,
     resultObjectProperties = [
-      makeProperty "count" TimingStatsCountId timingStatsCount,
-      makeProperty "mean" TimingStatsMeanId timingStatsMean,
-      makeProperty "std" TimingStatsDeviationId timingStatsDeviation,
-      makeProperty "var" TimingStatsVarianceId timingStatsVariance,
-      makeProperty "min" TimingStatsMinId timingStatsMin,
-      makeProperty "max" TimingStatsMaxId timingStatsMax,
-      makeProperty "minTime" TimingStatsMinTimeId timingStatsMinTime,
-      makeProperty "maxTime" TimingStatsMaxTimeId timingStatsMaxTime,
-      makeProperty "startTime" TimingStatsStartTimeId timingStatsStartTime,
-      makeProperty "lastTime" TimingStatsLastTimeId timingStatsLastTime,
-      makeProperty "sum" TimingStatsSumId timingStatsSum,
-      makeProperty "sum2" TimingStatsSum2Id timingStatsSum2 ] }
+      resultContainerMapProperty c "count" TimingStatsCountId timingStatsCount,
+      resultContainerMapProperty c "mean" TimingStatsMeanId timingStatsMean,
+      resultContainerMapProperty c "std" TimingStatsDeviationId timingStatsDeviation,
+      resultContainerMapProperty c "var" TimingStatsVarianceId timingStatsVariance,
+      resultContainerMapProperty c "min" TimingStatsMinId timingStatsMin,
+      resultContainerMapProperty c "max" TimingStatsMaxId timingStatsMax,
+      resultContainerMapProperty c "minTime" TimingStatsMinTimeId timingStatsMinTime,
+      resultContainerMapProperty c "maxTime" TimingStatsMaxTimeId timingStatsMaxTime,
+      resultContainerMapProperty c "startTime" TimingStatsStartTimeId timingStatsStartTime,
+      resultContainerMapProperty c "lastTime" TimingStatsLastTimeId timingStatsLastTime,
+      resultContainerMapProperty c "sum" TimingStatsSumId timingStatsSum,
+      resultContainerMapProperty c "sum2" TimingStatsSum2Id timingStatsSum2 ] }
   where
-    makeProperty name' i f =
-      ResultProperty { resultPropertyLabel  = name',
-                       resultPropertyId     = i,
-                       resultPropertySource = makeSource name' i f }
-    makeSource name' i f =
-      ResultItemSource $
-      ResultItem $
-      ResultValue { resultValueName   = resultValueName x ++ "." ++ name',
-                    resultValueId     = i,
-                    resultValueData   = fmap (fmap f) $ resultValueData x,
-                    resultValueSignal = resultValueSignal x }
+    c = resultValueToContainer x
   
 -- | Return a source by the specified finite queue.
 queueResultSource :: (Show si, Show sm, Show so,
