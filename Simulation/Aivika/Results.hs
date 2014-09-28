@@ -1060,65 +1060,41 @@ queueResultSource :: (Show si, Show sm, Show so,
                       ResultItemable (ResultValue si),
                       ResultItemable (ResultValue sm),
                       ResultItemable (ResultValue so))
-                     => ResultName
-                     -- ^ the result name
-                     -> ResultId
-                     -- ^ the result identifier
-                     -> Q.Queue si qi sm qm so qo a
-                     -- ^ the queue
+                     => ResultContainer (Q.Queue si qi sm qm so qo a)
+                     -- ^ the queue container
                      -> ResultSource
-queueResultSource name i m =
+queueResultSource c =
   ResultObjectSource $
   ResultObject {
-    resultObjectName = name,
-    resultObjectId = i,
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
     resultObjectTypeId = FiniteQueueId,
-    resultObjectSignal = ResultSignal $ Q.queueChanged_ m,
-    resultObjectSummary = queueResultSummary name i m,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = queueResultSummary c,
     resultObjectProperties = [
-      makeProperty0 "enqueueStrategy" EnqueueStrategyId Q.enqueueStrategy,
-      makeProperty0 "enqueueStoringStrategy" EnqueueStoringStrategyId Q.enqueueStoringStrategy,
-      makeProperty0 "dequeueStrategy" DequeueStrategyId Q.dequeueStrategy,
-      makeProperty "queueNull" QueueNullId Q.queueNull Q.queueNullChanged_,
-      makeProperty "queueFull" QueueFullId Q.queueFull Q.queueFullChanged_,
-      makeProperty0 "queueMaxCount" QueueMaxCountId Q.queueMaxCount,
-      makeProperty "queueCount" QueueCountId Q.queueCount Q.queueCountChanged_,
-      makeProperty "queueCountStats" QueueCountStatsId Q.queueCountStats Q.queueCountChanged_,
-      makeProperty "enqueueCount" EnqueueCountId Q.enqueueCount Q.enqueueCountChanged_,
-      makeProperty "enqueueLostCount" EnqueueLostCountId Q.enqueueLostCount Q.enqueueLostCountChanged_,
-      makeProperty "enqueueStoreCount" EnqueueStoreCountId Q.enqueueStoreCount Q.enqueueStoreCountChanged_,
-      makeProperty "dequeueCount" DequeueCountId Q.dequeueCount Q.dequeueCountChanged_,
-      makeProperty "dequeueExtractCount" DequeueExtractCountId Q.dequeueExtractCount Q.dequeueExtractCountChanged_,
-      makeProperty "queueLoadFactor" QueueLoadFactorId Q.queueLoadFactor Q.queueLoadFactorChanged_,
-      makeProperty1 "enqueueRate" EnqueueRateId Q.enqueueRate,
-      makeProperty1 "enqueueStoreRate" EnqueueStoreRateId Q.enqueueStoreRate,
-      makeProperty1 "dequeueRate" DequeueRateId Q.dequeueRate,
-      makeProperty1 "dequeueExtractRate" DequeueExtractRateId Q.dequeueExtractRate,
-      makeProperty "queueWaitTime" QueueWaitTimeId Q.queueWaitTime Q.queueWaitTimeChanged_,
-      makeProperty "queueTotalWaitTime" QueueTotalWaitTimeId Q.queueTotalWaitTime Q.queueTotalWaitTimeChanged_,
-      makeProperty "enqueueWaitTime" EnqueueWaitTimeId Q.enqueueWaitTime Q.enqueueWaitTimeChanged_,
-      makeProperty "dequeueWaitTime" DequeueWaitTimeId Q.dequeueWaitTime Q.dequeueWaitTimeChanged_,
-      makeProperty "queueRate" QueueRateId Q.queueRate Q.queueRateChanged_ ] }
-  where
-    makeProperty0 name' i f =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . return . f) (const EmptyResultSignal) }
-    makeProperty1 name' i f =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . f) (const UnknownResultSignal) }
-    makeProperty name' i f g =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . f) (ResultSignal . g) }
-    makeSource name' i f g =
-      ResultItemSource $
-      ResultItem $
-      ResultValue { resultValueName   = name ++ "." ++ name',
-                    resultValueId     = i,
-                    resultValueData   = f m,
-                    resultValueSignal = g m }
+      resultContainerConstProperty c "enqueueStrategy" EnqueueStrategyId Q.enqueueStrategy,
+      resultContainerConstProperty c "enqueueStoringStrategy" EnqueueStoringStrategyId Q.enqueueStoringStrategy,
+      resultContainerConstProperty c "dequeueStrategy" DequeueStrategyId Q.dequeueStrategy,
+      resultContainerProperty c "queueNull" QueueNullId Q.queueNull Q.queueNullChanged_,
+      resultContainerProperty c "queueFull" QueueFullId Q.queueFull Q.queueFullChanged_,
+      resultContainerConstProperty c "queueMaxCount" QueueMaxCountId Q.queueMaxCount,
+      resultContainerProperty c "queueCount" QueueCountId Q.queueCount Q.queueCountChanged_,
+      resultContainerProperty c "queueCountStats" QueueCountStatsId Q.queueCountStats Q.queueCountChanged_,
+      resultContainerProperty c "enqueueCount" EnqueueCountId Q.enqueueCount Q.enqueueCountChanged_,
+      resultContainerProperty c "enqueueLostCount" EnqueueLostCountId Q.enqueueLostCount Q.enqueueLostCountChanged_,
+      resultContainerProperty c "enqueueStoreCount" EnqueueStoreCountId Q.enqueueStoreCount Q.enqueueStoreCountChanged_,
+      resultContainerProperty c "dequeueCount" DequeueCountId Q.dequeueCount Q.dequeueCountChanged_,
+      resultContainerProperty c "dequeueExtractCount" DequeueExtractCountId Q.dequeueExtractCount Q.dequeueExtractCountChanged_,
+      resultContainerProperty c "queueLoadFactor" QueueLoadFactorId Q.queueLoadFactor Q.queueLoadFactorChanged_,
+      resultContainerIntegProperty c "enqueueRate" EnqueueRateId Q.enqueueRate,
+      resultContainerIntegProperty c "enqueueStoreRate" EnqueueStoreRateId Q.enqueueStoreRate,
+      resultContainerIntegProperty c "dequeueRate" DequeueRateId Q.dequeueRate,
+      resultContainerIntegProperty c "dequeueExtractRate" DequeueExtractRateId Q.dequeueExtractRate,
+      resultContainerProperty c "queueWaitTime" QueueWaitTimeId Q.queueWaitTime Q.queueWaitTimeChanged_,
+      resultContainerProperty c "queueTotalWaitTime" QueueTotalWaitTimeId Q.queueTotalWaitTime Q.queueTotalWaitTimeChanged_,
+      resultContainerProperty c "enqueueWaitTime" EnqueueWaitTimeId Q.enqueueWaitTime Q.enqueueWaitTimeChanged_,
+      resultContainerProperty c "dequeueWaitTime" DequeueWaitTimeId Q.dequeueWaitTime Q.dequeueWaitTimeChanged_,
+      resultContainerProperty c "queueRate" QueueRateId Q.queueRate Q.queueRateChanged_ ] }
 
 -- | Return a source by the specified infinite queue.
 infiniteQueueResultSource :: (Show sm, Show so,
@@ -1278,48 +1254,28 @@ timingStatsResultSummary = ResultItemSource . ResultItem . resultItemToStringVal
                          
 -- | Return the summary by the specified finite queue.
 queueResultSummary :: (Show si, Show sm, Show so)
-                      => ResultName
-                      -- ^ the result name
-                      -> ResultId
-                      -- ^ the result identifier
-                      -> Q.Queue si qi sm qm so qo a
-                      -- ^ the queue
+                      => ResultContainer (Q.Queue si qi sm qm so qo a)
+                      -- ^ the queue container
                       -> ResultSource
-queueResultSummary name i m =
+queueResultSummary c =
   ResultObjectSource $
   ResultObject {
-    resultObjectName = name,
-    resultObjectId = i,
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
     resultObjectTypeId = FiniteQueueId,
-    resultObjectSignal = ResultSignal $ Q.queueChanged_ m,
-    resultObjectSummary = queueResultSummary name i m,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = queueResultSummary c,
     resultObjectProperties = [
-      makeProperty0 "queueMaxCount" QueueMaxCountId Q.queueMaxCount,
-      makeProperty "queueCountStats" QueueCountStatsId Q.queueCountStats Q.queueCountChanged_,
-      makeProperty "enqueueCount" EnqueueCountId Q.enqueueCount Q.enqueueCountChanged_,
-      makeProperty "enqueueLostCount" EnqueueLostCountId Q.enqueueLostCount Q.enqueueLostCountChanged_,
-      makeProperty "enqueueStoreCount" EnqueueStoreCountId Q.enqueueStoreCount Q.enqueueStoreCountChanged_,
-      makeProperty "dequeueCount" DequeueCountId Q.dequeueCount Q.dequeueCountChanged_,
-      makeProperty "dequeueExtractCount" DequeueExtractCountId Q.dequeueExtractCount Q.dequeueExtractCountChanged_,
-      makeProperty "queueLoadFactor" QueueLoadFactorId Q.queueLoadFactor Q.queueLoadFactorChanged_,
-      makeProperty "queueWaitTime" QueueWaitTimeId Q.queueWaitTime Q.queueWaitTimeChanged_,
-      makeProperty "queueRate" QueueRateId Q.queueRate Q.queueRateChanged_ ] }
-  where
-    makeProperty0 name' i f =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . return . f) (const EmptyResultSignal) }
-    makeProperty name' i f g =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . f) (ResultSignal . g) }
-    makeSource name' i f g =
-      ResultItemSource $
-      ResultItem $
-      ResultValue { resultValueName   = name ++ "." ++ name',
-                    resultValueId     = i,
-                    resultValueData   = f m,
-                    resultValueSignal = g m }
+      resultContainerConstProperty c "queueMaxCount" QueueMaxCountId Q.queueMaxCount,
+      resultContainerProperty c "queueCountStats" QueueCountStatsId Q.queueCountStats Q.queueCountChanged_,
+      resultContainerProperty c "enqueueCount" EnqueueCountId Q.enqueueCount Q.enqueueCountChanged_,
+      resultContainerProperty c "enqueueLostCount" EnqueueLostCountId Q.enqueueLostCount Q.enqueueLostCountChanged_,
+      resultContainerProperty c "enqueueStoreCount" EnqueueStoreCountId Q.enqueueStoreCount Q.enqueueStoreCountChanged_,
+      resultContainerProperty c "dequeueCount" DequeueCountId Q.dequeueCount Q.dequeueCountChanged_,
+      resultContainerProperty c "dequeueExtractCount" DequeueExtractCountId Q.dequeueExtractCount Q.dequeueExtractCountChanged_,
+      resultContainerProperty c "queueLoadFactor" QueueLoadFactorId Q.queueLoadFactor Q.queueLoadFactorChanged_,
+      resultContainerProperty c "queueWaitTime" QueueWaitTimeId Q.queueWaitTime Q.queueWaitTimeChanged_,
+      resultContainerProperty c "queueRate" QueueRateId Q.queueRate Q.queueRateChanged_ ] }
   
 -- | Return the summary by the specified infinite queue.
 infiniteQueueResultSummary :: (Show sm, Show so)
@@ -1584,7 +1540,8 @@ instance (Show si, Show sm, Show so,
           ResultItemable (ResultValue so))
          => ResultProvider (Q.Queue si qi sm qm so qo a) where
 
-  resultSource' = queueResultSource
+  resultSource' name i m =
+    queueResultSource $ ResultContainer name i m (ResultSignal $ Q.queueChanged_ m)
 
 instance (Show sm, Show so,
           ResultItemable (ResultValue sm),
