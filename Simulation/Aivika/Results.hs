@@ -356,8 +356,6 @@ data ResultContainer e =
                     -- ^ The container name.
                     resultContainerId :: ResultId,
                     -- ^ The container identifier.
-                    resultContainerObjectId :: ResultId,
-                    -- ^ The container's object identifier.
                     resultContainerData :: e,
                     -- ^ The container data.
                     resultContainerSignal :: ResultSignal
@@ -467,11 +465,10 @@ resultContainerMapProperty cont name i f =
 resultValueToContainer :: ResultId -> ResultValue a -> ResultContainer (ResultData a)
 resultValueToContainer i x =
   ResultContainer {
-    resultContainerName     = resultValueName x,
-    resultContainerId       = resultValueId x,
-    resultContainerObjectId = i,
-    resultContainerData     = resultValueData x,
-    resultContainerSignal   = resultValueSignal x }
+    resultContainerName   = resultValueName x,
+    resultContainerId     = resultValueId x,
+    resultContainerData   = resultValueData x,
+    resultContainerSignal = resultValueSignal x }
 
 -- | Convert the result container to a value.
 resultContainerToValue :: ResultContainer (ResultData a) -> ResultValue a
