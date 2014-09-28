@@ -12,8 +12,22 @@
 -- The module allows exporting the simulation results from the model.
 --
 module Simulation.Aivika.Results
-       (ResultName,
+       (-- * Definitions Focused on Modeling
+        Results,
+        ResultTransform,
+        ResultName,
         ResultProvider(..),
+        results,
+        expandResults,
+        resultSummary,
+        resultByName,
+        resultByProperty,
+        ResultComputing(..),
+        ResultComputation(..),
+        ResultListWithSubscript(..),
+        ResultArrayWithSubscript(..),
+        ResultVectorWithSubscript(..),
+        -- * Definitions Focused on Extending the Library 
         ResultSourceMap,
         ResultSource(..),
         ResultItem(..),
@@ -37,11 +51,12 @@ module Simulation.Aivika.Results
         ResultData,
         ResultSignal(..),
         maybeResultSignal,
-        Results(..),
-        ResultTransform,
+        textResultSource,
+        timeResultSource,
         ResultPredefinedSignals(..),
         newResultPredefinedSignals,
-        results,
+        resultSourceMap,
+        resultSourceList,
         resultsToIntValues,
         resultsToIntListValues,
         resultsToIntStatsValues,
@@ -52,19 +67,8 @@ module Simulation.Aivika.Results
         resultsToDoubleTimingStatsValues,
         resultsToStringValues,
         resultSignal,
-        expandResults,
-        resultSummary,
-        resultByName,
-        resultByProperty,
         pureResultSignal,
-        ResultComputing(..),
-        ResultComputation(..),
-        computeResultValue,
-        textResultSource,
-        timeResultSource,
-        ResultListWithSubscript(..),
-        ResultArrayWithSubscript(..),
-        ResultVectorWithSubscript(..)) where
+        computeResultValue) where
 
 import Control.Monad
 import Control.Monad.Trans
@@ -904,7 +908,7 @@ resultSignal :: Results -> ResultSignal
 resultSignal = mconcat . map resultSourceSignal . resultSourceList
 
 -- | Return an expanded version of the simulation results expanding the properties as possible, which
--- takes place for expanding statistics to show the count, average, deviation, minimum, maximum and so on
+-- takes place for expanding statistics to show the count, average, deviation, minimum, maximum etc.
 -- as separate values.
 expandResults :: ResultTransform
 expandResults = results . map expandResultSource . resultSourceList
