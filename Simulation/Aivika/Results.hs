@@ -350,6 +350,138 @@ instance Functor ResultValue where
 voidResultValue :: ResultValue a -> ResultValue b
 voidResultValue x = x { resultValueData = Nothing }
 
+-- | A container of the simulation results such as queue, server or array.
+data ResultContainer e =
+  ResultContainer { resultContainerName :: ResultName,
+                    -- ^ The container name.
+                    resultContainerId :: ResultId,
+                    -- ^ The container identifier.
+                    resultContainerObjectId :: ResultId,
+                    -- ^ The container's object identifier.
+                    resultContainerData :: e,
+                    -- ^ The container data.
+                    resultContainerSignal :: ResultSignal
+                    -- ^ Whether the container emits a signal when changing simulation data.
+                  }
+
+instance Functor ResultContainer where
+  fmap f x = x { resultContainerData = f (resultContainerData x) }
+
+-- | Create a new property source by the specified container.
+resultContainerPropertySource :: ResultItemable (ResultValue b)
+                                 => ResultContainer a
+                                 -- ^ the container
+                                 -> ResultName
+                                 -- ^ the property label
+                                 -> ResultId
+                                 -- ^ the property identifier
+                                 -> (a -> ResultData b)
+                                 -- ^ get the specified data from the container
+                                 -> (a -> ResultSignal)
+                                 -- ^ get the data signal from the container
+                                 -> ResultSource
+resultContainerPropertySource cont name i f g =
+  ResultItemSource $
+  ResultItem $
+  ResultValue {
+    resultValueName   = (resultContainerName cont) ++ "." ++ name,
+    resultValueId     = i,
+    resultValueData   = f (resultContainerData cont),
+    resultValueSignal = g (resultContainerData cont) }
+
+-- | Create a constant property by the specified container.
+resultContainerConstProperty :: ResultItemable (ResultValue b)
+                                => ResultContainer a
+                                -- ^ the container
+                                -> ResultName
+                                -- ^ the property label
+                                -> ResultId
+                                -- ^ the property identifier
+                                -> (a -> b)
+                                -- ^ get the specified data from the container
+                                -> ResultProperty
+resultContainerConstProperty cont name i f =
+  ResultProperty {
+    resultPropertyLabel = name,
+    resultPropertyId = i,
+    resultPropertySource =
+      resultContainerPropertySource cont name i (Just . return . f) (const EmptyResultSignal) }
+  
+-- | Create by the specified container a property that changes in the integration time points, or it is supposed to be such one.
+resultContainerIntegProperty :: ResultItemable (ResultValue b)
+                                => ResultContainer a
+                                -- ^ the container
+                                -> ResultName
+                                -- ^ the property label
+                                -> ResultId
+                                -- ^ the property identifier
+                                -> (a -> Event b)
+                                -- ^ get the specified data from the container
+                             -> ResultProperty
+resultContainerIntegProperty cont name i f =
+  ResultProperty {
+    resultPropertyLabel = name,
+    resultPropertyId = i,
+    resultPropertySource =
+      resultContainerPropertySource cont name i (Just . f) (const UnknownResultSignal) }
+  
+-- | Create a property by the specified container.
+resultContainerProperty :: ResultItemable (ResultValue b)
+                           => ResultContainer a
+                           -- ^ the container
+                           -> ResultName
+                           -- ^ the property label
+                           -> ResultId
+                           -- ^ the property identifier
+                           -> (a -> Event b)
+                           -- ^ get the specified data from the container
+                           -> (a -> Signal ())
+                           -- ^ get a signal triggered when changing data.
+                           -> ResultProperty
+resultContainerProperty cont name i f g =                     
+  ResultProperty {
+    resultPropertyLabel = name,
+    resultPropertyId = i,
+    resultPropertySource =
+      resultContainerPropertySource cont name i (Just . f) (ResultSignal . g) }
+
+-- | Create by the specified container a mapped property which is recomputed each time again and again.
+resultContainerMapProperty :: ResultItemable (ResultValue b)
+                              => ResultContainer (ResultData a)
+                              -- ^ the container
+                              -> ResultName
+                              -- ^ the property label
+                              -> ResultId
+                              -- ^ the property identifier
+                              -> (a -> b)
+                              -- ^ recompute the specified data
+                              -> ResultProperty
+resultContainerMapProperty cont name i f =                     
+  ResultProperty {
+    resultPropertyLabel = name,
+    resultPropertyId = i,
+    resultPropertySource =
+      resultContainerPropertySource cont name i (fmap $ fmap f) (const $ resultContainerSignal cont) }
+
+-- | Convert the result value to a container with the specified object identifier. 
+resultValueToContainer :: ResultId -> ResultValue a -> ResultContainer (ResultData a)
+resultValueToContainer i x =
+  ResultContainer {
+    resultContainerName     = resultValueName x,
+    resultContainerId       = resultValueId x,
+    resultContainerObjectId = i,
+    resultContainerData     = resultValueData x,
+    resultContainerSignal   = resultValueSignal x }
+
+-- | Convert the result container to a value.
+resultContainerToValue :: ResultContainer (ResultData a) -> ResultValue a
+resultContainerToValue x =
+  ResultValue {
+    resultValueName   = resultContainerName x,
+    resultValueId     = resultContainerId x,
+    resultValueData   = resultContainerData x,
+    resultValueSignal = resultContainerSignal x }
+
 -- | Represents the very simulation results.
 type ResultData e = Maybe (Event e)
 
