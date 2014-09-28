@@ -1219,49 +1219,49 @@ arrivalTimerResultSummary c =
 
 -- | Return a source by the specified server.
 serverResultSource :: (Show s, ResultItemable (ResultValue s))
-                      => ResultName
-                      -- ^ the result name
-                      -> ResultId
-                      -- ^ the result identifier
-                      -> Server s a b
-                      -- ^ the server
+                      => ResultContainer (Server s a b)
+                      -- ^ the server container
                       -> ResultSource
-serverResultSource name i m =
+serverResultSource c =
   ResultObjectSource $
   ResultObject {
-    resultObjectName = name,
-    resultObjectId = i,
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
     resultObjectTypeId = ServerId,
-    resultObjectSignal = ResultSignal $ serverChanged_ m,
-    resultObjectSummary = serverResultSummary name i m,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = serverResultSummary c,
     resultObjectProperties = [
-      makeProperty0 "initState" ServerInitStateId serverInitState,
-      makeProperty "state" ServerStateId serverState serverStateChanged_,
-      makeProperty "totalInputWaitTime" ServerTotalInputWaitTimeId serverTotalInputWaitTime serverTotalInputWaitTimeChanged_,
-      makeProperty "totalProcessingTime" ServerTotalProcessingTimeId serverTotalProcessingTime serverTotalProcessingTimeChanged_,
-      makeProperty "totalOutputWaitTime" ServerTotalOutputWaitTimeId serverTotalOutputWaitTime serverTotalOutputWaitTimeChanged_,
-      makeProperty "inputWaitTime" ServerInputWaitTimeId serverInputWaitTime serverInputWaitTimeChanged_,
-      makeProperty "processingTime" ServerProcessingTimeId serverProcessingTime serverProcessingTimeChanged_,
-      makeProperty "outputWaitTime" ServerOutputWaitTimeId serverOutputWaitTime serverOutputWaitTimeChanged_,
-      makeProperty "inputWaitFactor" ServerInputWaitFactorId serverInputWaitFactor serverInputWaitFactorChanged_,
-      makeProperty "processingFactor" ServerProcessingFactorId serverProcessingFactor serverProcessingFactorChanged_,
-      makeProperty "outputWaitFactor" ServerOutputWaitFactorId serverOutputWaitFactor serverOutputWaitFactorChanged_ ] }
-  where
-    makeProperty0 name' i f =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . return . f) (const EmptyResultSignal) }
-    makeProperty name' i f g =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . f) (ResultSignal . g) }
-    makeSource name' i f g =
-      ResultItemSource $
-      ResultItem $
-      ResultValue { resultValueName   = name ++ "." ++ name',
-                    resultValueId     = i,
-                    resultValueData   = f m,
-                    resultValueSignal = g m }
+      resultContainerConstProperty c "initState" ServerInitStateId serverInitState,
+      resultContainerProperty c "state" ServerStateId serverState serverStateChanged_,
+      resultContainerProperty c "totalInputWaitTime" ServerTotalInputWaitTimeId serverTotalInputWaitTime serverTotalInputWaitTimeChanged_,
+      resultContainerProperty c "totalProcessingTime" ServerTotalProcessingTimeId serverTotalProcessingTime serverTotalProcessingTimeChanged_,
+      resultContainerProperty c "totalOutputWaitTime" ServerTotalOutputWaitTimeId serverTotalOutputWaitTime serverTotalOutputWaitTimeChanged_,
+      resultContainerProperty c "inputWaitTime" ServerInputWaitTimeId serverInputWaitTime serverInputWaitTimeChanged_,
+      resultContainerProperty c "processingTime" ServerProcessingTimeId serverProcessingTime serverProcessingTimeChanged_,
+      resultContainerProperty c "outputWaitTime" ServerOutputWaitTimeId serverOutputWaitTime serverOutputWaitTimeChanged_,
+      resultContainerProperty c "inputWaitFactor" ServerInputWaitFactorId serverInputWaitFactor serverInputWaitFactorChanged_,
+      resultContainerProperty c "processingFactor" ServerProcessingFactorId serverProcessingFactor serverProcessingFactorChanged_,
+      resultContainerProperty c "outputWaitFactor" ServerOutputWaitFactorId serverOutputWaitFactor serverOutputWaitFactorChanged_ ] }
+
+-- | Return the summary by the specified server.
+serverResultSummary :: ResultContainer (Server s a b)
+                       -- ^ the server container
+                       -> ResultSource
+serverResultSummary c =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
+    resultObjectTypeId = ServerId,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = serverResultSummary c,
+    resultObjectProperties = [
+      resultContainerProperty c "inputWaitTime" ServerInputWaitTimeId serverInputWaitTime serverInputWaitTimeChanged_,
+      resultContainerProperty c "processingTime" ServerProcessingTimeId serverProcessingTime serverProcessingTimeChanged_,
+      resultContainerProperty c "outputWaitTime" ServerOutputWaitTimeId serverOutputWaitTime serverOutputWaitTimeChanged_,
+      resultContainerProperty c "inputWaitFactor" ServerInputWaitFactorId serverInputWaitFactor serverInputWaitFactorChanged_,
+      resultContainerProperty c "processingFactor" ServerProcessingFactorId serverProcessingFactor serverProcessingFactorChanged_,
+      resultContainerProperty c "outputWaitFactor" ServerOutputWaitFactorId serverOutputWaitFactor serverOutputWaitFactorChanged_ ] }
 
 -- | Return an arbitrary text as a separator source.
 textResultSource :: String -> ResultSource
@@ -1273,42 +1273,6 @@ textResultSource text =
 timeResultSource :: ResultSource
 timeResultSource = resultSource' "t" TimeId time
                          
--- | Return the summary by the specified server.
-serverResultSummary :: ResultName
-                       -- ^ the result name
-                       -> ResultId
-                       -- ^ the result identifier
-                       -> Server s a b
-                       -- ^ the server
-                       -> ResultSource
-serverResultSummary name i m =
-  ResultObjectSource $
-  ResultObject {
-    resultObjectName = name,
-    resultObjectId = i,
-    resultObjectTypeId = ServerId,
-    resultObjectSignal = ResultSignal $ serverChanged_ m,
-    resultObjectSummary = serverResultSummary name i m,
-    resultObjectProperties = [
-      makeProperty "inputWaitTime" ServerInputWaitTimeId serverInputWaitTime serverInputWaitTimeChanged_,
-      makeProperty "processingTime" ServerProcessingTimeId serverProcessingTime serverProcessingTimeChanged_,
-      makeProperty "outputWaitTime" ServerOutputWaitTimeId serverOutputWaitTime serverOutputWaitTimeChanged_,
-      makeProperty "inputWaitFactor" ServerInputWaitFactorId serverInputWaitFactor serverInputWaitFactorChanged_,
-      makeProperty "processingFactor" ServerProcessingFactorId serverProcessingFactor serverProcessingFactorChanged_,
-      makeProperty "outputWaitFactor" ServerOutputWaitFactorId serverOutputWaitFactor serverOutputWaitFactorChanged_ ] }
-  where
-    makeProperty name' i f g =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . f) (ResultSignal . g) }
-    makeSource name' i f g =
-      ResultItemSource $
-      ResultItem $
-      ResultValue { resultValueName   = name ++ "." ++ name',
-                    resultValueId     = i,
-                    resultValueData   = f m,
-                    resultValueSignal = g m }
-
 -- | Make an integer subscript
 intSubscript :: Int -> String
 intSubscript i = "[" ++ show i ++ "]"
@@ -1486,4 +1450,5 @@ instance ResultProvider ArrivalTimer where
 
 instance (Show s, ResultItemable (ResultValue s)) => ResultProvider (Server s a b) where
 
-  resultSource' = serverResultSource
+  resultSource' name i m =
+    serverResultSource $ ResultContainer name i m (ResultSignal $ serverChanged_ m)
