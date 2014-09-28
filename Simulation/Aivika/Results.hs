@@ -1023,6 +1023,13 @@ samplingStatsResultSource x =
       resultContainerMapProperty c "max" SamplingStatsMaxId samplingStatsMax ] }
   where
     c = resultValueToContainer x
+
+-- | Return the summary by the specified statistics.
+samplingStatsResultSummary :: ResultItemable (ResultValue (SamplingStats a))
+                              => ResultValue (SamplingStats a)
+                              -- ^ the statistics
+                           -> ResultSource
+samplingStatsResultSummary = ResultItemSource . ResultItem . resultItemToStringValue 
   
 -- | Return a source by the specified timing statistics.
 timingStatsResultSource :: (TimingData a,
@@ -1054,6 +1061,13 @@ timingStatsResultSource x =
       resultContainerMapProperty c "sum2" TimingStatsSum2Id timingStatsSum2 ] }
   where
     c = resultValueToContainer x
+
+-- | Return the summary by the specified timing statistics.
+timingStatsResultSummary :: (TimingData a, ResultItemable (ResultValue (TimingStats a)))
+                            => ResultValue (TimingStats a) 
+                            -- ^ the statistics
+                            -> ResultSource
+timingStatsResultSummary = ResultItemSource . ResultItem . resultItemToStringValue
   
 -- | Return a source by the specified finite queue.
 queueResultSource :: (Show si, Show sm, Show so,
@@ -1094,6 +1108,31 @@ queueResultSource c =
       resultContainerProperty c "queueTotalWaitTime" QueueTotalWaitTimeId Q.queueTotalWaitTime Q.queueTotalWaitTimeChanged_,
       resultContainerProperty c "enqueueWaitTime" EnqueueWaitTimeId Q.enqueueWaitTime Q.enqueueWaitTimeChanged_,
       resultContainerProperty c "dequeueWaitTime" DequeueWaitTimeId Q.dequeueWaitTime Q.dequeueWaitTimeChanged_,
+      resultContainerProperty c "queueRate" QueueRateId Q.queueRate Q.queueRateChanged_ ] }
+
+-- | Return the summary by the specified finite queue.
+queueResultSummary :: (Show si, Show sm, Show so)
+                      => ResultContainer (Q.Queue si qi sm qm so qo a)
+                      -- ^ the queue container
+                      -> ResultSource
+queueResultSummary c =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
+    resultObjectTypeId = FiniteQueueId,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = queueResultSummary c,
+    resultObjectProperties = [
+      resultContainerConstProperty c "queueMaxCount" QueueMaxCountId Q.queueMaxCount,
+      resultContainerProperty c "queueCountStats" QueueCountStatsId Q.queueCountStats Q.queueCountChanged_,
+      resultContainerProperty c "enqueueCount" EnqueueCountId Q.enqueueCount Q.enqueueCountChanged_,
+      resultContainerProperty c "enqueueLostCount" EnqueueLostCountId Q.enqueueLostCount Q.enqueueLostCountChanged_,
+      resultContainerProperty c "enqueueStoreCount" EnqueueStoreCountId Q.enqueueStoreCount Q.enqueueStoreCountChanged_,
+      resultContainerProperty c "dequeueCount" DequeueCountId Q.dequeueCount Q.dequeueCountChanged_,
+      resultContainerProperty c "dequeueExtractCount" DequeueExtractCountId Q.dequeueExtractCount Q.dequeueExtractCountChanged_,
+      resultContainerProperty c "queueLoadFactor" QueueLoadFactorId Q.queueLoadFactor Q.queueLoadFactorChanged_,
+      resultContainerProperty c "queueWaitTime" QueueWaitTimeId Q.queueWaitTime Q.queueWaitTimeChanged_,
       resultContainerProperty c "queueRate" QueueRateId Q.queueRate Q.queueRateChanged_ ] }
 
 -- | Return a source by the specified infinite queue.
@@ -1237,46 +1276,7 @@ textResultSource text =
 -- | Return the source of the modeling time.
 timeResultSource :: ResultSource
 timeResultSource = resultSource' "t" TimeId time
-
--- | Return the summary by the specified statistics.
-samplingStatsResultSummary :: ResultItemable (ResultValue (SamplingStats a))
-                              => ResultValue (SamplingStats a)
-                              -- ^ the statistics
-                           -> ResultSource
-samplingStatsResultSummary = ResultItemSource . ResultItem . resultItemToStringValue 
-
--- | Return the summary by the specified timing statistics.
-timingStatsResultSummary :: (TimingData a, ResultItemable (ResultValue (TimingStats a)))
-                            => ResultValue (TimingStats a) 
-                            -- ^ the statistics
-                            -> ResultSource
-timingStatsResultSummary = ResultItemSource . ResultItem . resultItemToStringValue
                          
--- | Return the summary by the specified finite queue.
-queueResultSummary :: (Show si, Show sm, Show so)
-                      => ResultContainer (Q.Queue si qi sm qm so qo a)
-                      -- ^ the queue container
-                      -> ResultSource
-queueResultSummary c =
-  ResultObjectSource $
-  ResultObject {
-    resultObjectName = resultContainerName c,
-    resultObjectId = resultContainerId c,
-    resultObjectTypeId = FiniteQueueId,
-    resultObjectSignal = resultContainerSignal c,
-    resultObjectSummary = queueResultSummary c,
-    resultObjectProperties = [
-      resultContainerConstProperty c "queueMaxCount" QueueMaxCountId Q.queueMaxCount,
-      resultContainerProperty c "queueCountStats" QueueCountStatsId Q.queueCountStats Q.queueCountChanged_,
-      resultContainerProperty c "enqueueCount" EnqueueCountId Q.enqueueCount Q.enqueueCountChanged_,
-      resultContainerProperty c "enqueueLostCount" EnqueueLostCountId Q.enqueueLostCount Q.enqueueLostCountChanged_,
-      resultContainerProperty c "enqueueStoreCount" EnqueueStoreCountId Q.enqueueStoreCount Q.enqueueStoreCountChanged_,
-      resultContainerProperty c "dequeueCount" DequeueCountId Q.dequeueCount Q.dequeueCountChanged_,
-      resultContainerProperty c "dequeueExtractCount" DequeueExtractCountId Q.dequeueExtractCount Q.dequeueExtractCountChanged_,
-      resultContainerProperty c "queueLoadFactor" QueueLoadFactorId Q.queueLoadFactor Q.queueLoadFactorChanged_,
-      resultContainerProperty c "queueWaitTime" QueueWaitTimeId Q.queueWaitTime Q.queueWaitTimeChanged_,
-      resultContainerProperty c "queueRate" QueueRateId Q.queueRate Q.queueRateChanged_ ] }
-  
 -- | Return the summary by the specified infinite queue.
 infiniteQueueResultSummary :: (Show sm, Show so)
                               => ResultName
