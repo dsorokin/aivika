@@ -10,7 +10,12 @@
 -- The module defines locales for outputting and printing the simulation results.
 --
 module Simulation.Aivika.Results.Locale
-       (-- * Locale Codes
+       (-- * Basic Types
+        ResultLocale,
+        ResultLocalisation,
+        ResultDescription,
+        ResultId(..),
+        -- * Locale Codes
         russianResultLocale,
         englishResultLocale,
         -- * Localisations
@@ -20,7 +25,156 @@ module Simulation.Aivika.Results.Locale
 
 import qualified Data.Map as M
 
-import Simulation.Aivika.Results
+import Simulation.Aivika.Dynamics
+import Simulation.Aivika.Statistics
+import Simulation.Aivika.Statistics.Accumulator
+import qualified Simulation.Aivika.Queue as Q
+import qualified Simulation.Aivika.Queue.Infinite as IQ
+import Simulation.Aivika.Arrival
+import Simulation.Aivika.Server
+
+-- | A locale to output the simulation results.
+--
+-- Examples are: @\"ru\", @\"en\" etc.
+type ResultLocale = String
+
+-- | It localises the description of simulation results.
+type ResultLocalisation = ResultId -> ResultDescription
+
+-- | A description used for describing the results when generating output.
+type ResultDescription = String
+
+-- | The result entity identifier.
+data ResultId = TimeId
+                -- ^ A 'time' computation.
+              | VectorId
+                -- ^ Describes a vector.
+              | VectorItemId String
+                -- ^ Describes a vector item with the specified subscript.
+              | SamplingStatsId
+                -- ^ A 'SamplingStats' value.
+              | SamplingStatsCountId
+                -- ^ Property 'samplingStatsCount'.
+              | SamplingStatsMinId
+                -- ^ Property 'samplingStatsMin'.
+              | SamplingStatsMaxId
+                -- ^ Property 'samplingStatsMax'.
+              | SamplingStatsMeanId
+                -- ^ Property 'samplingStatsMean'.
+              | SamplingStatsMean2Id
+                -- ^ Property 'samplingStatsMean2'.
+              | SamplingStatsVarianceId
+                -- ^ Property 'samplingStatsVariance'.
+              | SamplingStatsDeviationId
+                -- ^ Property 'samplingStatsDeviation'.
+              | TimingStatsId
+                -- ^ A 'TimingStats' value.
+              | TimingStatsCountId
+                -- ^ Property 'timingStatsCount'.
+              | TimingStatsMinId
+                -- ^ Property 'timingStatsMin'.
+              | TimingStatsMaxId
+                -- ^ Property 'timingStatsMax'.
+              | TimingStatsMeanId
+                -- ^ Property 'timingStatsMean'.
+              | TimingStatsVarianceId
+                -- ^ Property 'timingStatsVariance'.
+              | TimingStatsDeviationId
+                -- ^ Property 'timingStatsDeviation'.
+              | TimingStatsMinTimeId
+                -- ^ Property 'timingStatsMinTime'.
+              | TimingStatsMaxTimeId
+                -- ^ Property 'timingStatsMaxTime'.
+              | TimingStatsStartTimeId
+                -- ^ Property 'timingStatsStartTime'.
+              | TimingStatsLastTimeId
+                -- ^ Property 'timingStatsLastTime'.
+              | TimingStatsSumId
+                -- ^ Property 'timingStatsSum'.
+              | TimingStatsSum2Id
+                -- ^ Property 'timingStatsSum2'.
+              | FiniteQueueId
+                -- ^ A finite 'Q.Queue'.
+              | InfiniteQueueId
+                -- ^ An infinite 'IQ.Queue'.
+              | EnqueueStrategyId
+                -- ^ Property 'Q.enqueueStrategy'.
+              | EnqueueStoringStrategyId
+                -- ^ Property 'Q.enqueueStoringStrategy'.
+              | DequeueStrategyId
+                -- ^ Property 'Q.dequeueStrategy'.
+              | QueueNullId
+                -- ^ Property 'Q.queueNull'.
+              | QueueFullId
+                -- ^ Property 'Q.queueFull'.
+              | QueueMaxCountId
+                -- ^ Property 'Q.queueMaxCount'.
+              | QueueCountId
+                -- ^ Property 'Q.queueCount'.
+              | QueueCountStatsId
+                -- ^ Property 'Q.queueCountStats'.
+              | EnqueueCountId
+                -- ^ Property 'Q.enqueueCount'.
+              | EnqueueLostCountId
+                -- ^ Property 'Q.enqueueLostCount'.
+              | EnqueueStoreCountId
+                -- ^ Property 'Q.enqueueStoreCount'.
+              | DequeueCountId
+                -- ^ Property 'Q.dequeueCount'.
+              | DequeueExtractCountId
+                -- ^ Property 'Q.dequeueExtractCount'.
+              | QueueLoadFactorId
+                -- ^ Property 'Q.queueLoadFactor'.
+              | EnqueueRateId
+                -- ^ Property 'Q.enqueueRate'.
+              | EnqueueStoreRateId
+                -- ^ Property 'Q.enqueueStoreRate'.
+              | DequeueRateId
+                -- ^ Property 'Q.dequeueRate'.
+              | DequeueExtractRateId
+                -- ^ Property 'Q.dequeueExtractRate'.
+              | QueueWaitTimeId
+                -- ^ Property 'Q.queueWaitTime'.
+              | QueueTotalWaitTimeId
+                -- ^ Property 'Q.queueTotalWaitTime'.
+              | EnqueueWaitTimeId
+                -- ^ Property 'Q.enqueueWaitTime'.
+              | DequeueWaitTimeId
+                -- ^ Property 'Q.dequeueWaitTime'.
+              | QueueRateId
+                -- ^ Property 'Q.queueRate'.
+              | ArrivalTimerId
+                -- ^ An 'ArrivalTimer'.
+              | ArrivalProcessingTimeId
+                -- ^ Property 'arrivalProcessingTime'.
+              | ServerId
+                -- ^ Represents a 'Server'.
+              | ServerInitStateId
+                -- ^ Property 'serverInitState'.
+              | ServerStateId
+                -- ^ Property 'serverState'.
+              | ServerTotalInputWaitTimeId
+                -- ^ Property 'serverTotalInputWaitTime'.
+              | ServerTotalProcessingTimeId
+                -- ^ Property 'serverTotalProcessingTime'.
+              | ServerTotalOutputWaitTimeId
+                -- ^ Property 'serverTotalOutputWaitTime'.
+              | ServerInputWaitTimeId
+                -- ^ Property 'serverInputWaitTime'.
+              | ServerProcessingTimeId
+                -- ^ Property 'serverProcessingTime'.
+              | ServerOutputWaitTimeId
+                -- ^ Property 'serverOutputWaitTime'.
+              | ServerInputWaitFactorId
+                -- ^ Property 'serverInputWaitFactor'.
+              | ServerProcessingFactorId
+                -- ^ Property 'serverProcessingFactor'.
+              | ServerOutputWaitFactorId
+                -- ^ Property 'serverOutputWaitFactor'.
+              | UserDefinedResultId ResultDescription
+                -- ^ An user defined description.
+              | LocalisedResultId (M.Map ResultLocale ResultDescription)
+                -- ^ A localised property or object name.
 
 -- | The Russian locale.
 russianResultLocale :: ResultLocale
