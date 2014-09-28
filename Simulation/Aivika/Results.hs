@@ -92,8 +92,7 @@ class ResultItemable a where
   -- | Return usually a short version of the item, i.e. its summary,
   -- but values of some data types such as statistics can be
   -- implicitly expanded to an object with the corresponded
-  -- properties as it takes place with the 'resultItemExpansion'
-  -- function.
+  -- properties.
   resultItemSummary :: a -> ResultSource
   
   -- | Return integer numbers in time points.
@@ -731,7 +730,7 @@ resultSourceSummary (ResultObjectSource x) = resultObjectSummary x
 resultSourceSummary (ResultVectorSource x) = resultVectorSummary x
 resultSourceSummary z@(ResultSeparatorSource x) = z
 
--- | Return a signal emitted by the source with eliminated 'EmptyResultSignal' as possible.
+-- | Return a signal emitted by the source.
 resultSourceSignal :: ResultSource -> ResultSignal
 resultSourceSignal (ResultItemSource (ResultItem x)) = resultItemSignal x
 resultSourceSignal (ResultObjectSource x) = resultObjectSignal x
@@ -770,7 +769,7 @@ resultSourceToDoubleStatsValues = map (\(ResultItem x) -> resultItemToDoubleStat
 resultSourceToDoubleTimingStatsValues :: ResultSource -> [ResultValue (TimingStats Double)]
 resultSourceToDoubleTimingStatsValues = map (\(ResultItem x) -> resultItemToDoubleTimingStatsValue x) . flattenResultSource
 
--- | Represent the result source as 'String' values.
+-- | Represent the result source as string values.
 resultSourceToStringValues :: ResultSource -> [ResultValue String]
 resultSourceToStringValues = map (\(ResultItem x) -> resultItemToStringValue x) . flattenResultSource
 
@@ -843,7 +842,7 @@ resultsToDoubleStatsValues = concat . map resultSourceToDoubleStatsValues . resu
 resultsToDoubleTimingStatsValues :: Results -> [ResultValue (TimingStats Double)]
 resultsToDoubleTimingStatsValues = concat . map resultSourceToDoubleTimingStatsValues . resultSourceList
 
--- | Represent the results as 'String' values.
+-- | Represent the results as string values.
 resultsToStringValues :: Results -> [ResultValue String]
 resultsToStringValues = concat . map resultSourceToStringValues . resultSourceList
 
