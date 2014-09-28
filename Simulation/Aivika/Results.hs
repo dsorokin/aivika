@@ -1139,56 +1139,53 @@ queueResultSummary c =
 infiniteQueueResultSource :: (Show sm, Show so,
                               ResultItemable (ResultValue sm),
                               ResultItemable (ResultValue so))
-                             => ResultName
-                             -- ^ the result name
-                             -> ResultId
-                             -- ^ the result identifier
-                             -> IQ.Queue sm qm so qo a
-                             -- ^ the queue
+                             => ResultContainer (IQ.Queue sm qm so qo a)
+                             -- ^ the queue container
                              -> ResultSource
-infiniteQueueResultSource name i m =
+infiniteQueueResultSource c =
   ResultObjectSource $
   ResultObject {
-    resultObjectName = name,
-    resultObjectId = i,
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
     resultObjectTypeId = FiniteQueueId,
-    resultObjectSignal = ResultSignal $ IQ.queueChanged_ m,
-    resultObjectSummary = infiniteQueueResultSummary name i m,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = infiniteQueueResultSummary c,
     resultObjectProperties = [
-      makeProperty0 "enqueueStoringStrategy" EnqueueStoringStrategyId IQ.enqueueStoringStrategy,
-      makeProperty0 "dequeueStrategy" DequeueStrategyId IQ.dequeueStrategy,
-      makeProperty "queueNull" QueueNullId IQ.queueNull IQ.queueNullChanged_,
-      makeProperty "queueCount" QueueCountId IQ.queueCount IQ.queueCountChanged_,
-      makeProperty "queueCountStats" QueueCountStatsId IQ.queueCountStats IQ.queueCountChanged_,
-      makeProperty "enqueueStoreCount" EnqueueStoreCountId IQ.enqueueStoreCount IQ.enqueueStoreCountChanged_,
-      makeProperty "dequeueCount" DequeueCountId IQ.dequeueCount IQ.dequeueCountChanged_,
-      makeProperty "dequeueExtractCount" DequeueExtractCountId IQ.dequeueExtractCount IQ.dequeueExtractCountChanged_,
-      makeProperty1 "enqueueStoreRate" EnqueueStoreRateId IQ.enqueueStoreRate,
-      makeProperty1 "dequeueRate" DequeueRateId IQ.dequeueRate,
-      makeProperty1 "dequeueExtractRate" DequeueExtractRateId IQ.dequeueExtractRate,
-      makeProperty "queueWaitTime" QueueWaitTimeId IQ.queueWaitTime IQ.queueWaitTimeChanged_,
-      makeProperty "dequeueWaitTime" DequeueWaitTimeId IQ.dequeueWaitTime IQ.dequeueWaitTimeChanged_,
-      makeProperty "queueRate" QueueRateId IQ.queueRate IQ.queueRateChanged_ ] }
-  where
-    makeProperty0 name' i f =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . return . f) (const EmptyResultSignal) }
-    makeProperty1 name' i f =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . f) (const UnknownResultSignal) }
-    makeProperty name' i f g =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . f) (ResultSignal . g) }
-    makeSource name' i f g =
-      ResultItemSource $
-      ResultItem $
-      ResultValue { resultValueName   = name ++ "." ++ name',
-                    resultValueId     = i,
-                    resultValueData   = f m,
-                    resultValueSignal = g m }
+      resultContainerConstProperty c "enqueueStoringStrategy" EnqueueStoringStrategyId IQ.enqueueStoringStrategy,
+      resultContainerConstProperty c "dequeueStrategy" DequeueStrategyId IQ.dequeueStrategy,
+      resultContainerProperty c "queueNull" QueueNullId IQ.queueNull IQ.queueNullChanged_,
+      resultContainerProperty c "queueCount" QueueCountId IQ.queueCount IQ.queueCountChanged_,
+      resultContainerProperty c "queueCountStats" QueueCountStatsId IQ.queueCountStats IQ.queueCountChanged_,
+      resultContainerProperty c "enqueueStoreCount" EnqueueStoreCountId IQ.enqueueStoreCount IQ.enqueueStoreCountChanged_,
+      resultContainerProperty c "dequeueCount" DequeueCountId IQ.dequeueCount IQ.dequeueCountChanged_,
+      resultContainerProperty c "dequeueExtractCount" DequeueExtractCountId IQ.dequeueExtractCount IQ.dequeueExtractCountChanged_,
+      resultContainerIntegProperty c "enqueueStoreRate" EnqueueStoreRateId IQ.enqueueStoreRate,
+      resultContainerIntegProperty c "dequeueRate" DequeueRateId IQ.dequeueRate,
+      resultContainerIntegProperty c "dequeueExtractRate" DequeueExtractRateId IQ.dequeueExtractRate,
+      resultContainerProperty c "queueWaitTime" QueueWaitTimeId IQ.queueWaitTime IQ.queueWaitTimeChanged_,
+      resultContainerProperty c "dequeueWaitTime" DequeueWaitTimeId IQ.dequeueWaitTime IQ.dequeueWaitTimeChanged_,
+      resultContainerProperty c "queueRate" QueueRateId IQ.queueRate IQ.queueRateChanged_ ] }
+
+-- | Return the summary by the specified infinite queue.
+infiniteQueueResultSummary :: (Show sm, Show so)
+                              => ResultContainer (IQ.Queue sm qm so qo a)
+                              -- ^ the queue container
+                              -> ResultSource
+infiniteQueueResultSummary c =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
+    resultObjectTypeId = FiniteQueueId,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = infiniteQueueResultSummary c,
+    resultObjectProperties = [
+      resultContainerProperty c "queueCountStats" QueueCountStatsId IQ.queueCountStats IQ.queueCountChanged_,
+      resultContainerProperty c "enqueueStoreCount" EnqueueStoreCountId IQ.enqueueStoreCount IQ.enqueueStoreCountChanged_,
+      resultContainerProperty c "dequeueCount" DequeueCountId IQ.dequeueCount IQ.dequeueCountChanged_,
+      resultContainerProperty c "dequeueExtractCount" DequeueExtractCountId IQ.dequeueExtractCount IQ.dequeueExtractCountChanged_,
+      resultContainerProperty c "queueWaitTime" QueueWaitTimeId IQ.queueWaitTime IQ.queueWaitTimeChanged_,
+      resultContainerProperty c "queueRate" QueueRateId IQ.queueRate IQ.queueRateChanged_ ] }
   
 -- | Return a source by the specified arrival timer.
 arrivalTimerResultSource :: ResultName
@@ -1277,43 +1274,6 @@ textResultSource text =
 timeResultSource :: ResultSource
 timeResultSource = resultSource' "t" TimeId time
                          
--- | Return the summary by the specified infinite queue.
-infiniteQueueResultSummary :: (Show sm, Show so)
-                              => ResultName
-                              -- ^ the result name
-                              -> ResultId
-                              -- ^ the result identifier
-                              -> IQ.Queue sm qm so qo a
-                              -- ^ the queue
-                              -> ResultSource
-infiniteQueueResultSummary name i m =
-  ResultObjectSource $
-  ResultObject {
-    resultObjectName = name,
-    resultObjectId = i,
-    resultObjectTypeId = FiniteQueueId,
-    resultObjectSignal = ResultSignal $ IQ.queueChanged_ m,
-    resultObjectSummary = infiniteQueueResultSummary name i m,
-    resultObjectProperties = [
-      makeProperty "queueCountStats" QueueCountStatsId IQ.queueCountStats IQ.queueCountChanged_,
-      makeProperty "enqueueStoreCount" EnqueueStoreCountId IQ.enqueueStoreCount IQ.enqueueStoreCountChanged_,
-      makeProperty "dequeueCount" DequeueCountId IQ.dequeueCount IQ.dequeueCountChanged_,
-      makeProperty "dequeueExtractCount" DequeueExtractCountId IQ.dequeueExtractCount IQ.dequeueExtractCountChanged_,
-      makeProperty "queueWaitTime" QueueWaitTimeId IQ.queueWaitTime IQ.queueWaitTimeChanged_,
-      makeProperty "queueRate" QueueRateId IQ.queueRate IQ.queueRateChanged_ ] }
-  where
-    makeProperty name' i f g =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . f) (ResultSignal . g) }
-    makeSource name' i f g =
-      ResultItemSource $
-      ResultItem $
-      ResultValue { resultValueName   = name ++ "." ++ name',
-                    resultValueId     = i,
-                    resultValueData   = f m,
-                    resultValueSignal = g m }
-  
 -- | Return the summary by the specified arrival timer.
 arrivalTimerResultSummary :: ResultName
                              -- ^ the result name
@@ -1548,7 +1508,8 @@ instance (Show sm, Show so,
           ResultItemable (ResultValue so))
          => ResultProvider (IQ.Queue sm qm so qo a) where
 
-  resultSource' = infiniteQueueResultSource
+  resultSource' name i m =
+    infiniteQueueResultSource $ ResultContainer name i m (ResultSignal $ IQ.queueChanged_ m)
 
 instance ResultProvider ArrivalTimer where
 
