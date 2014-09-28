@@ -1188,35 +1188,34 @@ infiniteQueueResultSummary c =
       resultContainerProperty c "queueRate" QueueRateId IQ.queueRate IQ.queueRateChanged_ ] }
   
 -- | Return a source by the specified arrival timer.
-arrivalTimerResultSource :: ResultName
-                            -- ^ the result name
-                            -> ResultId
-                            -- ^ the result identifier
-                            -> ArrivalTimer
-                            -- ^ the arrival timer
+arrivalTimerResultSource :: ResultContainer ArrivalTimer
+                            -- ^ the arrival timer container
                             -> ResultSource
-arrivalTimerResultSource name i m =
+arrivalTimerResultSource c =
   ResultObjectSource $
   ResultObject {
-    resultObjectName = name,
-    resultObjectId = i,
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
     resultObjectTypeId = ArrivalTimerId,
-    resultObjectSignal = ResultSignal $ arrivalProcessingTimeChanged_ m,
-    resultObjectSummary = arrivalTimerResultSummary name i m,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = arrivalTimerResultSummary c,
     resultObjectProperties = [
-      makeProperty "processingTime" ArrivalProcessingTimeId arrivalProcessingTime arrivalProcessingTimeChanged_ ] }
-  where
-    makeProperty name' i f g =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . f) (ResultSignal . g) }
-    makeSource name' i f g =
-      ResultItemSource $
-      ResultItem $
-      ResultValue { resultValueName   = name ++ "." ++ name',
-                    resultValueId     = i,
-                    resultValueData   = f m,
-                    resultValueSignal = g m }
+      resultContainerProperty c "processingTime" ArrivalProcessingTimeId arrivalProcessingTime arrivalProcessingTimeChanged_ ] }
+
+-- | Return the summary by the specified arrival timer.
+arrivalTimerResultSummary :: ResultContainer ArrivalTimer
+                             -- ^ the arrival timer container
+                             -> ResultSource
+arrivalTimerResultSummary c =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
+    resultObjectTypeId = ArrivalTimerId,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = arrivalTimerResultSummary c,
+    resultObjectProperties = [
+      resultContainerProperty c "processingTime" ArrivalProcessingTimeId arrivalProcessingTime arrivalProcessingTimeChanged_ ] }
 
 -- | Return a source by the specified server.
 serverResultSource :: (Show s, ResultItemable (ResultValue s))
@@ -1274,37 +1273,6 @@ textResultSource text =
 timeResultSource :: ResultSource
 timeResultSource = resultSource' "t" TimeId time
                          
--- | Return the summary by the specified arrival timer.
-arrivalTimerResultSummary :: ResultName
-                             -- ^ the result name
-                             -> ResultId
-                             -- ^ the result identifier
-                             -> ArrivalTimer
-                             -- ^ the arrival timer
-                             -> ResultSource
-arrivalTimerResultSummary name i m =
-  ResultObjectSource $
-  ResultObject {
-    resultObjectName = name,
-    resultObjectId = i,
-    resultObjectTypeId = ArrivalTimerId,
-    resultObjectSignal = ResultSignal $ arrivalProcessingTimeChanged_ m,
-    resultObjectSummary = arrivalTimerResultSummary name i m,
-    resultObjectProperties = [
-      makeProperty "processingTime" ArrivalProcessingTimeId arrivalProcessingTime arrivalProcessingTimeChanged_ ] }
-  where
-    makeProperty name' i f g =
-      ResultProperty { resultPropertyLabel = name',
-                       resultPropertyId = i,
-                       resultPropertySource = makeSource name' i (Just . f) (ResultSignal . g) }
-    makeSource name' i f g =
-      ResultItemSource $
-      ResultItem $
-      ResultValue { resultValueName   = name ++ "." ++ name',
-                    resultValueId     = i,
-                    resultValueData   = f m,
-                    resultValueSignal = g m }
-
 -- | Return the summary by the specified server.
 serverResultSummary :: ResultName
                        -- ^ the result name
@@ -1513,7 +1481,8 @@ instance (Show sm, Show so,
 
 instance ResultProvider ArrivalTimer where
 
-  resultSource' = arrivalTimerResultSource
+  resultSource' name i m =
+    arrivalTimerResultSource $ ResultContainer name i m (ResultSignal $ arrivalProcessingTimeChanged_ m)
 
 instance (Show s, ResultItemable (ResultValue s)) => ResultProvider (Server s a b) where
 
