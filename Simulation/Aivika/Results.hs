@@ -66,6 +66,8 @@ module Simulation.Aivika.Results
         resultsToDoubleStatsValues,
         resultsToDoubleTimingStatsValues,
         resultsToStringValues,
+        composeResults,
+        concatResults,
         resultSignal,
         pureResultSignal,
         computeResultValue) where
