@@ -67,7 +67,6 @@ module Simulation.Aivika.Results
         resultsToDoubleTimingStatsValues,
         resultsToStringValues,
         composeResults,
-        concatResults,
         resultSignal,
         pureResultSignal,
         computeResultValue) where
@@ -962,6 +961,17 @@ composeResults f =
 concatResults :: [ResultTransform] -> ResultTransform
 concatResults trs rs =
   results $ concat $ map (\tr -> resultSourceList $ tr rs) trs
+
+-- | Append the results using the specified transformation functions.
+appendResults :: ResultTransform -> ResultTransform -> ResultTransform
+appendResults x y =
+  concatResults [x, y]
+
+instance Monoid ResultTransform where
+
+  mempty  = id
+  mappend = appendResults
+  mconcat = concatResults
 
 -- | Return a pure signal as a result of combination of the predefined signals
 -- with the specified result signal usually provided by the sources.
