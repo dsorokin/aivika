@@ -26,7 +26,6 @@ module Simulation.Aivika.Results
         ResultComputation(..),
         ResultListWithSubscript(..),
         ResultArrayWithSubscript(..),
-        ResultVectorWithSubscript(..),
         -- * Definitions Focused on Extending the Library 
         ResultSourceMap,
         ResultSource(..),
@@ -76,7 +75,7 @@ import Control.Monad.Trans
 
 import qualified Data.Map as M
 import qualified Data.Array as A
-import qualified Data.Vector as V
+-- import qualified Data.Vector as V
 
 import Data.Ix
 import Data.Maybe
@@ -1403,11 +1402,11 @@ instance (Show i, Ix i, ResultProvider p) => ResultProvider (A.Array i p) where
       items = A.elems m
       subscript = map show (A.indices m)
 
-instance ResultProvider p => ResultProvider (V.Vector p) where
-
-  resultSource' name i m =
-    resultSource' name i $ ResultVectorWithSubscript m subscript where
-      subscript = V.imap (\i x -> intSubscript i) m
+-- instance ResultProvider p => ResultProvider (V.Vector p) where
+-- 
+--   resultSource' name i m =
+--     resultSource' name i $ ResultVectorWithSubscript m subscript where
+--       subscript = V.imap (\i x -> intSubscript i) m
 
 -- | Represents a list with the specified subscript.
 data ResultListWithSubscript p =
@@ -1417,9 +1416,9 @@ data ResultListWithSubscript p =
 data ResultArrayWithSubscript i p =
   ResultArrayWithSubscript (A.Array i p) (A.Array i String)
 
--- | Represents a vector with the specified subscript.
-data ResultVectorWithSubscript p =
-  ResultVectorWithSubscript (V.Vector p) (V.Vector String)
+-- -- | Represents a vector with the specified subscript.
+-- data ResultVectorWithSubscript p =
+--   ResultVectorWithSubscript (V.Vector p) (V.Vector String)
 
 instance ResultProvider p => ResultProvider (ResultListWithSubscript p) where
 
@@ -1450,29 +1449,29 @@ instance (Show i, Ix i, ResultProvider p) => ResultProvider (ResultArrayWithSubs
       items = A.elems xs
       subscript = A.elems ys
 
-instance ResultProvider p => ResultProvider (ResultVectorWithSubscript p) where
-
-  resultSource' name i (ResultVectorWithSubscript xs ys) =
-    ResultVectorSource $
-    memoResultVectorSignal $
-    memoResultVectorSummary $
-    ResultVector { resultVectorName = name,
-                   resultVectorId = i,
-                   resultVectorItems = axs,
-                   resultVectorSubscript = ays,
-                   resultVectorSignal = undefined,
-                   resultVectorSummary = undefined }
-    where
-      bnds   = (0, V.length xs - 1)
-      axs    = A.listArray bnds (V.toList items)
-      ays    = A.listArray bnds (V.toList ys)
-      items =
-        V.generate (V.length xs) $ \i ->
-        let x = xs V.! i
-            y = ys V.! i
-            name' = name ++ y
-        in resultSource' name' (VectorItemId y) x
-      items' = V.map resultSourceSummary items
+-- instance ResultProvider p => ResultProvider (ResultVectorWithSubscript p) where
+-- 
+--   resultSource' name i (ResultVectorWithSubscript xs ys) =
+--     ResultVectorSource $
+--     memoResultVectorSignal $
+--     memoResultVectorSummary $
+--     ResultVector { resultVectorName = name,
+--                    resultVectorId = i,
+--                    resultVectorItems = axs,
+--                    resultVectorSubscript = ays,
+--                    resultVectorSignal = undefined,
+--                    resultVectorSummary = undefined }
+--     where
+--       bnds   = (0, V.length xs - 1)
+--       axs    = A.listArray bnds (V.toList items)
+--       ays    = A.listArray bnds (V.toList ys)
+--       items =
+--         V.generate (V.length xs) $ \i ->
+--         let x = xs V.! i
+--             y = ys V.! i
+--             name' = name ++ y
+--         in resultSource' name' (VectorItemId y) x
+--       items' = V.map resultSourceSummary items
 
 instance (Ix i, Show i, ResultComputing m) => ResultProvider (m (A.Array i Double)) where
 
@@ -1484,15 +1483,15 @@ instance (Ix i, Show i, ResultComputing m) => ResultProvider (m (A.Array i Int))
   resultSource' name i m =
     ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name i m
 
-instance ResultComputing m => ResultProvider (m (V.Vector Double)) where
+-- instance ResultComputing m => ResultProvider (m (V.Vector Double)) where
+-- 
+--   resultSource' name i m =
+--     ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name i m
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name i m
-
-instance ResultComputing m => ResultProvider (m (V.Vector Int)) where
-
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name i m
+-- instance ResultComputing m => ResultProvider (m (V.Vector Int)) where
+-- 
+--   resultSource' name i m =
+--     ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name i m
 
 instance (Show si, Show sm, Show so,
           ResultItemable (ResultValue si),

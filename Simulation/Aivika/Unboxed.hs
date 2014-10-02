@@ -35,9 +35,9 @@ instance Unboxed Int
 instance Unboxed Int8	 
 instance Unboxed Int16	 
 instance Unboxed Int32	 
-instance Unboxed Int64	 
+-- instance Unboxed Int64	 
 instance Unboxed Word	 
 instance Unboxed Word8	 
 instance Unboxed Word16	 
 instance Unboxed Word32	 
-instance Unboxed Word64
+-- instance Unboxed Word64
