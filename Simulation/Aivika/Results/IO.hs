@@ -18,10 +18,14 @@ module Simulation.Aivika.Results.IO
         printResultsInStartTime,
         printResultsInStopTime,
         printResultsInIntegTimes,
+        printResultsInTime,
+        printResultsInTimes,
         -- * Simulating and Printing the Results
         printSimulationResultsInStartTime,
         printSimulationResultsInStopTime,
         printSimulationResultsInIntegTimes,
+        printSimulationResultsInTime,
+        printSimulationResultsInTimes,
         -- * Showing the Results
         showResultsWithTime,
         showResultsInStartTime,
@@ -326,6 +330,21 @@ printResultsInIntegTimes print results =
            printResultsWithTime print results
      liftIO $ loop ms
 
+-- | Print the simulation results in the specified time.
+printResultsInTime :: Double -> ResultSourcePrint -> Results -> Simulation ()
+printResultsInTime t print results =
+  runDynamicsInTime t $ runEvent $
+  printResultsWithTime print results
+
+-- | Print the simulation results in the specified time points.
+printResultsInTimes :: [Double] -> ResultSourcePrint -> Results -> Simulation ()
+printResultsInTimes ts print results =
+  do let loop (m : ms) = m >> loop ms
+         loop [] = return ()
+     ms <- runDynamicsInTimes ts $ runEvent $
+           printResultsWithTime print results
+     liftIO $ loop ms
+
 -- | Show the results with the information about the modeling time.
 showResultsWithTime :: ResultSourceShowS -> Results -> Event ShowS
 showResultsWithTime f results =
@@ -383,6 +402,18 @@ printSimulationResultsInIntegTimes :: ResultSourcePrint -> Simulation Results ->
 printSimulationResultsInIntegTimes print model specs =
   flip runSimulation specs $
   model >>= printResultsInIntegTimes print
+
+-- | Run the simulation and then print the results in the specified time point.
+printSimulationResultsInTime :: Double -> ResultSourcePrint -> Simulation Results -> Specs -> IO ()
+printSimulationResultsInTime t print model specs =
+  flip runSimulation specs $
+  model >>= printResultsInTime t print
+
+-- | Run the simulation and then print the results in the specified time points.
+printSimulationResultsInTimes :: [Double] -> ResultSourcePrint -> Simulation Results -> Specs -> IO ()
+printSimulationResultsInTimes ts print model specs =
+  flip runSimulation specs $
+  model >>= printResultsInTimes ts print
 
 -- | Run the simulation and then show the results in the start time.
 showSimulationResultsInStartTime :: ResultSourceShowS -> Simulation Results -> Specs -> IO ShowS
