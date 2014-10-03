@@ -9,7 +9,42 @@
 --
 -- The module allows printing and converting the 'Simulation' 'Results' to a 'String'.
 --
-module Simulation.Aivika.Results.IO where
+module Simulation.Aivika.Results.IO
+       (-- * Basic Types
+        ResultSourcePrint,
+        ResultSourceShowS,
+        -- * Printing the Results
+        printResultsWithTime,
+        printResultsInStartTime,
+        printResultsInStopTime,
+        printResultsInIntegTimes,
+        -- * Simulating and Printing the Results
+        printSimulationResultsInStartTime,
+        printSimulationResultsInStopTime,
+        printSimulationResultsInIntegTimes,
+        -- * Showing the Results
+        showResultsWithTime,
+        showResultsInStartTime,
+        showResultsInStopTime,
+        showResultsInIntegTimes,
+        -- * Simulating and Showing the Results
+        showSimulationResultsInStartTime,
+        showSimulationResultsInStopTime,
+        showSimulationResultsInIntegTimes,
+        -- * Printing the Result Source
+        hPrintResultSourceIndented,
+        hPrintResultSource,
+        hPrintResultSourceInRussian,
+        hPrintResultSourceInEnglish,
+        printResultSourceIndented,
+        printResultSource,
+        printResultSourceInRussian,
+        printResultSourceInEnglish,
+        -- * Showing the Result Source
+        showResultSourceIndented,
+        showResultSource,
+        showResultSourceInRussian,
+        showResultSourceInEnglish) where
 
 import Control.Monad
 import Control.Monad.Trans
@@ -291,68 +326,78 @@ printResultsInIntegTimes print results =
            printResultsWithTime print results
      liftIO $ loop ms
 
--- | Print in Russian the simulation results in start time.
-printInitResultsInRussian :: Results -> Simulation ()
-printInitResultsInRussian = printResultsInStartTime  printResultSourceInRussian
+-- | Show the results with the information about the modeling time.
+showResultsWithTime :: ResultSourceShowS -> Results -> Event ShowS
+showResultsWithTime f results =
+  do let x1 = textResultSource "----------"
+         x2 = timeResultSource
+         x3 = textResultSource ""
+         xs = resultSourceList results
+     y1 <- f x1
+     y2 <- f x2
+     y3 <- f x3
+     ys <- forM xs f
+     return $
+       y1 .
+       y2 .
+       -- y3 .
+       foldr (.) id ys
+       -- y3
 
--- | Print in English the simulation results in start time.
-printInitResultsInEnglish :: Results -> Simulation ()
-printInitResultsInEnglish = printResultsInStartTime  printResultSourceInEnglish
+-- | Show the simulation results in start time.
+showResultsInStartTime :: ResultSourceShowS -> Results -> Simulation ShowS
+showResultsInStartTime f results =
+  runEventInStartTime $ showResultsWithTime f results
 
--- | Print in Russian the simulation results in stop time.
-printFinalResultsInRussian :: Results -> Simulation ()
-printFinalResultsInRussian = printResultsInStopTime  printResultSourceInRussian
+-- | Show the simulation results in stop time.
+showResultsInStopTime :: ResultSourceShowS -> Results -> Simulation ShowS
+showResultsInStopTime f results =
+  runEventInStopTime $ showResultsWithTime f results
 
--- | Print in English the simulation results in stop time.
-printFinalResultsInEnglish :: Results -> Simulation ()
-printFinalResultsInEnglish = printResultsInStopTime  printResultSourceInEnglish
+-- | Show the simulation results in integration time points.
+--
+-- It may consume much memory, for we have to traverse all the integration
+-- points to create the resulting function within the 'Simulation' computation.
+showResultsInIntegTimes :: ResultSourceShowS -> Results -> Simulation ShowS
+showResultsInIntegTimes f results =
+  do let loop (m : ms) = return (.) `ap` m `ap` loop ms
+         loop [] = return id
+     ms <- runDynamicsInIntegTimes $ runEvent $
+           showResultsWithTime f results
+     liftIO $ loop ms
 
--- | Print in Russian the simulation results in integration time points.
-printIntegResultsInRussian :: Results -> Simulation ()
-printIntegResultsInRussian = printResultsInIntegTimes  printResultSourceInRussian
-
--- | Print in English the simulation results in integration time points.
-printIntegResultsInEnglish :: Results -> Simulation ()
-printIntegResultsInEnglish = printResultsInIntegTimes  printResultSourceInEnglish
-
--- | Run the simulation and output to the results in the start time.
-outputResultsInStartTime :: ResultSourcePrint -> Simulation Results -> Specs -> IO ()
-outputResultsInStartTime print model specs =
+-- | Run the simulation and then print the results in the start time.
+printSimulationResultsInStartTime :: ResultSourcePrint -> Simulation Results -> Specs -> IO ()
+printSimulationResultsInStartTime print model specs =
   flip runSimulation specs $
   model >>= printResultsInStartTime print
 
--- | Run the simulation and output to the results in the final time.
-outputResultsInStopTime :: ResultSourcePrint -> Simulation Results -> Specs -> IO ()
-outputResultsInStopTime print model specs =
+-- | Run the simulation and then print the results in the final time.
+printSimulationResultsInStopTime :: ResultSourcePrint -> Simulation Results -> Specs -> IO ()
+printSimulationResultsInStopTime print model specs =
   flip runSimulation specs $
   model >>= printResultsInStopTime print
 
--- | Run the simulation and output to the results in the integration time points.
-outputResultsInIntegTimes :: ResultSourcePrint -> Simulation Results -> Specs -> IO ()
-outputResultsInIntegTimes print model specs =
+-- | Run the simulation and then print the results in the integration time points.
+printSimulationResultsInIntegTimes :: ResultSourcePrint -> Simulation Results -> Specs -> IO ()
+printSimulationResultsInIntegTimes print model specs =
   flip runSimulation specs $
   model >>= printResultsInIntegTimes print
 
--- | Run the simulation and output in Russian the results in the start time.
-outputInitResultsInRussian :: Simulation Results -> Specs -> IO ()
-outputInitResultsInRussian = outputResultsInStartTime printResultSourceInRussian
+-- | Run the simulation and then show the results in the start time.
+showSimulationResultsInStartTime :: ResultSourceShowS -> Simulation Results -> Specs -> IO ShowS
+showSimulationResultsInStartTime f model specs =
+  flip runSimulation specs $
+  model >>= showResultsInStartTime f
 
--- | Run the simulation and output in English the results in the start time.
-outputInitResultsInEnglish :: Simulation Results -> Specs -> IO ()
-outputInitResultsInEnglish = outputResultsInStartTime printResultSourceInEnglish
+-- | Run the simulation and then show the results in the final time.
+showSimulationResultsInStopTime :: ResultSourceShowS -> Simulation Results -> Specs -> IO ShowS
+showSimulationResultsInStopTime f model specs =
+  flip runSimulation specs $
+  model >>= showResultsInStopTime f
 
--- | Run the simulation and output in Russian the results in the final time.
-outputFinalResultsInRussian :: Simulation Results -> Specs -> IO ()
-outputFinalResultsInRussian = outputResultsInStopTime printResultSourceInRussian
-
--- | Run the simulation and output in English the results in the final time.
-outputFinalResultsInEnglish :: Simulation Results -> Specs -> IO ()
-outputFinalResultsInEnglish = outputResultsInStopTime printResultSourceInEnglish
-
--- | Run the simulation and output in Russian the results in the integration time points.
-outputIntegResultsInRussian :: Simulation Results -> Specs -> IO ()
-outputIntegResultsInRussian = outputResultsInIntegTimes printResultSourceInRussian
-
--- | Run the simulation and output in English the results in the integration time points.
-outputIntegResultsInEnglish :: Simulation Results -> Specs -> IO ()
-outputIntegResultsInEnglish = outputResultsInIntegTimes printResultSourceInEnglish
+-- | Run the simulation and then show the results in the integration time points.
+showSimulationResultsInIntegTimes :: ResultSourceShowS -> Simulation Results -> Specs -> IO ShowS
+showSimulationResultsInIntegTimes f model specs =
+  flip runSimulation specs $
+  model >>= showResultsInIntegTimes f
