@@ -24,4 +24,7 @@ model =
          resultSource "b" "variable B" b,
          resultSource "c" "variable C" c]
 
-main = outputFinalResultsInEnglish model specs
+main =
+  printSimulationResultsInStopTime
+  printResultSourceInEnglish
+  model specs

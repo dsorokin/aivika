@@ -317,5 +317,7 @@ model =
         furnaceQueue furnace]
 
 -- | The main program.
--- main = outputFinalResultsInRussian model specs
-main = outputFinalResultsInEnglish model specs
+main =
+  printSimulationResultsInStopTime
+  printResultSourceInEnglish
+  model specs

@@ -3,6 +3,7 @@ import Simulation.Aivika
 
 import Model
 
-main = 
-  -- outputIntegResultsInRussian model specs
-  outputIntegResultsInEnglish model specs
+main =
+  printSimulationResultsInIntegTimes
+  printResultSourceInEnglish
+  model specs

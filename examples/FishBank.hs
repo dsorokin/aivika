@@ -54,5 +54,7 @@ model =
 main =
   flip runSimulation specs $
   model >>= \results -> do
-    printInitResultsInEnglish results
-    printFinalResultsInEnglish results
+    printResultsInStartTime
+      printResultSourceInEnglish results
+    printResultsInStopTime
+      printResultSourceInEnglish results
