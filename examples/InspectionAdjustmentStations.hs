@@ -178,5 +178,6 @@ modelSummary :: Simulation Results
 modelSummary = fmap resultSummary model
 
 main =
-  -- outputFinalResultsInRussian modelSummary specs
-  outputFinalResultsInEnglish modelSummary specs
+  printSimulationResultsInStopTime
+  printResultSourceInEnglish
+  modelSummary specs
