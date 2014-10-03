@@ -31,10 +31,14 @@ module Simulation.Aivika.Results.IO
         showResultsInStartTime,
         showResultsInStopTime,
         showResultsInIntegTimes,
+        showResultsInTime,
+        showResultsInTimes,
         -- * Simulating and Showing the Results
         showSimulationResultsInStartTime,
         showSimulationResultsInStopTime,
         showSimulationResultsInIntegTimes,
+        showSimulationResultsInTime,
+        showSimulationResultsInTimes,
         -- * Printing the Result Source
         hPrintResultSourceIndented,
         hPrintResultSource,
@@ -321,7 +325,7 @@ printResultsInStopTime :: ResultSourcePrint -> Results -> Simulation ()
 printResultsInStopTime print results =
   runEventInStopTime $ printResultsWithTime print results
 
--- | Print the simulation results in integration time points.
+-- | Print the simulation results in the integration time points.
 printResultsInIntegTimes :: ResultSourcePrint -> Results -> Simulation ()
 printResultsInIntegTimes print results =
   do let loop (m : ms) = m >> loop ms
@@ -373,7 +377,7 @@ showResultsInStopTime :: ResultSourceShowS -> Results -> Simulation ShowS
 showResultsInStopTime f results =
   runEventInStopTime $ showResultsWithTime f results
 
--- | Show the simulation results in integration time points.
+-- | Show the simulation results in the integration time points.
 --
 -- It may consume much memory, for we have to traverse all the integration
 -- points to create the resulting function within the 'Simulation' computation.
@@ -382,6 +386,24 @@ showResultsInIntegTimes f results =
   do let loop (m : ms) = return (.) `ap` m `ap` loop ms
          loop [] = return id
      ms <- runDynamicsInIntegTimes $ runEvent $
+           showResultsWithTime f results
+     liftIO $ loop ms
+
+-- | Show the simulation results in the specified time point.
+showResultsInTime :: Double -> ResultSourceShowS -> Results -> Simulation ShowS
+showResultsInTime t f results =
+  runDynamicsInTime t $ runEvent $
+  showResultsWithTime f results
+
+-- | Show the simulation results in the specified time points.
+--
+-- It may consume much memory, for we have to traverse all the specified
+-- points to create the resulting function within the 'Simulation' computation.
+showResultsInTimes :: [Double] -> ResultSourceShowS -> Results -> Simulation ShowS
+showResultsInTimes ts f results =
+  do let loop (m : ms) = return (.) `ap` m `ap` loop ms
+         loop [] = return id
+     ms <- runDynamicsInTimes ts $ runEvent $
            showResultsWithTime f results
      liftIO $ loop ms
 
@@ -428,7 +450,25 @@ showSimulationResultsInStopTime f model specs =
   model >>= showResultsInStopTime f
 
 -- | Run the simulation and then show the results in the integration time points.
+--
+-- It may consume much memory, for we have to traverse all the integration
+-- points to create the resulting function within the 'IO' computation.
 showSimulationResultsInIntegTimes :: ResultSourceShowS -> Simulation Results -> Specs -> IO ShowS
 showSimulationResultsInIntegTimes f model specs =
   flip runSimulation specs $
   model >>= showResultsInIntegTimes f
+
+-- | Run the simulation and then show the results in the integration time point.
+showSimulationResultsInTime :: Double -> ResultSourceShowS -> Simulation Results -> Specs -> IO ShowS
+showSimulationResultsInTime t f model specs =
+  flip runSimulation specs $
+  model >>= showResultsInTime t f
+
+-- | Run the simulation and then show the results in the specified time points.
+--
+-- It may consume much memory, for we have to traverse all the specified
+-- points to create the resulting function within the 'IO' computation.
+showSimulationResultsInTimes :: [Double] -> ResultSourceShowS -> Simulation Results -> Specs -> IO ShowS
+showSimulationResultsInTimes ts f model specs =
+  flip runSimulation specs $
+  model >>= showResultsInTimes ts f
