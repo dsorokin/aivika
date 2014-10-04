@@ -88,10 +88,12 @@ module Simulation.Aivika.Results
         resultsToIntValues,
         resultsToIntListValues,
         resultsToIntStatsValues,
+        resultsToIntStatsEitherValues,
         resultsToIntTimingStatsValues,
         resultsToDoubleValues,
         resultsToDoubleListValues,
         resultsToDoubleStatsValues,
+        resultsToDoubleStatsEitherValues,
         resultsToDoubleTimingStatsValues,
         resultsToStringValues,
         composeResults,
@@ -862,7 +864,7 @@ resultSourceToIntListValues = map (\(ResultItem x) -> resultItemToIntListValue x
 resultSourceToIntStatsValues :: ResultSource -> [ResultValue (SamplingStats Int)]
 resultSourceToIntStatsValues = map (\(ResultItem x) -> resultItemToIntStatsValue x) . flattenResultSource
 
--- | Represent the result source as statistics based on integer numbers optimised for fast aggregation.
+-- | Represent the result source as statistics based on integer numbers and optimised for fast aggregation.
 resultSourceToIntStatsEitherValues :: ResultSource -> [ResultValue (Either Int (SamplingStats Int))]
 resultSourceToIntStatsEitherValues = map (\(ResultItem x) -> resultItemToIntStatsEitherValue x) . flattenResultSource
 
@@ -882,7 +884,7 @@ resultSourceToDoubleListValues = map (\(ResultItem x) -> resultItemToDoubleListV
 resultSourceToDoubleStatsValues :: ResultSource -> [ResultValue (SamplingStats Double)]
 resultSourceToDoubleStatsValues = map (\(ResultItem x) -> resultItemToDoubleStatsValue x) . flattenResultSource
 
--- | Represent the result source as statistics based on double floating point numbers optimised for fast aggregation.
+-- | Represent the result source as statistics based on double floating point numbers and optimised for fast aggregation.
 resultSourceToDoubleStatsEitherValues :: ResultSource -> [ResultValue (Either Double (SamplingStats Double))]
 resultSourceToDoubleStatsEitherValues = map (\(ResultItem x) -> resultItemToDoubleStatsEitherValue x) . flattenResultSource
 
@@ -943,6 +945,10 @@ resultsToIntListValues = concat . map resultSourceToIntListValues . resultSource
 resultsToIntStatsValues :: Results -> [ResultValue (SamplingStats Int)]
 resultsToIntStatsValues = concat . map resultSourceToIntStatsValues . resultSourceList
 
+-- | Represent the results as statistics based on integer numbers and optimised for fast aggregation.
+resultsToIntStatsEitherValues :: Results -> [ResultValue (Either Int (SamplingStats Int))]
+resultsToIntStatsEitherValues = concat . map resultSourceToIntStatsEitherValues . resultSourceList
+
 -- | Represent the results as timing statistics based on integer numbers.
 resultsToIntTimingStatsValues :: Results -> [ResultValue (TimingStats Int)]
 resultsToIntTimingStatsValues = concat . map resultSourceToIntTimingStatsValues . resultSourceList
@@ -958,6 +964,10 @@ resultsToDoubleListValues = concat . map resultSourceToDoubleListValues . result
 -- | Represent the results as statistics based on double floating point numbers.
 resultsToDoubleStatsValues :: Results -> [ResultValue (SamplingStats Double)]
 resultsToDoubleStatsValues = concat . map resultSourceToDoubleStatsValues . resultSourceList
+
+-- | Represent the results as statistics based on double floating point numbers and optimised for fast aggregation.
+resultsToDoubleStatsEitherValues :: Results -> [ResultValue (Either Double (SamplingStats Double))]
+resultsToDoubleStatsEitherValues = concat . map resultSourceToDoubleStatsEitherValues . resultSourceList
 
 -- | Represent the results as timing statistics based on double floating point numbers.
 resultsToDoubleTimingStatsValues :: Results -> [ResultValue (TimingStats Double)]
