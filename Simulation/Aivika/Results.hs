@@ -29,6 +29,21 @@ module Simulation.Aivika.Results
 #ifndef __HASTE__
         ResultVectorWithSubscript(..),
 #endif
+        -- * Definitions Focused on Using the Library
+        ResultPair(..),
+        resultsToIntPairs,
+        resultsToIntListPairs,
+        resultsToIntStatsPairs,
+        resultsToIntTimingStatsPairs,
+        resultsToDoublePairs,
+        resultsToDoubleListPairs,
+        resultsToDoubleStatsPairs,
+        resultsToDoubleTimingStatsPairs,
+        resultsToStringPairs,
+        ResultPredefinedSignals(..),
+        newResultPredefinedSignals,
+        resultSignal,
+        pureResultSignal,
         -- * Definitions Focused on Extending the Library 
         ResultSourceMap,
         ResultSource(..),
@@ -55,8 +70,15 @@ module Simulation.Aivika.Results
         maybeResultSignal,
         textResultSource,
         timeResultSource,
-        ResultPredefinedSignals(..),
-        newResultPredefinedSignals,
+        resultSourceToIntValues,
+        resultSourceToIntListValues,
+        resultSourceToIntStatsValues,
+        resultSourceToIntTimingStatsValues,
+        resultSourceToDoubleValues,
+        resultSourceToDoubleListValues,
+        resultSourceToDoubleStatsValues,
+        resultSourceToDoubleTimingStatsValues,
+        resultSourceToStringValues,
         resultSourceMap,
         resultSourceList,
         resultsToIntValues,
@@ -69,8 +91,6 @@ module Simulation.Aivika.Results
         resultsToDoubleTimingStatsValues,
         resultsToStringValues,
         composeResults,
-        resultSignal,
-        pureResultSignal,
         computeResultValue) where
 
 import Control.Monad
@@ -993,6 +1013,140 @@ pureResultSignal rs (ResultSignal s) =
   void (resultSignalInStartTime rs) <> void (resultSignalInStopTime rs) <> s
 pureResultSignal rs (ResultSignalMix s) =
   void (resultSignalInIntegTimes rs) <> s
+
+-- | Defines a final result pair: its name and values.
+data ResultPair e =
+  ResultPair { resultPairName :: ResultName,
+               -- ^ The name of the result.
+               resultPairData :: Event e
+               -- ^ The final values of the result.
+             }
+
+-- | Convert the results to pairs of integer values,
+-- or raise a conversion error.
+resultsToIntPairs :: Results -> [ResultPair Int]
+resultsToIntPairs rs = flip map (resultsToIntValues rs) $ \x ->
+  let n = resultValueName x
+      a = resultValueData x
+  in case a of
+    Nothing ->
+      error $
+      "Cannot represent variable " ++ n ++
+      " as a source of integer values: resultsToIntPairs"
+    Just a ->
+      ResultPair n a
+
+-- | Convert the results to pairs of lists of integer values,
+-- or raise a conversion error.
+resultsToIntListPairs :: Results -> [ResultPair [Int]]
+resultsToIntListPairs rs = flip map (resultsToIntListValues rs) $ \x ->
+  let n = resultValueName x
+      a = resultValueData x
+  in case a of
+    Nothing ->
+      error $
+      "Cannot represent variable " ++ n ++
+      " as a source of lists of integer values: resultsToIntListPairs"
+    Just a ->
+      ResultPair n a
+
+-- | Convert the results to pairs of statistics based on integer values,
+-- or raise a conversion error.
+resultsToIntStatsPairs :: Results -> [ResultPair (SamplingStats Int)]
+resultsToIntStatsPairs rs = flip map (resultsToIntStatsValues rs) $ \x ->
+  let n = resultValueName x
+      a = resultValueData x
+  in case a of
+    Nothing ->
+      error $
+      "Cannot represent variable " ++ n ++
+      " as a source of statistics based on integer values: resultsToIntStatsPairs"
+    Just a ->
+      ResultPair n a
+
+-- | Convert the results to pairs of timing statistics based on integer values,
+-- or raise a conversion error.
+resultsToIntTimingStatsPairs :: Results -> [ResultPair (TimingStats Int)]
+resultsToIntTimingStatsPairs rs = flip map (resultsToIntTimingStatsValues rs) $ \x ->
+  let n = resultValueName x
+      a = resultValueData x
+  in case a of
+    Nothing ->
+      error $
+      "Cannot represent variable " ++ n ++
+      " as a source of timing statistics based on integer values: resultsToIntTimingStatsPairs"
+    Just a ->
+      ResultPair n a
+
+-- | Convert the results to pairs of double floating point values,
+-- or raise a conversion error.
+resultsToDoublePairs :: Results -> [ResultPair Double]
+resultsToDoublePairs rs = flip map (resultsToDoubleValues rs) $ \x ->
+  let n = resultValueName x
+      a = resultValueData x
+  in case a of
+    Nothing ->
+      error $
+      "Cannot represent variable " ++ n ++
+      " as a source of double floating point values: resultsToDoublePairs"
+    Just a ->
+      ResultPair n a
+
+-- | Convert the results to pairs of lists of double floating point values,
+-- or raise a conversion error.
+resultsToDoubleListPairs :: Results -> [ResultPair [Double]]
+resultsToDoubleListPairs rs = flip map (resultsToDoubleListValues rs) $ \x ->
+  let n = resultValueName x
+      a = resultValueData x
+  in case a of
+    Nothing ->
+      error $
+      "Cannot represent variable " ++ n ++
+      " as a source of lists of double floating point values: resultsToDoubleListPairs"
+    Just a ->
+      ResultPair n a
+
+-- | Convert the results to pairs of statistics based on double floating point values,
+-- or raise a conversion error.
+resultsToDoubleStatsPairs :: Results -> [ResultPair (SamplingStats Double)]
+resultsToDoubleStatsPairs rs = flip map (resultsToDoubleStatsValues rs) $ \x ->
+  let n = resultValueName x
+      a = resultValueData x
+  in case a of
+    Nothing ->
+      error $
+      "Cannot represent variable " ++ n ++
+      " as a source of statistics based on double floating point values: resultsToDoubleStatsPairs"
+    Just a ->
+      ResultPair n a
+
+-- | Convert the results to pairs of timing statistics based on double floating point values,
+-- or raise a conversion error.
+resultsToDoubleTimingStatsPairs :: Results -> [ResultPair (TimingStats Double)]
+resultsToDoubleTimingStatsPairs rs = flip map (resultsToDoubleTimingStatsValues rs) $ \x ->
+  let n = resultValueName x
+      a = resultValueData x
+  in case a of
+    Nothing ->
+      error $
+      "Cannot represent variable " ++ n ++
+      " as a source of timing statistics based on double floating point values: resultsToDoubleTimingStatsPairs"
+    Just a ->
+      ResultPair n a
+
+-- | Convert the results to pairs of string values,
+-- or raise a conversion error.
+resultsToStringPairs :: Results -> [ResultPair String]
+resultsToStringPairs rs = flip map (resultsToStringValues rs) $ \x ->
+  let n = resultValueName x
+      a = resultValueData x
+  in case a of
+    Nothing ->
+      error $
+      "Cannot represent variable " ++ n ++
+      " as a source of string values: resultsToStringPairs"
+    Just a ->
+      ResultPair n a
 
 -- | Represents a computation that can return the simulation data.
 class ResultComputing m where
