@@ -1659,7 +1659,7 @@ instance (Show i, Ix i, ResultProvider p) => ResultProvider (A.Array i p) where
   resultSource' name i m =
     resultSource' name i $ ResultListWithSubscript items subscript where
       items = A.elems m
-      subscript = map show (A.indices m)
+      subscript = map (\i -> "[" ++ show i ++ "]") (A.indices m)
 
 #ifndef __HASTE__
 
