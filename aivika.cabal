@@ -85,7 +85,7 @@ copyright:       (c) 2009-2014. David Sorokin <david.sorokin@gmail.com>
 author:          David Sorokin
 maintainer:      David Sorokin <david.sorokin@gmail.com>
 homepage:        http://github.com/dsorokin/aivika
-cabal-version:   >= 1.6
+cabal-version:   >= 1.10
 build-type:      Simple
 tested-with:     GHC == 7.8.3
 
@@ -106,6 +106,11 @@ extra-source-files:  examples/BassDiffusion/Model.hs
                      examples/TimeOut.hs
                      examples/TimeOutInt.hs
                      examples/TimeOutWait.hs
+
+flag haste-inst
+    
+    description: The package is built using haste-inst
+    default:     False
 
 library
 
@@ -173,17 +178,23 @@ library
                      containers >= 0.4.0.0,
                      random >= 1.0.0.3
 
-    extensions:      FlexibleContexts,
-                     FlexibleInstances,
-                     UndecidableInstances,
-                     BangPatterns,
-                     RecursiveDo,
-                     Arrows,
-                     MultiParamTypeClasses,
-                     FunctionalDependencies,
-                     ExistentialQuantification
+    if !flag(haste-inst)
+       build-depends:   vector >= 0.10.0.1
+
+    other-extensions:   FlexibleContexts,
+                        FlexibleInstances,
+                        UndecidableInstances,
+                        BangPatterns,
+                        RecursiveDo,
+                        Arrows,
+                        MultiParamTypeClasses,
+                        FunctionalDependencies,
+                        ExistentialQuantification,
+                        CPP
                      
     ghc-options:     -O2
+
+    default-language:   Haskell2010
 
 source-repository head
 
