@@ -75,10 +75,12 @@ module Simulation.Aivika.Results
         resultSourceToIntValues,
         resultSourceToIntListValues,
         resultSourceToIntStatsValues,
+        resultSourceToIntStatsEitherValues,
         resultSourceToIntTimingStatsValues,
         resultSourceToDoubleValues,
         resultSourceToDoubleListValues,
         resultSourceToDoubleStatsValues,
+        resultSourceToDoubleStatsEitherValues,
         resultSourceToDoubleTimingStatsValues,
         resultSourceToStringValues,
         resultSourceMap,
@@ -860,6 +862,10 @@ resultSourceToIntListValues = map (\(ResultItem x) -> resultItemToIntListValue x
 resultSourceToIntStatsValues :: ResultSource -> [ResultValue (SamplingStats Int)]
 resultSourceToIntStatsValues = map (\(ResultItem x) -> resultItemToIntStatsValue x) . flattenResultSource
 
+-- | Represent the result source as statistics based on integer numbers optimised for fast aggregation.
+resultSourceToIntStatsEitherValues :: ResultSource -> [ResultValue (Either Int (SamplingStats Int))]
+resultSourceToIntStatsEitherValues = map (\(ResultItem x) -> resultItemToIntStatsEitherValue x) . flattenResultSource
+
 -- | Represent the result source as timing statistics based on integer numbers.
 resultSourceToIntTimingStatsValues :: ResultSource -> [ResultValue (TimingStats Int)]
 resultSourceToIntTimingStatsValues = map (\(ResultItem x) -> resultItemToIntTimingStatsValue x) . flattenResultSource
@@ -875,6 +881,10 @@ resultSourceToDoubleListValues = map (\(ResultItem x) -> resultItemToDoubleListV
 -- | Represent the result source as statistics based on double floating point numbers.
 resultSourceToDoubleStatsValues :: ResultSource -> [ResultValue (SamplingStats Double)]
 resultSourceToDoubleStatsValues = map (\(ResultItem x) -> resultItemToDoubleStatsValue x) . flattenResultSource
+
+-- | Represent the result source as statistics based on double floating point numbers optimised for fast aggregation.
+resultSourceToDoubleStatsEitherValues :: ResultSource -> [ResultValue (Either Double (SamplingStats Double))]
+resultSourceToDoubleStatsEitherValues = map (\(ResultItem x) -> resultItemToDoubleStatsEitherValue x) . flattenResultSource
 
 -- | Represent the result source as timing statistics based on double floating point numbers.
 resultSourceToDoubleTimingStatsValues :: ResultSource -> [ResultValue (TimingStats Double)]
