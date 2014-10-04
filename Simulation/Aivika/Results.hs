@@ -929,6 +929,11 @@ newResultPredefinedSignals = runDynamicsInStartTime $ runEventWith EarlierEvents
                                           resultSignalInStartTime  = signalInStartTime,
                                           resultSignalInStopTime   = signalInStopTime }
 
+instance Monoid Results where
+
+  mempty      = results mempty
+  mappend x y = results $ resultSourceList x <> resultSourceList y
+
 -- | Prepare the simulation results.
 results :: [ResultSource] -> Results
 results ms =
@@ -1041,12 +1046,6 @@ concatResults trs rs =
 appendResults :: ResultTransform -> ResultTransform -> ResultTransform
 appendResults x y =
   concatResults [x, y]
-
-instance Monoid ResultTransform where
-
-  mempty  = id
-  mappend = appendResults
-  mconcat = concatResults
 
 -- | Return a pure signal as a result of combination of the predefined signals
 -- with the specified result signal usually provided by the sources.
