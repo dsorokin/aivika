@@ -49,6 +49,8 @@ module Simulation.Aivika.Results
         ResultSource(..),
         ResultItem(..),
         ResultItemable(..),
+        resultItemToIntStatsEitherValue,
+        resultItemToDoubleStatsEitherValue,
         ResultObject(..),
         ResultProperty(..),
         ResultVector(..),
@@ -204,6 +206,32 @@ class ResultItemable a where
 
   -- | Return string representations in time points.
   resultItemToStringValue :: a -> ResultValue String
+
+-- | Return a version optimised for fast aggregation of the statistics based on integer numbers.
+resultItemToIntStatsEitherValue :: ResultItemable a => a -> ResultValue (Either Int (SamplingStats Int))
+resultItemToIntStatsEitherValue x =
+  case resultValueData x1 of
+    Just a1 -> fmap Left x1
+    Nothing ->
+      case resultValueData x2 of
+        Just a2 -> fmap Right x2
+        Nothing -> voidResultValue x2
+  where
+    x1 = resultItemToIntValue x
+    x2 = resultItemToIntStatsValue x
+
+-- | Return a version optimised for fast aggregation of the statistics based on double floating point numbers.
+resultItemToDoubleStatsEitherValue :: ResultItemable a => a -> ResultValue (Either Double (SamplingStats Double))
+resultItemToDoubleStatsEitherValue x =
+  case resultValueData x1 of
+    Just a1 -> fmap Left x1
+    Nothing ->
+      case resultValueData x2 of
+        Just a2 -> fmap Right x2
+        Nothing -> voidResultValue x2
+  where
+    x1 = resultItemToDoubleValue x
+    x2 = resultItemToDoubleStatsValue x
 
 -- | The simulation results represented by an object having properties.
 data ResultObject =
