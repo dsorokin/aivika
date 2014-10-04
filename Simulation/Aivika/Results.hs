@@ -34,10 +34,12 @@ module Simulation.Aivika.Results
         resultsToIntPairs,
         resultsToIntListPairs,
         resultsToIntStatsPairs,
+        resultsToIntStatsEitherPairs,
         resultsToIntTimingStatsPairs,
         resultsToDoublePairs,
         resultsToDoubleListPairs,
         resultsToDoubleStatsPairs,
+        resultsToDoubleStatsEitherPairs,
         resultsToDoubleTimingStatsPairs,
         resultsToStringPairs,
         ResultPredefinedSignals(..),
@@ -1112,6 +1114,20 @@ resultsToIntStatsPairs rs = flip map (resultsToIntStatsValues rs) $ \x ->
     Just a ->
       ResultPair n a
 
+-- | Convert the results to pairs of statistics based on integer values and optimised
+-- for fast aggregation, or raise a conversion error.
+resultsToIntStatsEitherPairs :: Results -> [ResultPair (Either Int (SamplingStats Int))]
+resultsToIntStatsEitherPairs rs = flip map (resultsToIntStatsEitherValues rs) $ \x ->
+  let n = resultValueName x
+      a = resultValueData x
+  in case a of
+    Nothing ->
+      error $
+      "Cannot represent variable " ++ n ++
+      " as a source of statistics based on integer values: resultsToIntStatsEitherPairs"
+    Just a ->
+      ResultPair n a
+
 -- | Convert the results to pairs of timing statistics based on integer values,
 -- or raise a conversion error.
 resultsToIntTimingStatsPairs :: Results -> [ResultPair (TimingStats Int)]
@@ -1165,6 +1181,20 @@ resultsToDoubleStatsPairs rs = flip map (resultsToDoubleStatsValues rs) $ \x ->
       error $
       "Cannot represent variable " ++ n ++
       " as a source of statistics based on double floating point values: resultsToDoubleStatsPairs"
+    Just a ->
+      ResultPair n a
+
+-- | Convert the results to pairs of statistics based on double floating point values
+-- and optimised for fast aggregation, or raise a conversion error.
+resultsToDoubleStatsEitherPairs :: Results -> [ResultPair (Either Double (SamplingStats Double))]
+resultsToDoubleStatsEitherPairs rs = flip map (resultsToDoubleStatsEitherValues rs) $ \x ->
+  let n = resultValueName x
+      a = resultValueData x
+  in case a of
+    Nothing ->
+      error $
+      "Cannot represent variable " ++ n ++
+      " as a source of statistics based on double floating point values: resultsToDoubleStatsEitherPairs"
     Just a ->
       ResultPair n a
 
