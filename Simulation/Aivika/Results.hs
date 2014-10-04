@@ -30,18 +30,18 @@ module Simulation.Aivika.Results
         ResultVectorWithSubscript(..),
 #endif
         -- * Definitions Focused on Using the Library
-        ResultPair(..),
-        resultsToIntPairs,
-        resultsToIntListPairs,
-        resultsToIntStatsPairs,
-        resultsToIntStatsEitherPairs,
-        resultsToIntTimingStatsPairs,
-        resultsToDoublePairs,
-        resultsToDoubleListPairs,
-        resultsToDoubleStatsPairs,
-        resultsToDoubleStatsEitherPairs,
-        resultsToDoubleTimingStatsPairs,
-        resultsToStringPairs,
+        ResultExtract(..),
+        extractIntResults,
+        extractIntListResults,
+        extractIntStatsResults,
+        extractIntStatsEitherResults,
+        extractIntTimingStatsResults,
+        extractDoubleResults,
+        extractDoubleListResults,
+        extractDoubleStatsResults,
+        extractDoubleStatsEitherResults,
+        extractDoubleTimingStatsResults,
+        extractStringResults,
         ResultPredefinedSignals(..),
         newResultPredefinedSignals,
         resultSignal,
@@ -1064,167 +1064,189 @@ pureResultSignal rs (ResultSignal s) =
 pureResultSignal rs (ResultSignalMix s) =
   void (resultSignalInIntegTimes rs) <> s
 
--- | Defines a final result pair: its name and values.
-data ResultPair e =
-  ResultPair { resultPairName :: ResultName,
-               -- ^ The name of the result.
-               resultPairData :: Event e
-               -- ^ The final values of the result.
-             }
+-- | Defines a final result extract: its name, values and other data.
+data ResultExtract e =
+  ResultExtract { resultExtractName   :: ResultName,
+                  -- ^ The result name.
+                  resultExtractId     :: ResultId,
+                  -- ^ The result identifier.
+                  resultExtractData   :: Event e,
+                  -- ^ The result values.
+                  resultExtractSignal :: ResultSignal
+                  -- ^ Whether the result emits a signal.
+                }
 
--- | Convert the results to pairs of integer values,
--- or raise a conversion error.
-resultsToIntPairs :: Results -> [ResultPair Int]
-resultsToIntPairs rs = flip map (resultsToIntValues rs) $ \x ->
+-- | Extract the results as integer values, or raise a conversion error.
+extractIntResults :: Results -> [ResultExtract Int]
+extractIntResults rs = flip map (resultsToIntValues rs) $ \x ->
   let n = resultValueName x
+      i = resultValueId x
       a = resultValueData x
+      s = resultValueSignal x
   in case a of
     Nothing ->
       error $
       "Cannot represent variable " ++ n ++
-      " as a source of integer values: resultsToIntPairs"
+      " as a source of integer values: extractIntResults"
     Just a ->
-      ResultPair n a
+      ResultExtract n i a s
 
--- | Convert the results to pairs of lists of integer values,
--- or raise a conversion error.
-resultsToIntListPairs :: Results -> [ResultPair [Int]]
-resultsToIntListPairs rs = flip map (resultsToIntListValues rs) $ \x ->
+-- | Extract the results as lists of integer values, or raise a conversion error.
+extractIntListResults :: Results -> [ResultExtract [Int]]
+extractIntListResults rs = flip map (resultsToIntListValues rs) $ \x ->
   let n = resultValueName x
+      i = resultValueId x
       a = resultValueData x
+      s = resultValueSignal x
   in case a of
     Nothing ->
       error $
       "Cannot represent variable " ++ n ++
-      " as a source of lists of integer values: resultsToIntListPairs"
+      " as a source of lists of integer values: extractIntListResults"
     Just a ->
-      ResultPair n a
+      ResultExtract n i a s
 
--- | Convert the results to pairs of statistics based on integer values,
+-- | Extract the results as statistics based on integer values,
 -- or raise a conversion error.
-resultsToIntStatsPairs :: Results -> [ResultPair (SamplingStats Int)]
-resultsToIntStatsPairs rs = flip map (resultsToIntStatsValues rs) $ \x ->
+extractIntStatsResults :: Results -> [ResultExtract (SamplingStats Int)]
+extractIntStatsResults rs = flip map (resultsToIntStatsValues rs) $ \x ->
   let n = resultValueName x
+      i = resultValueId x
       a = resultValueData x
+      s = resultValueSignal x
   in case a of
     Nothing ->
       error $
       "Cannot represent variable " ++ n ++
-      " as a source of statistics based on integer values: resultsToIntStatsPairs"
+      " as a source of statistics based on integer values: extractIntStatsResults"
     Just a ->
-      ResultPair n a
+      ResultExtract n i a s
 
--- | Convert the results to pairs of statistics based on integer values and optimised
+-- | Extract the results as statistics based on integer values and optimised
 -- for fast aggregation, or raise a conversion error.
-resultsToIntStatsEitherPairs :: Results -> [ResultPair (Either Int (SamplingStats Int))]
-resultsToIntStatsEitherPairs rs = flip map (resultsToIntStatsEitherValues rs) $ \x ->
+extractIntStatsEitherResults :: Results -> [ResultExtract (Either Int (SamplingStats Int))]
+extractIntStatsEitherResults rs = flip map (resultsToIntStatsEitherValues rs) $ \x ->
   let n = resultValueName x
+      i = resultValueId x
       a = resultValueData x
+      s = resultValueSignal x
   in case a of
     Nothing ->
       error $
       "Cannot represent variable " ++ n ++
-      " as a source of statistics based on integer values: resultsToIntStatsEitherPairs"
+      " as a source of statistics based on integer values: extractIntStatsEitherResults"
     Just a ->
-      ResultPair n a
+      ResultExtract n i a s
 
--- | Convert the results to pairs of timing statistics based on integer values,
+-- | Extract the results as timing statistics based on integer values,
 -- or raise a conversion error.
-resultsToIntTimingStatsPairs :: Results -> [ResultPair (TimingStats Int)]
-resultsToIntTimingStatsPairs rs = flip map (resultsToIntTimingStatsValues rs) $ \x ->
+extractIntTimingStatsResults :: Results -> [ResultExtract (TimingStats Int)]
+extractIntTimingStatsResults rs = flip map (resultsToIntTimingStatsValues rs) $ \x ->
   let n = resultValueName x
+      i = resultValueId x
       a = resultValueData x
+      s = resultValueSignal x
   in case a of
     Nothing ->
       error $
       "Cannot represent variable " ++ n ++
-      " as a source of timing statistics based on integer values: resultsToIntTimingStatsPairs"
+      " as a source of timing statistics based on integer values: extractIntTimingStatsResults"
     Just a ->
-      ResultPair n a
+      ResultExtract n i a s
 
--- | Convert the results to pairs of double floating point values,
+-- | Extract the results as double floating point values, or raise a conversion error.
+extractDoubleResults :: Results -> [ResultExtract Double]
+extractDoubleResults rs = flip map (resultsToDoubleValues rs) $ \x ->
+  let n = resultValueName x
+      i = resultValueId x
+      a = resultValueData x
+      s = resultValueSignal x
+  in case a of
+    Nothing ->
+      error $
+      "Cannot represent variable " ++ n ++
+      " as a source of double floating point values: extractDoubleResults"
+    Just a ->
+      ResultExtract n i a s
+
+-- | Extract the results as lists of double floating point values,
 -- or raise a conversion error.
-resultsToDoublePairs :: Results -> [ResultPair Double]
-resultsToDoublePairs rs = flip map (resultsToDoubleValues rs) $ \x ->
+extractDoubleListResults :: Results -> [ResultExtract [Double]]
+extractDoubleListResults rs = flip map (resultsToDoubleListValues rs) $ \x ->
   let n = resultValueName x
+      i = resultValueId x
       a = resultValueData x
+      s = resultValueSignal x
   in case a of
     Nothing ->
       error $
       "Cannot represent variable " ++ n ++
-      " as a source of double floating point values: resultsToDoublePairs"
+      " as a source of lists of double floating point values: extractDoubleListResults"
     Just a ->
-      ResultPair n a
+      ResultExtract n i a s
 
--- | Convert the results to pairs of lists of double floating point values,
+-- | Extract the results as statistics based on double floating point values,
 -- or raise a conversion error.
-resultsToDoubleListPairs :: Results -> [ResultPair [Double]]
-resultsToDoubleListPairs rs = flip map (resultsToDoubleListValues rs) $ \x ->
+extractDoubleStatsResults :: Results -> [ResultExtract (SamplingStats Double)]
+extractDoubleStatsResults rs = flip map (resultsToDoubleStatsValues rs) $ \x ->
   let n = resultValueName x
+      i = resultValueId x
       a = resultValueData x
+      s = resultValueSignal x
   in case a of
     Nothing ->
       error $
       "Cannot represent variable " ++ n ++
-      " as a source of lists of double floating point values: resultsToDoubleListPairs"
+      " as a source of statistics based on double floating point values: extractDoubleStatsResults"
     Just a ->
-      ResultPair n a
+      ResultExtract n i a s
 
--- | Convert the results to pairs of statistics based on double floating point values,
--- or raise a conversion error.
-resultsToDoubleStatsPairs :: Results -> [ResultPair (SamplingStats Double)]
-resultsToDoubleStatsPairs rs = flip map (resultsToDoubleStatsValues rs) $ \x ->
-  let n = resultValueName x
-      a = resultValueData x
-  in case a of
-    Nothing ->
-      error $
-      "Cannot represent variable " ++ n ++
-      " as a source of statistics based on double floating point values: resultsToDoubleStatsPairs"
-    Just a ->
-      ResultPair n a
-
--- | Convert the results to pairs of statistics based on double floating point values
+-- | Extract the results as statistics based on double floating point values
 -- and optimised for fast aggregation, or raise a conversion error.
-resultsToDoubleStatsEitherPairs :: Results -> [ResultPair (Either Double (SamplingStats Double))]
-resultsToDoubleStatsEitherPairs rs = flip map (resultsToDoubleStatsEitherValues rs) $ \x ->
+extractDoubleStatsEitherResults :: Results -> [ResultExtract (Either Double (SamplingStats Double))]
+extractDoubleStatsEitherResults rs = flip map (resultsToDoubleStatsEitherValues rs) $ \x ->
   let n = resultValueName x
+      i = resultValueId x
       a = resultValueData x
+      s = resultValueSignal x
   in case a of
     Nothing ->
       error $
       "Cannot represent variable " ++ n ++
-      " as a source of statistics based on double floating point values: resultsToDoubleStatsEitherPairs"
+      " as a source of statistics based on double floating point values: extractDoubleStatsEitherResults"
     Just a ->
-      ResultPair n a
+      ResultExtract n i a s
 
--- | Convert the results to pairs of timing statistics based on double floating point values,
+-- | Extract the results as timing statistics based on double floating point values,
 -- or raise a conversion error.
-resultsToDoubleTimingStatsPairs :: Results -> [ResultPair (TimingStats Double)]
-resultsToDoubleTimingStatsPairs rs = flip map (resultsToDoubleTimingStatsValues rs) $ \x ->
+extractDoubleTimingStatsResults :: Results -> [ResultExtract (TimingStats Double)]
+extractDoubleTimingStatsResults rs = flip map (resultsToDoubleTimingStatsValues rs) $ \x ->
   let n = resultValueName x
+      i = resultValueId x
       a = resultValueData x
+      s = resultValueSignal x
   in case a of
     Nothing ->
       error $
       "Cannot represent variable " ++ n ++
-      " as a source of timing statistics based on double floating point values: resultsToDoubleTimingStatsPairs"
+      " as a source of timing statistics based on double floating point values: extractDoubleTimingStatsResults"
     Just a ->
-      ResultPair n a
+      ResultExtract n i a s
 
--- | Convert the results to pairs of string values,
--- or raise a conversion error.
-resultsToStringPairs :: Results -> [ResultPair String]
-resultsToStringPairs rs = flip map (resultsToStringValues rs) $ \x ->
+-- | Extract the results as string values, or raise a conversion error.
+extractStringResults :: Results -> [ResultExtract String]
+extractStringResults rs = flip map (resultsToStringValues rs) $ \x ->
   let n = resultValueName x
+      i = resultValueId x
       a = resultValueData x
+      s = resultValueSignal x
   in case a of
     Nothing ->
       error $
       "Cannot represent variable " ++ n ++
-      " as a source of string values: resultsToStringPairs"
+      " as a source of string values: extractStringResults"
     Just a ->
-      ResultPair n a
+      ResultExtract n i a s
 
 -- | Represents a computation that can return the simulation data.
 class ResultComputing m where
