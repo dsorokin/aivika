@@ -14,6 +14,7 @@ module Simulation.Aivika.Statistics
        (-- * Simple Statistics
         SamplingStats(..),
         SamplingData(..),
+        combineSamplingStatsEither,
         samplingStatsVariance,
         samplingStatsDeviation,
         samplingStatsSummary,
@@ -155,6 +156,11 @@ combineSamplingStatsGeneric stats1 stats2
         meanZ2 = k1 * meanX2 + k2 * meanY2
         k1     = n1 / n
         k2     = n2 / n
+
+-- | If allows combining statistics more efficiently if we know that the first argument can be a scalar.
+combineSamplingStatsEither :: SamplingData a => Either a (SamplingStats a) -> SamplingStats a -> SamplingStats a
+combineSamplingStatsEither (Left a) stats2 = addSamplingStats a stats2
+combineSamplingStatsEither (Right stats1) stats2 = combineSamplingStats stats1 stats2
 
 -- | Return the variance.
 samplingStatsVariance :: SamplingStats a -> Double
