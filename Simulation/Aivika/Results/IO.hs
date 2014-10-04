@@ -217,6 +217,8 @@ showResultSourceIndented indent loc source@(ResultVectorSource x) =
   showResultSourceIndentedLabelled indent (resultVectorName x) loc source
 showResultSourceIndented indent loc source@(ResultObjectSource x) =
   showResultSourceIndentedLabelled indent (resultObjectName x) loc source
+showResultSourceIndented indent loc source@(ResultSeparatorSource x) =
+  showResultSourceIndentedLabelled indent (resultSeparatorText x) loc source
 
 -- | Show an indented and labelled text representation of the results by the specified source.
 showResultSourceIndentedLabelled :: Int
