@@ -14,14 +14,15 @@ module Simulation.Aivika.Results.Locale
         ResultLocale,
         ResultLocalisation,
         ResultDescription,
-        ResultId(..),
         -- * Locale Codes
         russianResultLocale,
         englishResultLocale,
         -- * Localisations
         lookupResultLocalisation,
         russianResultLocalisation,
-        englishResultLocalisation) where
+        englishResultLocalisation,
+        -- * Unique Identifiers
+        ResultId(..)) where
 
 import qualified Data.Map as M
 
