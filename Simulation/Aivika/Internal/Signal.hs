@@ -80,11 +80,11 @@ data SignalSource a =
   
 -- | The signal that can have disposable handlers.  
 data Signal a =
-  Signal { handleSignal :: (a -> Event ()) -> Event (Event ())
+  Signal { handleSignal :: (a -> Event ()) -> Event DisposableEvent
            -- ^ Subscribe the handler to the specified 
-           -- signal and return a nested computation 
-           -- that, being applied, unsubscribes the 
-           -- handler from this signal.
+           -- signal and return a nested computation
+           -- within a disposable object that, being applied,
+           -- unsubscribes the handler from this signal.
          }
   
 -- | The queue of signal handlers.
@@ -99,7 +99,7 @@ data SignalHandler a =
 instance Eq (SignalHandler a) where
   x == y = (handlerRef x) == (handlerRef y)
 
--- | Subscribe the handler to the specified signal.
+-- | Subscribe the handler to the specified signal forever.
 -- To subscribe the disposable handlers, use function 'handleSignal'.
 handleSignal_ :: Signal a -> (a -> Event ()) -> Event ()
 handleSignal_ signal h = 
@@ -119,6 +119,7 @@ newSignalSource =
            Event $ \p ->
            do x <- enqueueSignalHandler queue h
               return $
+                DisposableEvent $
                 Event $ \p -> dequeueSignalHandler queue x
          trigger a =
            Event $ \p -> triggerSignalHandlers queue a p
@@ -195,7 +196,7 @@ merge2Signals m1 m2 =
   Signal { handleSignal = \h ->
             do x1 <- handleSignal m1 h
                x2 <- handleSignal m2 h
-               return $ do { x1; x2 } }
+               return $ x1 <> x2 }
 
 -- | Merge three signals.
 merge3Signals :: Signal a -> Signal a -> Signal a -> Signal a
@@ -204,7 +205,7 @@ merge3Signals m1 m2 m3 =
             do x1 <- handleSignal m1 h
                x2 <- handleSignal m2 h
                x3 <- handleSignal m3 h
-               return $ do { x1; x2; x3 } }
+               return $ x1 <> x2 <> x3 }
 
 -- | Merge four signals.
 merge4Signals :: Signal a -> Signal a -> Signal a -> 
@@ -215,7 +216,7 @@ merge4Signals m1 m2 m3 m4 =
                x2 <- handleSignal m2 h
                x3 <- handleSignal m3 h
                x4 <- handleSignal m4 h
-               return $ do { x1; x2; x3; x4 } }
+               return $ x1 <> x2 <> x3 <> x4 }
            
 -- | Merge five signals.
 merge5Signals :: Signal a -> Signal a -> Signal a -> 
@@ -227,7 +228,7 @@ merge5Signals m1 m2 m3 m4 m5 =
                x3 <- handleSignal m3 h
                x4 <- handleSignal m4 h
                x5 <- handleSignal m5 h
-               return $ do { x1; x2; x3; x4; x5 } }
+               return $ x1 <> x2 <> x3 <> x4 <> x5 }
 
 -- | Compose the signal.
 mapSignalM :: (a -> Event b) -> Signal a -> Signal b
@@ -244,7 +245,7 @@ apSignal f m =
 -- | An empty signal which is never triggered.
 emptySignal :: Signal a
 emptySignal =
-  Signal { handleSignal = \h -> return $ return () }
+  Signal { handleSignal = \h -> return mempty }
                                     
 -- | Represents the history of the signal values.
 data SignalHistory a =

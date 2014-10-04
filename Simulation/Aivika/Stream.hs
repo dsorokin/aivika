@@ -499,7 +499,7 @@ signalStream s =
      h <- liftEvent $
           handleSignal s $ 
           enqueue q
-     whenCancellingProcess h
+     whenCancellingProcess $ disposeEvent h
      return $ repeatProcess $ dequeue q
 
 -- | Return a computation of the signal that triggers values from the specified stream,

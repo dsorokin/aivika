@@ -41,9 +41,12 @@ module Simulation.Aivika.Internal.Event
         throwEvent,
         -- * Memoization
         memoEvent,
-        memoEventInTime) where
+        memoEventInTime,
+        -- * Disposable
+        DisposableEvent(..)) where
 
 import Data.IORef
+import Data.Monoid
 
 import qualified Control.Exception as C
 import Control.Exception (IOException, throw, finally)
@@ -395,3 +398,14 @@ yieldEvent m =
   Event $ \p ->
   invokeEvent p $
   enqueueEvent (pointTime p) m
+
+-- | Defines a computation disposing some entity.
+newtype DisposableEvent =
+  DisposableEvent { disposeEvent :: Event ()
+                    -- ^ Dispose something within the 'Event' computation.
+                  }
+
+instance Monoid DisposableEvent where
+
+  mempty = DisposableEvent $ return ()
+  mappend (DisposableEvent x) (DisposableEvent y) = DisposableEvent $ x >> y

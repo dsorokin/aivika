@@ -106,7 +106,7 @@ contCancellationDeactivate x =
   writeIORef (contCancellationActivatedRef x) False
 
 -- | If the main computation is cancelled then all the nested ones will be cancelled too.
-contCancellationBind :: ContCancellationSource -> [ContCancellationSource] -> Event (Event ())
+contCancellationBind :: ContCancellationSource -> [ContCancellationSource] -> Event DisposableEvent
 contCancellationBind x ys =
   Event $ \p ->
   do hs1 <- forM ys $ \y ->
@@ -117,8 +117,7 @@ contCancellationBind x ys =
        invokeEvent p $
        handleSignal (contCancellationInitiating y) $ \_ ->
        contCancellationInitiate x
-     return $ do sequence_ hs1
-                 sequence_ hs2
+     return $ mconcat hs1 <> mconcat hs2
 
 -- | Connect the parent computation to the child one.
 contCancellationConnect :: ContCancellationSource
@@ -127,7 +126,7 @@ contCancellationConnect :: ContCancellationSource
                            -- ^ how to connect
                            -> ContCancellationSource
                            -- ^ the child
-                           -> Event (Event ())
+                           -> Event DisposableEvent
                            -- ^ computation of the disposable handler
 contCancellationConnect parent cancellation child =
   Event $ \p ->
@@ -141,15 +140,15 @@ contCancellationConnect parent cancellation child =
        case cancellation of
          CancelTogether -> invokeEvent p m1
          CancelChildAfterParent -> invokeEvent p m1
-         CancelParentAfterChild -> return $ return ()
-         CancelInIsolation -> return $ return ()
+         CancelParentAfterChild -> return mempty
+         CancelInIsolation -> return mempty
      h2 <-
        case cancellation of
          CancelTogether -> invokeEvent p m2
-         CancelChildAfterParent -> return $ return ()
+         CancelChildAfterParent -> return mempty
          CancelParentAfterChild -> invokeEvent p m2
-         CancelInIsolation -> return $ return ()
-     return $ h1 >> h2
+         CancelInIsolation -> return mempty
+     return $ h1 <> h2
 
 -- | Initiate the cancellation.
 contCancellationInitiate :: ContCancellationSource -> Event ()
@@ -497,7 +496,7 @@ contParallel xs =
                     Event $ \p ->
                     do n' <- readIORef counter
                        when (n' == n) $
-                         do invokeEvent p hs  -- unbind the cancellation sources
+                         do invokeEvent p $ disposeEvent hs  -- unbind the cancellation sources
                             f1 <- contCanceled c
                             f2 <- readIORef catchRef
                             case (f1, f2) of
@@ -558,7 +557,7 @@ contParallel_ xs =
                     Event $ \p ->
                     do n' <- readIORef counter
                        when (n' == n) $
-                         do invokeEvent p hs  -- unbind the cancellation sources
+                         do invokeEvent p $ disposeEvent hs  -- unbind the cancellation sources
                             f1 <- contCanceled c
                             f2 <- readIORef catchRef
                             case (f1, f2) of
@@ -606,15 +605,15 @@ rerunCont x cancelSource =
                     contCancellationBind (contCancelSource $ contAux c) [cancelSource]
               let cont a  =
                     Event $ \p ->
-                    do invokeEvent p hs  -- unbind the cancellation source
+                    do invokeEvent p $ disposeEvent hs  -- unbind the cancellation source
                        invokeEvent p $ resumeCont c a
                   econt e =
                     Event $ \p ->
-                    do invokeEvent p hs  -- unbind the cancellation source
+                    do invokeEvent p $ disposeEvent hs  -- unbind the cancellation source
                        invokeEvent p $ resumeECont c e
                   ccont e =
                     Event $ \p ->
-                    do invokeEvent p hs  -- unbind the cancellation source
+                    do invokeEvent p $ disposeEvent hs  -- unbind the cancellation source
                        cancelCont p c
               invokeEvent p $
                 runCont x cont econt ccont cancelSource (contCatchFlag $ contAux c)
@@ -634,15 +633,15 @@ spawnCont cancellation x cancelSource =
                     (contCancelSource $ contAux c) cancellation cancelSource
               let cont a  =
                     Event $ \p ->
-                    do invokeEvent p hs  -- unbind the cancellation source
+                    do invokeEvent p $ disposeEvent hs  -- unbind the cancellation source
                        -- do nothing and it will finish the computation
                   econt e =
                     Event $ \p ->
-                    do invokeEvent p hs  -- unbind the cancellation source
+                    do invokeEvent p $ disposeEvent hs  -- unbind the cancellation source
                        invokeEvent p $ throwEvent e  -- this is all we can do
                   ccont e =
                     Event $ \p ->
-                    do invokeEvent p hs  -- unbind the cancellation source
+                    do invokeEvent p $ disposeEvent hs  -- unbind the cancellation source
                        -- do nothing and it will finish the computation
               invokeEvent p $
                 enqueueEvent (pointTime p) $
@@ -670,7 +669,7 @@ contFreeze c =
                Nothing ->
                  error "The handler was lost: contFreeze."
                Just h ->
-                 do invokeEvent p h
+                 do invokeEvent p $ disposeEvent h
                     c <- readIORef rc
                     case c of
                       Nothing -> return ()
@@ -684,7 +683,7 @@ contFreeze c =
      writeIORef rh (Just h)
      return $
        Event $ \p ->
-       do invokeEvent p h
+       do invokeEvent p $ disposeEvent h
           c <- readIORef rc
           writeIORef rc Nothing
           return c
@@ -704,7 +703,7 @@ contAwait signal =
                            Nothing ->
                              error "The signal was lost: contAwait."
                            Just x ->
-                             do invokeEvent p x
+                             do invokeEvent p $ disposeEvent x
                                 c <- invokeEvent p c
                                 case c of
                                   Nothing -> return ()
