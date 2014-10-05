@@ -11,28 +11,6 @@
 --
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 
--- CAUTION:
---
--- This model is not yet fully tested and it may contain logical errors but it seems to be working,
--- although some results may differ slightly but it can be related to a great value of the deviation
--- for some variables as well as to a small number of samples in [1].
---
--- The results for the queue sizes in [2] seem doubtful for me, while my results for these queue sizes
--- are similar to [1] but I also made 1000 runs (see the aivika-experiment-chart package) versus 1 run
--- in [1]. In comparison with [1] I see a difference in the queue size for the adjustment station and
--- it can be realized as there was a too small number of samples (= 13) in [1], for the TV settings must
--- fail when inspecting to be directed to the adjustor.
---
--- Also I have received more small values for the wait time in comparison with [1] but they have
--- a relatively great deviation, which may be acceptable (??), taking into account a small number of
--- samples used in [1].
---
--- At the same time, all my other results except for these queue sizes correspond to [2], where the author
--- launched 1000 simulation runs too.
---
--- Some new things that I have added the past summer (2013), i.e. Streams / Processors / Queues / Servers,
--- should be yet verified for other models but, as I wrote, they seem to be working.
-
 import Prelude hiding (id, (.)) 
 
 import Control.Monad
