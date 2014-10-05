@@ -51,7 +51,7 @@ model =
 
      let upTimeProp =
            do x <- readRef totalUpTime
-              y <- liftParameter stoptime
+              y <- liftDynamics time
               return $ x / (2 * y)
 
      return $
