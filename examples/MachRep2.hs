@@ -31,7 +31,7 @@ specs = Specs { spcStartTime = 0.0,
                 spcMethod = RungeKutta4,
                 spcGeneratorType = SimpleGenerator }
      
-model :: Simulation (Double, Double)
+model :: Simulation Results
 model =
   do -- number of times the machines have broken down
      nRep <- newRef 0 
@@ -72,13 +72,33 @@ model =
 
      runProcessInStartTime machine
      runProcessInStartTime machine
-          
-     runEventInStopTime $
-       do x <- readRef totalUpTime
-          y <- liftParameter stoptime
-          n <- readRef nRep
-          nImmed <- readRef nImmedRep
-          return (x / (2 * y), 
-                  fromIntegral nImmed / fromIntegral n)
+
+     let upTimeProp =
+           do x <- readRef totalUpTime
+              y <- liftDynamics time
+              return $ x / (2 * y)
+
+         immedProp :: Event Double
+         immedProp =
+           do n <- readRef nRep
+              nImmed <- readRef nImmedRep
+              return $
+                fromIntegral nImmed /
+                fromIntegral n
+
+     return $
+       results
+       [resultSource
+        "upTimeProp"
+        "The long-run proportion of up time (~ 0.6)"
+        upTimeProp,
+        --
+        resultSource
+        "immedProp"
+        "The proption of time of immediate access (~0.67)"
+        immedProp]
   
-main = runSimulation model specs >>= print
+main =
+  printSimulationResultsInStopTime
+  printResultSourceInEnglish
+  model specs
