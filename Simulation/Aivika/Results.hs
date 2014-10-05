@@ -22,6 +22,8 @@ module Simulation.Aivika.Results
         resultSummary,
         resultByName,
         resultByProperty,
+        resultByIndex,
+        resultBySubscript,
         ResultComputing(..),
         ResultComputation(..),
         ResultListWithSubscript(..),
@@ -273,7 +275,7 @@ data ResultVector =
                  -- ^ The vector identifier.
                  resultVectorItems :: A.Array Int ResultSource,
                  -- ^ The results supplied by the vector items.
-                 resultVectorSubscript :: A.Array Int String,
+                 resultVectorSubscript :: A.Array Int ResultName,
                  -- ^ The subscript used as a suffix to create item names.
                  resultVectorSignal :: ResultSignal,
                  -- ^ A combined signal if present.
@@ -1011,26 +1013,69 @@ resultByName name rs =
 
 -- | Take a result from the object with the specified property label.
 resultByProperty :: ResultName -> ResultTransform
-resultByProperty label rs =
-  flip composeResults rs $ \x ->
-  case x of
-    ResultObjectSource s ->
-      let ps =
-            flip filter (resultObjectProperties s) $ \p ->
-            resultPropertyLabel p == label
-      in case ps of
-        [] ->
+resultByProperty label rs = flip composeResults rs loop
+  where
+    loop x =
+      case x of
+        ResultObjectSource s ->
+          let ps =
+                flip filter (resultObjectProperties s) $ \p ->
+                resultPropertyLabel p == label
+          in case ps of
+            [] ->
+              error $
+              "Not found property " ++ label ++
+              " for object " ++ resultObjectName s ++
+              ": resultByProperty"
+            ps ->
+              map resultPropertySource ps
+        ResultVectorSource s ->
+          concat $ map loop $ A.elems $ resultVectorItems s
+        x ->
           error $
-          "Not found property " ++ label ++
-          " for object " ++ resultObjectName s ++
+          "Result source " ++ resultSourceName x ++
+          " is neither object, nor vector " ++
           ": resultByProperty"
-        ps ->
-          map resultPropertySource ps
-    x ->
-      error $
-      "Result source " ++ resultSourceName x ++
-      " is not object" ++
-      ": resultByProperty"
+
+-- | Take a result from the vector by the specified integer index.
+resultByIndex :: Int -> ResultTransform
+resultByIndex index rs = flip composeResults rs loop
+  where
+    loop x =
+      case x of
+        ResultVectorSource s ->
+          [resultVectorItems s A.! index] 
+        x ->
+          error $
+          "Result source " ++ resultSourceName x ++
+          " is not vector " ++
+          ": resultByIndex"
+
+-- | Take a result from the vector by the specified string subscript.
+resultBySubscript :: ResultName -> ResultTransform
+resultBySubscript subscript rs = flip composeResults rs loop
+  where
+    loop x =
+      case x of
+        ResultVectorSource s ->
+          let ys = A.elems $ resultVectorItems s
+              zs = A.elems $ resultVectorSubscript s
+              ps =
+                flip filter (zip ys zs) $ \(y, z) ->
+                z == subscript
+          in case ps of
+            [] ->
+              error $
+              "Not found subscript " ++ subscript ++
+              " for vector " ++ resultVectorName s ++
+              ": resultBySubscript"
+            ps ->
+              map fst ps
+        x ->
+          error $
+          "Result source " ++ resultSourceName x ++
+          " is not vector " ++
+          ": resultBySubscript"
 
 -- | Compose the results using the specified transformation function.
 composeResults :: (ResultSource -> [ResultSource]) -> ResultTransform
@@ -1600,7 +1645,7 @@ timeResultSource :: ResultSource
 timeResultSource = resultSource' "t" TimeId time
                          
 -- | Make an integer subscript
-intSubscript :: Int -> String
+intSubscript :: Int -> ResultName
 intSubscript i = "[" ++ show i ++ "]"
 
 instance ResultComputing m => ResultProvider (m Double) where
