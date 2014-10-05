@@ -3,8 +3,6 @@
 -- the Agent-based Modeling as described in the AnyLogic 
 -- documentation.
 
-module Model where
-
 import Data.Array
 
 import Control.Monad
@@ -99,3 +97,8 @@ model =
         "potentialAdopter" "potential adopters" potentialAdopters,
         resultSource 
         "adopters" "adopters" adopters]
+
+main =
+  printSimulationResultsInIntegTimes
+  printResultSourceInEnglish
+  model specs
