@@ -28,7 +28,7 @@ specs = Specs { spcStartTime = 0.0,
                 spcMethod = RungeKutta4,
                 spcGeneratorType = SimpleGenerator }
         
-model :: Simulation Double
+model :: Simulation Results
 model =
   do totalUpTime <- newRef 0.0
      
@@ -48,10 +48,20 @@ model =
 
      runProcessInStartTime machine
      runProcessInStartTime machine
-     
-     runEventInStopTime $
-       do x <- readRef totalUpTime
-          y <- liftParameter stoptime
-          return $ x / (2 * y)
+
+     let upTimeProp =
+           do x <- readRef totalUpTime
+              y <- liftParameter stoptime
+              return $ x / (2 * y)
+
+     return $
+       results
+       [resultSource
+        "upTimeProp"
+        "The long-run proportion of up time (~ 0.66)"
+        upTimeProp]
   
-main = runSimulation model specs >>= print
+main =
+  printSimulationResultsInStopTime
+  printResultSourceInEnglish
+  model specs
