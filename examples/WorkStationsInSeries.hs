@@ -51,11 +51,6 @@ workStationCount1 = 1
 -- (in parallel but the commented code allocates them sequentially)
 workStationCount2 = 1
 
--- create an accumulator to gather the queue size statistics 
-newQueueSizeAccumulator queue =
-  newTimingStatsAccumulator $
-  Signalable (queueCount queue) (queueCountChanged_ queue)
-
 -- create a work station (server) with the exponential processing time
 newWorkStationExponential meanTime =
   newServer $ \a ->
@@ -68,24 +63,20 @@ newWorkStationExponential meanTime =
 interposePrefetchProcessor x y = 
   x >>> prefetchProcessor >>> y
 
-model :: Simulation ()
+model :: Simulation Results
 model = do
   -- it will gather the statistics of the processing time
   arrivalTimer <- newArrivalTimer
   -- define a stream of input events
   let inputStream = randomExponentialStream meanOrderDelay 
   -- create a queue before the first work stations
-  queue1 <- newFCFSQueue queueMaxCount1
+  queue1 <-
+    runEventInStartTime $
+    newFCFSQueue queueMaxCount1
   -- create a queue before the second work stations
-  queue2 <- newFCFSQueue queueMaxCount2
-  -- the first queue size statistics
-  queueSizeAcc1 <- 
+  queue2 <-
     runEventInStartTime $
-    newQueueSizeAccumulator queue1
-  -- the second queue size statistics
-  queueSizeAcc2 <- 
-    runEventInStartTime $
-    newQueueSizeAccumulator queue2
+    newFCFSQueue queueMaxCount2
   -- create the first work stations (servers)
   workStation1s <- forM [1 .. workStationCount1] $ \_ ->
     newWorkStationExponential meanProcessingTime1
@@ -114,46 +105,35 @@ model = do
   -- start simulating the model
   runProcessInStartTime $
     sinkStream $ runProcessor entireProcessor inputStream
-  -- show the results in the final time
-  runEventInStopTime $
-    do queueSum1 <- queueSummary queue1 2
-       queueSum2 <- queueSummary queue2 2
-       workStationSum1s <- forM workStation1s $ \x -> serverSummary x 2
-       workStationSum2s <- forM workStation2s $ \x -> serverSummary x 2
-       processingTime <- arrivalProcessingTime arrivalTimer
-       queueSize1 <- timingStatsAccumulated queueSizeAcc1
-       queueSize2 <- timingStatsAccumulated queueSizeAcc2
-       liftIO $
-         do putStrLn ""
-            putStrLn "--- the first queue summary (in the final time) ---"
-            putStrLn ""
-            putStrLn $ queueSum1 []
-            putStrLn ""
-            forM_ (zip [1..] workStationSum1s) $ \(i, x) ->
-              do putStrLn $ "--- the first work station no. " ++ show i ++ " (in the final time) ---"
-                 putStrLn ""
-                 putStrLn $ x []
-                 putStrLn ""
-            putStrLn "--- the second queue summary (in the final time) ---"
-            putStrLn ""
-            putStrLn $ queueSum2 []
-            putStrLn ""
-            forM_ (zip [1..] workStationSum2s) $ \(i, x) ->
-              do putStrLn $ "--- the second work station no. " ++ show i ++ " (in the final time) ---"
-                 putStrLn ""
-                 putStrLn $ x []
-                 putStrLn ""
-            putStrLn "--- the processing time summary ---"
-            putStrLn ""
-            putStrLn $ samplingStatsSummary processingTime 2 []
-            putStrLn ""
-            putStrLn "--- the first queue size summary ---"
-            putStrLn ""
-            putStrLn $ timingStatsSummary queueSize1 2 []
-            putStrLn ""
-            putStrLn "--- the second queue size summary ---"
-            putStrLn ""
-            putStrLn $ timingStatsSummary queueSize2 2 []
-            putStrLn ""
+  -- return the simulation results
+  return $
+    results
+    [resultSource
+     "queue1" "Queue no. 1"
+     queue1,
+     --
+     resultSource
+     "workStation1s" "Work Stations of line no. 1"
+     workStation1s,
+     --
+     resultSource
+     "queue2" "Queue no. 2"
+     queue2,
+     --
+     resultSource
+     "workStation2s" "Work Stations of line no. 2"
+     workStation2s,
+     --
+     resultSource
+     "arrivalTimer" "The arrival timer"
+     arrivalTimer]
 
-main = runSimulation model specs
+modelSummary :: Simulation Results
+modelSummary =
+  fmap resultSummary model
+
+main =
+  printSimulationResultsInStopTime
+  printResultSourceInEnglish
+  -- model specs
+  modelSummary specs
