@@ -1,11 +1,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Dynamics.Memo
--- Copyright  : Copyright (c) 2009-2013, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2014, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.6.3
+-- Tested with: GHC 7.8.3
 --
 -- This module defines memo functions. The memoization creates such 'Dynamics'
 -- computations, which values are cached in the integration time points. Then
@@ -15,7 +15,9 @@
 module Simulation.Aivika.Dynamics.Memo
        (memoDynamics,
         memo0Dynamics,
-        iterateDynamics) where
+        iterateDynamics,
+        memoUnzipDynamics,
+        memo0UnzipDynamics) where
 
 import Data.Array
 import Data.Array.IO.Safe
@@ -125,3 +127,33 @@ iterateDynamics (Dynamics m) =
               n' <- readIORef nref
               loop n'
      return $ discreteDynamics $ Dynamics r
+
+-- | Memoize and unzip the computation of pairs, applying the 'memoDynamics' function.
+memoUnzipDynamics :: Dynamics (a, b) -> Simulation (Dynamics a, Dynamics b)
+memoUnzipDynamics m =
+  Simulation $ \r ->
+  do m' <- invokeSimulation r (memoDynamics m)
+     let ma =
+           Dynamics $ \p ->
+           do (a, _) <- invokeDynamics p m'
+              return a
+         mb =
+           Dynamics $ \p ->
+           do (_, b) <- invokeDynamics p m'
+              return b
+     return (ma, mb)
+
+-- | Memoize and unzip the computation of pairs, applying the 'memo0Dynamics' function.
+memo0UnzipDynamics :: Dynamics (a, b) -> Simulation (Dynamics a, Dynamics b)
+memo0UnzipDynamics m =
+  Simulation $ \r ->
+  do m' <- invokeSimulation r (memo0Dynamics m)
+     let ma =
+           Dynamics $ \p ->
+           do (a, _) <- invokeDynamics p m'
+              return a
+         mb =
+           Dynamics $ \p ->
+           do (_, b) <- invokeDynamics p m'
+              return b
+     return (ma, mb)
