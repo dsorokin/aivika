@@ -12,7 +12,9 @@ n2 = 3
 
 model :: Simulation ()
 model =
-  do q <- newQueue FCFS StaticPriorities FCFS n2
+  do q <-
+       runEventInStartTime $
+       newQueue FCFS StaticPriorities FCFS n2
 
      runProcessInStartTime $
        let loop =
