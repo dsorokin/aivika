@@ -16,8 +16,8 @@ module Simulation.Aivika.Dynamics.Memo
        (memoDynamics,
         memo0Dynamics,
         iterateDynamics,
-        memoUnzipDynamics,
-        memo0UnzipDynamics) where
+        unzipDynamics,
+        unzip0Dynamics) where
 
 import Data.Array
 import Data.Array.IO.Safe
@@ -129,8 +129,8 @@ iterateDynamics (Dynamics m) =
      return $ discreteDynamics $ Dynamics r
 
 -- | Memoize and unzip the computation of pairs, applying the 'memoDynamics' function.
-memoUnzipDynamics :: Dynamics (a, b) -> Simulation (Dynamics a, Dynamics b)
-memoUnzipDynamics m =
+unzipDynamics :: Dynamics (a, b) -> Simulation (Dynamics a, Dynamics b)
+unzipDynamics m =
   Simulation $ \r ->
   do m' <- invokeSimulation r (memoDynamics m)
      let ma =
@@ -144,8 +144,8 @@ memoUnzipDynamics m =
      return (ma, mb)
 
 -- | Memoize and unzip the computation of pairs, applying the 'memo0Dynamics' function.
-memo0UnzipDynamics :: Dynamics (a, b) -> Simulation (Dynamics a, Dynamics b)
-memo0UnzipDynamics m =
+unzip0Dynamics :: Dynamics (a, b) -> Simulation (Dynamics a, Dynamics b)
+unzip0Dynamics m =
   Simulation $ \r ->
   do m' <- invokeSimulation r (memo0Dynamics m)
      let ma =

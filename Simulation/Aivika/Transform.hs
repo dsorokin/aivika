@@ -56,19 +56,19 @@ instance Arrow Transform where
 
   first (Transform f) =
     Transform $ \bd ->
-    do (b, d) <- memo0UnzipDynamics bd
+    do (b, d) <- unzip0Dynamics bd
        c <- f b
        return $ liftM2 (,) c d 
 
   second (Transform f) =
     Transform $ \db ->
-    do (d, b) <- memo0UnzipDynamics db
+    do (d, b) <- unzip0Dynamics db
        c <- f b
        return $ liftM2 (,) d c
 
   (Transform f) *** (Transform g) =
     Transform $ \bb' ->
-    do (b, b') <- memo0UnzipDynamics bb'
+    do (b, b') <- unzip0Dynamics bb'
        c  <- f b
        c' <- g b'
        return $ liftM2 (,) c c'
@@ -85,7 +85,7 @@ instance ArrowLoop Transform where
     Transform $ \b ->
     mdo let bd = liftM2 (,) b d
         cd <- f bd
-        (c, d) <- memo0UnzipDynamics cd
+        (c, d) <- unzip0Dynamics cd
         return c
 
 -- | A transform that returns the current modeling time.
