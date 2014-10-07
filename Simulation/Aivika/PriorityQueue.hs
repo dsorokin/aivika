@@ -143,8 +143,10 @@ dequeue pq =
      vals <- readIORef (pqVals pq)
      k  <- readArray keys i
      v  <- readArray vals i
-     k0 <- readArray keys size
-     v0 <- readArray vals size
+     let k0 = 0.0
+         v0 = undefined
+     -- k0 <- readArray keys size
+     -- v0 <- readArray vals size
      writeArray keys i k0
      writeArray vals i v0
      siftDown keys vals i 0 k v
