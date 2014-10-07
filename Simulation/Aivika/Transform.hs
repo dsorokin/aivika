@@ -13,12 +13,15 @@
 -- analogous circuit as an opposite to the digital one.
 --
 module Simulation.Aivika.Transform
-       (-- * Transform Arrow
+       (-- * The Transform Arrow
         Transform(..),
+        -- * Delaying the Transform
+        delayTransform,
+        -- * The Time Transform
+        timeTransform,
         -- * Differential and Difference Equations
         integTransform,
-        sumTransform,
-        timeTransform) where
+        sumTransform) where
 
 import qualified Control.Category as C
 import Control.Arrow
@@ -92,8 +95,19 @@ instance ArrowLoop Transform where
 timeTransform :: Transform a Double
 timeTransform = Transform $ const $ return time
 
+-- | Return a delayed transform by the specified lag time and initial value.
+--
+-- This is actually the 'delayI' function wrapped in the 'Transform' type. 
+delayTransform :: Dynamics Double     -- ^ the lag time
+                  -> Dynamics a       -- ^ the initial value
+                  -> Transform a a    -- ^ the delayed transform
+delayTransform lagTime init =
+  Transform $ \a -> delayI a lagTime init
+  
 -- | Return a transform that maps the derivative to an integral
 -- by the specified initial value.
+--
+-- This is actually the 'integ' function wrapped in the 'Transform' type. 
 integTransform :: Dynamics Double
                   -- ^ the initial value
                   -> Transform Double Double
@@ -102,6 +116,8 @@ integTransform = Transform . integ
 
 -- | Return a transform that maps the difference to a sum
 -- by the specified initial value.
+--
+-- This is actually the 'diffsum' function wrapped in the 'Transform' type. 
 sumTransform :: (Num a, Unboxed a) =>
                 Dynamics a
                 -- ^ the initial value

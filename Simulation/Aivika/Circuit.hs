@@ -16,16 +16,16 @@
 -- The implementation is based on the <http://en.wikibooks.org/wiki/Haskell/Arrow_tutorial Arrow Tutorial>.
 --
 module Simulation.Aivika.Circuit
-       (-- * Circuit Arrow
+       (-- * The Circuit Arrow
         Circuit(..),
         -- * Circuit Primitives
         arrCircuit,
         accumCircuit,
-        -- * Arrival Circuit
+        -- * The Arrival Circuit
         arrivalCircuit,
-        -- * Delaying Circuit
+        -- * Delaying the Circuit
         delayCircuit,
-        -- * Time Circuit
+        -- * The Time Circuit
         timeCircuit,
         -- * Conditional Computation
         (<?<),
@@ -39,7 +39,7 @@ module Simulation.Aivika.Circuit
         -- * Integrals and Difference Equations
         integCircuit,
         sumCircuit,
-        -- * Circuit Transform
+        -- * The Circuit Transform
         circuitTransform) where
 
 import qualified Control.Category as C
