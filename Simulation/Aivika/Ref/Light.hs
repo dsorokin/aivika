@@ -5,7 +5,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.6.3
+-- Tested with: GHC 7.8.3
 --
 -- This module defines a light-weight and more fast version of an updatable reference
 -- that depends on the event queue but that doesn't supply with the signal notification.
