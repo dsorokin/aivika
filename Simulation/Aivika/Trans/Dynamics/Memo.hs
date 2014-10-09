@@ -19,34 +19,31 @@ module Simulation.Aivika.Trans.Dynamics.Memo
         unzipDynamics,
         unzip0Dynamics) where
 
-import Data.Array
-import Data.Array.IO.Safe
-import Data.IORef
 import Control.Monad
 
+import Simulation.Aivika.Trans.Internal.ProtoRef
+import Simulation.Aivika.Trans.Internal.ProtoArray
 import Simulation.Aivika.Trans.Internal.Specs
+import Simulation.Aivika.Trans.Internal.MonadSim
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Dynamics.Interpolate
 
--- | Create a boxed array with default values.
-newBoxedArray_ :: Ix i => (i, i) -> IO (IOArray i e)
-newBoxedArray_ = newArray_
-
 -- | Memoize and order the computation in the integration time points using 
 -- the interpolation that knows of the Runge-Kutta method. The values are
 -- calculated sequentially starting from 'starttime'.
-memoDynamics :: Dynamics e -> Simulation (Dynamics e)
+memoDynamics :: MonadSim m => DynamicsT m e -> SimulationT m (DynamicsT m e)
 {-# INLINE memoDynamics #-}
 memoDynamics (Dynamics m) = 
   Simulation $ \r ->
   do let sc = runSpecs r
+         s  = runSession r
          (phl, phu) = integPhaseBnds sc
          (nl, nu)   = integIterationBnds sc
-     arr   <- newBoxedArray_ ((phl, nl), (phu, nu))
-     nref  <- newIORef 0
-     phref <- newIORef 0
+     arr   <- newProtoArray_ s ((phl, nl), (phu, nu))
+     nref  <- newProtoRef s 0
+     phref <- newProtoRef s 0
      let r p = 
            do let sc  = pointSpecs p
                   n   = pointIteration p
@@ -55,20 +52,20 @@ memoDynamics (Dynamics m) =
                   loop n' ph' = 
                     if (n' > n) || ((n' == n) && (ph' > ph)) 
                     then 
-                      readArray arr (ph, n)
+                      readProtoArray arr (ph, n)
                     else 
                       let p' = p { pointIteration = n', pointPhase = ph',
                                    pointTime = basicTime sc n' ph' }
                       in do a <- m p'
-                            a `seq` writeArray arr (ph', n') a
+                            a `seq` writeProtoArray arr (ph', n') a
                             if ph' >= phu 
-                              then do writeIORef phref 0
-                                      writeIORef nref (n' + 1)
+                              then do writeProtoRef phref 0
+                                      writeProtoRef nref (n' + 1)
                                       loop (n' + 1) 0
-                              else do writeIORef phref (ph' + 1)
+                              else do writeProtoRef phref (ph' + 1)
                                       loop n' (ph' + 1)
-              n'  <- readIORef nref
-              ph' <- readIORef phref
+              n'  <- readProtoRef nref
+              ph' <- readProtoRef phref
               loop n' ph'
      return $ interpolateDynamics $ Dynamics r
 
@@ -78,29 +75,30 @@ memoDynamics (Dynamics m) =
 -- difference when we request for values in the intermediate time points
 -- that are used by this method to integrate. In general case you should 
 -- prefer the 'memo0Dynamics' function above 'memoDynamics'.
-memo0Dynamics :: Dynamics e -> Simulation (Dynamics e)
+memo0Dynamics :: MonadSim m => DynamicsT m e -> SimulationT m (DynamicsT m e)
 {-# INLINE memo0Dynamics #-}
 memo0Dynamics (Dynamics m) = 
   Simulation $ \r ->
   do let sc   = runSpecs r
+         s    = runSession r
          bnds = integIterationBnds sc
-     arr  <- newBoxedArray_ bnds
-     nref <- newIORef 0
+     arr  <- newProtoArray_ s bnds
+     nref <- newProtoRef s 0
      let r p =
            do let sc = pointSpecs p
                   n  = pointIteration p
                   loop n' = 
                     if n' > n
                     then 
-                      readArray arr n
+                      readProtoArray arr n
                     else 
                       let p' = p { pointIteration = n', pointPhase = 0,
                                    pointTime = basicTime sc n' 0 }
                       in do a <- m p'
-                            a `seq` writeArray arr n' a
-                            writeIORef nref (n' + 1)
+                            a `seq` writeProtoArray arr n' a
+                            writeProtoRef nref (n' + 1)
                             loop (n' + 1)
-              n' <- readIORef nref
+              n' <- readProtoRef nref
               loop n'
      return $ discreteDynamics $ Dynamics r
 
@@ -108,12 +106,13 @@ memo0Dynamics (Dynamics m) =
 -- the integration time points. It is equivalent to a call of the
 -- 'memo0Dynamics' function but significantly more efficient, for the array 
 -- is not created.
-iterateDynamics :: Dynamics () -> Simulation (Dynamics ())
+iterateDynamics :: MonadSim m => DynamicsT m () -> SimulationT m (DynamicsT m ())
 {-# INLINE iterateDynamics #-}
 iterateDynamics (Dynamics m) = 
   Simulation $ \r ->
   do let sc = runSpecs r
-     nref <- newIORef 0
+         s  = runSession r
+     nref <- newProtoRef s 0
      let r p =
            do let sc = pointSpecs p
                   n  = pointIteration p
@@ -122,9 +121,9 @@ iterateDynamics (Dynamics m) =
                     let p' = p { pointIteration = n', pointPhase = 0,
                                  pointTime = basicTime sc n' 0 }
                     in do a <- m p'
-                          a `seq` writeIORef nref (n' + 1)
+                          a `seq` writeProtoRef nref (n' + 1)
                           loop (n' + 1)
-              n' <- readIORef nref
+              n' <- readProtoRef nref
               loop n'
      return $ discreteDynamics $ Dynamics r
 

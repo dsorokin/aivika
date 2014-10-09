@@ -6,14 +6,15 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
--- The module defines the 'Parameter' monad that allows representing the model
+-- The module defines the 'ParameterT' monad transformer that allows representing the model
 -- parameters. For example, they can be used when running the Monte-Carlo simulation.
 --
--- In general, this monad is very useful for representing a computation which is external
+-- In general, this monad tranformer is very useful for representing a computation which is external
 -- relative to the model itself.
 -- 
 module Simulation.Aivika.Trans.Parameter
        (-- * Parameter
+        ParameterT,
         Parameter,
         ParameterLift(..),
         runParameter,

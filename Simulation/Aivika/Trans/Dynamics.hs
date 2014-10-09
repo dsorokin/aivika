@@ -7,10 +7,11 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
--- The module defines the 'Dynamics' monad representing a time varying polymorphic function. 
+-- The module defines the 'DynamicsT' monad tranformer representing a time varying polymorphic function. 
 --
 module Simulation.Aivika.Trans.Dynamics
        (-- * Dynamics Monad
+        DynamicsT,
         Dynamics,
         DynamicsLift(..),
         runDynamicsInStartTime,

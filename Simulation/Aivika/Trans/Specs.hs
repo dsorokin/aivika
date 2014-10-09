@@ -10,6 +10,7 @@
 -- It defines the simulation specs and functions for this data type.
 module Simulation.Aivika.Trans.Specs
        (-- * Simulation Specs
+        SpecsT(..),
         Specs(..),
         Method(..),
         -- * Auxiliary Functions

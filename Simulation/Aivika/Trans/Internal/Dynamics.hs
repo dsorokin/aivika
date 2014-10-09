@@ -9,10 +9,11 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
--- The module defines the 'Dynamics' monad representing a time varying polymorphic function. 
+-- The module defines the 'DynamicsT' monad transformer representing a time varying polymorphic function. 
 --
 module Simulation.Aivika.Trans.Internal.Dynamics
        (-- * Dynamics
+        DynamicsT(..),
         Dynamics(..),
         DynamicsLift(..),
         invokeDynamics,
@@ -39,78 +40,86 @@ import Control.Monad.Trans
 import Control.Monad.Fix
 import Control.Applicative
 
+import Simulation.Aivika.Trans.Internal.Exception
+import Simulation.Aivika.Trans.Internal.MonadSim
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
 
--- | A value in the 'Dynamics' monad represents a polymorphic time varying function.
-newtype Dynamics a = Dynamics (Point -> IO a)
+-- | A value in the 'DynamicsT' monad represents a polymorphic time varying function
+-- defined in the whole spectrum of time values as a single entity. It is ideal for
+-- numerical approximating integrals.
+newtype DynamicsT m a = Dynamics (PointT m -> m a)
 
-instance Monad Dynamics where
-  return  = returnD
-  m >>= k = bindD m k
+-- | A convenient type synonym.
+type Dynamics = DynamicsT IO
 
-returnD :: a -> Dynamics a
-{-# INLINE returnD #-}
-returnD a = Dynamics (\p -> return a)
+instance Monad m => Monad (DynamicsT m) where
 
-bindD :: Dynamics a -> (a -> Dynamics b) -> Dynamics b
-{-# INLINE bindD #-}
-bindD (Dynamics m) k = 
-  Dynamics $ \p -> 
-  do a <- m p
-     let Dynamics m' = k a
-     m' p
+  {-# INLINE return #-}
+  return a = Dynamics $ \p -> return a
 
--- | Run the 'Dynamics' computation in the initial time point.
-runDynamicsInStartTime :: Dynamics a -> Simulation a
+  {-# INLINE (>>=) #-}
+  (Dynamics m) >>= k =
+    Dynamics $ \p -> 
+    do a <- m p
+       let Dynamics m' = k a
+       m' p
+
+-- | Run the 'DynamicsT' computation in the initial time point.
+runDynamicsInStartTime :: DynamicsT m a -> SimulationT m a
+{-# INLINE runDynamicsInStartTime #-}
 runDynamicsInStartTime (Dynamics m) =
   Simulation $ m . integStartPoint
 
--- | Run the 'Dynamics' computation in the final time point.
-runDynamicsInStopTime :: Dynamics a -> Simulation a
+-- | Run the 'DynamicsT' computation in the final time point.
+runDynamicsInStopTime :: DynamicsT m a -> SimulationT m a
+{-# INLINE runDynamicsInStopTime #-}
 runDynamicsInStopTime (Dynamics m) =
   Simulation $ m . integStopPoint
 
--- | Run the 'Dynamics' computation in all integration time points.
-runDynamicsInIntegTimes :: Dynamics a -> Simulation [IO a]
+-- | Run the 'DynamicsT' computation in all integration time points.
+runDynamicsInIntegTimes :: Monad m => DynamicsT m a -> SimulationT m [m a]
+{-# INLINE runDynamicsInIntegTimes #-}
 runDynamicsInIntegTimes (Dynamics m) =
   Simulation $ return . map m . integPoints
 
--- | Run the 'Dynamics' computation in the specified time point.
-runDynamicsInTime :: Double -> Dynamics a -> Simulation a
+-- | Run the 'DynamicsT' computation in the specified time point.
+runDynamicsInTime :: Double -> DynamicsT m a -> SimulationT m a
+{-# INLINE runDynamicsInTime #-}
 runDynamicsInTime t (Dynamics m) =
   Simulation $ \r -> m $ pointAt r t
 
--- | Run the 'Dynamics' computation in the specified time points.
-runDynamicsInTimes :: [Double] -> Dynamics a -> Simulation [IO a]
+-- | Run the 'DynamicsT' computation in the specified time points.
+runDynamicsInTimes :: Monad m => [Double] -> DynamicsT m a -> SimulationT m [m a]
+{-# INLINE runDynamicsInTimes #-}
 runDynamicsInTimes ts (Dynamics m) =
   Simulation $ \r -> return $ map (m . pointAt r) ts 
 
-instance Functor Dynamics where
-  fmap = liftMD
+instance Functor m => Functor (DynamicsT m) where
+  
+  {-# INLINE fmap #-}
+  fmap f (Dynamics x) = Dynamics $ \p -> fmap f $ x p
 
-instance Applicative Dynamics where
-  pure = return
-  (<*>) = ap
+instance Applicative m => Applicative (DynamicsT m) where
+  
+  {-# INLINE pure #-}
+  pure = Dynamics . const . pure
+  
+  {-# INLINE (<*>) #-}
+  (Dynamics x) <*> (Dynamics y) = Dynamics $ \p -> x p <*> y p
 
-instance Eq (Dynamics a) where
-  x == y = error "Can't compare dynamics." 
-
-instance Show (Dynamics a) where
-  showsPrec _ x = showString "<< Dynamics >>"
-
-liftMD :: (a -> b) -> Dynamics a -> Dynamics b
+liftMD :: Monad m => (a -> b) -> DynamicsT m a -> DynamicsT m b
 {-# INLINE liftMD #-}
 liftMD f (Dynamics x) =
   Dynamics $ \p -> do { a <- x p; return $ f a }
 
-liftM2D :: (a -> b -> c) -> Dynamics a -> Dynamics b -> Dynamics c
+liftM2D :: Monad m => (a -> b -> c) -> DynamicsT m a -> DynamicsT m b -> DynamicsT m c
 {-# INLINE liftM2D #-}
 liftM2D f (Dynamics x) (Dynamics y) =
   Dynamics $ \p -> do { a <- x p; b <- y p; return $ f a b }
 
-instance (Num a) => Num (Dynamics a) where
+instance (Num a, Monad m) => Num (DynamicsT m a) where
   x + y = liftM2D (+) x y
   x - y = liftM2D (-) x y
   x * y = liftM2D (*) x y
@@ -119,12 +128,12 @@ instance (Num a) => Num (Dynamics a) where
   signum = liftMD signum
   fromInteger i = return $ fromInteger i
 
-instance (Fractional a) => Fractional (Dynamics a) where
+instance (Fractional a, Monad m) => Fractional (DynamicsT m a) where
   x / y = liftM2D (/) x y
   recip = liftMD recip
   fromRational t = return $ fromRational t
 
-instance (Floating a) => Floating (Dynamics a) where
+instance (Floating a, Monad m) => Floating (DynamicsT m a) where
   pi = return pi
   exp = liftMD exp
   log = liftMD log
@@ -143,74 +152,86 @@ instance (Floating a) => Floating (Dynamics a) where
   acosh = liftMD acosh
   atanh = liftMD atanh
 
-instance MonadIO Dynamics where
-  liftIO m = Dynamics $ const m
+instance MonadTrans DynamicsT where
 
-instance ParameterLift Dynamics where
-  liftParameter = liftDP
+  {-# INLINE lift #-}
+  lift = Dynamics . const
 
-instance SimulationLift Dynamics where
-  liftSimulation = liftDS
-    
-liftDP :: Parameter a -> Dynamics a
-{-# INLINE liftDP #-}
-liftDP (Parameter m) =
-  Dynamics $ \p -> m $ pointRun p
-    
-liftDS :: Simulation a -> Dynamics a
-{-# INLINE liftDS #-}
-liftDS (Simulation m) =
-  Dynamics $ \p -> m $ pointRun p
-
--- | A type class to lift the 'Dynamics' computations to other computations.
-class DynamicsLift m where
+instance MonadIO m => MonadIO (DynamicsT m) where
   
-  -- | Lift the specified 'Dynamics' computation to another computation.
-  liftDynamics :: Dynamics a -> m a
+  {-# INLINE liftIO #-}
+  liftIO = Dynamics . const . liftIO
 
-instance DynamicsLift Dynamics where
+-- | A type class to lift the 'DynamicsT' computations into other computations.
+class DynamicsLift t where
+  
+  -- | Lift the specified 'DynamicsT' computation into another computation.
+  liftDynamics :: Monad m => DynamicsT m a -> t m a
+
+instance DynamicsLift DynamicsT where
+  
+  {-# INLINE liftDynamics #-}
   liftDynamics = id
+
+instance SimulationLift DynamicsT where
+
+  {-# INLINE liftSimulation #-}
+  liftSimulation (Simulation x) = Dynamics $ x . pointRun 
+
+instance ParameterLift DynamicsT where
+
+  {-# INLINE liftParameter #-}
+  liftParameter (Parameter x) = Dynamics $ x . pointRun
   
--- | Exception handling within 'Dynamics' computations.
-catchDynamics :: Dynamics a -> (IOException -> Dynamics a) -> Dynamics a
+-- | Exception handling within 'DynamicsT' computations.
+catchDynamics :: MonadSim m => DynamicsT m a -> (IOException -> DynamicsT m a) -> DynamicsT m a
+{-# INLINABLE catchDynamics #-}
 catchDynamics (Dynamics m) h =
   Dynamics $ \p -> 
-  C.catch (m p) $ \e ->
+  catchComputation (m p) $ \e ->
   let Dynamics m' = h e in m' p
                            
 -- | A computation with finalization part like the 'finally' function.
-finallyDynamics :: Dynamics a -> Dynamics b -> Dynamics a
+finallyDynamics :: MonadSim m => DynamicsT m a -> DynamicsT m b -> DynamicsT m a
+{-# INLINABLE finallyDynamics #-}
 finallyDynamics (Dynamics m) (Dynamics m') =
   Dynamics $ \p ->
-  C.finally (m p) (m' p)
+  finallyComputation (m p) (m' p)
 
 -- | Like the standard 'throw' function.
-throwDynamics :: IOException -> Dynamics a
+throwDynamics :: MonadSim m => IOException -> DynamicsT m a
+{-# INLINABLE throwDynamics #-}
 throwDynamics = throw
 
--- | Invoke the 'Dynamics' computation.
-invokeDynamics :: Point -> Dynamics a -> IO a
+-- | Invoke the 'DynamicsT' computation.
+invokeDynamics :: PointT m -> DynamicsT m a -> m a
 {-# INLINE invokeDynamics #-}
 invokeDynamics p (Dynamics m) = m p
 
-instance MonadFix Dynamics where
+instance MonadFix m => MonadFix (DynamicsT m) where
+
+  {-# INLINE mfix #-}
   mfix f = 
     Dynamics $ \p ->
     do { rec { a <- invokeDynamics p (f a) }; return a }
 
 -- | Computation that returns the current simulation time.
-time :: Dynamics Double
+time :: Monad m => DynamicsT m Double
+{-# INLINE time #-}
 time = Dynamics $ return . pointTime 
 
 -- | Whether the current time is an integration time.
-isTimeInteg :: Dynamics Bool
+isTimeInteg :: Monad m => DynamicsT m Bool
+{-# INLINE isTimeInteg #-}
 isTimeInteg = Dynamics $ \p -> return $ pointPhase p >= 0
 
 -- | Return the integration iteration closest to the current simulation time.
-integIteration :: Dynamics Int
+integIteration :: Monad m => DynamicsT m Int
+{-# INLINE integIteration #-}
 integIteration = Dynamics $ return . pointIteration
 
 -- | Return the integration phase for the current simulation time.
 -- It is @(-1)@ for non-integration time points.
-integPhase :: Dynamics Int
+integPhase :: Monad m => DynamicsT m Int
+{-# INLINE integPhase #-}
 integPhase = Dynamics $ return . pointPhase

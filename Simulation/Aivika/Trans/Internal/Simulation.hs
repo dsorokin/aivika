@@ -1,5 +1,5 @@
 
-{-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE RecursiveDo, TypeSynonymInstances #-}
 
 -- |
 -- Module     : Simulation.Aivika.Trans.Internal.Simulation
@@ -9,11 +9,12 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
--- The module defines the 'Simulation' monad that represents a computation
+-- The module defines the 'SimulationT' monad transformer that represents a computation
 -- within the simulation run.
 -- 
 module Simulation.Aivika.Trans.Internal.Simulation
        (-- * Simulation
+        SimulationT(..),
         Simulation(..),
         SimulationLift(..),
         invokeSimulation,
@@ -23,7 +24,8 @@ module Simulation.Aivika.Trans.Internal.Simulation
         catchSimulation,
         finallySimulation,
         throwSimulation,
-        -- * Utilities
+        -- * Internal Parameters
+        simulationSession,
         simulationEventQueue,
         -- * Memoization
         memoSimulation) where
@@ -38,36 +40,42 @@ import Control.Applicative
 
 import Data.IORef
 
-import Simulation.Aivika.Trans.Generator
+import Simulation.Aivika.Trans.Internal.Exception
+import Simulation.Aivika.Trans.Internal.Session
+import Simulation.Aivika.Trans.Internal.ProtoRef
+import Simulation.Aivika.Trans.Internal.Generator
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
+import Simulation.Aivika.Trans.Internal.MonadSim
 
--- | A value in the 'Simulation' monad represents a computation
+-- | A value in the 'SimulationT' monad represents a computation
 -- within the simulation run.
-newtype Simulation a = Simulation (Run -> IO a)
+newtype SimulationT m a = Simulation (RunT m -> m a)
 
-instance Monad Simulation where
-  return  = returnS
-  m >>= k = bindS m k
+-- | A convenient type synonym.
+type Simulation a = SimulationT IO a
 
-returnS :: a -> Simulation a
-{-# INLINE returnS #-}
-returnS a = Simulation (\r -> return a)
+instance Monad m => Monad (SimulationT m) where
 
-bindS :: Simulation a -> (a -> Simulation b) -> Simulation b
-{-# INLINE bindS #-}
-bindS (Simulation m) k = 
-  Simulation $ \r -> 
-  do a <- m r
-     let Simulation m' = k a
-     m' r
+  {-# INLINE return #-}
+  return a = Simulation $ \r -> return a
+
+  {-# INLINE (>>=) #-}
+  (Simulation m) >>= k =
+    Simulation $ \r -> 
+    do a <- m r
+       let Simulation m' = k a
+       m' r
 
 -- | Run the simulation using the specified specs.
-runSimulation :: Simulation a -> Specs -> IO a
+runSimulation :: MonadSim m => SimulationT m a -> SpecsT m -> m a
+{-# INLINABLE runSimulation #-}
 runSimulation (Simulation m) sc =
-  do q <- newEventQueue sc
-     g <- newGenerator $ spcGeneratorType sc
+  do s <- newSession
+     q <- newEventQueue s sc
+     g <- newGenerator s $ spcGeneratorType sc
      m Run { runSpecs = sc,
+             runSession = s,
              runIndex = 1,
              runCount = 1,
              runEventQueue = q,
@@ -75,89 +83,118 @@ runSimulation (Simulation m) sc =
 
 -- | Run the given number of simulations using the specified specs, 
 --   where each simulation is distinguished by its index 'simulationIndex'.
-runSimulations :: Simulation a -> Specs -> Int -> [IO a]
+runSimulations :: MonadSim m => SimulationT m a -> SpecsT m -> Int -> [m a]
+{-# INLINABLE runSimulations #-}
 runSimulations (Simulation m) sc runs = map f [1 .. runs]
-  where f i = do q <- newEventQueue sc
-                 g <- newGenerator $ spcGeneratorType sc
+  where f i = do s <- newSession
+                 q <- newEventQueue s sc
+                 g <- newGenerator s $ spcGeneratorType sc
                  m Run { runSpecs = sc,
+                         runSession = s,
                          runIndex = i,
                          runCount = runs,
                          runEventQueue = q,
                          runGenerator = g }
 
 -- | Return the event queue.
-simulationEventQueue :: Simulation EventQueue
+simulationEventQueue :: Monad m => SimulationT m (EventQueueT m)
+{-# INLINE simulationEventQueue #-}
 simulationEventQueue = Simulation $ return . runEventQueue
 
-instance Functor Simulation where
-  fmap = liftMS
+-- | Return the simulation session.
+simulationSession :: Monad m => SimulationT m (SessionT m)
+{-# INLINE simulationSession #-}
+simulationSession = Simulation $ return . runSession
 
-instance Applicative Simulation where
-  pure = return
-  (<*>) = ap
+instance Functor m => Functor (SimulationT m) where
+  
+  {-# INLINE fmap #-}
+  fmap f (Simulation x) = Simulation $ \r -> fmap f $ x r
 
-liftMS :: (a -> b) -> Simulation a -> Simulation b
+instance Applicative m => Applicative (SimulationT m) where
+  
+  {-# INLINE pure #-}
+  pure = Simulation . const . pure
+  
+  {-# INLINE (<*>) #-}
+  (Simulation x) <*> (Simulation y) = Simulation $ \r -> x r <*> y r
+
+liftMS :: Monad m => (a -> b) -> SimulationT m a -> SimulationT m b
 {-# INLINE liftMS #-}
 liftMS f (Simulation x) =
   Simulation $ \r -> do { a <- x r; return $ f a }
 
-instance MonadIO Simulation where
-  liftIO m = Simulation $ const m
+instance MonadTrans SimulationT where
 
--- | A type class to lift the simulation computations to other computations.
-class SimulationLift m where
+  {-# INLINE lift #-}
+  lift = Simulation . const
+
+instance MonadIO m => MonadIO (SimulationT m) where
   
-  -- | Lift the specified 'Simulation' computation to another computation.
-  liftSimulation :: Simulation a -> m a
+  {-# INLINE liftIO #-}
+  liftIO = Simulation . const . liftIO
 
-instance SimulationLift Simulation where
+-- | A type class to lift the simulation computations into other computations.
+class SimulationLift t where
+  
+  -- | Lift the specified 'SimulationT' computation into another computation.
+  liftSimulation :: Monad m => SimulationT m a -> t m a
+
+instance SimulationLift SimulationT where
+  
+  {-# INLINE liftSimulation #-}
   liftSimulation = id
 
-instance ParameterLift Simulation where
-  liftParameter = liftPS
+instance ParameterLift SimulationT where
 
-liftPS :: Parameter a -> Simulation a
-{-# INLINE liftPS #-}
-liftPS (Parameter x) =
-  Simulation x
+  {-# INLINE liftParameter #-}
+  liftParameter (Parameter x) = Simulation x
     
--- | Exception handling within 'Simulation' computations.
-catchSimulation :: Simulation a -> (IOException -> Simulation a) -> Simulation a
+-- | Exception handling within 'SimulationT' computations.
+catchSimulation :: MonadSim m => SimulationT m a -> (IOException -> SimulationT m a) -> SimulationT m a
+{-# INLINABLE catchSimulation #-}
 catchSimulation (Simulation m) h =
   Simulation $ \r -> 
-  C.catch (m r) $ \e ->
+  catchComputation (m r) $ \e ->
   let Simulation m' = h e in m' r
                            
 -- | A computation with finalization part like the 'finally' function.
-finallySimulation :: Simulation a -> Simulation b -> Simulation a
+finallySimulation :: MonadSim m => SimulationT m a -> SimulationT m b -> SimulationT m a
+{-# INLINABLE finallySimulation #-}
 finallySimulation (Simulation m) (Simulation m') =
   Simulation $ \r ->
-  C.finally (m r) (m' r)
+  finallyComputation (m r) (m' r)
 
 -- | Like the standard 'throw' function.
-throwSimulation :: IOException -> Simulation a
+throwSimulation :: MonadSim m => IOException -> SimulationT m a
+{-# INLINABLE throwSimulation #-}
 throwSimulation = throw
 
--- | Invoke the 'Simulation' computation.
-invokeSimulation :: Run -> Simulation a -> IO a
+-- | Invoke the 'SimulationT' computation.
+invokeSimulation :: RunT m -> SimulationT m a -> m a
 {-# INLINE invokeSimulation #-}
 invokeSimulation r (Simulation m) = m r
 
-instance MonadFix Simulation where
+instance MonadFix m => MonadFix (SimulationT m) where
+
+  {-# INLINE mfix #-}
   mfix f = 
     Simulation $ \r ->
-    do { rec { a <- invokeSimulation r (f a) }; return a }  
+    do { rec { a <- invokeSimulation r (f a) }; return a }
 
--- | Memoize the 'Simulation' computation, always returning the same value
+-- | Memoize the 'SimulationT' computation, always returning the same value
 -- within a simulation run.
-memoSimulation :: Simulation a -> Simulation (Simulation a)
+memoSimulation :: MonadSim m => SimulationT m a -> SimulationT m (SimulationT m a)
+{-# INLINABLE memoSimulation #-}
 memoSimulation m =
-  do ref <- liftIO $ newIORef Nothing
+  Simulation $ \r ->
+  do let s = runSession r
+     ref <- newProtoRef s Nothing
      return $ Simulation $ \r ->
-       do x <- readIORef ref
+       do x <- readProtoRef ref
           case x of
             Just v -> return v
             Nothing ->
               do v <- invokeSimulation r m
-                 writeIORef ref (Just v)
+                 writeProtoRef ref (Just v)
                  return v
