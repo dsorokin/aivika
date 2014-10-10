@@ -66,7 +66,7 @@ import Simulation.Aivika.Trans.Internal.Specs
 newtype ParameterT m a = Parameter (RunT m -> m a)
 
 -- | A convenient type synonym.
-type Parameter = ParameterT IO
+type Parameter a = ParameterT IO a
 
 instance Monad m => Monad (ParameterT m) where
 

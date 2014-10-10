@@ -52,7 +52,7 @@ import Simulation.Aivika.Trans.Internal.Simulation
 newtype DynamicsT m a = Dynamics (PointT m -> m a)
 
 -- | A convenient type synonym.
-type Dynamics = DynamicsT IO
+type Dynamics a = DynamicsT IO a
 
 instance Monad m => Monad (DynamicsT m) where
 
