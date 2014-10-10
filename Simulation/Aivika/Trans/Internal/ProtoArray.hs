@@ -69,7 +69,7 @@ class ProtoArraying m => ProtoUArraying m e where
 
 instance ProtoArraying IO where
 
-  data ProtoArrayT IO i e = ProtoArray (IOArray i e)
+  newtype ProtoArrayT IO i e = ProtoArray (IOArray i e)
 
   {-# SPECIALISE INLINE protoArrayBounds :: Ix i => ProtoArray i e -> IO (i, i) #-}
   protoArrayBounds (ProtoArray a) = getBounds a
@@ -88,7 +88,7 @@ instance ProtoArraying IO where
 
 instance MArray IOUArray e IO => ProtoUArraying IO e where
 
-  data ProtoUArrayT IO i e = ProtoUArray (IOUArray i e)
+  newtype ProtoUArrayT IO i e = ProtoUArray (IOUArray i e)
 
   {-# SPECIALISE INLINE protoUArrayBounds :: (MArray IOUArray e IO, Ix i) => ProtoUArray i e -> IO (i, i) #-}
   protoUArrayBounds (ProtoUArray a) = getBounds a

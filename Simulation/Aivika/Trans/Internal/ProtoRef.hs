@@ -40,7 +40,7 @@ class ProtoReferring m where
 
 instance ProtoReferring IO where
 
-  data ProtoRefT IO a = ProtoRef (IORef a)
+  newtype ProtoRefT IO a = ProtoRef (IORef a)
 
   {-# SPECIALIZE INLINE newProtoRef :: Session -> a -> IO (ProtoRef a) #-}
   newProtoRef session a = fmap ProtoRef $ newIORef a
