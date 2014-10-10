@@ -22,7 +22,10 @@ class ExceptionHandling m where
   catchComputation :: m a -> (IOException -> m a) -> m a
 
   -- | Introduce a finalisation block.
-  finallyComputation :: m a -> m b -> m a 
+  finallyComputation :: m a -> m b -> m a
+
+  -- | Throw an exception.
+  throwComputation :: IOException -> m a
 
 instance ExceptionHandling IO where
 
@@ -31,3 +34,6 @@ instance ExceptionHandling IO where
 
   {-# INLINE finallyComputation #-}
   finallyComputation = finally
+
+  {-# INLINE throwComputation #-}
+  throwComputation = throw
