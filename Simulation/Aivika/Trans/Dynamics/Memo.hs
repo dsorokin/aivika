@@ -34,7 +34,7 @@ import Simulation.Aivika.Trans.Dynamics.Interpolate
 -- the interpolation that knows of the Runge-Kutta method. The values are
 -- calculated sequentially starting from 'starttime'.
 memoDynamics :: MonadSim m => DynamicsT m e -> SimulationT m (DynamicsT m e)
-{-# INLINE memoDynamics #-}
+{-# INLINABLE memoDynamics #-}
 memoDynamics (Dynamics m) = 
   Simulation $ \r ->
   do let sc = runSpecs r
@@ -76,7 +76,7 @@ memoDynamics (Dynamics m) =
 -- that are used by this method to integrate. In general case you should 
 -- prefer the 'memo0Dynamics' function above 'memoDynamics'.
 memo0Dynamics :: MonadSim m => DynamicsT m e -> SimulationT m (DynamicsT m e)
-{-# INLINE memo0Dynamics #-}
+{-# INLINABLE memo0Dynamics #-}
 memo0Dynamics (Dynamics m) = 
   Simulation $ \r ->
   do let sc   = runSpecs r
@@ -107,7 +107,7 @@ memo0Dynamics (Dynamics m) =
 -- 'memo0Dynamics' function but significantly more efficient, for the array 
 -- is not created.
 iterateDynamics :: MonadSim m => DynamicsT m () -> SimulationT m (DynamicsT m ())
-{-# INLINE iterateDynamics #-}
+{-# INLINABLE iterateDynamics #-}
 iterateDynamics (Dynamics m) = 
   Simulation $ \r ->
   do let sc = runSpecs r

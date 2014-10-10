@@ -28,12 +28,13 @@ import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Dynamics.Interpolate
+import Simulation.Aivika.Trans.Unboxed
 
 -- | Memoize and order the computation in the integration time points using 
 -- the interpolation that knows of the Runge-Kutta method. The values are
 -- calculated sequentially starting from 'starttime'.
-memoDynamics :: (ProtoUArraying m e, MonadSim m) => DynamicsT m e -> SimulationT m (DynamicsT m e)
-{-# INLINE memoDynamics #-}
+memoDynamics :: (Unboxed m e, MonadSim m) => DynamicsT m e -> SimulationT m (DynamicsT m e)
+{-# INLINABLE memoDynamics #-}
 memoDynamics (Dynamics m) = 
   Simulation $ \r ->
   do let sc = runSpecs r
@@ -75,8 +76,8 @@ memoDynamics (Dynamics m) =
 -- difference when we request for values in the intermediate time points
 -- that are used by this method to integrate. In general case you should 
 -- prefer the 'memo0Dynamics' function above 'memoDynamics'.
-memo0Dynamics :: (ProtoUArraying m e, MonadSim m) => DynamicsT m e -> SimulationT m (DynamicsT m e)
-{-# INLINE memo0Dynamics #-}
+memo0Dynamics :: (Unboxed m e, MonadSim m) => DynamicsT m e -> SimulationT m (DynamicsT m e)
+{-# INLINABLE memo0Dynamics #-}
 memo0Dynamics (Dynamics m) = 
   Simulation $ \r ->
   do let sc   = runSpecs r

@@ -61,7 +61,7 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
 
-import Simulation.Aivika.Trans.Internal.ProtoArray
+import Simulation.Aivika.Trans.Internal.Unboxed
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.MonadSim
 import Simulation.Aivika.Trans.Internal.Parameter
@@ -519,7 +519,7 @@ trend x at i =
 --
 -- As usual, to create a loopback, you should use the recursive do-notation.
 diffsum :: (MonadSim m, MonadFix m,
-            ProtoUArraying m a, Num a)
+            Unboxed m a, Num a)
            => DynamicsT m a                  -- ^ the difference
            -> DynamicsT m a                  -- ^ the initial value
            -> SimulationT m (DynamicsT m a)  -- ^ the sum
