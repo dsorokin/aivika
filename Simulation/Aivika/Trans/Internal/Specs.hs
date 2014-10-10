@@ -32,8 +32,8 @@ module Simulation.Aivika.Trans.Internal.Specs
 
 import Data.IORef
 
-import Simulation.Aivika.Trans.Internal.Session
-import Simulation.Aivika.Trans.Internal.Generator
+import Simulation.Aivika.Trans.Session
+import Simulation.Aivika.Trans.Generator
 import qualified Simulation.Aivika.Trans.PriorityQueue as PQ
 
 -- | It defines the simulation specs.

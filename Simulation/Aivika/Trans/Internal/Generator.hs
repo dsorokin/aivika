@@ -21,7 +21,7 @@ import System.Random
 
 import Data.IORef
 
-import Simulation.Aivika.Trans.Internal.Session
+import Simulation.Aivika.Trans.Session
 
 -- | Defines a monad whithin which computation the random number generator can work.
 class Generating m where

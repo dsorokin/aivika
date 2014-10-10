@@ -40,8 +40,8 @@ import Control.Monad.Trans
 import Control.Monad.Fix
 import Control.Applicative
 
-import Simulation.Aivika.Trans.Internal.Exception
-import Simulation.Aivika.Trans.Internal.MonadSim
+import Simulation.Aivika.Trans.Exception
+import Simulation.Aivika.Trans.MonadSim
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation

@@ -40,13 +40,13 @@ import Control.Applicative
 
 import Data.IORef
 
-import Simulation.Aivika.Trans.Internal.Exception
-import Simulation.Aivika.Trans.Internal.Session
-import Simulation.Aivika.Trans.Internal.ProtoRef
-import Simulation.Aivika.Trans.Internal.Generator
+import Simulation.Aivika.Trans.Exception
+import Simulation.Aivika.Trans.Session
+import Simulation.Aivika.Trans.ProtoRef
+import Simulation.Aivika.Trans.Generator
+import Simulation.Aivika.Trans.MonadSim
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
-import Simulation.Aivika.Trans.Internal.MonadSim
 
 -- | A value in the 'SimulationT' monad represents a computation
 -- within the simulation run.

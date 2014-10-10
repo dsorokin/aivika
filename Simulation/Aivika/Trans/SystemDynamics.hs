@@ -61,13 +61,13 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
 
-import Simulation.Aivika.Trans.Internal.Unboxed
 import Simulation.Aivika.Trans.Internal.Specs
-import Simulation.Aivika.Trans.Internal.MonadSim
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Dynamics.Interpolate
+import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Unboxed
 import Simulation.Aivika.Table
 
 import qualified Simulation.Aivika.Trans.Dynamics.Memo as M

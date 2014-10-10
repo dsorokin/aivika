@@ -52,11 +52,11 @@ import Data.IORef
 import qualified Data.IntMap as M
 import Data.Array
 
-import Simulation.Aivika.Trans.Internal.Exception
-import Simulation.Aivika.Trans.Internal.Session
-import Simulation.Aivika.Trans.Internal.Generator
+import Simulation.Aivika.Trans.Exception
+import Simulation.Aivika.Trans.Session
+import Simulation.Aivika.Trans.Generator
+import Simulation.Aivika.Trans.MonadSim
 import Simulation.Aivika.Trans.Internal.Specs
-import Simulation.Aivika.Trans.Internal.MonadSim
 
 -- | The 'ParameterT' monad that allows specifying the model parameters.
 -- For example, they can be used when running the Monte-Carlo simulation.

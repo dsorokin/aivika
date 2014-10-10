@@ -12,4 +12,22 @@
 module Simulation.Aivika.Trans.Exception
        (ExceptionHandling(..)) where
 
-import Simulation.Aivika.Trans.Internal.Exception
+import Control.Exception
+
+-- | A computation within which we can handle 'IO' exceptions
+-- as well as define finalisation blocks.
+class ExceptionHandling m where
+
+  -- | Catch an 'IO' exception within the computation.
+  catchComputation :: m a -> (IOException -> m a) -> m a
+
+  -- | Introduce a finalisation block.
+  finallyComputation :: m a -> m b -> m a 
+
+instance ExceptionHandling IO where
+
+  {-# INLINE catchComputation #-}
+  catchComputation = catch
+
+  {-# INLINE finallyComputation #-}
+  finallyComputation = finally

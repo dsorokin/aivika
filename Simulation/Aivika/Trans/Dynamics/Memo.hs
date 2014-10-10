@@ -21,10 +21,10 @@ module Simulation.Aivika.Trans.Dynamics.Memo
 
 import Control.Monad
 
-import Simulation.Aivika.Trans.Internal.ProtoRef
-import Simulation.Aivika.Trans.Internal.ProtoArray
+import Simulation.Aivika.Trans.ProtoRef
+import Simulation.Aivika.Trans.ProtoArray
+import Simulation.Aivika.Trans.MonadSim
 import Simulation.Aivika.Trans.Internal.Specs
-import Simulation.Aivika.Trans.Internal.MonadSim
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Dynamics
