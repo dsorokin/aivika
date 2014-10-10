@@ -32,6 +32,6 @@ class (ExceptionHandling m,
        ProtoArraying m,
        Unboxed m Double,
        Generating m,
-       EventQueueing m) => MonadSim m
+       EventQueueable m) => MonadSim m
 
 instance MonadSim IO

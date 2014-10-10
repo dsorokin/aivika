@@ -97,7 +97,7 @@ runSimulations (Simulation m) sc runs = map f [1 .. runs]
                          runGenerator = g }
 
 -- | Return the event queue.
-simulationEventQueue :: Monad m => SimulationT m (EventQueueT m)
+simulationEventQueue :: Monad m => SimulationT m (EventTQueue m)
 {-# INLINE simulationEventQueue #-}
 simulationEventQueue = Simulation $ return . runEventQueue
 

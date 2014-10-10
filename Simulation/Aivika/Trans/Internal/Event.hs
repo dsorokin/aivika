@@ -9,28 +9,29 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
--- The module defines the 'Event' monad which is very similar to the 'Dynamics'
--- monad but only now the computation is strongly synchronized with the event queue.
+-- The module defines the 'EventT' monad transformer which is very similar to the 'DynamicsT'
+-- monad transformer but only now the computation is strongly synchronized with the event queue.
 --
 module Simulation.Aivika.Trans.Internal.Event
        (-- * Event Monad
+        EventT(..),
         Event(..),
         EventLift(..),
         EventProcessing(..),
         invokeEvent,
-        runEvent,
-        runEventWith,
         runEventInStartTime,
         runEventInStopTime,
         -- * Event Queue
-        enqueueEvent,
+        EventQueueable(..),
+        EventQueueing(..),
+        MonadEnq,
         enqueueEventWithCancellation,
         enqueueEventWithTimes,
         enqueueEventWithPoints,
         enqueueEventWithIntegTimes,
         yieldEvent,
-        eventQueueCount,
         -- * Cancelling Event
+        EventTCancellation,
         EventCancellation,
         cancelEvent,
         eventCancelled,
@@ -43,13 +44,13 @@ module Simulation.Aivika.Trans.Internal.Event
         memoEvent,
         memoEventInTime,
         -- * Disposable
+        DisposableEventT(..),
         DisposableEvent(..)) where
 
 import Data.IORef
 import Data.Monoid
 
-import qualified Control.Exception as C
-import Control.Exception (IOException, throw, finally)
+import Control.Exception
 
 import Control.Monad
 import Control.Monad.Trans
@@ -58,102 +59,110 @@ import Control.Applicative
 
 import qualified Simulation.Aivika.Trans.PriorityQueue as PQ
 
+import Simulation.Aivika.Trans.Exception
+import Simulation.Aivika.Trans.ProtoRef
+import Simulation.Aivika.Trans.MonadSim
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Dynamics
 
--- | A value in the 'Event' monad represents a polymorphic time varying function
--- which is strongly synchronized with the event queue.
-newtype Event a = Event (Point -> IO a)
+-- | A value in the 'EventT' monad transformer represents a polymorphic time varying
+-- function which is strongly synchronized with the event queue.
+newtype EventT m a = Event (PointT m -> m a)
 
-instance Monad Event where
-  return  = returnE
-  m >>= k = bindE m k
+-- | A convenient type synonym.
+type Event a = EventT IO a
 
-returnE :: a -> Event a
-{-# INLINE returnE #-}
-returnE a = Event (\p -> return a)
+instance Monad m => Monad (EventT m) where
 
-bindE :: Event a -> (a -> Event b) -> Event b
-{-# INLINE bindE #-}
-bindE (Event m) k = 
-  Event $ \p -> 
-  do a <- m p
-     let Event m' = k a
-     m' p
+  {-# INLINE return #-}
+  return a = Event $ \p -> return a
 
-instance Functor Event where
-  fmap = liftME
+  {-# INLINE (>>=) #-}
+  (Event m) >>= k =
+    Event $ \p -> 
+    do a <- m p
+       let Event m' = k a
+       m' p
 
-instance Applicative Event where
-  pure = return
-  (<*>) = ap
-
-liftME :: (a -> b) -> Event a -> Event b
-{-# INLINE liftME #-}
-liftME f (Event x) =
-  Event $ \p -> do { a <- x p; return $ f a }
-
-instance MonadIO Event where
-  liftIO m = Event $ const m
-
-instance ParameterLift Event where
-  liftParameter = liftPS
-
-instance SimulationLift Event where
-  liftSimulation = liftES
-
-instance DynamicsLift Event where
-  liftDynamics = liftDS
-    
-liftPS :: Parameter a -> Event a
-{-# INLINE liftPS #-}
-liftPS (Parameter m) =
-  Event $ \p -> m $ pointRun p
-    
-liftES :: Simulation a -> Event a
-{-# INLINE liftES #-}
-liftES (Simulation m) =
-  Event $ \p -> m $ pointRun p
-
-liftDS :: Dynamics a -> Event a
-{-# INLINE liftDS #-}
-liftDS (Dynamics m) =
-  Event m
-
--- | A type class to lift the 'Event' computation to other computations.
-class EventLift m where
+instance Functor m => Functor (EventT m) where
   
-  -- | Lift the specified 'Event' computation to another computation.
-  liftEvent :: Event a -> m a
+  {-# INLINE fmap #-}
+  fmap f (Event x) = Event $ \p -> fmap f $ x p
 
-instance EventLift Event where
+instance Applicative m => Applicative (EventT m) where
+  
+  {-# INLINE pure #-}
+  pure = Event . const . pure
+  
+  {-# INLINE (<*>) #-}
+  (Event x) <*> (Event y) = Event $ \p -> x p <*> y p
+
+instance MonadTrans EventT where
+
+  {-# INLINE lift #-}
+  lift = Event . const
+
+instance MonadIO m => MonadIO (EventT m) where
+  
+  {-# INLINE liftIO #-}
+  liftIO = Event . const . liftIO
+
+-- | A type class to lift the 'EventT' computations into other computations.
+class EventLift t where
+  
+  -- | Lift the specified 'EventT' computation into another computation.
+  liftEvent :: Monad m => EventT m a -> t m a
+
+instance EventLift EventT where
+  
+  {-# INLINE liftEvent #-}
   liftEvent = id
+
+instance DynamicsLift EventT where
   
--- | Exception handling within 'Event' computations.
-catchEvent :: Event a -> (IOException -> Event a) -> Event a
+  {-# INLINE liftDynamics #-}
+  liftDynamics (Dynamics x) = Event x
+
+instance SimulationLift EventT where
+
+  {-# INLINE liftSimulation #-}
+  liftSimulation (Simulation x) = Event $ x . pointRun 
+
+instance ParameterLift EventT where
+
+  {-# INLINE liftParameter #-}
+  liftParameter (Parameter x) = Event $ x . pointRun
+
+-- | Exception handling within 'EventT' computations.
+catchEvent :: MonadSim m => EventT m a -> (IOException -> EventT m a) -> EventT m a
+{-# INLINABLE catchEvent #-}
 catchEvent (Event m) h =
   Event $ \p -> 
-  C.catch (m p) $ \e ->
+  catchComputation (m p) $ \e ->
   let Event m' = h e in m' p
                            
 -- | A computation with finalization part like the 'finally' function.
-finallyEvent :: Event a -> Event b -> Event a
+finallyEvent :: MonadSim m => EventT m a -> EventT m b -> EventT m a
+{-# INLINABLE finallyEvent #-}
 finallyEvent (Event m) (Event m') =
   Event $ \p ->
-  C.finally (m p) (m' p)
+  finallyComputation (m p) (m' p)
 
 -- | Like the standard 'throw' function.
-throwEvent :: IOException -> Event a
+throwEvent :: MonadSim m => IOException -> EventT m a
+{-# INLINABLE throwEvent #-}
 throwEvent = throw
 
--- | Invoke the 'Event' computation.
-invokeEvent :: Point -> Event a -> IO a
+-- | Invoke the 'EventT' computation.
+invokeEvent :: PointT m -> EventT m a -> m a
 {-# INLINE invokeEvent #-}
 invokeEvent p (Event m) = m p
 
-instance MonadFix Event where
+instance MonadFix m => MonadFix (EventT m) where
+
+  {-# INLINE mfix #-}
   mfix f = 
     Event $ \p ->
     do { rec { a <- invokeEvent p (f a) }; return a }
@@ -182,22 +191,60 @@ data EventProcessing = CurrentEvents
                        -- (do not use unless the documentation states the opposite)
                      deriving (Eq, Ord, Show)
 
--- | Enqueue the event which must be actuated at the specified time.
---
--- The events are processed when calling the 'runEvent' function. So,
--- if you want to insist on their immediate execution then you can apply
--- something like
---
--- @
---   liftDynamics $ runEvent IncludingCurrentEvents $ return ()
--- @
---
--- although this is generally not good idea.  
-enqueueEvent :: Double -> Event () -> Event ()
-enqueueEvent t (Event m) =
-  Event $ \p ->
-  let pq = queuePQ $ runEventQueue $ pointRun p
-  in PQ.enqueue pq t m
+-- | A type class of monads that allow enqueueing the events.
+class EventQueueing m where
+
+  -- | Enqueue the event which must be actuated at the specified time.
+  --
+  -- The events are processed when calling the 'runEvent' function. So,
+  -- if you want to insist on their immediate execution then you can apply
+  -- something like
+  --
+  -- @
+  --   liftDynamics $ runEvent IncludingCurrentEvents $ return ()
+  -- @
+  --
+  -- although this is generally not good idea.  
+  enqueueEvent :: Double -> EventT m () -> EventT m ()
+
+  -- | Run the 'EventT' computation in the current simulation time
+  -- within the 'DynamicsT' computation involving all pending
+  -- 'CurrentEvents' in the processing too.
+  runEvent :: EventT m a -> DynamicsT m a
+  {-# INLINE runEvent #-}
+  runEvent = runEventWith CurrentEvents
+
+  -- | Run the 'EventT' computation in the current simulation time
+  -- within the 'DynamicsT' computation specifying what pending events 
+  -- should be involved in the processing.
+  runEventWith :: EventProcessing -> EventT m a -> DynamicsT m a
+
+  -- | Return the number of pending events that should
+  -- be yet actuated.
+  eventQueueCount :: EventT m Int
+
+instance EventQueueing IO where
+  
+  {-# INLINE enqueueEvent #-}
+  enqueueEvent t (Event m) =
+    Event $ \p ->
+    let pq = queuePQ $ runEventQueue $ pointRun p
+    in PQ.enqueue pq t m
+
+  {-# INLINE runEventWith #-}
+  runEventWith processing (Event e) =
+    Dynamics $ \p ->
+    do invokeDynamics p $ processEvents processing
+       e p
+
+  {-# INLINE eventQueueCount #-}
+  eventQueueCount =
+    Event $ PQ.queueCount . queuePQ . runEventQueue . pointRun
+
+-- | Such a simulation monad that allows enqueueing events.
+class (MonadSim m, EventQueueing m) => MonadEnq m
+
+instance MonadEnq IO
 
 -- | Process the pending events.
 processPendingEventsCore :: Bool -> Dynamics ()
@@ -266,45 +313,28 @@ processEvents EarlierEvents = processEventsIncludingEarlier
 processEvents CurrentEventsOrFromPast = processEventsIncludingCurrentCore
 processEvents EarlierEventsOrFromPast = processEventsIncludingEarlierCore
 
--- | Run the 'Event' computation in the current simulation time
--- within the 'Dynamics' computation involving all pending
--- 'CurrentEvents' in the processing too.
-runEvent :: Event a -> Dynamics a
-runEvent = runEventWith CurrentEvents
-
--- | Run the 'Event' computation in the current simulation time
--- within the 'Dynamics' computation specifying what pending events 
--- should be involved in the processing.
-runEventWith :: EventProcessing -> Event a -> Dynamics a
-runEventWith processing (Event e) =
-  Dynamics $ \p ->
-  do invokeDynamics p $ processEvents processing
-     e p
-
--- | Run the 'Event' computation in the start time involving all
+-- | Run the 'EventT' computation in the start time involving all
 -- pending 'CurrentEvents' in the processing too.
-runEventInStartTime :: Event a -> Simulation a
+runEventInStartTime :: MonadEnq m => EventT m a -> SimulationT m a
+{-# INLINE runEventInStartTime #-}
 runEventInStartTime = runDynamicsInStartTime . runEvent
 
--- | Run the 'Event' computation in the stop time involving all
+-- | Run the 'EventT' computation in the stop time involving all
 -- pending 'CurrentEvents' in the processing too.
-runEventInStopTime :: Event a -> Simulation a
+runEventInStopTime :: MonadEnq m => EventT m a -> SimulationT m a
+{-# INLINE runEventInStopTime #-}
 runEventInStopTime = runDynamicsInStopTime . runEvent
 
--- | Return the number of pending events that should
--- be yet actuated.
-eventQueueCount :: Event Int
-eventQueueCount =
-  Event $ PQ.queueCount . queuePQ . runEventQueue . pointRun
-
 -- | Actuate the event handler in the specified time points.
-enqueueEventWithTimes :: [Double] -> Event () -> Event ()
+enqueueEventWithTimes :: MonadEnq m => [Double] -> EventT m () -> EventT m ()
+{-# INLINE enqueueEventWithTimes #-}
 enqueueEventWithTimes ts e = loop ts
   where loop []       = return ()
         loop (t : ts) = enqueueEvent t $ e >> loop ts
        
 -- | Actuate the event handler in the specified time points.
-enqueueEventWithPoints :: [Point] -> Event () -> Event ()
+enqueueEventWithPoints :: MonadEnq m => [PointT m] -> EventT m () -> EventT m ()
+{-# INLINE enqueueEventWithPoints #-}
 enqueueEventWithPoints xs (Event e) = loop xs
   where loop []       = return ()
         loop (x : xs) = enqueueEvent (pointTime x) $ 
@@ -313,99 +343,115 @@ enqueueEventWithPoints xs (Event e) = loop xs
                            invokeEvent p $ loop xs
                            
 -- | Actuate the event handler in the integration time points.
-enqueueEventWithIntegTimes :: Event () -> Event ()
+enqueueEventWithIntegTimes :: MonadEnq m => EventT m () -> EventT m ()
+{-# INLINE enqueueEventWithIntegTimes #-}
 enqueueEventWithIntegTimes e =
   Event $ \p ->
   let points = integPoints $ pointRun p
   in invokeEvent p $ enqueueEventWithPoints points e
 
 -- | It allows cancelling the event.
-data EventCancellation =
-  EventCancellation { cancelEvent   :: Event (),
+data EventTCancellation m =
+  EventCancellation { cancelEvent   :: EventT m (),
                       -- ^ Cancel the event.
-                      eventCancelled :: Event Bool,
+                      eventCancelled :: EventT m Bool,
                       -- ^ Test whether the event was cancelled.
-                      eventFinished :: Event Bool
+                      eventFinished :: EventT m Bool
                       -- ^ Test whether the event was processed and finished.
                     }
 
+-- | A convenient type synonym.
+type EventCancellation = EventTCancellation IO
+
 -- | Enqueue the event with an ability to cancel it.
-enqueueEventWithCancellation :: Double -> Event () -> Event EventCancellation
+enqueueEventWithCancellation :: MonadEnq m => Double -> EventT m () -> EventT m (EventTCancellation m)
+{-# INLINE enqueueEventWithCancellation #-}
 enqueueEventWithCancellation t e =
   Event $ \p ->
-  do cancelledRef <- newIORef False
-     cancellableRef <- newIORef True
-     finishedRef <- newIORef False
+  do let s = runSession $ pointRun p
+     cancelledRef <- newProtoRef s False
+     cancellableRef <- newProtoRef s True
+     finishedRef <- newProtoRef s False
      let cancel =
            Event $ \p ->
-           do x <- readIORef cancellableRef
+           do x <- readProtoRef cancellableRef
               when x $
-                writeIORef cancelledRef True
+                writeProtoRef cancelledRef True
          cancelled =
-           Event $ \p -> readIORef cancelledRef
+           Event $ \p -> readProtoRef cancelledRef
          finished =
-           Event $ \p -> readIORef finishedRef
+           Event $ \p -> readProtoRef finishedRef
      invokeEvent p $
        enqueueEvent t $
        Event $ \p ->
-       do writeIORef cancellableRef False
-          x <- readIORef cancelledRef
+       do writeProtoRef cancellableRef False
+          x <- readProtoRef cancelledRef
           unless x $
             do invokeEvent p e
-               writeIORef finishedRef True
+               writeProtoRef finishedRef True
      return EventCancellation { cancelEvent   = cancel,
                                 eventCancelled = cancelled,
                                 eventFinished = finished }
 
--- | Memoize the 'Event' computation, always returning the same value
+-- | Memoize the 'EventT' computation, always returning the same value
 -- within a simulation run.
-memoEvent :: Event a -> Simulation (Event a)
+memoEvent :: MonadSim m => EventT m a -> SimulationT m (EventT m a)
+{-# INLINE memoEvent #-}
 memoEvent m =
-  do ref <- liftIO $ newIORef Nothing
+  Simulation $ \r ->
+  do let s = runSession r
+     ref <- newProtoRef s Nothing
      return $ Event $ \p ->
-       do x <- readIORef ref
+       do x <- readProtoRef ref
           case x of
             Just v -> return v
             Nothing ->
               do v <- invokeEvent p m
-                 writeIORef ref (Just v)
+                 writeProtoRef ref (Just v)
                  return v
 
--- | Memoize the 'Event' computation, always returning the same value
+-- | Memoize the 'EventT' computation, always returning the same value
 -- in the same modeling time. After the time changes, the value is
 -- recalculated by demand.
 --
--- It is possible to implement this function efficiently, for the 'Event'
+-- It is possible to implement this function efficiently, for the 'EventT'
 -- computation is always synchronized with the event queue which time
 -- flows in one direction only. This synchronization is a key difference
--- between the 'Event' and 'Dynamics' computations.
-memoEventInTime :: Event a -> Simulation (Event a)
+-- between the 'EventT' and 'DynamicsT' computations.
+memoEventInTime :: MonadSim m => EventT m a -> SimulationT m (EventT m a)
+{-# INLINE memoEventInTime #-}
 memoEventInTime m =
-  do ref <- liftIO $ newIORef Nothing
+  Simulation $ \r ->
+  do let s = runSession r
+     ref <- newProtoRef s Nothing
      return $ Event $ \p ->
-       do x <- readIORef ref
+       do x <- readProtoRef ref
           case x of
             Just (t, v) | t == pointTime p ->
               return v
             _ ->
               do v <- invokeEvent p m
-                 writeIORef ref (Just (pointTime p, v))
+                 writeProtoRef ref (Just (pointTime p, v))
                  return v
 
 -- | Enqueue the event which must be actuated with the current modeling time but later.
-yieldEvent :: Event () -> Event ()
+yieldEvent :: MonadEnq m => EventT m () -> EventT m ()
+{-# INLINE yieldEvent #-}
 yieldEvent m =
   Event $ \p ->
   invokeEvent p $
   enqueueEvent (pointTime p) m
 
 -- | Defines a computation disposing some entity.
-newtype DisposableEvent =
-  DisposableEvent { disposeEvent :: Event ()
-                    -- ^ Dispose something within the 'Event' computation.
+newtype DisposableEventT m =
+  DisposableEvent { disposeEvent :: EventT m ()
+                    -- ^ Dispose something within the 'EventT' computation.
                   }
 
-instance Monoid DisposableEvent where
+-- | A convenient type synonym.
+type DisposableEvent = DisposableEventT IO
+
+instance Monad m => Monoid (DisposableEventT m) where
 
   mempty = DisposableEvent $ return ()
   mappend (DisposableEvent x) (DisposableEvent y) = DisposableEvent $ x >> y

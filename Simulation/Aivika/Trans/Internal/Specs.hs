@@ -16,7 +16,10 @@ module Simulation.Aivika.Trans.Internal.Specs
         Method(..),
         RunT(..),
         PointT(..),
-        EventQueueing(..),
+        Point(..),
+        EventQueueable(..),
+        EventTQueue(..),
+        EventQueue(..),
         basicTime,
         integIterationBnds,
         integIterationHiBnd,
@@ -59,7 +62,7 @@ data RunT m = Run { runSpecs :: SpecsT m,  -- ^ the simulation specs
                     runSession :: SessionT m,        -- ^ the simulation session
                     runIndex :: Int,       -- ^ the current simulation run index
                     runCount :: Int,       -- ^ the total number of runs in this experiment
-                    runEventQueue :: EventQueueT m,  -- ^ the event queue
+                    runEventQueue :: EventTQueue m,  -- ^ the event queue
                     runGenerator :: GeneratorT m     -- ^ the random number generator
                   }
 
@@ -71,26 +74,29 @@ data PointT m = Point { pointSpecs :: SpecsT m,    -- ^ the simulation specs
                         pointPhase :: Int          -- ^ the current phase
                       }
 
+-- | A useful type synonym.
+type Point = PointT IO
+
 -- | A type class of monads within which the event queues are defined.
-class EventQueueing m where
+class EventQueueable m where
 
   -- | It represents the event queue.
-  data EventQueueT m :: *
+  data EventTQueue m :: *
 
   -- | Create a new event queue by the specified specs with simulation session.
-  newEventQueue :: SessionT m -> SpecsT m -> m (EventQueueT m)
+  newEventQueue :: SessionT m -> SpecsT m -> m (EventTQueue m)
 
-instance EventQueueing IO where
+instance EventQueueable IO where
 
-  data EventQueueT IO =
-    EventQueue { queuePQ :: PQ.PriorityQueue (PointT IO -> IO ()),
+  data EventTQueue IO =
+    EventQueue { queuePQ :: PQ.PriorityQueue (Point -> IO ()),
                  -- ^ the underlying priority queue
                  queueBusy :: IORef Bool,
                  -- ^ whether the queue is currently processing events
                  queueTime :: IORef Double
-                              -- ^ the actual time of the event queue
+                 -- ^ the actual time of the event queue
                }
-
+  
   newEventQueue session specs = 
     do f <- newIORef False
        t <- newIORef $ spcStartTime specs
@@ -98,6 +104,9 @@ instance EventQueueing IO where
        return EventQueue { queuePQ   = pq,
                            queueBusy = f,
                            queueTime = t }
+
+-- | A convenient type synonym.
+type EventQueue = EventTQueue IO
 
 -- | Returns the integration iterations starting from zero.
 integIterations :: SpecsT m -> [Int]
