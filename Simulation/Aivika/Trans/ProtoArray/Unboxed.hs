@@ -15,13 +15,14 @@ module Simulation.Aivika.Trans.ProtoArray.Unboxed
        (ProtoArraying(..),
         ProtoArray) where
 
+import Data.Array
 import Data.Array.IO.Safe
 
 import Simulation.Aivika.Trans.Session
 
 -- | A monad within which computation we can create and work with
 -- the prototype of mutable unboxed arrays.
-class ProtoArraying m e where
+class Monad m => ProtoArraying m e where
   
   -- | A prototype of mutable unboxed array.
   data ProtoArrayT m :: * -> * -> *
@@ -41,6 +42,9 @@ class ProtoArraying m e where
 
   -- | Write the element in the mutable unboxed array.
   writeProtoArray :: Ix i => ProtoArrayT m i e -> i -> e -> m ()
+
+  -- | Return the elements of the mutable unboxed array in an immutable array.
+  freezeProtoArray :: Ix i => ProtoArrayT m i e -> m (Array i e)
 
 instance MArray IOUArray e IO => ProtoArraying IO e where
 
@@ -75,6 +79,12 @@ instance MArray IOUArray e IO => ProtoArraying IO e where
   {-# SPECIALISE INLINE writeProtoArray :: (MArray IOUArray Int IO, Ix i) => ProtoArray i Int -> i -> Int -> IO () #-}
   {-# SPECIALISE INLINE writeProtoArray :: (MArray IOUArray e IO, Ix i) => ProtoArray i e -> i -> e -> IO () #-}
   writeProtoArray (ProtoArray a) = writeArray a
+
+  {-# SPECIALISE INLINE freezeProtoArray :: (MArray IOUArray Double IO, Ix i) => ProtoArray i Double -> IO (Array i Double) #-}
+  {-# SPECIALISE INLINE freezeProtoArray :: (MArray IOUArray Float IO, Ix i) => ProtoArray i Float -> IO (Array i Float) #-}
+  {-# SPECIALISE INLINE freezeProtoArray :: (MArray IOUArray Int IO, Ix i) => ProtoArray i Int -> IO (Array i Int) #-}
+  {-# SPECIALISE INLINE freezeProtoArray :: (MArray IOUArray e IO, Ix i) => ProtoArray i e -> IO (Array i e) #-}
+  freezeProtoArray (ProtoArray a) = freeze a
 
 -- | A convenient type synonym.
 type ProtoArray i e = ProtoArrayT IO i e

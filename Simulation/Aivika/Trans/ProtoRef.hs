@@ -21,7 +21,7 @@ import Simulation.Aivika.Trans.Session
 
 -- | A monad within which computation we can create and work with
 -- the prototype of mutable reference.
-class ProtoReferring m where
+class Monad m => ProtoReferring m where
   
   -- | A prototype of mutable reference.
   data ProtoRefT m :: * -> *

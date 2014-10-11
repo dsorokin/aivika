@@ -15,13 +15,14 @@ module Simulation.Aivika.Trans.ProtoArray
        (ProtoArraying(..),
         ProtoArray) where
 
+import Data.Array
 import Data.Array.IO.Safe
 
 import Simulation.Aivika.Trans.Session
 
 -- | A monad within which computation we can create and work with
 -- the prototype of mutable arrays.
-class ProtoArraying m where
+class Monad m => ProtoArraying m where
   
   -- | A prototype of mutable array.
   data ProtoArrayT m :: * -> * -> *
@@ -42,6 +43,9 @@ class ProtoArraying m where
   -- | Write the element in the mutable array.
   writeProtoArray :: Ix i => ProtoArrayT m i e -> i -> e -> m ()
 
+  -- | Return the elements of the mutable array in an immutable array.
+  freezeProtoArray :: Ix i => ProtoArrayT m i e -> m (Array i e)
+
 instance ProtoArraying IO where
 
   newtype ProtoArrayT IO i e = ProtoArray (IOArray i e)
@@ -60,6 +64,9 @@ instance ProtoArraying IO where
 
   {-# SPECIALISE INLINE writeProtoArray :: Ix i => ProtoArray i e -> i -> e -> IO () #-}
   writeProtoArray (ProtoArray a) = writeArray a
+
+  {-# SPECIALISE INLINE freezeProtoArray :: Ix i => ProtoArray i e -> IO (Array i e) #-}
+  freezeProtoArray (ProtoArray a) = freeze a
 
 -- | A convenient type synonym.
 type ProtoArray i e  = ProtoArrayT IO i e
