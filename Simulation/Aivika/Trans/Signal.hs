@@ -14,10 +14,8 @@
 --
 module Simulation.Aivika.Trans.Signal
        (-- * Handling and Triggering Signal
-        SignalT(..),
         Signal(..),
         handleSignal_,
-        SignalTSource,
         SignalSource,
         newSignalSource,
         publishSignal,
@@ -41,14 +39,12 @@ module Simulation.Aivika.Trans.Signal
         newSignalInStartTime,
         newSignalInStopTime,
         -- * Signal History
-        SignalTHistory,
         SignalHistory,
         signalHistorySignal,
         newSignalHistory,
         newSignalHistoryStartingWith,
         readSignalHistory,
         -- * Signalable Computations
-        SignalableT(..),
         Signalable(..),
         signalableChanged,
         emptySignalable,

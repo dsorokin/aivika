@@ -15,10 +15,8 @@
 
 module Simulation.Aivika.Trans.Internal.Signal
        (-- * Handling and Triggering Signal
-        SignalT(..),
         Signal(..),
         handleSignal_,
-        SignalTSource,
         SignalSource,
         newSignalSource,
         publishSignal,
@@ -42,14 +40,12 @@ module Simulation.Aivika.Trans.Internal.Signal
         newSignalInStartTime,
         newSignalInStopTime,
         -- * Signal History
-        SignalTHistory,
         SignalHistory,
         signalHistorySignal,
         newSignalHistory,
         newSignalHistoryStartingWith,
         readSignalHistory,
         -- * Signalable Computations
-        SignalableT(..),
         Signalable(..),
         signalableChanged,
         emptySignalable,
@@ -74,18 +70,18 @@ import Simulation.Aivika.Trans.Internal.Event
 import Simulation.Aivika.Trans.Internal.Arrival
 
 -- | The signal source that can publish its signal.
-data SignalTSource m a =
-  SignalSource { publishSignal :: SignalT m a,
+data SignalSource m a =
+  SignalSource { publishSignal :: Signal m a,
                                   -- ^ Publish the signal.
-                 triggerSignal :: a -> EventT m ()
+                 triggerSignal :: a -> Event m ()
                                   -- ^ Trigger the signal actuating 
                                   -- all its handlers at the current 
                                   -- simulation time point.
                }
   
 -- | The signal that can have disposable handlers.  
-data SignalT m a =
-  Signal { handleSignal :: (a -> EventT m ()) -> EventT m (DisposableEventT m)
+data Signal m a =
+  Signal { handleSignal :: (a -> Event m ()) -> Event m (DisposableEvent m)
            -- ^ Subscribe the handler to the specified 
            -- signal and return a nested computation
            -- within a disposable object that, being applied,
@@ -93,35 +89,29 @@ data SignalT m a =
          }
 
 -- | The queue of signal handlers.
-data SignalTHandlerQueue m a =
-  SignalHandlerQueue { queueList :: ProtoRefT m [SignalTHandler m a] }
+data SignalHandlerQueue m a =
+  SignalHandlerQueue { queueList :: ProtoRef m [SignalHandler m a] }
   
 -- | It contains the information about the disposable queue handler.
-data SignalTHandler m a =
-  SignalHandler { handlerComp   :: a -> EventT m (),
-                  handlerMarker :: SessionTMarker m }
+data SignalHandler m a =
+  SignalHandler { handlerComp   :: a -> Event m (),
+                  handlerMarker :: SessionMarker m }
 
--- | A convenient type synonym.
-type SignalSource a = SignalTSource IO a
-
--- | A convenient type synonym.
-type Signal a = SignalT IO a
-
-instance Sessionning m => Eq (SignalTHandler m a) where
+instance Sessionning m => Eq (SignalHandler m a) where
 
   {-# INLINE (==) #-}
   x == y = (handlerMarker x) == (handlerMarker y)
 
 -- | Subscribe the handler to the specified signal forever.
 -- To subscribe the disposable handlers, use function 'handleSignal'.
-handleSignal_ :: Monad m => SignalT m a -> (a -> EventT m ()) -> EventT m ()
+handleSignal_ :: Monad m => Signal m a -> (a -> Event m ()) -> Event m ()
 {-# INLINE handleSignal_ #-}
 handleSignal_ signal h = 
   do x <- handleSignal signal h
      return ()
      
 -- | Create a new signal source.
-newSignalSource :: MonadSim m => SimulationT m (SignalTSource m a)
+newSignalSource :: MonadSim m => Simulation m (SignalSource m a)
 {-# INLINE newSignalSource #-}
 newSignalSource =
   Simulation $ \r ->
@@ -143,7 +133,7 @@ newSignalSource =
      return source
 
 -- | Trigger all next signal handlers.
-triggerSignalHandlers :: MonadSim m => SignalTHandlerQueue m a -> a -> PointT m -> m ()
+triggerSignalHandlers :: MonadSim m => SignalHandlerQueue m a -> a -> Point m -> m ()
 {-# INLINE triggerSignalHandlers #-}
 triggerSignalHandlers q a p =
   do hs <- readProtoRef (queueList q)
@@ -151,7 +141,7 @@ triggerSignalHandlers q a p =
        invokeEvent p $ handlerComp h a
             
 -- | Enqueue the handler and return its representative in the queue.            
-enqueueSignalHandler :: MonadSim m => SignalTHandlerQueue m a -> (a -> EventT m ()) -> SessionTMarker m -> m (SignalTHandler m a)
+enqueueSignalHandler :: MonadSim m => SignalHandlerQueue m a -> (a -> Event m ()) -> SessionMarker m -> m (SignalHandler m a)
 {-# INLINE enqueueSignalHandler #-}
 enqueueSignalHandler q h m = 
   do let handler = SignalHandler { handlerComp   = h,
@@ -160,17 +150,17 @@ enqueueSignalHandler q h m =
      return handler
 
 -- | Dequeue the handler representative.
-dequeueSignalHandler :: MonadSim m => SignalTHandlerQueue m a -> SignalTHandler m a -> m ()
+dequeueSignalHandler :: MonadSim m => SignalHandlerQueue m a -> SignalHandler m a -> m ()
 {-# INLINE dequeueSignalHandler #-}
 dequeueSignalHandler q h = 
   modifyProtoRef (queueList q) (delete h)
 
-instance Monad m => Functor (SignalT m) where
+instance Monad m => Functor (Signal m) where
 
   {-# INLINE fmap #-}
   fmap = mapSignal
   
-instance Monad m => Monoid (SignalT m a) where 
+instance Monad m => Monoid (Signal m a) where 
 
   {-# INLINE mempty #-}
   mempty = emptySignal
@@ -189,7 +179,7 @@ instance Monad m => Monoid (SignalT m a) where
     mconcat $ merge5Signals x1 x2 x3 x4 x5 : xs
   
 -- | Map the signal according the specified function.
-mapSignal :: Monad m => (a -> b) -> SignalT m a -> SignalT m b
+mapSignal :: Monad m => (a -> b) -> Signal m a -> Signal m b
 {-# INLINE mapSignal #-}
 mapSignal f m =
   Signal { handleSignal = \h -> 
@@ -197,7 +187,7 @@ mapSignal f m =
 
 -- | Filter only those signal values that satisfy to 
 -- the specified predicate.
-filterSignal :: Monad m => (a -> Bool) -> SignalT m a -> SignalT m a
+filterSignal :: Monad m => (a -> Bool) -> Signal m a -> Signal m a
 {-# INLINE filterSignal #-}
 filterSignal p m =
   Signal { handleSignal = \h ->
@@ -206,7 +196,7 @@ filterSignal p m =
   
 -- | Filter only those signal values that satisfy to 
 -- the specified predicate.
-filterSignalM :: Monad m => (a -> EventT m Bool) -> SignalT m a -> SignalT m a
+filterSignalM :: Monad m => (a -> Event m Bool) -> Signal m a -> Signal m a
 {-# INLINE filterSignalM #-}
 filterSignalM p m =
   Signal { handleSignal = \h ->
@@ -215,7 +205,7 @@ filterSignalM p m =
                when x $ h a }
   
 -- | Merge two signals.
-merge2Signals :: Monad m => SignalT m a -> SignalT m a -> SignalT m a
+merge2Signals :: Monad m => Signal m a -> Signal m a -> Signal m a
 {-# INLINE merge2Signals #-}
 merge2Signals m1 m2 =
   Signal { handleSignal = \h ->
@@ -224,7 +214,7 @@ merge2Signals m1 m2 =
                return $ x1 <> x2 }
 
 -- | Merge three signals.
-merge3Signals :: Monad m => SignalT m a -> SignalT m a -> SignalT m a -> SignalT m a
+merge3Signals :: Monad m => Signal m a -> Signal m a -> Signal m a -> Signal m a
 {-# INLINE merge3Signals #-}
 merge3Signals m1 m2 m3 =
   Signal { handleSignal = \h ->
@@ -235,8 +225,8 @@ merge3Signals m1 m2 m3 =
 
 -- | Merge four signals.
 merge4Signals :: Monad m
-                 => SignalT m a -> SignalT m a -> SignalT m a
-                 -> SignalT m a -> SignalT m a
+                 => Signal m a -> Signal m a -> Signal m a
+                 -> Signal m a -> Signal m a
 {-# INLINE merge4Signals #-}
 merge4Signals m1 m2 m3 m4 =
   Signal { handleSignal = \h ->
@@ -248,8 +238,8 @@ merge4Signals m1 m2 m3 m4 =
            
 -- | Merge five signals.
 merge5Signals :: Monad m
-                 => SignalT m a -> SignalT m a -> SignalT m a
-                 -> SignalT m a -> SignalT m a -> SignalT m a
+                 => Signal m a -> Signal m a -> Signal m a
+                 -> Signal m a -> Signal m a -> Signal m a
 {-# INLINE merge5Signals #-}
 merge5Signals m1 m2 m3 m4 m5 =
   Signal { handleSignal = \h ->
@@ -261,44 +251,41 @@ merge5Signals m1 m2 m3 m4 m5 =
                return $ x1 <> x2 <> x3 <> x4 <> x5 }
 
 -- | Compose the signal.
-mapSignalM :: Monad m => (a -> EventT m b) -> SignalT m a -> SignalT m b
+mapSignalM :: Monad m => (a -> Event m b) -> Signal m a -> Signal m b
 {-# INLINE mapSignalM #-}
 mapSignalM f m =
   Signal { handleSignal = \h ->
             handleSignal m (f >=> h) }
   
 -- | Transform the signal.
-apSignal :: Monad m => EventT m (a -> b) -> SignalT m a -> SignalT m b
+apSignal :: Monad m => Event m (a -> b) -> Signal m a -> Signal m b
 {-# INLINE apSignal #-}
 apSignal f m =
   Signal { handleSignal = \h ->
             handleSignal m $ \a -> do { x <- f; h (x a) } }
 
 -- | An empty signal which is never triggered.
-emptySignal :: Monad m => SignalT m a
+emptySignal :: Monad m => Signal m a
 {-# INLINE emptySignal #-}
 emptySignal =
   Signal { handleSignal = \h -> return mempty }
                                     
 -- | Represents the history of the signal values.
-data SignalTHistory m a =
-  SignalHistory { signalHistorySignal :: SignalT m a,  
+data SignalHistory m a =
+  SignalHistory { signalHistorySignal :: Signal m a,  
                   -- ^ The signal for which the history is created.
-                  signalHistoryTimes  :: UV.ProtoVectorT m Double,
-                  signalHistoryValues :: V.ProtoVectorT m a }
-
--- | A convenient type synonym.
-type SignalHistory a = SignalTHistory IO a
+                  signalHistoryTimes  :: UV.ProtoVector m Double,
+                  signalHistoryValues :: V.ProtoVector m a }
 
 -- | Create a history of the signal values.
-newSignalHistory :: MonadSim m => SignalT m a -> EventT m (SignalTHistory m a)
+newSignalHistory :: MonadSim m => Signal m a -> Event m (SignalHistory m a)
 {-# INLINE newSignalHistory #-}
 newSignalHistory =
   newSignalHistoryStartingWith Nothing
 
 -- | Create a history of the signal values starting with
 -- the optional initial value.
-newSignalHistoryStartingWith :: MonadSim m => Maybe a -> SignalT m a -> EventT m (SignalTHistory m a)
+newSignalHistoryStartingWith :: MonadSim m => Maybe a -> Signal m a -> Event m (SignalHistory m a)
 {-# INLINE newSignalHistoryStartingWith #-}
 newSignalHistoryStartingWith init signal =
   Event $ \p ->
@@ -320,7 +307,7 @@ newSignalHistoryStartingWith init signal =
                             signalHistoryValues = xs }
        
 -- | Read the history of signal values.
-readSignalHistory :: MonadSim m => SignalTHistory m a -> EventT m (Array Int Double, Array Int a)
+readSignalHistory :: MonadSim m => SignalHistory m a -> Event m (Array Int Double, Array Int a)
 {-# INLINE readSignalHistory #-}
 readSignalHistory history =
   Event $ \p ->
@@ -329,13 +316,13 @@ readSignalHistory history =
      return (xs, ys)     
      
 -- | Trigger the signal with the current time.
-triggerSignalWithCurrentTime :: MonadSim m => SignalTSource m Double -> EventT m ()
+triggerSignalWithCurrentTime :: MonadSim m => SignalSource m Double -> Event m ()
 {-# INLINE triggerSignalWithCurrentTime #-}
 triggerSignalWithCurrentTime s =
   Event $ \p -> invokeEvent p $ triggerSignal s (pointTime p)
 
 -- | Return a signal that is triggered in the specified time points.
-newSignalInTimes :: MonadEnq m => [Double] -> EventT m (SignalT m Double)
+newSignalInTimes :: MonadEnq m => [Double] -> Event m (Signal m Double)
 {-# INLINE newSignalInTimes #-}
 newSignalInTimes xs =
   do s <- liftSimulation newSignalSource
@@ -344,7 +331,7 @@ newSignalInTimes xs =
        
 -- | Return a signal that is triggered in the integration time points.
 -- It should be called with help of 'runEventInStartTime'.
-newSignalInIntegTimes :: MonadEnq m => EventT m (SignalT m Double)
+newSignalInIntegTimes :: MonadEnq m => Event m (Signal m Double)
 {-# INLINE newSignalInIntegTimes #-}
 newSignalInIntegTimes =
   do s <- liftSimulation newSignalSource
@@ -353,7 +340,7 @@ newSignalInIntegTimes =
      
 -- | Return a signal that is triggered in the start time.
 -- It should be called with help of 'runEventInStartTime'.
-newSignalInStartTime :: MonadEnq m => EventT m (SignalT m Double)
+newSignalInStartTime :: MonadEnq m => Event m (Signal m Double)
 {-# INLINE newSignalInStartTime #-}
 newSignalInStartTime =
   do s <- liftSimulation newSignalSource
@@ -362,7 +349,7 @@ newSignalInStartTime =
      return $ publishSignal s
 
 -- | Return a signal that is triggered in the final time.
-newSignalInStopTime :: MonadEnq m => EventT m (SignalT m Double)
+newSignalInStopTime :: MonadEnq m => Event m (Signal m Double)
 {-# INLINE newSignalInStopTime #-}
 newSignalInStopTime =
   do s <- liftSimulation newSignalSource
@@ -371,28 +358,25 @@ newSignalInStopTime =
      return $ publishSignal s
 
 -- | Describes a computation that also signals when changing its value.
-data SignalableT m a =
-  Signalable { readSignalable :: EventT m a,
+data Signalable m a =
+  Signalable { readSignalable :: Event m a,
                -- ^ Return a computation of the value.
-               signalableChanged_ :: SignalT m ()
+               signalableChanged_ :: Signal m ()
                -- ^ Return a signal notifying that the value has changed
                -- but without providing the information about the changed value.
              }
 
--- | A convenient type synonym.
-type Signalable a = SignalableT IO a
-
 -- | Return a signal notifying that the value has changed.
-signalableChanged :: Monad m => SignalableT m a -> SignalT m a
+signalableChanged :: Monad m => Signalable m a -> Signal m a
 {-# INLINE signalableChanged #-}
 signalableChanged x = mapSignalM (const $ readSignalable x) $ signalableChanged_ x
 
-instance Functor m => Functor (SignalableT m) where
+instance Functor m => Functor (Signalable m) where
 
   {-# INLINE fmap #-}
   fmap f x = x { readSignalable = fmap f (readSignalable x) }
 
-instance (Monad m, Monoid a) => Monoid (SignalableT m a) where
+instance (Monad m, Monoid a) => Monoid (Signalable m a) where
 
   {-# INLINE mempty #-}
   mempty = emptySignalable
@@ -401,14 +385,14 @@ instance (Monad m, Monoid a) => Monoid (SignalableT m a) where
   mappend = appendSignalable
 
 -- | Return an identity.
-emptySignalable :: (Monad m, Monoid a) => SignalableT m a
+emptySignalable :: (Monad m, Monoid a) => Signalable m a
 {-# INLINE emptySignalable #-}
 emptySignalable =
   Signalable { readSignalable = return mempty,
                signalableChanged_ = mempty }
 
 -- | An associative operation.
-appendSignalable :: (Monad m, Monoid a) => SignalableT m a -> SignalableT m a -> SignalableT m a
+appendSignalable :: (Monad m, Monoid a) => Signalable m a -> Signalable m a -> Signalable m a
 {-# INLINE appendSignalable #-}
 appendSignalable m1 m2 =
   Signalable { readSignalable = liftM2 (<>) (readSignalable m1) (readSignalable m2),
@@ -416,7 +400,7 @@ appendSignalable m1 m2 =
 
 -- | Transform a signal so that the resulting signal returns a sequence of arrivals
 -- saving the information about the time points at which the original signal was received.
-arrivalSignal :: MonadSim m => SignalT m a -> SignalT m (Arrival a)
+arrivalSignal :: MonadSim m => Signal m a -> Signal m (Arrival a)
 {-# INLINE arrivalSignal #-}
 arrivalSignal m = 
   Signal { handleSignal = \h ->
