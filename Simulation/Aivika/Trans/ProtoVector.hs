@@ -78,6 +78,7 @@ instance ProtoVectoring IO where
                   vectorCountRef :: IORef Int, 
                   vectorCapacityRef :: IORef Int }
 
+  {-# SPECIALISE INLINE newProtoVector :: Session -> IO (ProtoVector a) #-}
   newProtoVector session = 
     do array <- newArray_ (0, 4 - 1)
        arrayRef <- newIORef array
@@ -87,6 +88,7 @@ instance ProtoVectoring IO where
                             vectorCountRef = countRef,
                             vectorCapacityRef = capacityRef }
 
+  {-# SPECIALISE INLINE copyProtoVector :: ProtoVector a -> IO (ProtoVector a) #-}
   copyProtoVector vector =
     do array <- readIORef (vectorArrayRef vector)
        count <- readIORef (vectorCountRef vector)
@@ -101,6 +103,7 @@ instance ProtoVectoring IO where
                             vectorCountRef = countRef',
                             vectorCapacityRef = capacityRef' }
 
+  {-# SPECIALISE INLINE protoVectorEnsureCapacity :: ProtoVector a -> Int -> IO () #-}
   protoVectorEnsureCapacity vector capacity =
     do capacity' <- readIORef (vectorCapacityRef vector)
        when (capacity' < capacity) $
@@ -114,8 +117,10 @@ instance ProtoVectoring IO where
             writeIORef (vectorArrayRef vector) array''
             writeIORef (vectorCapacityRef vector) capacity''
           
+  {-# SPECIALISE INLINE protoVectorCount :: ProtoVector a -> IO Int #-}
   protoVectorCount vector = readIORef (vectorCountRef vector)
           
+  {-# SPECIALISE INLINE appendProtoVector :: ProtoVector a -> a -> IO () #-}
   appendProtoVector vector item =
     do count <- readIORef (vectorCountRef vector)
        protoVectorEnsureCapacity vector (count + 1)
@@ -123,27 +128,33 @@ instance ProtoVectoring IO where
        writeArray array count item
        writeIORef (vectorCountRef vector) (count + 1)
      
+  {-# SPECIALISE INLINE readProtoVector :: ProtoVector a -> Int -> IO a #-}
   readProtoVector vector index =
     do array <- readIORef (vectorArrayRef vector)
        readArray array index
           
+  {-# SPECIALISE INLINE writeProtoVector :: ProtoVector a -> Int -> a -> IO () #-}
   writeProtoVector vector index item =
     do array <- readIORef (vectorArrayRef vector)
        writeArray array index item
                    
+  {-# SPECIALISE INLINE protoVectorBinarySearch :: Ord a => ProtoVector a -> a -> IO Int #-}
   protoVectorBinarySearch vector item =
     do array <- readIORef (vectorArrayRef vector)
        count <- readIORef (vectorCountRef vector)
        vectorBinarySearch' array item 0 (count - 1)
                    
+  {-# SPECIALISE INLINE protoVectorBinarySearchWithin :: Ord a => ProtoVector a -> a -> Int -> Int -> IO Int #-}
   protoVectorBinarySearchWithin vector item left right =
     do array <- readIORef (vectorArrayRef vector)
        vectorBinarySearch' array item left right
 
+  {-# SPECIALISE INLINE freezeProtoVector :: ProtoVector a -> IO (Array Int a) #-}
   freezeProtoVector vector = 
     do array <- readIORef (vectorArrayRef vector)
        freeze array
      
+  {-# SPECIALISE INLINE protoVectorInsert :: ProtoVector a -> Int -> a -> IO () #-}
   protoVectorInsert vector index item =
     do count <- readIORef (vectorCountRef vector)
        when (index < 0) $
@@ -162,6 +173,7 @@ instance ProtoVectoring IO where
        writeArray array index item
        writeIORef (vectorCountRef vector) (count + 1)
      
+  {-# SPECIALISE INLINE protoVectorDeleteAt :: ProtoVector a -> Int -> IO () #-}
   protoVectorDeleteAt vector index =
     do count <- readIORef (vectorCountRef vector)
        when (index < 0) $
@@ -179,6 +191,7 @@ instance ProtoVectoring IO where
        writeArray array (count - 1) undefined
        writeIORef (vectorCountRef vector) (count - 1)
      
+  {-# SPECIALISE INLINE protoVectorIndex :: Ord a => ProtoVector a -> a -> IO Int #-}
   protoVectorIndex vector item =
     do count <- readIORef (vectorCountRef vector)
        array <- readIORef (vectorArrayRef vector)
