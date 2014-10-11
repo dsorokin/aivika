@@ -453,5 +453,8 @@ type DisposableEvent = DisposableEventT IO
 
 instance Monad m => Monoid (DisposableEventT m) where
 
+  {-# INLINE mempty #-}
   mempty = DisposableEvent $ return ()
+
+  {-# INLINE mappend #-}
   mappend (DisposableEvent x) (DisposableEvent y) = DisposableEvent $ x >> y
