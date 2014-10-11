@@ -138,7 +138,7 @@ instance MonadIO m => MonadIO (SimulationT m) where
 class SimulationLift t where
   
   -- | Lift the specified 'SimulationT' computation into another computation.
-  liftSimulation :: Monad m => SimulationT m a -> t m a
+  liftSimulation :: MonadSim m => SimulationT m a -> t m a
 
 instance SimulationLift SimulationT where
   

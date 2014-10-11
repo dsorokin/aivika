@@ -113,7 +113,7 @@ instance MonadIO m => MonadIO (EventT m) where
 class EventLift t where
   
   -- | Lift the specified 'EventT' computation into another computation.
-  liftEvent :: Monad m => EventT m a -> t m a
+  liftEvent :: MonadSim m => EventT m a -> t m a
 
 instance EventLift EventT where
   

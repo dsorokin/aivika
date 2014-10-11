@@ -166,7 +166,7 @@ instance MonadIO m => MonadIO (DynamicsT m) where
 class DynamicsLift t where
   
   -- | Lift the specified 'DynamicsT' computation into another computation.
-  liftDynamics :: Monad m => DynamicsT m a -> t m a
+  liftDynamics :: MonadSim m => DynamicsT m a -> t m a
 
 instance DynamicsLift DynamicsT where
   

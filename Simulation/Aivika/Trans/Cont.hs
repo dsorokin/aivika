@@ -13,7 +13,7 @@
 --
 module Simulation.Aivika.Trans.Cont
        (ContCancellation(..),
+        ContT,
         Cont) where
 
-import Simulation.Aivika.Trans.Internal.Event
 import Simulation.Aivika.Trans.Internal.Cont

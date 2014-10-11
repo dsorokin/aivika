@@ -199,7 +199,7 @@ instance MonadIO m => MonadIO (ParameterT m) where
 class ParameterLift t where
   
   -- | Lift the specified 'ParameterT' computation into another computation.
-  liftParameter :: Monad m => ParameterT m a -> t m a
+  liftParameter :: MonadSim m => ParameterT m a -> t m a
 
 instance ParameterLift ParameterT where
   

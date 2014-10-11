@@ -12,9 +12,11 @@
 -- It defines a type class of monads based on which the simulation monads can be built.
 --
 module Simulation.Aivika.Trans.MonadSim
-       (MonadSim(..)) where
+       (MonadSim(..),
+        MonadSimTrans(..)) where
 
 import Control.Monad
+import Control.Monad.Trans
 
 import Simulation.Aivika.Trans.Exception
 import Simulation.Aivika.Trans.Session
@@ -37,3 +39,11 @@ class (ExceptionHandling m,
        EventQueueable m) => MonadSim m
 
 instance MonadSim IO
+
+-- | A variant of the standard 'MonadTrans' type class with one difference:
+-- the computation that will be lifted into another must be 'MonadSim' instead of
+-- more general and less restricted 'Monad'.
+class MonadSimTrans t where
+
+  -- | Lift the underlying computation into another within simulation.
+  liftComp :: MonadSim m => m a -> t m a
