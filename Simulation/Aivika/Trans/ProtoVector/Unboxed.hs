@@ -13,6 +13,7 @@
 --
 module Simulation.Aivika.Trans.ProtoVector.Unboxed
        (ProtoVectoring,
+        ProtoVectorT,
         ProtoVector,
         newProtoVector, 
         copyProtoVector,
