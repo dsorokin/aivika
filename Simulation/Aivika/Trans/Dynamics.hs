@@ -11,7 +11,6 @@
 --
 module Simulation.Aivika.Trans.Dynamics
        (-- * Dynamics Monad
-        DynamicsT,
         Dynamics,
         DynamicsLift(..),
         runDynamicsInStartTime,
