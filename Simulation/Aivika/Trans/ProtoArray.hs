@@ -1,5 +1,5 @@
 
-{-# LANGUAGE TypeFamilies, MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, UndecidableInstances #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- |
 -- Module     : Simulation.Aivika.Trans.ProtoArray
