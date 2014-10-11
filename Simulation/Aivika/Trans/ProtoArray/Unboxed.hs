@@ -43,6 +43,12 @@ class Monad m => ProtoArraying m e where
   -- | Write the element in the mutable unboxed array.
   writeProtoArray :: Ix i => ProtoArrayT m i e -> i -> e -> m ()
 
+  -- | Return a list of the elements.
+  protoArrayElems :: Ix i => ProtoArrayT m i e -> m [e]
+
+  -- | Return a list of the association pairs.
+  protoArrayAssocs :: Ix i => ProtoArrayT m i e -> m [(i, e)]
+
   -- | Return the elements of the mutable unboxed array in an immutable array.
   freezeProtoArray :: Ix i => ProtoArrayT m i e -> m (Array i e)
 
@@ -79,6 +85,18 @@ instance MArray IOUArray e IO => ProtoArraying IO e where
   {-# SPECIALISE INLINE writeProtoArray :: (MArray IOUArray Int IO, Ix i) => ProtoArray i Int -> i -> Int -> IO () #-}
   {-# SPECIALISE INLINE writeProtoArray :: (MArray IOUArray e IO, Ix i) => ProtoArray i e -> i -> e -> IO () #-}
   writeProtoArray (ProtoArray a) = writeArray a
+
+  {-# SPECIALISE INLINE protoArrayElems :: (MArray IOUArray Double IO, Ix i) => ProtoArray i Double -> IO [Double] #-}
+  {-# SPECIALISE INLINE protoArrayElems :: (MArray IOUArray Float IO, Ix i) => ProtoArray i Float -> IO [Float] #-}
+  {-# SPECIALISE INLINE protoArrayElems :: (MArray IOUArray Int IO, Ix i) => ProtoArray i Int -> IO [Int] #-}
+  {-# SPECIALISE INLINE protoArrayElems :: (MArray IOUArray e IO, Ix i) => ProtoArray i e -> IO [e] #-}
+  protoArrayElems (ProtoArray a) = getElems a
+
+  {-# SPECIALISE INLINE protoArrayAssocs :: (MArray IOUArray Double IO, Ix i) => ProtoArray i Double -> IO [(i, Double)] #-}
+  {-# SPECIALISE INLINE protoArrayAssocs :: (MArray IOUArray Float IO, Ix i) => ProtoArray i Float -> IO [(i, Float)] #-}
+  {-# SPECIALISE INLINE protoArrayAssocs :: (MArray IOUArray Int IO, Ix i) => ProtoArray i Int -> IO [(i, Int)] #-}
+  {-# SPECIALISE INLINE protoArrayAssocs :: (MArray IOUArray e IO, Ix i) => ProtoArray i e -> IO [(i, e)] #-}
+  protoArrayAssocs (ProtoArray a) = getAssocs a
 
   {-# SPECIALISE INLINE freezeProtoArray :: (MArray IOUArray Double IO, Ix i) => ProtoArray i Double -> IO (Array i Double) #-}
   {-# SPECIALISE INLINE freezeProtoArray :: (MArray IOUArray Float IO, Ix i) => ProtoArray i Float -> IO (Array i Float) #-}

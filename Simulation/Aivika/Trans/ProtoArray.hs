@@ -43,6 +43,12 @@ class Monad m => ProtoArraying m where
   -- | Write the element in the mutable array.
   writeProtoArray :: Ix i => ProtoArrayT m i e -> i -> e -> m ()
 
+  -- | Return a list of the elements.
+  protoArrayElems :: Ix i => ProtoArrayT m i e -> m [e]
+
+  -- | Return a list of the association pairs.
+  protoArrayAssocs :: Ix i => ProtoArrayT m i e -> m [(i, e)]
+
   -- | Return the elements of the mutable array in an immutable array.
   freezeProtoArray :: Ix i => ProtoArrayT m i e -> m (Array i e)
 
@@ -64,6 +70,12 @@ instance ProtoArraying IO where
 
   {-# SPECIALISE INLINE writeProtoArray :: Ix i => ProtoArray i e -> i -> e -> IO () #-}
   writeProtoArray (ProtoArray a) = writeArray a
+
+  {-# SPECIALISE INLINE protoArrayElems :: Ix i => ProtoArray i e -> IO [e] #-}
+  protoArrayElems (ProtoArray a) = getElems a
+
+  {-# SPECIALISE INLINE protoArrayAssocs :: Ix i => ProtoArray i e -> IO [(i, e)] #-}
+  protoArrayAssocs (ProtoArray a) = getAssocs a
 
   {-# SPECIALISE INLINE freezeProtoArray :: Ix i => ProtoArray i e -> IO (Array i e) #-}
   freezeProtoArray (ProtoArray a) = freeze a
