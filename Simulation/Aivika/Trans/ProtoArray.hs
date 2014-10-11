@@ -12,8 +12,7 @@
 -- It defines a prototype of all mutable arrays.
 --
 module Simulation.Aivika.Trans.ProtoArray
-       (ProtoArraying(..),
-        ProtoArray) where
+       (ProtoArraying(..)) where
 
 import Data.Array
 import Data.Array.IO.Safe
@@ -25,60 +24,57 @@ import Simulation.Aivika.Trans.Session
 class Monad m => ProtoArraying m where
   
   -- | A prototype of mutable array.
-  data ProtoArrayT m :: * -> * -> *
+  data ProtoArray m :: * -> * -> *
 
   -- | Return the bounds of the array.
-  protoArrayBounds :: Ix i => ProtoArrayT m i e -> m (i, i)
+  protoArrayBounds :: Ix i => ProtoArray m i e -> m (i, i)
 
   -- | Create a new ptototype of mutable array by the specified session and initial value.
-  newProtoArray :: Ix i => SessionT m -> (i, i) -> e -> m (ProtoArrayT m i e)
+  newProtoArray :: Ix i => Session m -> (i, i) -> e -> m (ProtoArray m i e)
 
   -- | Create a new ptototype of mutable array by the specified session
   -- with every element initialised to an undefined value.
-  newProtoArray_ :: Ix i => SessionT m -> (i, i) -> m (ProtoArrayT m i e)
+  newProtoArray_ :: Ix i => Session m -> (i, i) -> m (ProtoArray m i e)
 
   -- | Read an element from the mutable array.
-  readProtoArray :: Ix i => ProtoArrayT m i e -> i -> m e
+  readProtoArray :: Ix i => ProtoArray m i e -> i -> m e
 
   -- | Write the element in the mutable array.
-  writeProtoArray :: Ix i => ProtoArrayT m i e -> i -> e -> m ()
+  writeProtoArray :: Ix i => ProtoArray m i e -> i -> e -> m ()
 
   -- | Return a list of the elements.
-  protoArrayElems :: Ix i => ProtoArrayT m i e -> m [e]
+  protoArrayElems :: Ix i => ProtoArray m i e -> m [e]
 
   -- | Return a list of the association pairs.
-  protoArrayAssocs :: Ix i => ProtoArrayT m i e -> m [(i, e)]
+  protoArrayAssocs :: Ix i => ProtoArray m i e -> m [(i, e)]
 
   -- | Return the elements of the mutable array in an immutable array.
-  freezeProtoArray :: Ix i => ProtoArrayT m i e -> m (Array i e)
+  freezeProtoArray :: Ix i => ProtoArray m i e -> m (Array i e)
 
 instance ProtoArraying IO where
 
-  newtype ProtoArrayT IO i e = ProtoArray (IOArray i e)
+  newtype ProtoArray IO i e = ProtoArray (IOArray i e)
 
-  {-# SPECIALISE INLINE protoArrayBounds :: Ix i => ProtoArray i e -> IO (i, i) #-}
+  {-# SPECIALISE INLINE protoArrayBounds :: Ix i => ProtoArray IO i e -> IO (i, i) #-}
   protoArrayBounds (ProtoArray a) = getBounds a
 
-  {-# SPECIALISE INLINE newProtoArray :: Ix i => Session -> (i, i) -> e -> IO (ProtoArray i e) #-}
+  {-# SPECIALISE INLINE newProtoArray :: Ix i => Session IO -> (i, i) -> e -> IO (ProtoArray IO i e) #-}
   newProtoArray s bnds e = fmap ProtoArray $ newArray bnds e
 
-  {-# SPECIALISE INLINE newProtoArray_ :: Ix i => Session -> (i, i) -> IO (ProtoArray i e) #-}
+  {-# SPECIALISE INLINE newProtoArray_ :: Ix i => Session IO -> (i, i) -> IO (ProtoArray IO i e) #-}
   newProtoArray_ s bnds = fmap ProtoArray $ newArray_ bnds
 
-  {-# SPECIALISE INLINE readProtoArray :: Ix i => ProtoArray i e -> i -> IO e #-}
+  {-# SPECIALISE INLINE readProtoArray :: Ix i => ProtoArray IO i e -> i -> IO e #-}
   readProtoArray (ProtoArray a) = readArray a
 
-  {-# SPECIALISE INLINE writeProtoArray :: Ix i => ProtoArray i e -> i -> e -> IO () #-}
+  {-# SPECIALISE INLINE writeProtoArray :: Ix i => ProtoArray IO i e -> i -> e -> IO () #-}
   writeProtoArray (ProtoArray a) = writeArray a
 
-  {-# SPECIALISE INLINE protoArrayElems :: Ix i => ProtoArray i e -> IO [e] #-}
+  {-# SPECIALISE INLINE protoArrayElems :: Ix i => ProtoArray IO i e -> IO [e] #-}
   protoArrayElems (ProtoArray a) = getElems a
 
-  {-# SPECIALISE INLINE protoArrayAssocs :: Ix i => ProtoArray i e -> IO [(i, e)] #-}
+  {-# SPECIALISE INLINE protoArrayAssocs :: Ix i => ProtoArray IO i e -> IO [(i, e)] #-}
   protoArrayAssocs (ProtoArray a) = getAssocs a
 
-  {-# SPECIALISE INLINE freezeProtoArray :: Ix i => ProtoArray i e -> IO (Array i e) #-}
+  {-# SPECIALISE INLINE freezeProtoArray :: Ix i => ProtoArray IO i e -> IO (Array i e) #-}
   freezeProtoArray (ProtoArray a) = freeze a
-
--- | A convenient type synonym.
-type ProtoArray i e  = ProtoArrayT IO i e

@@ -21,42 +21,36 @@ import Data.IORef
 class Sessionning m where
   
   -- | A simulation session.
-  data SessionT m :: *
+  data Session m :: *
 
   -- | A marker that exists with the session and which can be compared for equality.
-  data SessionTMarker m :: *
+  data SessionMarker m :: *
 
   -- | Create a new session.
-  newSession :: m (SessionT m)
+  newSession :: m (Session m)
 
   -- | Create a new marker within the current session.
-  newSessionMarker :: SessionT m -> m (SessionTMarker m)
+  newSessionMarker :: Session m -> m (SessionMarker m)
 
   -- | Compare two markers for equality.
-  equalSessionMarker :: SessionTMarker m -> SessionTMarker m -> Bool
+  equalSessionMarker :: SessionMarker m -> SessionMarker m -> Bool
 
 instance Sessionning IO where
 
-  data SessionT IO = Session
+  data Session IO = Session
 
-  newtype SessionTMarker IO = SessionMarker (IORef ())
+  newtype SessionMarker IO = SessionMarker (IORef ())
 
-  {-# SPECIALISE INLINE newSession :: IO Session #-}
+  {-# SPECIALISE INLINE newSession :: IO (Session IO) #-}
   newSession = return Session
 
-  {-# SPECIALISE INLINE newSessionMarker :: Session -> IO SessionMarker #-}
+  {-# SPECIALISE INLINE newSessionMarker :: Session IO -> IO (SessionMarker IO) #-}
   newSessionMarker session = fmap SessionMarker $ newIORef ()
 
-  {-# SPECIALISE INLINE equalSessionMarker :: SessionMarker -> SessionMarker -> Bool #-}
+  {-# SPECIALISE INLINE equalSessionMarker :: SessionMarker IO -> SessionMarker IO -> Bool #-}
   equalSessionMarker (SessionMarker x) (SessionMarker y) = x == y
 
--- | A convenient type synonym.
-type Session = SessionT IO
-
--- | A convenient type synonym.
-type SessionMarker = SessionTMarker IO
-
-instance Sessionning m => Eq (SessionTMarker m) where
+instance Sessionning m => Eq (SessionMarker m) where
 
   {-# INLINE (==) #-}
   (==) = equalSessionMarker
