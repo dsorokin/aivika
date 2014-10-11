@@ -11,7 +11,6 @@
 -- 
 module Simulation.Aivika.Trans.Simulation
        (-- * Simulation
-        SimulationT,
         Simulation,
         SimulationLift(..),
         runSimulation,
