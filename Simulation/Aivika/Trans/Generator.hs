@@ -11,8 +11,6 @@
 --
 module Simulation.Aivika.Trans.Generator 
        (Generating(..),
-        Generator,
-        GeneratorTType(..),
         GeneratorType) where
 
 import Simulation.Aivika.Trans.Internal.Generator

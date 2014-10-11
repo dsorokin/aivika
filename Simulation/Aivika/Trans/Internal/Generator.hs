@@ -13,9 +13,7 @@
 --
 module Simulation.Aivika.Trans.Internal.Generator 
        (Generating(..),
-        Generator,
-        GeneratorTType(..),
-        GeneratorType) where
+        GeneratorType(..)) where
 
 import System.Random
 
@@ -27,74 +25,74 @@ import Simulation.Aivika.Trans.Session
 class Generating m where
 
   -- | Defines a random number generator.
-  data GeneratorT m :: *
+  data Generator m :: *
 
   -- | Generate an uniform random number
   -- with the specified minimum and maximum.
-  generateUniform :: GeneratorT m -> Double -> Double -> m Double
+  generateUniform :: Generator m -> Double -> Double -> m Double
   
   -- | Generate an uniform integer random number
   -- with the specified minimum and maximum.
-  generateUniformInt :: GeneratorT m -> Int -> Int -> m Int
+  generateUniformInt :: Generator m -> Int -> Int -> m Int
 
   -- | Generate a normal random number
   -- with the specified mean and deviation.
-  generateNormal :: GeneratorT m -> Double -> Double -> m Double
+  generateNormal :: Generator m -> Double -> Double -> m Double
 
   -- | Generate a random number distributed exponentially
   -- with the specified mean (the reciprocal of the rate).
-  generateExponential :: GeneratorT m -> Double -> m Double
+  generateExponential :: Generator m -> Double -> m Double
 
   -- | Generate the Erlang random number
   -- with the specified scale (the reciprocal of the rate)
   -- and integer shape.
-  generateErlang :: GeneratorT m -> Double -> Int -> m Double
+  generateErlang :: Generator m -> Double -> Int -> m Double
   
   -- | Generate the Poisson random number with the specified mean.
-  generatePoisson :: GeneratorT m -> Double -> m Int
+  generatePoisson :: Generator m -> Double -> m Int
 
   -- | Generate the binomial random number
   -- with the specified probability and number of trials.
-  generateBinomial :: GeneratorT m -> Double -> Int -> m Int
+  generateBinomial :: Generator m -> Double -> Int -> m Int
   
   -- | Create a new random number generator by the specified type with current session.
-  newGenerator :: SessionT m -> GeneratorTType m -> m (GeneratorT m)
+  newGenerator :: Session m -> GeneratorType m -> m (Generator m)
 
   -- | Create a new random generator by the specified standard generator within current session.
-  newRandomGenerator :: RandomGen g => SessionT m -> g -> m (GeneratorT m)
+  newRandomGenerator :: RandomGen g => Session m -> g -> m (Generator m)
 
   -- | Create a new random generator by the specified uniform generator of numbers
   -- from 0 to 1 within current session.
-  newRandomGenerator01 :: SessionT m -> m Double -> m (GeneratorT m)
+  newRandomGenerator01 :: Session m -> m Double -> m (Generator m)
 
 instance Generating IO where
 
-  data GeneratorT IO =
-    Generator { generator01     :: IO Double,
+  data Generator IO =
+    Generator { generator01 :: IO Double,
                 -- ^ the generator of uniform numbers from 0 to 1
                 generatorNormal01 :: IO Double
                 -- ^ the generator of normal numbers with mean 0 and variance 1
               }
 
-  {-# SPECIALIZE INLINE generateUniform :: Generator -> Double -> Double -> IO Double #-}
+  {-# SPECIALISE INLINE generateUniform :: Generator IO -> Double -> Double -> IO Double #-}
   generateUniform = generateUniform01 . generator01
 
-  {-# SPECIALIZE INLINE generateUniformInt :: Generator -> Int -> Int -> IO Int #-}
+  {-# SPECIALISE INLINE generateUniformInt :: Generator IO -> Int -> Int -> IO Int #-}
   generateUniformInt = generateUniformInt01 . generator01
 
-  {-# SPECIALIZE INLINE generateUniform :: Generator -> Double -> Double -> IO Double #-}
+  {-# SPECIALISE INLINE generateUniform :: Generator IO -> Double -> Double -> IO Double #-}
   generateNormal = generateNormal01 . generatorNormal01
 
-  {-# SPECIALIZE INLINE generateExponential :: Generator -> Double -> IO Double #-}
+  {-# SPECIALISE INLINE generateExponential :: Generator IO -> Double -> IO Double #-}
   generateExponential = generateExponential01 . generator01
 
-  {-# SPECIALIZE INLINE generateErlang :: Generator -> Double -> Int -> IO Double #-}
+  {-# SPECIALISE INLINE generateErlang :: Generator IO -> Double -> Int -> IO Double #-}
   generateErlang = generateErlang01 . generator01
 
-  {-# SPECIALIZE INLINE generatePoisson :: Generator -> Double -> IO Int #-}
+  {-# SPECIALISE INLINE generatePoisson :: Generator IO -> Double -> IO Int #-}
   generatePoisson = generatePoisson01 . generator01
 
-  {-# SPECIALIZE INLINE generateBinomial :: Generator -> Double -> Int -> IO Int #-}
+  {-# SPECIALISE INLINE generateBinomial :: Generator IO -> Double -> Int -> IO Int #-}
   generateBinomial = generateBinomial01 . generator01
 
   newGenerator session tp =
@@ -122,21 +120,15 @@ instance Generating IO where
                           generatorNormal01 = gNormal01 }
 
 -- | Defines a type of the random number generator.
-data GeneratorTType m = SimpleGenerator
-                         -- ^ The simple random number generator.
-                       | SimpleGeneratorWithSeed Int
-                         -- ^ The simple random number generator with the specified seed.
-                       | CustomGenerator (m Generator)
-                         -- ^ The custom random number generator.
-                       | CustomGenerator01 (m Double)
-                         -- ^ The custom random number generator by the specified uniform
-                         -- generator of numbers from 0 to 1.
-
--- | A convenient type synonym.
-type Generator = GeneratorT IO
-
--- | A convenient type synonym.
-type GeneratorType = GeneratorTType IO
+data GeneratorType m = SimpleGenerator
+                       -- ^ The simple random number generator.
+                     | SimpleGeneratorWithSeed Int
+                       -- ^ The simple random number generator with the specified seed.
+                     | CustomGenerator (m (Generator m))
+                       -- ^ The custom random number generator.
+                     | CustomGenerator01 (m Double)
+                       -- ^ The custom random number generator by the specified uniform
+                       -- generator of numbers from 0 to 1.
 
 -- | Generate an uniform random number with the specified minimum and maximum.
 generateUniform01 :: IO Double
