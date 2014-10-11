@@ -13,7 +13,6 @@
 --
 module Simulation.Aivika.Trans.ProtoVector.Unboxed
        (ProtoVectoring,
-        ProtoVectorT,
         ProtoVector,
         newProtoVector, 
         copyProtoVector,
@@ -62,17 +61,14 @@ instance ProtoVectoring IO Word64
 #endif
 
 -- | A prototype of mutable vector.
-data ProtoVectorT m a =
-    ProtoVector { vectorSession  :: SessionT m,
-                  vectorArrayRef :: ProtoRefT m (ProtoArrayT m Int a),
-                  vectorCountRef :: ProtoRefT m Int, 
-                  vectorCapacityRef :: ProtoRefT m Int }
-
--- | A convenient type synonym.
-type ProtoVector a  = ProtoVectorT IO a
+data ProtoVector m a =
+    ProtoVector { vectorSession  :: Session m,
+                  vectorArrayRef :: ProtoRef m (ProtoArray m Int a),
+                  vectorCountRef :: ProtoRef m Int, 
+                  vectorCapacityRef :: ProtoRef m Int }
 
 -- | Create a new vector within the specified simulation session.
-newProtoVector :: ProtoVectoring m a => SessionT m -> m (ProtoVectorT m a)
+newProtoVector :: ProtoVectoring m a => Session m -> m (ProtoVector m a)
 {-# INLINABLE newProtoVector #-}
 newProtoVector session = 
   do array <- newProtoArray_ session (0, 4 - 1)
@@ -85,7 +81,7 @@ newProtoVector session =
                           vectorCapacityRef = capacityRef }
 
 -- | Copy the vector.
-copyProtoVector :: ProtoVectoring m a => ProtoVectorT m a -> m (ProtoVectorT m a)
+copyProtoVector :: ProtoVectoring m a => ProtoVector m a -> m (ProtoVector m a)
 {-# INLINABLE copyProtoVector #-}
 copyProtoVector vector =
   do let session = vectorSession vector
@@ -104,7 +100,7 @@ copyProtoVector vector =
                           vectorCapacityRef = capacityRef' }
        
 -- | Ensure that the vector has the specified capacity.
-protoVectorEnsureCapacity :: ProtoVectoring m a => ProtoVectorT m a -> Int -> m ()
+protoVectorEnsureCapacity :: ProtoVectoring m a => ProtoVector m a -> Int -> m ()
 {-# INLINABLE protoVectorEnsureCapacity #-}
 protoVectorEnsureCapacity vector capacity =
   do capacity' <- readProtoRef (vectorCapacityRef vector)
@@ -121,12 +117,12 @@ protoVectorEnsureCapacity vector capacity =
           writeProtoRef (vectorCapacityRef vector) capacity''
 
 -- | Return the element count.
-protoVectorCount :: ProtoVectoring m a => ProtoVectorT m a -> m Int
+protoVectorCount :: ProtoVectoring m a => ProtoVector m a -> m Int
 {-# INLINE protoVectorCount #-}
 protoVectorCount vector = readProtoRef (vectorCountRef vector)
 
 -- | Add the specified element to the end of the vector.
-appendProtoVector :: ProtoVectoring m a => ProtoVectorT m a -> a -> m ()          
+appendProtoVector :: ProtoVectoring m a => ProtoVector m a -> a -> m ()          
 {-# INLINE appendProtoVector #-}
 appendProtoVector vector item =
   do count <- readProtoRef (vectorCountRef vector)
@@ -136,14 +132,14 @@ appendProtoVector vector item =
      writeProtoRef (vectorCountRef vector) (count + 1)
 
 -- | Read a value from the vector, where indices are started from 0.
-readProtoVector :: ProtoVectoring m a => ProtoVectorT m a -> Int -> m a
+readProtoVector :: ProtoVectoring m a => ProtoVector m a -> Int -> m a
 {-# INLINE readProtoVector #-}
 readProtoVector vector index =
   do array <- readProtoRef (vectorArrayRef vector)
      readProtoArray array index
 
 -- | Set an array item at the specified index which is started from 0.
-writeProtoVector :: ProtoVectoring m a => ProtoVectorT m a -> Int -> a -> m ()
+writeProtoVector :: ProtoVectoring m a => ProtoVector m a -> Int -> a -> m ()
 {-# INLINE writeProtoVector #-}
 writeProtoVector vector index item =
   do array <- readProtoRef (vectorArrayRef vector)
@@ -151,7 +147,7 @@ writeProtoVector vector index item =
 
 -- | Return the index of the specified element using binary search; otherwise, 
 -- a negated insertion index minus one: 0 -> -0 - 1, ..., i -> -i - 1, ....
-protoVectorBinarySearch :: (ProtoVectoring m a, Ord a) => ProtoVectorT m a -> a -> m Int
+protoVectorBinarySearch :: (ProtoVectoring m a, Ord a) => ProtoVector m a -> a -> m Int
 {-# INLINE protoVectorBinarySearch #-}
 protoVectorBinarySearch vector item =
   do array <- readProtoRef (vectorArrayRef vector)
@@ -160,21 +156,21 @@ protoVectorBinarySearch vector item =
 
 -- | Return the index of the specified element using binary search
 -- within the specified range; otherwise, a negated insertion index minus one.
-protoVectorBinarySearchWithin :: (ProtoVectoring m a, Ord a) => ProtoVectorT m a -> a -> Int -> Int -> m Int
+protoVectorBinarySearchWithin :: (ProtoVectoring m a, Ord a) => ProtoVector m a -> a -> Int -> Int -> m Int
 {-# INLINE protoVectorBinarySearchWithin #-}
 protoVectorBinarySearchWithin vector item left right =
   do array <- readProtoRef (vectorArrayRef vector)
      vectorBinarySearch' array item left right
 
 -- | Return the elements of the vector in an immutable array.
-freezeProtoVector :: ProtoVectoring m a => ProtoVectorT m a -> m (Array Int a)
+freezeProtoVector :: ProtoVectoring m a => ProtoVector m a -> m (Array Int a)
 {-# INLINE freezeProtoVector #-}
 freezeProtoVector vector =
   do array <- readProtoRef (vectorArrayRef vector)
      freezeProtoArray array
 
 -- | Insert the element in the vector at the specified index.
-protoVectorInsert :: ProtoVectoring m a => ProtoVectorT m a -> Int -> a -> m ()
+protoVectorInsert :: ProtoVectoring m a => ProtoVector m a -> Int -> a -> m ()
 {-# INLINABLE protoVectorInsert #-}
 protoVectorInsert vector index item =
   do count <- readProtoRef (vectorCountRef vector)
@@ -195,7 +191,7 @@ protoVectorInsert vector index item =
      writeProtoRef (vectorCountRef vector) (count + 1)
 
 -- | Delete the element at the specified index.
-protoVectorDeleteAt :: ProtoVectoring m a => ProtoVectorT m a -> Int -> m ()
+protoVectorDeleteAt :: ProtoVectoring m a => ProtoVector m a -> Int -> m ()
 {-# INLINABLE protoVectorDeleteAt #-}
 protoVectorDeleteAt vector index =
   do count <- readProtoRef (vectorCountRef vector)
@@ -215,7 +211,7 @@ protoVectorDeleteAt vector index =
      writeProtoRef (vectorCountRef vector) (count - 1)
 
 -- | Return the index of the item or -1.
-protoVectorIndex :: (ProtoVectoring m a, Eq a) => ProtoVectorT m a -> a -> m Int
+protoVectorIndex :: (ProtoVectoring m a, Eq a) => ProtoVector m a -> a -> m Int
 {-# INLINABLE protoVectorIndex #-}
 protoVectorIndex vector item =
   do count <- readProtoRef (vectorCountRef vector)
@@ -229,7 +225,7 @@ protoVectorIndex vector item =
                      else loop $ index + 1
      loop 0
 
-vectorBinarySearch' :: (ProtoVectoring m a, Ord a) => ProtoArrayT m Int a -> a -> Int -> Int -> m Int
+vectorBinarySearch' :: (ProtoVectoring m a, Ord a) => ProtoArray m Int a -> a -> Int -> Int -> m Int
 {-# INLINABLE vectorBinarySearch' #-}
 vectorBinarySearch' array item left right =
   if left > right 
