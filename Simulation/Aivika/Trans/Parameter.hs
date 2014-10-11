@@ -14,7 +14,6 @@
 -- 
 module Simulation.Aivika.Trans.Parameter
        (-- * Parameter
-        ParameterT,
         Parameter,
         ParameterLift(..),
         runParameter,
