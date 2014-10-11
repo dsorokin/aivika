@@ -46,40 +46,30 @@ instance MArray IOUArray e IO => ProtoArraying IO e where
 
   newtype ProtoArrayT IO i e = ProtoArray (IOUArray i e)
 
-  {-# SPECIALISE INLINE protoArrayBounds :: (MArray IOUArray Bool IO, Ix i) => ProtoArray i Bool -> IO (i, i) #-}
-  {-# SPECIALISE INLINE protoArrayBounds :: (MArray IOUArray Char IO, Ix i) => ProtoArray i Char -> IO (i, i) #-}
   {-# SPECIALISE INLINE protoArrayBounds :: (MArray IOUArray Double IO, Ix i) => ProtoArray i Double -> IO (i, i) #-}
   {-# SPECIALISE INLINE protoArrayBounds :: (MArray IOUArray Float IO, Ix i) => ProtoArray i Float -> IO (i, i) #-}
   {-# SPECIALISE INLINE protoArrayBounds :: (MArray IOUArray Int IO, Ix i) => ProtoArray i Int -> IO (i, i) #-}
   {-# SPECIALISE INLINE protoArrayBounds :: (MArray IOUArray e IO, Ix i) => ProtoArray i e -> IO (i, i) #-}
   protoArrayBounds (ProtoArray a) = getBounds a
 
-  {-# SPECIALISE INLINE newProtoArray :: (MArray IOUArray Bool IO, Ix i) => Session -> (i, i) -> Bool -> IO (ProtoArray i Bool) #-}
-  {-# SPECIALISE INLINE newProtoArray :: (MArray IOUArray Char IO, Ix i) => Session -> (i, i) -> Char -> IO (ProtoArray i Char) #-}
   {-# SPECIALISE INLINE newProtoArray :: (MArray IOUArray Double IO, Ix i) => Session -> (i, i) -> Double -> IO (ProtoArray i Double) #-}
   {-# SPECIALISE INLINE newProtoArray :: (MArray IOUArray Float IO, Ix i) => Session -> (i, i) -> Float -> IO (ProtoArray i Float) #-}
   {-# SPECIALISE INLINE newProtoArray :: (MArray IOUArray Int IO, Ix i) => Session -> (i, i) -> Int -> IO (ProtoArray i Int) #-}
   {-# SPECIALISE INLINE newProtoArray :: (MArray IOUArray e IO, Ix i) => Session -> (i, i) -> e -> IO (ProtoArray i e) #-}
   newProtoArray s bnds e = fmap ProtoArray $ newArray bnds e
 
-  {-# SPECIALISE INLINE newProtoArray_ :: (MArray IOUArray Bool IO, Ix i) => Session -> (i, i) -> IO (ProtoArray i Bool) #-}
-  {-# SPECIALISE INLINE newProtoArray_ :: (MArray IOUArray Char IO, Ix i) => Session -> (i, i) -> IO (ProtoArray i Char) #-}
   {-# SPECIALISE INLINE newProtoArray_ :: (MArray IOUArray Double IO, Ix i) => Session -> (i, i) -> IO (ProtoArray i Double) #-}
   {-# SPECIALISE INLINE newProtoArray_ :: (MArray IOUArray Float IO, Ix i) => Session -> (i, i) -> IO (ProtoArray i Float) #-}
   {-# SPECIALISE INLINE newProtoArray_ :: (MArray IOUArray Int IO, Ix i) => Session -> (i, i) -> IO (ProtoArray i Int) #-}
   {-# SPECIALISE INLINE newProtoArray_ :: (MArray IOUArray e IO, Ix i) => Session -> (i, i) -> IO (ProtoArray i e) #-}
   newProtoArray_ s bnds = fmap ProtoArray $ newArray_ bnds
 
-  {-# SPECIALISE INLINE readProtoArray :: (MArray IOUArray Bool IO, Ix i) => ProtoArray i Bool -> i -> IO Bool #-}
-  {-# SPECIALISE INLINE readProtoArray :: (MArray IOUArray Char IO, Ix i) => ProtoArray i Char -> i -> IO Char #-}
   {-# SPECIALISE INLINE readProtoArray :: (MArray IOUArray Double IO, Ix i) => ProtoArray i Double -> i -> IO Double #-}
   {-# SPECIALISE INLINE readProtoArray :: (MArray IOUArray Float IO, Ix i) => ProtoArray i Float -> i -> IO Float #-}
   {-# SPECIALISE INLINE readProtoArray :: (MArray IOUArray Int IO, Ix i) => ProtoArray i Int -> i -> IO Int #-}
   {-# SPECIALISE INLINE readProtoArray :: (MArray IOUArray e IO, Ix i) => ProtoArray i e -> i -> IO e #-}
   readProtoArray (ProtoArray a) = readArray a
 
-  {-# SPECIALISE INLINE writeProtoArray :: (MArray IOUArray Bool IO, Ix i) => ProtoArray i Bool -> i -> Bool -> IO () #-}
-  {-# SPECIALISE INLINE writeProtoArray :: (MArray IOUArray Char IO, Ix i) => ProtoArray i Char -> i -> Char -> IO () #-}
   {-# SPECIALISE INLINE writeProtoArray :: (MArray IOUArray Double IO, Ix i) => ProtoArray i Double -> i -> Double -> IO () #-}
   {-# SPECIALISE INLINE writeProtoArray :: (MArray IOUArray Float IO, Ix i) => ProtoArray i Float -> i -> Float -> IO () #-}
   {-# SPECIALISE INLINE writeProtoArray :: (MArray IOUArray Int IO, Ix i) => ProtoArray i Int -> i -> Int -> IO () #-}
