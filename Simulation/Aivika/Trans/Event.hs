@@ -12,7 +12,6 @@
 --
 module Simulation.Aivika.Trans.Event
        (-- * Event Monad
-        EventT,
         Event,
         EventLift(..),
         EventProcessing(..),
@@ -26,7 +25,6 @@ module Simulation.Aivika.Trans.Event
         enqueueEventWithIntegTimes,
         yieldEvent,
         -- * Cancelling Event
-        EventTCancellation,
         EventCancellation,
         cancelEvent,
         eventCancelled,
@@ -39,7 +37,6 @@ module Simulation.Aivika.Trans.Event
         memoEvent,
         memoEventInTime,
         -- * Disposable
-        DisposableEventT(..),
         DisposableEvent(..)) where
 
 import Simulation.Aivika.Trans.Internal.Event
