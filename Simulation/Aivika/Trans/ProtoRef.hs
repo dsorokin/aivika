@@ -38,6 +38,9 @@ class ProtoReferring m where
   -- | Modify a value stored in the prototype of mutable reference.
   modifyProtoRef :: ProtoRefT m a -> (a -> a) -> m ()
 
+  -- | Whether two prototypes of mutable references are equal.
+  equalProtoRef :: ProtoRefT m a -> ProtoRefT m a -> Bool
+
 instance ProtoReferring IO where
 
   newtype ProtoRefT IO a = ProtoRef (IORef a)
@@ -54,5 +57,13 @@ instance ProtoReferring IO where
   {-# SPECIALIZE INLINE modifyProtoRef :: ProtoRef a -> (a -> a) -> IO () #-}
   modifyProtoRef (ProtoRef x) = modifyIORef x
 
+  {-# SPECIALIZE INLINE equalProtoRef :: ProtoRef a -> ProtoRef a -> Bool #-}
+  equalProtoRef (ProtoRef x) (ProtoRef y) = x == y
+
 -- | A conventient type synonym.
 type ProtoRef = ProtoRefT IO
+
+instance ProtoReferring m => Eq (ProtoRefT m a) where
+
+  {-# INLINE (==) #-}
+  (==) = equalProtoRef
