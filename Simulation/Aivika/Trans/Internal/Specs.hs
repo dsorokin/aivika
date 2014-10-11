@@ -11,14 +11,11 @@
 --
 -- It defines the simulation specs and related stuff.
 module Simulation.Aivika.Trans.Internal.Specs
-       (SpecsT(..),
-        Specs(..),
+       (Specs(..),
         Method(..),
-        RunT(..),
-        PointT(..),
+        Run(..),
         Point(..),
         EventQueueable(..),
-        EventTQueue(..),
         EventQueue(..),
         basicTime,
         integIterationBnds,
@@ -40,16 +37,13 @@ import Simulation.Aivika.Trans.Generator
 import qualified Simulation.Aivika.Trans.PriorityQueue as PQ
 
 -- | It defines the simulation specs.
-data SpecsT m = Specs { spcStartTime :: Double,    -- ^ the start time
-                        spcStopTime :: Double,     -- ^ the stop time
-                        spcDT :: Double,           -- ^ the integration time step
-                        spcMethod :: Method,       -- ^ the integration method
-                        spcGeneratorType :: GeneratorTType m
-                        -- ^ the type of the random number generator
-                       }
-
--- | A convenient type synonym.
-type Specs = SpecsT IO
+data Specs m = Specs { spcStartTime :: Double,    -- ^ the start time
+                       spcStopTime :: Double,     -- ^ the stop time
+                       spcDT :: Double,           -- ^ the integration time step
+                       spcMethod :: Method,       -- ^ the integration method
+                       spcGeneratorType :: GeneratorType m
+                       -- ^ the type of the random number generator
+                     }
 
 -- | It defines the integration method.
 data Method = Euler          -- ^ Euler's method
@@ -58,38 +52,35 @@ data Method = Euler          -- ^ Euler's method
             deriving (Eq, Ord, Show)
 
 -- | It indentifies the simulation run.
-data RunT m = Run { runSpecs :: SpecsT m,  -- ^ the simulation specs
-                    runSession :: SessionT m,        -- ^ the simulation session
-                    runIndex :: Int,       -- ^ the current simulation run index
-                    runCount :: Int,       -- ^ the total number of runs in this experiment
-                    runEventQueue :: EventTQueue m,  -- ^ the event queue
-                    runGenerator :: GeneratorT m     -- ^ the random number generator
-                  }
+data Run m = Run { runSpecs :: Specs m,            -- ^ the simulation specs
+                   runSession :: Session m,        -- ^ the simulation session
+                   runIndex :: Int,       -- ^ the current simulation run index
+                   runCount :: Int,       -- ^ the total number of runs in this experiment
+                   runEventQueue :: EventQueue m,  -- ^ the event queue
+                   runGenerator :: Generator m     -- ^ the random number generator
+                 }
 
 -- | It defines the simulation point appended with the additional information.
-data PointT m = Point { pointSpecs :: SpecsT m,    -- ^ the simulation specs
-                        pointRun :: RunT m,        -- ^ the simulation run
-                        pointTime :: Double,       -- ^ the current time
-                        pointIteration :: Int,     -- ^ the current iteration
-                        pointPhase :: Int          -- ^ the current phase
-                      }
-
--- | A useful type synonym.
-type Point = PointT IO
+data Point m = Point { pointSpecs :: Specs m,      -- ^ the simulation specs
+                       pointRun :: Run m,          -- ^ the simulation run
+                       pointTime :: Double,        -- ^ the current time
+                       pointIteration :: Int,      -- ^ the current iteration
+                       pointPhase :: Int           -- ^ the current phase
+                     }
 
 -- | A type class of monads within which the event queues are defined.
 class EventQueueable m where
 
   -- | It represents the event queue.
-  data EventTQueue m :: *
+  data EventQueue m :: *
 
   -- | Create a new event queue by the specified specs with simulation session.
-  newEventQueue :: SessionT m -> SpecsT m -> m (EventTQueue m)
+  newEventQueue :: Session m -> Specs m -> m (EventQueue m)
 
 instance EventQueueable IO where
 
-  data EventTQueue IO =
-    EventQueue { queuePQ :: PQ.PriorityQueue (Point -> IO ()),
+  data EventQueue IO =
+    EventQueue { queuePQ :: PQ.PriorityQueue (Point IO -> IO ()),
                  -- ^ the underlying priority queue
                  queueBusy :: IORef Bool,
                  -- ^ whether the queue is currently processing events
@@ -105,27 +96,24 @@ instance EventQueueable IO where
                            queueBusy = f,
                            queueTime = t }
 
--- | A convenient type synonym.
-type EventQueue = EventTQueue IO
-
 -- | Returns the integration iterations starting from zero.
-integIterations :: SpecsT m -> [Int]
+integIterations :: Specs m -> [Int]
 integIterations sc = [i1 .. i2] where
   i1 = integIterationLoBnd sc
   i2 = integIterationHiBnd sc
 
 -- | Returns the first and last integration iterations.
-integIterationBnds :: SpecsT m -> (Int, Int)
+integIterationBnds :: Specs m -> (Int, Int)
 integIterationBnds sc = (i1, i2) where
   i1 = integIterationLoBnd sc
   i2 = integIterationHiBnd sc
 
 -- | Returns the first integration iteration, i.e. zero.
-integIterationLoBnd :: SpecsT m -> Int
+integIterationLoBnd :: Specs m -> Int
 integIterationLoBnd sc = 0
 
 -- | Returns the last integration iteration.
-integIterationHiBnd :: SpecsT m -> Int
+integIterationHiBnd :: Specs m -> Int
 integIterationHiBnd sc =
   let n = round ((spcStopTime sc - 
                   spcStartTime sc) / spcDT sc)
@@ -138,7 +126,7 @@ integIterationHiBnd sc =
      else n
 
 -- | Returns the phases for the specified simulation specs starting from zero.
-integPhases :: SpecsT m -> [Int]
+integPhases :: Specs m -> [Int]
 integPhases sc = 
   case spcMethod sc of
     Euler -> [0]
@@ -146,7 +134,7 @@ integPhases sc =
     RungeKutta4 -> [0, 1, 2, 3]
 
 -- | Returns the first and last integration phases.
-integPhaseBnds :: SpecsT m -> (Int, Int)
+integPhaseBnds :: Specs m -> (Int, Int)
 integPhaseBnds sc = 
   case spcMethod sc of
     Euler -> (0, 0)
@@ -154,11 +142,11 @@ integPhaseBnds sc =
     RungeKutta4 -> (0, 3)
 
 -- | Returns the first integration phase, i.e. zero.
-integPhaseLoBnd :: SpecsT m -> Int
+integPhaseLoBnd :: Specs m -> Int
 integPhaseLoBnd sc = 0
                   
 -- | Returns the last integration phase, 0 for Euler's method, 1 for RK2 and 3 for RK4.
-integPhaseHiBnd :: SpecsT m -> Int
+integPhaseHiBnd :: Specs m -> Int
 integPhaseHiBnd sc = 
   case spcMethod sc of
     Euler -> 0
@@ -167,7 +155,7 @@ integPhaseHiBnd sc =
 
 -- | Returns a simulation time for the integration point specified by 
 -- the specs, iteration and phase.
-basicTime :: SpecsT m -> Int -> Int -> Double
+basicTime :: Specs m -> Int -> Int -> Double
 {-# INLINE basicTime #-}
 basicTime sc n ph =
   if ph < 0 then 
@@ -184,13 +172,13 @@ basicTime sc n ph =
             delta RungeKutta4 3 = spcDT sc
 
 -- | Return the integration time values.
-integTimes :: SpecsT m -> [Double]
+integTimes :: Specs m -> [Double]
 integTimes sc = map t [nl .. nu]
   where (nl, nu) = integIterationBnds sc
         t n = basicTime sc n 0
 
 -- | Return the integration time points.
-integPoints :: RunT m -> [PointT m]
+integPoints :: Run m -> [Point m]
 integPoints r = points
   where sc = runSpecs r
         (nl, nu) = integIterationBnds sc
@@ -202,7 +190,7 @@ integPoints r = points
                            pointPhase = 0 }
 
 -- | Return the start time point.
-integStartPoint :: RunT m -> PointT m
+integStartPoint :: Run m -> Point m
 integStartPoint r = point nl
   where sc = runSpecs r
         (nl, nu) = integIterationBnds sc
@@ -213,7 +201,7 @@ integStartPoint r = point nl
                            pointPhase = 0 }
 
 -- | Return the stop time point.
-integStopPoint :: RunT m -> PointT m
+integStopPoint :: Run m -> Point m
 integStopPoint r = point nu
   where sc = runSpecs r
         (nl, nu) = integIterationBnds sc
@@ -224,7 +212,7 @@ integStopPoint r = point nu
                            pointPhase = 0 }
 
 -- | Return the point at the specified time.
-pointAt :: RunT m -> Double -> PointT m
+pointAt :: Run m -> Double -> Point m
 {-# INLINABLE pointAt #-}
 pointAt r t = p
   where sc = runSpecs r
