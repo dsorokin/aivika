@@ -7,14 +7,13 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
--- The 'ContT' monad is a variation of the standard Cont monad 
+-- The 'Cont' monad is a variation of the standard Cont monad 
 -- and F# async workflow, where the result of applying 
--- the continuations is the 'EventT' computation.
+-- the continuations is the 'Event' computation.
 --
 module Simulation.Aivika.Trans.Internal.Cont
-       (ContTCancellationSource,
-        ContT(..),
-        ContTParams,
+       (ContCancellationSource,
+        ContParams,
         ContCancellation(..),
         Cont(..),
         newContCancellationSource,
@@ -70,14 +69,14 @@ data ContCancellation = CancelTogether
                         -- ^ Cancel the computations in isolation.
 
 -- | It manages the cancellation process.
-data ContTCancellationSource m =
-  ContCancellationSource { contCancellationInitiatedRef :: ProtoRefT m Bool,
-                           contCancellationActivatedRef :: ProtoRefT m Bool,
-                           contCancellationInitiatingSource :: SignalTSource m ()
+data ContCancellationSource m =
+  ContCancellationSource { contCancellationInitiatedRef :: ProtoRef m Bool,
+                           contCancellationActivatedRef :: ProtoRef m Bool,
+                           contCancellationInitiatingSource :: SignalSource m ()
                          }
 
 -- | Create the cancellation source.
-newContCancellationSource :: MonadSim m => SimulationT m (ContTCancellationSource m)
+newContCancellationSource :: MonadSim m => Simulation m (ContCancellationSource m)
 {-# INLINE newContCancellationSource #-}
 newContCancellationSource =
   Simulation $ \r ->
@@ -91,31 +90,31 @@ newContCancellationSource =
                                    }
 
 -- | Signal when the cancellation is intiating.
-contCancellationInitiating :: ContTCancellationSource m -> SignalT m ()
+contCancellationInitiating :: ContCancellationSource m -> Signal m ()
 {-# INLINE contCancellationInitiating #-}
 contCancellationInitiating =
   publishSignal . contCancellationInitiatingSource
 
 -- | Whether the cancellation was initiated.
-contCancellationInitiated :: MonadSim m => ContTCancellationSource m -> (EventT m Bool)
+contCancellationInitiated :: MonadSim m => ContCancellationSource m -> (Event m Bool)
 {-# INLINE contCancellationInitiated #-}
 contCancellationInitiated x =
   Event $ \p -> readProtoRef (contCancellationInitiatedRef x)
 
 -- | Whether the cancellation was activated.
-contCancellationActivated :: MonadSim m => ContTCancellationSource m -> m Bool
+contCancellationActivated :: MonadSim m => ContCancellationSource m -> m Bool
 {-# INLINE contCancellationActivated #-}
 contCancellationActivated =
   readProtoRef . contCancellationActivatedRef
 
 -- | Deactivate the cancellation.
-contCancellationDeactivate :: MonadSim m => ContTCancellationSource m -> m ()
+contCancellationDeactivate :: MonadSim m => ContCancellationSource m -> m ()
 {-# INLINE contCancellationDeactivate #-}
 contCancellationDeactivate x =
   writeProtoRef (contCancellationActivatedRef x) False
 
 -- | If the main computation is cancelled then all the nested ones will be cancelled too.
-contCancellationBind :: MonadSim m => ContTCancellationSource m -> [ContTCancellationSource m] -> EventT m (DisposableEventT m)
+contCancellationBind :: MonadSim m => ContCancellationSource m -> [ContCancellationSource m] -> Event m (DisposableEvent m)
 {-# INLINABLE contCancellationBind #-}
 contCancellationBind x ys =
   Event $ \p ->
@@ -131,13 +130,13 @@ contCancellationBind x ys =
 
 -- | Connect the parent computation to the child one.
 contCancellationConnect :: MonadSim m
-                           => ContTCancellationSource m
+                           => ContCancellationSource m
                            -- ^ the parent
                            -> ContCancellation
                            -- ^ how to connect
-                           -> ContTCancellationSource m
+                           -> ContCancellationSource m
                            -- ^ the child
-                           -> EventT m (DisposableEventT m)
+                           -> Event m (DisposableEvent m)
                            -- ^ computation of the disposable handler
 {-# INLINABLE contCancellationConnect #-}
 contCancellationConnect parent cancellation child =
@@ -163,7 +162,7 @@ contCancellationConnect parent cancellation child =
      return $ h1 <> h2
 
 -- | Initiate the cancellation.
-contCancellationInitiate :: MonadSim m => ContTCancellationSource m -> EventT m ()
+contCancellationInitiate :: MonadSim m => ContCancellationSource m -> Event m ()
 {-# INLINE contCancellationInitiate #-}
 contCancellationInitiate x =
   Event $ \p ->
@@ -173,28 +172,25 @@ contCancellationInitiate x =
           writeProtoRef (contCancellationActivatedRef x) True
           invokeEvent p $ triggerSignal (contCancellationInitiatingSource x) ()
 
--- | The 'ContT' type is similar to the standard Cont monad 
+-- | The 'Cont' type is similar to the standard Cont monad 
 -- and F# async workflow but only the result of applying
--- the continuations return the 'EventT' computation.
-newtype ContT m a = Cont (ContTParams m a -> EventT m ())
-
--- | A convenient type synonym.
-type Cont a = ContT IO a
+-- the continuations return the 'Event' computation.
+newtype Cont m a = Cont (ContParams m a -> Event m ())
 
 -- | The continuation parameters.
-data ContTParams m a = 
-  ContParams { contCont :: a -> EventT m (), 
-               contAux  :: ContTParamsAux m }
+data ContParams m a = 
+  ContParams { contCont :: a -> Event m (), 
+               contAux  :: ContParamsAux m }
 
 -- | The auxiliary continuation parameters.
-data ContTParamsAux m =
-  ContParamsAux { contECont :: IOException -> EventT m (),
-                  contCCont :: () -> EventT m (),
-                  contCancelSource :: ContTCancellationSource m,
+data ContParamsAux m =
+  ContParamsAux { contECont :: IOException -> Event m (),
+                  contCCont :: () -> Event m (),
+                  contCancelSource :: ContCancellationSource m,
                   contCancelFlag :: m Bool,
                   contCatchFlag  :: Bool }
 
-instance MonadSim m => Monad (ContT m) where
+instance MonadSim m => Monad (Cont m) where
 
   {-# INLINE return #-}
   return a = 
@@ -216,7 +212,7 @@ instance MonadSim m => Monad (ContT m) where
               let cont a = invokeCont c (k a)
               in c { contCont = cont }
 
-instance MonadSimTrans ContT where
+instance MonadSimTrans Cont where
 
   {-# INLINE liftComp #-}
   liftComp m =
@@ -226,7 +222,7 @@ instance MonadSimTrans ContT where
     then liftWithCatching m p c
     else liftWithoutCatching m p c
 
-instance ParameterLift ContT where
+instance ParameterLift Cont where
 
   {-# INLINE liftParameter #-}
   liftParameter (Parameter m) = 
@@ -236,7 +232,7 @@ instance ParameterLift ContT where
     then liftWithCatching (m $ pointRun p) p c
     else liftWithoutCatching (m $ pointRun p) p c
 
-instance SimulationLift ContT where
+instance SimulationLift Cont where
 
   {-# INLINE liftSimulation #-}
   liftSimulation (Simulation m) = 
@@ -246,7 +242,7 @@ instance SimulationLift ContT where
     then liftWithCatching (m $ pointRun p) p c
     else liftWithoutCatching (m $ pointRun p) p c
 
-instance DynamicsLift ContT where
+instance DynamicsLift Cont where
 
   {-# INLINE liftDynamics #-}
   liftDynamics (Dynamics m) = 
@@ -256,7 +252,7 @@ instance DynamicsLift ContT where
     then liftWithCatching (m p) p c
     else liftWithoutCatching (m p) p c
 
-instance EventLift ContT where
+instance EventLift Cont where
 
   {-# INLINE liftEvent #-}
   liftEvent (Event m) = 
@@ -266,7 +262,7 @@ instance EventLift ContT where
     then liftWithCatching (m p) p c
     else liftWithoutCatching (m p) p c
 
-instance (MonadSim m, MonadIO m) => MonadIO (ContT m) where
+instance (MonadSim m, MonadIO m) => MonadIO (Cont m) where
 
   {-# INLINE liftIO #-}
   liftIO m =
@@ -276,12 +272,12 @@ instance (MonadSim m, MonadIO m) => MonadIO (ContT m) where
     then liftWithCatching (liftIO m) p c
     else liftWithoutCatching (liftIO m) p c
 
-instance MonadSim m => Functor (ContT m) where
+instance MonadSim m => Functor (Cont m) where
 
   {-# INLINE fmap #-}
   fmap = liftM
 
-instance MonadSim m => Applicative (ContT m) where
+instance MonadSim m => Applicative (Cont m) where
 
   {-# INLINE pure #-}
   pure = return
@@ -290,19 +286,19 @@ instance MonadSim m => Applicative (ContT m) where
   (<*>) = ap
 
 -- | Invoke the computation.
-invokeCont :: ContTParams m a -> ContT m a -> EventT m ()
+invokeCont :: ContParams m a -> Cont m a -> Event m ()
 {-# INLINE invokeCont #-}
 invokeCont p (Cont m) = m p
 
 -- | Cancel the computation.
-cancelCont :: MonadSim m => PointT m -> ContTParams m a -> m ()
+cancelCont :: MonadSim m => Point m -> ContParams m a -> m ()
 {-# NOINLINE cancelCont #-}
 cancelCont p c =
   do contCancellationDeactivate (contCancelSource $ contAux c)
      invokeEvent p $ (contCCont $ contAux c) ()
 
 -- | Like @return a >>= k@.
-callCont :: MonadSim m => (a -> ContT m b) -> a -> ContTParams m b -> EventT m ()
+callCont :: MonadSim m => (a -> Cont m b) -> a -> ContParams m b -> Event m ()
 {-# INLINE callCont #-}
 callCont k a c =
   Event $ \p ->
@@ -311,8 +307,8 @@ callCont k a c =
        then cancelCont p c
        else invokeEvent p $ invokeCont c (k a)
 
--- | Exception handling within 'ContT' computations.
-catchCont :: MonadSim m => ContT m a -> (IOException -> ContT m a) -> ContT m a
+-- | Exception handling within 'Cont' computations.
+catchCont :: MonadSim m => Cont m a -> (IOException -> Cont m a) -> Cont m a
 {-# INLINABLE catchCont #-}
 catchCont (Cont m) h = 
   Cont $ \c0 ->
@@ -326,7 +322,7 @@ catchCont (Cont m) h =
             in c { contAux = (contAux c) { contECont = econt } }
                
 -- | A computation with finalization part.
-finallyCont :: MonadSim m => ContT m a -> ContT m b -> ContT m a
+finallyCont :: MonadSim m => Cont m a -> Cont m b -> Cont m a
 {-# INLINABLE finallyCont #-}
 finallyCont (Cont m) (Cont m') = 
   Cont $ \c0 -> 
@@ -359,29 +355,29 @@ finallyCont (Cont m) (Cont m') =
 
 -- | Throw the exception with the further exception handling.
 -- By some reasons, the standard 'throw' function per se is not handled 
--- properly within 'ContT' computations, altough it will be still handled 
+-- properly within 'Cont' computations, altough it will be still handled 
 -- if it will be hidden under the 'liftIO' function. The problem arises 
 -- namely with the @throw@ function, not 'IO' computations.
-throwCont :: (MonadSim m, MonadIO m) => IOException -> ContT m a
+throwCont :: (MonadSim m, MonadIO m) => IOException -> Cont m a
 {-# INLINABLE throwCont #-}
 throwCont e = liftIO $ throw e
 
 -- | Run the 'Cont' computation with the specified cancelation source 
 -- and flag indicating whether to catch exceptions from the beginning.
 runCont :: MonadSim m
-           => ContT m a
+           => Cont m a
            -- ^ the computation to run
-           -> (a -> EventT m ())
+           -> (a -> Event m ())
            -- ^ the main branch 
-           -> (IOError -> EventT m ())
+           -> (IOError -> Event m ())
            -- ^ the branch for handing exceptions
-           -> (() -> EventT m ())
+           -> (() -> Event m ())
            -- ^ the branch for cancellation
-           -> ContTCancellationSource m
+           -> ContCancellationSource m
            -- ^ the cancellation source
            -> Bool
            -- ^ whether to support the exception handling from the beginning
-           -> EventT m ()
+           -> Event m ()
 {-# INLINE runCont #-}
 runCont (Cont m) cont econt ccont cancelSource catchFlag = 
   m ContParams { contCont = cont,
@@ -392,7 +388,7 @@ runCont (Cont m) cont econt ccont cancelSource catchFlag =
                                    contCancelFlag = contCancellationActivated cancelSource, 
                                    contCatchFlag  = catchFlag } }
   
-liftWithoutCatching :: MonadSim m => m a -> PointT m -> ContTParams m a -> m ()
+liftWithoutCatching :: MonadSim m => m a -> Point m -> ContParams m a -> m ()
 {-# INLINE liftWithoutCatching #-}
 liftWithoutCatching m p c =
   do z <- contCanceled c
@@ -401,7 +397,7 @@ liftWithoutCatching m p c =
        else do a <- m
                invokeEvent p $ contCont c a
 
-liftWithCatching :: MonadSim m => m a -> PointT m -> ContTParams m a -> m ()
+liftWithCatching :: MonadSim m => m a -> Point m -> ContParams m a -> m ()
 {-# NOINLINE liftWithCatching #-}
 liftWithCatching m p c =
   do z <- contCanceled c
@@ -424,7 +420,7 @@ liftWithCatching m p c =
                    invokeEvent p $ (contECont . contAux) c e
 
 -- | Resume the computation by the specified parameters.
-resumeCont :: MonadSim m => ContTParams m a -> a -> EventT m ()
+resumeCont :: MonadSim m => ContParams m a -> a -> Event m ()
 {-# INLINE resumeCont #-}
 resumeCont c a = 
   Event $ \p ->
@@ -434,7 +430,7 @@ resumeCont c a =
        else invokeEvent p $ contCont c a
 
 -- | Resume the exception handling by the specified parameters.
-resumeECont :: MonadSim m => ContTParams m a -> IOException -> EventT m ()
+resumeECont :: MonadSim m => ContParams m a -> IOException -> Event m ()
 {-# INLINE resumeECont #-}
 resumeECont c e = 
   Event $ \p ->
@@ -444,7 +440,7 @@ resumeECont c e =
        else invokeEvent p $ (contECont $ contAux c) e
 
 -- | Test whether the computation is canceled.
-contCanceled :: ContTParams m a -> m Bool
+contCanceled :: ContParams m a -> m Bool
 {-# INLINE contCanceled #-}
 contCanceled c = contCancelFlag $ contAux c
 
@@ -459,11 +455,11 @@ contCanceled c = contCancelFlag $ contAux c
 -- actually executed on a single operating system thread but
 -- they are processed simultaneously by the event queue.
 contParallel :: MonadSim m
-                => [(ContT m a, ContTCancellationSource m)]
+                => [(Cont m a, ContCancellationSource m)]
                 -- ^ the list of pairs:
                 -- the nested computation,
                 -- the cancellation source
-                -> ContT m [a]
+                -> Cont m [a]
 {-# INLINABLE contParallel #-}
 contParallel xs =
   Cont $ \c ->
@@ -524,11 +520,11 @@ contParallel xs =
 -- the results but we are interested in the actions to be peformed by
 -- the nested computations.
 contParallel_ :: MonadSim m
-                 => [(ContT m a, ContTCancellationSource m)]
+                 => [(Cont m a, ContCancellationSource m)]
                  -- ^ the list of pairs:
                  -- the nested computation,
                  -- the cancellation source
-                 -> ContT m ()
+                 -> Cont m ()
 {-# INLINABLE contParallel_ #-}
 contParallel_ xs =
   Cont $ \c ->
@@ -583,8 +579,8 @@ contParallel_ xs =
             then invokeEvent p $ contCont c ()
             else worker
 
--- | Rerun the 'ContT' computation with the specified cancellation source.
-rerunCont :: MonadSim m => ContT m a -> ContTCancellationSource m -> ContT m a
+-- | Rerun the 'Cont' computation with the specified cancellation source.
+rerunCont :: MonadSim m => Cont m a -> ContCancellationSource m -> Cont m a
 {-# INLINABLE rerunCont #-}
 rerunCont x cancelSource =
   Cont $ \c ->
@@ -611,8 +607,8 @@ rerunCont x cancelSource =
        then cancelCont p c
        else worker
 
--- | Run the 'ContT' computation in parallel but connect the cancellation sources.
-spawnCont :: MonadEnq m => ContCancellation -> ContT m () -> ContTCancellationSource m -> ContT m ()
+-- | Run the 'Cont' computation in parallel but connect the cancellation sources.
+spawnCont :: MonadEnq m => ContCancellation -> Cont m () -> ContCancellationSource m -> Cont m ()
 {-# INLINABLE spawnCont #-}
 spawnCont cancellation x cancelSource =
   Cont $ \c ->
@@ -644,7 +640,7 @@ spawnCont cancellation x cancelSource =
        else worker
 
 -- | Freeze the computation parameters temporarily.
-contFreeze :: MonadEnq m => ContTParams m a -> EventT m (EventT m (Maybe (ContTParams m a)))
+contFreeze :: MonadEnq m => ContParams m a -> Event m (Event m (Maybe (ContParams m a)))
 {-# INLINABLE contFreeze #-}
 contFreeze c =
   Event $ \p ->
@@ -681,7 +677,7 @@ contFreeze c =
           return c
      
 -- | Await the signal.
-contAwait :: MonadEnq m => SignalT m a -> ContT m a
+contAwait :: MonadEnq m => Signal m a -> Cont m a
 {-# INLINABLE contAwait #-}
 contAwait signal =
   Cont $ \c ->
