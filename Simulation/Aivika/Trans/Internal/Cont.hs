@@ -382,6 +382,7 @@ runCont :: MonadSim m
            -> Bool
            -- ^ whether to support the exception handling from the beginning
            -> EventT m ()
+{-# INLINE runCont #-}
 runCont (Cont m) cont econt ccont cancelSource catchFlag = 
   m ContParams { contCont = cont,
                  contAux  = 
