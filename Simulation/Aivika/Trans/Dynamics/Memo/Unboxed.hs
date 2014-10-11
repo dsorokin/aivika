@@ -21,7 +21,7 @@ module Simulation.Aivika.Trans.Dynamics.Memo.Unboxed
 import Control.Monad
 
 import Simulation.Aivika.Trans.ProtoRef
-import Simulation.Aivika.Trans.ProtoArray
+import Simulation.Aivika.Trans.ProtoArray.Unboxed
 import Simulation.Aivika.Trans.MonadSim
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
@@ -41,7 +41,7 @@ memoDynamics (Dynamics m) =
          s  = runSession r
          (phl, phu) = integPhaseBnds sc
          (nl, nu)   = integIterationBnds sc
-     arr   <- newProtoUArray_ s ((phl, nl), (phu, nu))
+     arr   <- newProtoArray_ s ((phl, nl), (phu, nu))
      nref  <- newProtoRef s 0
      phref <- newProtoRef s 0
      let r p =
@@ -52,13 +52,13 @@ memoDynamics (Dynamics m) =
                   loop n' ph' = 
                     if (n' > n) || ((n' == n) && (ph' > ph)) 
                     then 
-                      readProtoUArray arr (ph, n)
+                      readProtoArray arr (ph, n)
                     else 
                       let p' = p { pointIteration = n', 
                                    pointPhase = ph',
                                    pointTime = basicTime sc n' ph' }
                       in do a <- m p'
-                            a `seq` writeProtoUArray arr (ph', n') a
+                            a `seq` writeProtoArray arr (ph', n') a
                             if ph' >= phu 
                               then do writeProtoRef phref 0
                                       writeProtoRef nref (n' + 1)
@@ -83,7 +83,7 @@ memo0Dynamics (Dynamics m) =
   do let sc   = runSpecs r
          s    = runSession r
          bnds = integIterationBnds sc
-     arr  <- newProtoUArray_ s bnds
+     arr  <- newProtoArray_ s bnds
      nref <- newProtoRef s 0
      let r p =
            do let sc = pointSpecs p
@@ -91,12 +91,12 @@ memo0Dynamics (Dynamics m) =
                   loop n' = 
                     if n' > n
                     then 
-                      readProtoUArray arr n
+                      readProtoArray arr n
                     else 
                       let p' = p { pointIteration = n', pointPhase = 0,
                                    pointTime = basicTime sc n' 0 }
                       in do a <- m p'
-                            a `seq` writeProtoUArray arr n' a
+                            a `seq` writeProtoArray arr n' a
                             writeProtoRef nref (n' + 1)
                             loop (n' + 1)
               n' <- readProtoRef nref

@@ -15,14 +15,14 @@
 module Simulation.Aivika.Trans.Unboxed
        (Unboxed(..)) where
 
-import Simulation.Aivika.Trans.ProtoArray
+import Simulation.Aivika.Trans.ProtoArray.Unboxed
 
 import Data.Array
 import Data.Int
 import Data.Word
 
 -- | The type which values can be contained in an unboxed array.
-class ProtoUArraying m e => Unboxed m e
+class ProtoArraying m e => Unboxed m e
 
 instance Unboxed IO Bool
 instance Unboxed IO Char
