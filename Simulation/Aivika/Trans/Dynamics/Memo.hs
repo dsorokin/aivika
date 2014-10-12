@@ -37,28 +37,28 @@ memoDynamics :: MonadSim m => Dynamics m e -> Simulation m (Dynamics m e)
 {-# INLINABLE memoDynamics #-}
 memoDynamics (Dynamics m) = 
   Simulation $ \r ->
-  do let sc = runSpecs r
-         s  = runSession r
-         (phl, phu) = integPhaseBnds sc
-         (nl, nu)   = integIterationBnds sc
-     arr   <- newProtoArray_ s ((phl, nl), (phu, nu))
+  do let sc  = runSpecs r
+         s   = runSession r
+         phs = 1 + integPhaseHiBnd sc
+         ns  = 1 + integIterationHiBnd sc
+     arr   <- newProtoArray_ s (ns * phs)
      nref  <- newProtoRef s 0
      phref <- newProtoRef s 0
      let r p = 
-           do let sc  = pointSpecs p
-                  n   = pointIteration p
-                  ph  = pointPhase p
-                  phu = integPhaseHiBnd sc 
+           do let n  = pointIteration p
+                  ph = pointPhase p
+                  i  = n * phs + ph
                   loop n' ph' = 
                     if (n' > n) || ((n' == n) && (ph' > ph)) 
                     then 
-                      readProtoArray arr (ph, n)
+                      readProtoArray arr i
                     else 
                       let p' = p { pointIteration = n', pointPhase = ph',
                                    pointTime = basicTime sc n' ph' }
+                          i' = n' * phs + ph'
                       in do a <- m p'
-                            a `seq` writeProtoArray arr (ph', n') a
-                            if ph' >= phu 
+                            a `seq` writeProtoArray arr i' a
+                            if ph' >= phs - 1 
                               then do writeProtoRef phref 0
                                       writeProtoRef nref (n' + 1)
                                       loop (n' + 1) 0
@@ -79,10 +79,10 @@ memo0Dynamics :: MonadSim m => Dynamics m e -> Simulation m (Dynamics m e)
 {-# INLINABLE memo0Dynamics #-}
 memo0Dynamics (Dynamics m) = 
   Simulation $ \r ->
-  do let sc   = runSpecs r
-         s    = runSession r
-         bnds = integIterationBnds sc
-     arr  <- newProtoArray_ s bnds
+  do let sc = runSpecs r
+         s  = runSession r
+         ns = 1 + integIterationHiBnd sc
+     arr  <- newProtoArray_ s ns
      nref <- newProtoRef s 0
      let r p =
            do let sc = pointSpecs p

@@ -467,7 +467,7 @@ contParallel xs =
   do let n = length xs
          s = runSession $ pointRun p
          worker =
-           do results   <- newProtoArray_ s (1, n)
+           do results   <- newProtoArray_ s n
               counter   <- newProtoRef s 0
               catchRef  <- newProtoRef s Nothing
               hs <- invokeEvent p $
@@ -482,7 +482,7 @@ contParallel xs =
                             f2 <- readProtoRef catchRef
                             case (f1, f2) of
                               (False, Nothing) ->
-                                do rs <- protoArrayElems results
+                                do rs <- protoArrayToList results
                                    invokeEvent p $ resumeCont c rs
                               (False, Just e) ->
                                 invokeEvent p $ resumeECont c e
@@ -506,7 +506,7 @@ contParallel xs =
                     do modifyProtoRef counter (+ 1)
                        -- the main computation was automatically canceled
                        invokeEvent p propagate
-              forM_ (zip [1..n] xs) $ \(i, (x, cancelSource)) ->
+              forM_ (zip [0..n-1] xs) $ \(i, (x, cancelSource)) ->
                 invokeEvent p $
                 runCont x (cont i) econt ccont cancelSource (contCatchFlag $ contAux c)
      z <- contCanceled c
@@ -569,7 +569,7 @@ contParallel_ xs =
                     do modifyProtoRef counter (+ 1)
                        -- the main computation was automatically canceled
                        invokeEvent p propagate
-              forM_ (zip [1..n] xs) $ \(i, (x, cancelSource)) ->
+              forM_ (zip [0..n-1] xs) $ \(i, (x, cancelSource)) ->
                 invokeEvent p $
                 runCont x (cont i) econt ccont cancelSource (contCatchFlag $ contAux c)
      z <- contCanceled c

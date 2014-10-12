@@ -25,57 +25,58 @@ import Simulation.Aivika.Trans.ProtoRef
 class ProtoReferring m => ProtoArraying m where
   
   -- | A prototype of mutable array.
-  data ProtoArray m :: * -> * -> *
+  data ProtoArray m :: * -> *
 
-  -- | Return the bounds of the array.
-  protoArrayBounds :: Ix i => ProtoArray m i e -> m (i, i)
+  -- | Return the array size.
+  protoArrayCount :: ProtoArray m a -> m Int
 
-  -- | Create a new ptototype of mutable array by the specified session and initial value.
-  newProtoArray :: Ix i => Session m -> (i, i) -> e -> m (ProtoArray m i e)
+  -- | Create a new ptototype of mutable array by the specified session,
+  -- size and initial value.
+  newProtoArray :: Session m -> Int -> a -> m (ProtoArray m a)
 
   -- | Create a new ptototype of mutable array by the specified session
-  -- with every element initialised to an undefined value.
-  newProtoArray_ :: Ix i => Session m -> (i, i) -> m (ProtoArray m i e)
+  -- and size with every element initialised to an undefined value.
+  newProtoArray_ :: Session m -> Int -> m (ProtoArray m a)
 
   -- | Read an element from the mutable array.
-  readProtoArray :: Ix i => ProtoArray m i e -> i -> m e
+  readProtoArray :: ProtoArray m a -> Int -> m a
 
   -- | Write the element in the mutable array.
-  writeProtoArray :: Ix i => ProtoArray m i e -> i -> e -> m ()
+  writeProtoArray :: ProtoArray m a -> Int -> a -> m ()
 
   -- | Return a list of the elements.
-  protoArrayElems :: Ix i => ProtoArray m i e -> m [e]
+  protoArrayToList :: ProtoArray m a -> m [a]
 
-  -- | Return a list of the association pairs.
-  protoArrayAssocs :: Ix i => ProtoArray m i e -> m [(i, e)]
+  -- | Create an array by the specified list of elements.
+  protoArrayFromList :: [a] -> m (ProtoArray m a)
 
   -- | Return the elements of the mutable array in an immutable array.
-  freezeProtoArray :: Ix i => ProtoArray m i e -> m (Array i e)
+  freezeProtoArray :: ProtoArray m a -> m (Array Int a)
 
 instance ProtoArraying IO where
 
-  newtype ProtoArray IO i e = ProtoArray (IOArray i e)
+  newtype ProtoArray IO a = ProtoArray (IOArray Int a)
 
-  {-# SPECIALISE INLINE protoArrayBounds :: Ix i => ProtoArray IO i e -> IO (i, i) #-}
-  protoArrayBounds (ProtoArray a) = getBounds a
+  {-# SPECIALISE INLINE protoArrayCount :: ProtoArray IO a -> IO Int #-}
+  protoArrayCount (ProtoArray a) = do { (0, n') <- getBounds a; return $ n' + 1 }
 
-  {-# SPECIALISE INLINE newProtoArray :: Ix i => Session IO -> (i, i) -> e -> IO (ProtoArray IO i e) #-}
-  newProtoArray s bnds e = fmap ProtoArray $ newArray bnds e
+  {-# SPECIALISE INLINE newProtoArray :: Session IO -> Int -> a -> IO (ProtoArray IO a) #-}
+  newProtoArray s n a = fmap ProtoArray $ newArray (0, n - 1) a
 
-  {-# SPECIALISE INLINE newProtoArray_ :: Ix i => Session IO -> (i, i) -> IO (ProtoArray IO i e) #-}
-  newProtoArray_ s bnds = fmap ProtoArray $ newArray_ bnds
+  {-# SPECIALISE INLINE newProtoArray_ :: Session IO -> Int -> IO (ProtoArray IO a) #-}
+  newProtoArray_ s n = fmap ProtoArray $ newArray_ (0, n - 1)
 
-  {-# SPECIALISE INLINE readProtoArray :: Ix i => ProtoArray IO i e -> i -> IO e #-}
+  {-# SPECIALISE INLINE readProtoArray :: ProtoArray IO a -> Int -> IO a #-}
   readProtoArray (ProtoArray a) = readArray a
 
-  {-# SPECIALISE INLINE writeProtoArray :: Ix i => ProtoArray IO i e -> i -> e -> IO () #-}
+  {-# SPECIALISE INLINE writeProtoArray :: ProtoArray IO a -> Int -> a -> IO () #-}
   writeProtoArray (ProtoArray a) = writeArray a
 
-  {-# SPECIALISE INLINE protoArrayElems :: Ix i => ProtoArray IO i e -> IO [e] #-}
-  protoArrayElems (ProtoArray a) = getElems a
+  {-# SPECIALISE INLINE protoArrayToList :: ProtoArray IO a -> IO [a] #-}
+  protoArrayToList (ProtoArray a) = getElems a
 
-  {-# SPECIALISE INLINE protoArrayAssocs :: Ix i => ProtoArray IO i e -> IO [(i, e)] #-}
-  protoArrayAssocs (ProtoArray a) = getAssocs a
+  {-# SPECIALISE INLINE protoArrayFromList :: [a] -> IO (ProtoArray IO a) #-}
+  protoArrayFromList xs = fmap ProtoArray $ newListArray (0, length xs - 1) xs
 
-  {-# SPECIALISE INLINE freezeProtoArray :: Ix i => ProtoArray IO i e -> IO (Array i e) #-}
+  {-# SPECIALISE INLINE freezeProtoArray :: ProtoArray IO a -> IO (Array Int a) #-}
   freezeProtoArray (ProtoArray a) = freeze a

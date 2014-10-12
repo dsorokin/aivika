@@ -36,7 +36,7 @@ import Simulation.Aivika.Trans.ProtoArray
 -- | A prototype of mutable vector.
 data Vector m a =
     Vector { vectorSession  :: Session m,
-             vectorArrayRef :: ProtoRef m (ProtoArray m Int a),
+             vectorArrayRef :: ProtoRef m (ProtoArray m a),
              vectorCountRef :: ProtoRef m Int, 
              vectorCapacityRef :: ProtoRef m Int }
 
@@ -44,7 +44,7 @@ data Vector m a =
 newVector :: ProtoArraying m => Session m -> m (Vector m a)
 {-# INLINABLE newVector #-}
 newVector session = 
-  do array <- newProtoArray_ session (0, 4 - 1)
+  do array <- newProtoArray_ session 4
      arrayRef <- newProtoRef session array
      countRef <- newProtoRef session 0
      capacityRef <- newProtoRef session 4
@@ -60,7 +60,7 @@ copyVector vector =
   do let session = vectorSession vector
      array <- readProtoRef (vectorArrayRef vector)
      count <- readProtoRef (vectorCountRef vector)
-     array' <- newProtoArray_ session (0, count - 1)
+     array' <- newProtoArray_ session count
      arrayRef' <- newProtoRef session array'
      countRef' <- newProtoRef session count
      capacityRef' <- newProtoRef session count
@@ -82,7 +82,7 @@ vectorEnsureCapacity vector capacity =
           count' <- readProtoRef (vectorCountRef vector)
           let capacity'' = max (2 * capacity') capacity
               session    = vectorSession vector
-          array'' <- newProtoArray_ session (0, capacity'' - 1)
+          array'' <- newProtoArray_ session capacity''
           forM_ [0 .. count' - 1] $ \i ->
             do x <- readProtoArray array' i
                writeProtoArray array'' i x
@@ -198,7 +198,7 @@ vectorIndex vector item =
                      else loop $ index + 1
      loop 0
 
-vectorBinarySearch' :: (ProtoArraying m, Ord a) => ProtoArray m Int a -> a -> Int -> Int -> m Int
+vectorBinarySearch' :: (ProtoArraying m, Ord a) => ProtoArray m a -> a -> Int -> Int -> m Int
 {-# INLINABLE vectorBinarySearch' #-}
 vectorBinarySearch' array item left right =
   if left > right 
