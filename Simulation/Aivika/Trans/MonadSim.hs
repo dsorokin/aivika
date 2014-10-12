@@ -22,7 +22,6 @@ import Simulation.Aivika.Trans.Exception
 import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.ProtoRef
 import Simulation.Aivika.Trans.ProtoArray
-import Simulation.Aivika.Trans.ProtoVector
 import Simulation.Aivika.Trans.Unboxed
 import Simulation.Aivika.Trans.Generator
 import Simulation.Aivika.Trans.Internal.Specs
@@ -33,7 +32,6 @@ class (ExceptionHandling m,
        Sessionning m,
        ProtoReferring m,
        ProtoArraying m,
-       ProtoVectoring m,
        Unboxed m Double,
        Generating m,
        EventQueueable m) => MonadSim m

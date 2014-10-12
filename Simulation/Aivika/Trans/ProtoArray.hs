@@ -18,10 +18,11 @@ import Data.Array
 import Data.Array.IO.Safe
 
 import Simulation.Aivika.Trans.Session
+import Simulation.Aivika.Trans.ProtoRef
 
 -- | A monad within which computation we can create and work with
 -- the prototype of mutable arrays.
-class Monad m => ProtoArraying m where
+class ProtoReferring m => ProtoArraying m where
   
   -- | A prototype of mutable array.
   data ProtoArray m :: * -> * -> *

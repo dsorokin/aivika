@@ -60,8 +60,8 @@ import Control.Monad.Trans
 
 import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.ProtoRef
-import qualified Simulation.Aivika.Trans.ProtoVector as V
-import qualified Simulation.Aivika.Trans.ProtoVector.Unboxed as UV
+import qualified Simulation.Aivika.Trans.Vector as V
+import qualified Simulation.Aivika.Trans.Vector.Unboxed as UV
 import Simulation.Aivika.Trans.MonadSim
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
@@ -274,8 +274,8 @@ emptySignal =
 data SignalHistory m a =
   SignalHistory { signalHistorySignal :: Signal m a,  
                   -- ^ The signal for which the history is created.
-                  signalHistoryTimes  :: UV.ProtoVector m Double,
-                  signalHistoryValues :: V.ProtoVector m a }
+                  signalHistoryTimes  :: UV.Vector m Double,
+                  signalHistoryValues :: V.Vector m a }
 
 -- | Create a history of the signal values.
 newSignalHistory :: MonadSim m => Signal m a -> Event m (SignalHistory m a)
@@ -290,18 +290,18 @@ newSignalHistoryStartingWith :: MonadSim m => Maybe a -> Signal m a -> Event m (
 newSignalHistoryStartingWith init signal =
   Event $ \p ->
   do let s = runSession $ pointRun p
-     ts <- UV.newProtoVector s
-     xs <- V.newProtoVector s
+     ts <- UV.newVector s
+     xs <- V.newVector s
      case init of
        Nothing -> return ()
        Just a ->
-         do UV.appendProtoVector ts (pointTime p)
-            V.appendProtoVector xs a
+         do UV.appendVector ts (pointTime p)
+            V.appendVector xs a
      invokeEvent p $
        handleSignal_ signal $ \a ->
        Event $ \p ->
-       do UV.appendProtoVector ts (pointTime p)
-          V.appendProtoVector xs a
+       do UV.appendVector ts (pointTime p)
+          V.appendVector xs a
      return SignalHistory { signalHistorySignal = signal,
                             signalHistoryTimes  = ts,
                             signalHistoryValues = xs }
@@ -311,8 +311,8 @@ readSignalHistory :: MonadSim m => SignalHistory m a -> Event m (Array Int Doubl
 {-# INLINE readSignalHistory #-}
 readSignalHistory history =
   Event $ \p ->
-  do xs <- UV.freezeProtoVector (signalHistoryTimes history)
-     ys <- V.freezeProtoVector (signalHistoryValues history)
+  do xs <- UV.freezeVector (signalHistoryTimes history)
+     ys <- V.freezeVector (signalHistoryValues history)
      return (xs, ys)     
      
 -- | Trigger the signal with the current time.
