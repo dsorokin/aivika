@@ -20,7 +20,7 @@ import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Dynamics
 
 -- | Return the initial value.
-initDynamics :: DynamicsT m a -> DynamicsT m a
+initDynamics :: Dynamics m a -> Dynamics m a
 {-# INLINE initDynamics #-}
 initDynamics (Dynamics m) =
   Dynamics $ \p ->
@@ -30,7 +30,7 @@ initDynamics (Dynamics m) =
              pointPhase = 0 }
 
 -- | Discretize the computation in the integration time points.
-discreteDynamics :: DynamicsT m a -> DynamicsT m a
+discreteDynamics :: Dynamics m a -> Dynamics m a
 {-# INLINE discreteDynamics #-}
 discreteDynamics (Dynamics m) =
   Dynamics $ \p ->
@@ -45,7 +45,7 @@ discreteDynamics (Dynamics m) =
 -- | Interpolate the computation based on the integration time points only.
 -- Unlike the 'discreteDynamics' function it knows about the intermediate 
 -- time points that are used in the Runge-Kutta method.
-interpolateDynamics :: DynamicsT m a -> DynamicsT m a
+interpolateDynamics :: Dynamics m a -> Dynamics m a
 {-# INLINE interpolateDynamics #-}
 interpolateDynamics (Dynamics m) = 
   Dynamics $ \p -> 
