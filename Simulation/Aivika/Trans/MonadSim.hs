@@ -36,8 +36,6 @@ class (ExceptionHandling m,
        Generating m,
        EventQueueable m) => MonadSim m
 
-instance MonadSim IO
-
 -- | A variant of the standard 'MonadTrans' type class with one difference:
 -- the computation that will be lifted into another must be 'MonadSim' instead of
 -- more general and less restricted 'Monad'.

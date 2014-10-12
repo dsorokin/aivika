@@ -34,7 +34,6 @@ import Data.IORef
 
 import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.Generator
-import qualified Simulation.Aivika.Trans.PriorityQueue as PQ
 
 -- | It defines the simulation specs.
 data Specs m = Specs { spcStartTime :: Double,    -- ^ the start time
@@ -76,25 +75,6 @@ class EventQueueable m where
 
   -- | Create a new event queue by the specified specs with simulation session.
   newEventQueue :: Session m -> Specs m -> m (EventQueue m)
-
-instance EventQueueable IO where
-
-  data EventQueue IO =
-    EventQueue { queuePQ :: PQ.PriorityQueue (Point IO -> IO ()),
-                 -- ^ the underlying priority queue
-                 queueBusy :: IORef Bool,
-                 -- ^ whether the queue is currently processing events
-                 queueTime :: IORef Double
-                 -- ^ the actual time of the event queue
-               }
-  
-  newEventQueue session specs = 
-    do f <- newIORef False
-       t <- newIORef $ spcStartTime specs
-       pq <- PQ.newQueue
-       return EventQueue { queuePQ   = pq,
-                           queueBusy = f,
-                           queueTime = t }
 
 -- | Returns the integration iterations starting from zero.
 integIterations :: Specs m -> [Int]

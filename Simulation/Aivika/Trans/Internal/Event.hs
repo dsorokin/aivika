@@ -1,5 +1,5 @@
 
-{-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE RecursiveDo, TypeFamilies #-}
 
 -- |
 -- Module     : Simulation.Aivika.Trans.Internal.Event
@@ -54,9 +54,10 @@ import Control.Monad.Trans
 import Control.Monad.Fix
 import Control.Applicative
 
-import qualified Simulation.Aivika.Trans.PriorityQueue as PQ
+import qualified Simulation.Aivika.PriorityQueue as PQ
 
 import Simulation.Aivika.Trans.Exception
+import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.ProtoRef
 import Simulation.Aivika.Trans.MonadSim
 import Simulation.Aivika.Trans.Internal.Specs
@@ -217,6 +218,25 @@ class EventQueueing m where
   -- be yet actuated.
   eventQueueCount :: Event m Int
 
+instance EventQueueable IO where
+
+  data EventQueue IO =
+    EventQueue { queuePQ :: PQ.PriorityQueue (Point IO -> IO ()),
+                 -- ^ the underlying priority queue
+                 queueBusy :: IORef Bool,
+                 -- ^ whether the queue is currently processing events
+                 queueTime :: IORef Double
+                 -- ^ the actual time of the event queue
+               }
+  
+  newEventQueue session specs = 
+    do f <- newIORef False
+       t <- newIORef $ spcStartTime specs
+       pq <- PQ.newQueue
+       return EventQueue { queuePQ   = pq,
+                           queueBusy = f,
+                           queueTime = t }
+
 instance EventQueueing IO where
   
   {-# INLINE enqueueEvent #-}
@@ -238,6 +258,7 @@ instance EventQueueing IO where
 -- | Such a simulation monad that allows enqueueing events.
 class (MonadSim m, EventQueueing m) => MonadEnq m
 
+instance MonadSim IO
 instance MonadEnq IO
 
 -- | Process the pending events.
