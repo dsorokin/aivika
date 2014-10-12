@@ -25,7 +25,7 @@ import Control.Monad
 
 import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.ProtoRef
-import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Comp
 
 -- | A cell of the double-linked list.
 data DoubleLinkedItem m a = 

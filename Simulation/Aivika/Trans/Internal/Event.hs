@@ -23,7 +23,7 @@ module Simulation.Aivika.Trans.Internal.Event
         -- * Event Queue
         EventQueueable(..),
         EventQueueing(..),
-        MonadEnq,
+        Enq,
         enqueueEventWithCancellation,
         enqueueEventWithTimes,
         enqueueEventWithPoints,
@@ -58,7 +58,7 @@ import qualified Simulation.Aivika.PriorityQueue as PQ
 import Simulation.Aivika.Trans.Exception
 import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.ProtoRef
-import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
@@ -107,7 +107,7 @@ instance MonadIO m => MonadIO (Event m) where
 class EventLift t where
   
   -- | Lift the specified 'Event' computation into another computation.
-  liftEvent :: MonadSim m => Event m a -> t m a
+  liftEvent :: Comp m => Event m a -> t m a
 
 instance EventLift Event where
   
@@ -130,7 +130,7 @@ instance ParameterLift Event where
   liftParameter (Parameter x) = Event $ x . pointRun
 
 -- | Exception handling within 'Event' computations.
-catchEvent :: MonadSim m => Event m a -> (IOException -> Event m a) -> Event m a
+catchEvent :: Comp m => Event m a -> (IOException -> Event m a) -> Event m a
 {-# INLINABLE catchEvent #-}
 catchEvent (Event m) h =
   Event $ \p -> 
@@ -138,14 +138,14 @@ catchEvent (Event m) h =
   let Event m' = h e in m' p
                            
 -- | A computation with finalization part like the 'finally' function.
-finallyEvent :: MonadSim m => Event m a -> Event m b -> Event m a
+finallyEvent :: Comp m => Event m a -> Event m b -> Event m a
 {-# INLINABLE finallyEvent #-}
 finallyEvent (Event m) (Event m') =
   Event $ \p ->
   finallyComp (m p) (m' p)
 
 -- | Like the standard 'throw' function.
-throwEvent :: MonadSim m => IOException -> Event m a
+throwEvent :: Comp m => IOException -> Event m a
 {-# INLINABLE throwEvent #-}
 throwEvent = throw
 
@@ -218,29 +218,29 @@ class EventQueueing m where
   eventQueueCount :: Event m Int
 
 -- | Such a simulation monad that allows enqueueing events.
-class (MonadSim m, EventQueueing m) => MonadEnq m
+class (Comp m, EventQueueing m) => Enq m
 
 -- | Run the 'Event' computation in the start time involving all
 -- pending 'CurrentEvents' in the processing too.
-runEventInStartTime :: MonadEnq m => Event m a -> Simulation m a
+runEventInStartTime :: Enq m => Event m a -> Simulation m a
 {-# INLINE runEventInStartTime #-}
 runEventInStartTime = runDynamicsInStartTime . runEvent
 
 -- | Run the 'Event' computation in the stop time involving all
 -- pending 'CurrentEvents' in the processing too.
-runEventInStopTime :: MonadEnq m => Event m a -> Simulation m a
+runEventInStopTime :: Enq m => Event m a -> Simulation m a
 {-# INLINE runEventInStopTime #-}
 runEventInStopTime = runDynamicsInStopTime . runEvent
 
 -- | Actuate the event handler in the specified time points.
-enqueueEventWithTimes :: MonadEnq m => [Double] -> Event m () -> Event m ()
+enqueueEventWithTimes :: Enq m => [Double] -> Event m () -> Event m ()
 {-# INLINE enqueueEventWithTimes #-}
 enqueueEventWithTimes ts e = loop ts
   where loop []       = return ()
         loop (t : ts) = enqueueEvent t $ e >> loop ts
        
 -- | Actuate the event handler in the specified time points.
-enqueueEventWithPoints :: MonadEnq m => [Point m] -> Event m () -> Event m ()
+enqueueEventWithPoints :: Enq m => [Point m] -> Event m () -> Event m ()
 {-# INLINE enqueueEventWithPoints #-}
 enqueueEventWithPoints xs (Event e) = loop xs
   where loop []       = return ()
@@ -250,7 +250,7 @@ enqueueEventWithPoints xs (Event e) = loop xs
                            invokeEvent p $ loop xs
                            
 -- | Actuate the event handler in the integration time points.
-enqueueEventWithIntegTimes :: MonadEnq m => Event m () -> Event m ()
+enqueueEventWithIntegTimes :: Enq m => Event m () -> Event m ()
 {-# INLINE enqueueEventWithIntegTimes #-}
 enqueueEventWithIntegTimes e =
   Event $ \p ->
@@ -268,7 +268,7 @@ data EventCancellation m =
                     }
 
 -- | Enqueue the event with an ability to cancel it.
-enqueueEventWithCancellation :: MonadEnq m => Double -> Event m () -> Event m (EventCancellation m)
+enqueueEventWithCancellation :: Enq m => Double -> Event m () -> Event m (EventCancellation m)
 {-# INLINE enqueueEventWithCancellation #-}
 enqueueEventWithCancellation t e =
   Event $ \p ->
@@ -299,7 +299,7 @@ enqueueEventWithCancellation t e =
 
 -- | Memoize the 'Event' computation, always returning the same value
 -- within a simulation run.
-memoEvent :: MonadSim m => Event m a -> Simulation m (Event m a)
+memoEvent :: Comp m => Event m a -> Simulation m (Event m a)
 {-# INLINE memoEvent #-}
 memoEvent m =
   Simulation $ \r ->
@@ -322,7 +322,7 @@ memoEvent m =
 -- computation is always synchronized with the event queue which time
 -- flows in one direction only. This synchronization is a key difference
 -- between the 'Event' and 'Dynamics' computations.
-memoEventInTime :: MonadSim m => Event m a -> Simulation m (Event m a)
+memoEventInTime :: Comp m => Event m a -> Simulation m (Event m a)
 {-# INLINE memoEventInTime #-}
 memoEventInTime m =
   Simulation $ \r ->
@@ -339,7 +339,7 @@ memoEventInTime m =
                  return v
 
 -- | Enqueue the event which must be actuated with the current modeling time but later.
-yieldEvent :: MonadEnq m => Event m () -> Event m ()
+yieldEvent :: Enq m => Event m () -> Event m ()
 {-# INLINE yieldEvent #-}
 yieldEvent m =
   Event $ \p ->

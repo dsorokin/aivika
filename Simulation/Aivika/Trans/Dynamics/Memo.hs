@@ -23,7 +23,7 @@ import Control.Monad
 
 import Simulation.Aivika.Trans.ProtoRef
 import Simulation.Aivika.Trans.ProtoArray
-import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
@@ -33,7 +33,7 @@ import Simulation.Aivika.Trans.Dynamics.Interpolate
 -- | Memoize and order the computation in the integration time points using 
 -- the interpolation that knows of the Runge-Kutta method. The values are
 -- calculated sequentially starting from 'starttime'.
-memoDynamics :: MonadSim m => Dynamics m e -> Simulation m (Dynamics m e)
+memoDynamics :: Comp m => Dynamics m e -> Simulation m (Dynamics m e)
 {-# INLINABLE memoDynamics #-}
 memoDynamics (Dynamics m) = 
   Simulation $ \r ->
@@ -75,7 +75,7 @@ memoDynamics (Dynamics m) =
 -- difference when we request for values in the intermediate time points
 -- that are used by this method to integrate. In general case you should 
 -- prefer the 'memo0Dynamics' function above 'memoDynamics'.
-memo0Dynamics :: MonadSim m => Dynamics m e -> Simulation m (Dynamics m e)
+memo0Dynamics :: Comp m => Dynamics m e -> Simulation m (Dynamics m e)
 {-# INLINABLE memo0Dynamics #-}
 memo0Dynamics (Dynamics m) = 
   Simulation $ \r ->
@@ -106,7 +106,7 @@ memo0Dynamics (Dynamics m) =
 -- the integration time points. It is equivalent to a call of the
 -- 'memo0Dynamics' function but significantly more efficient, for the array 
 -- is not created.
-iterateDynamics :: MonadSim m => Dynamics m () -> Simulation m (Dynamics m ())
+iterateDynamics :: Comp m => Dynamics m () -> Simulation m (Dynamics m ())
 {-# INLINABLE iterateDynamics #-}
 iterateDynamics (Dynamics m) = 
   Simulation $ \r ->
@@ -128,7 +128,7 @@ iterateDynamics (Dynamics m) =
      return $ discreteDynamics $ Dynamics r
 
 -- | Memoize and unzip the computation of pairs, applying the 'memoDynamics' function.
-unzipDynamics :: MonadSim m => Dynamics m (a, b) -> Simulation m (Dynamics m a, Dynamics m b)
+unzipDynamics :: Comp m => Dynamics m (a, b) -> Simulation m (Dynamics m a, Dynamics m b)
 {-# INLINABLE unzipDynamics #-}
 unzipDynamics m =
   Simulation $ \r ->
@@ -144,7 +144,7 @@ unzipDynamics m =
      return (ma, mb)
 
 -- | Memoize and unzip the computation of pairs, applying the 'memo0Dynamics' function.
-unzip0Dynamics :: MonadSim m => Dynamics m (a, b) -> Simulation m (Dynamics m a, Dynamics m b)
+unzip0Dynamics :: Comp m => Dynamics m (a, b) -> Simulation m (Dynamics m a, Dynamics m b)
 {-# INLINABLE unzip0Dynamics #-}
 unzip0Dynamics m =
   Simulation $ \r ->

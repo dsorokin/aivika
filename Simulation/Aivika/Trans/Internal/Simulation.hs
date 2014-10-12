@@ -43,7 +43,7 @@ import Simulation.Aivika.Trans.Exception
 import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.ProtoRef
 import Simulation.Aivika.Trans.Generator
-import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 
@@ -64,7 +64,7 @@ instance Monad m => Monad (Simulation m) where
        m' r
 
 -- | Run the simulation using the specified specs.
-runSimulation :: MonadSim m => Simulation m a -> Specs m -> m a
+runSimulation :: Comp m => Simulation m a -> Specs m -> m a
 {-# INLINABLE runSimulation #-}
 runSimulation (Simulation m) sc =
   do s <- newSession
@@ -79,7 +79,7 @@ runSimulation (Simulation m) sc =
 
 -- | Run the given number of simulations using the specified specs, 
 --   where each simulation is distinguished by its index 'simulationIndex'.
-runSimulations :: MonadSim m => Simulation m a -> Specs m -> Int -> [m a]
+runSimulations :: Comp m => Simulation m a -> Specs m -> Int -> [m a]
 {-# INLINABLE runSimulations #-}
 runSimulations (Simulation m) sc runs = map f [1 .. runs]
   where f i = do s <- newSession
@@ -134,7 +134,7 @@ instance MonadIO m => MonadIO (Simulation m) where
 class SimulationLift t where
   
   -- | Lift the specified 'Simulation' computation into another computation.
-  liftSimulation :: MonadSim m => Simulation m a -> t m a
+  liftSimulation :: Comp m => Simulation m a -> t m a
 
 instance SimulationLift Simulation where
   
@@ -147,7 +147,7 @@ instance ParameterLift Simulation where
   liftParameter (Parameter x) = Simulation x
     
 -- | Exception handling within 'Simulation' computations.
-catchSimulation :: MonadSim m => Simulation m a -> (IOException -> Simulation m a) -> Simulation m a
+catchSimulation :: Comp m => Simulation m a -> (IOException -> Simulation m a) -> Simulation m a
 {-# INLINABLE catchSimulation #-}
 catchSimulation (Simulation m) h =
   Simulation $ \r -> 
@@ -155,14 +155,14 @@ catchSimulation (Simulation m) h =
   let Simulation m' = h e in m' r
                            
 -- | A computation with finalization part like the 'finally' function.
-finallySimulation :: MonadSim m => Simulation m a -> Simulation m b -> Simulation m a
+finallySimulation :: Comp m => Simulation m a -> Simulation m b -> Simulation m a
 {-# INLINABLE finallySimulation #-}
 finallySimulation (Simulation m) (Simulation m') =
   Simulation $ \r ->
   finallyComp (m r) (m' r)
 
 -- | Like the standard 'throw' function.
-throwSimulation :: MonadSim m => IOException -> Simulation m a
+throwSimulation :: Comp m => IOException -> Simulation m a
 {-# INLINABLE throwSimulation #-}
 throwSimulation = throw
 
@@ -180,7 +180,7 @@ instance MonadFix m => MonadFix (Simulation m) where
 
 -- | Memoize the 'Simulation' computation, always returning the same value
 -- within a simulation run.
-memoSimulation :: MonadSim m => Simulation m a -> Simulation m (Simulation m a)
+memoSimulation :: Comp m => Simulation m a -> Simulation m (Simulation m a)
 {-# INLINABLE memoSimulation #-}
 memoSimulation m =
   Simulation $ \r ->

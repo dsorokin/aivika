@@ -40,7 +40,7 @@ import Control.Monad.Fix
 import Control.Applicative
 
 import Simulation.Aivika.Trans.Exception
-import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
@@ -162,7 +162,7 @@ instance MonadIO m => MonadIO (Dynamics m) where
 class DynamicsLift t where
   
   -- | Lift the specified 'Dynamics' computation into another computation.
-  liftDynamics :: MonadSim m => Dynamics m a -> t m a
+  liftDynamics :: Comp m => Dynamics m a -> t m a
 
 instance DynamicsLift Dynamics where
   
@@ -180,7 +180,7 @@ instance ParameterLift Dynamics where
   liftParameter (Parameter x) = Dynamics $ x . pointRun
   
 -- | Exception handling within 'Dynamics' computations.
-catchDynamics :: MonadSim m => Dynamics m a -> (IOException -> Dynamics m a) -> Dynamics m a
+catchDynamics :: Comp m => Dynamics m a -> (IOException -> Dynamics m a) -> Dynamics m a
 {-# INLINABLE catchDynamics #-}
 catchDynamics (Dynamics m) h =
   Dynamics $ \p -> 
@@ -188,14 +188,14 @@ catchDynamics (Dynamics m) h =
   let Dynamics m' = h e in m' p
                            
 -- | A computation with finalization part like the 'finally' function.
-finallyDynamics :: MonadSim m => Dynamics m a -> Dynamics m b -> Dynamics m a
+finallyDynamics :: Comp m => Dynamics m a -> Dynamics m b -> Dynamics m a
 {-# INLINABLE finallyDynamics #-}
 finallyDynamics (Dynamics m) (Dynamics m') =
   Dynamics $ \p ->
   finallyComp (m p) (m' p)
 
 -- | Like the standard 'throw' function.
-throwDynamics :: MonadSim m => IOException -> Dynamics m a
+throwDynamics :: Comp m => IOException -> Dynamics m a
 {-# INLINABLE throwDynamics #-}
 throwDynamics = throw
 

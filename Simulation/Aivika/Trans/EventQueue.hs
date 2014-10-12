@@ -23,7 +23,7 @@ import Control.Monad
 import qualified Simulation.Aivika.PriorityQueue as PQ
 
 import Simulation.Aivika.Trans.Session
-import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Internal.Event
@@ -65,8 +65,8 @@ instance EventQueueing IO where
   eventQueueCount =
     Event $ PQ.queueCount . queuePQ . runEventQueue . pointRun
 
-instance MonadSim IO
-instance MonadEnq IO
+instance Comp IO
+instance Enq IO
 
 -- | Process the pending events.
 processPendingEventsCore :: Bool -> Dynamics IO ()

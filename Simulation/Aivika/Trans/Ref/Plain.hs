@@ -24,7 +24,7 @@ import Control.Monad.Trans
 
 import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.ProtoRef
-import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Event
@@ -36,7 +36,7 @@ newtype Ref m a =
   Ref { refValue :: ProtoRef m a }
 
 -- | Create a new reference.
-newRef :: MonadSim m => a -> Simulation m (Ref m a)
+newRef :: Comp m => a -> Simulation m (Ref m a)
 {-# INLINE newRef #-}
 newRef a =
   Simulation $ \r ->
@@ -45,18 +45,18 @@ newRef a =
      return Ref { refValue = x }
      
 -- | Read the value of a reference.
-readRef :: MonadSim m => Ref m a -> Event m a
+readRef :: Comp m => Ref m a -> Event m a
 {-# INLINE readRef #-}
 readRef r = Event $ \p -> readProtoRef (refValue r)
 
 -- | Write a new value into the reference.
-writeRef :: MonadSim m => Ref m a -> a -> Event m ()
+writeRef :: Comp m => Ref m a -> a -> Event m ()
 {-# INLINE writeRef #-}
 writeRef r a = Event $ \p -> 
   a `seq` writeProtoRef (refValue r) a
 
 -- | Mutate the contents of the reference.
-modifyRef :: MonadSim m => Ref m a -> (a -> a) -> Event m ()
+modifyRef :: Comp m => Ref m a -> (a -> a) -> Event m ()
 {-# INLINE modifyRef #-}
 modifyRef r f = Event $ \p -> 
   do a <- readProtoRef (refValue r)

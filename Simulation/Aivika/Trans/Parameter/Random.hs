@@ -35,14 +35,14 @@ import System.Random
 import Control.Monad.Trans
 
 import Simulation.Aivika.Trans.Generator
-import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Dynamics
 import Simulation.Aivika.Trans.Dynamics.Memo.Unboxed
 
 -- | Computation that generates a new random number distributed uniformly.
-randomUniform :: MonadSim m
+randomUniform :: Comp m
                  => Double     -- ^ minimum
                  -> Double  -- ^ maximum
                  -> Parameter m Double
@@ -53,7 +53,7 @@ randomUniform min max =
   in generateUniform g min max
 
 -- | Computation that generates a new random integer number distributed uniformly.
-randomUniformInt :: MonadSim m
+randomUniformInt :: Comp m
                     => Int     -- ^ minimum
                     -> Int  -- ^ maximum
                     -> Parameter m Int
@@ -64,7 +64,7 @@ randomUniformInt min max =
   in generateUniformInt g min max
 
 -- | Computation that generates a new random number distributed normally.
-randomNormal :: MonadSim m
+randomNormal :: Comp m
                 => Double     -- ^ mean
                 -> Double  -- ^ deviation
                 -> Parameter m Double
@@ -76,7 +76,7 @@ randomNormal mu nu =
 
 -- | Computation that returns a new exponential random number with the specified mean
 -- (the reciprocal of the rate).
-randomExponential :: MonadSim m
+randomExponential :: Comp m
                      => Double
                      -- ^ the mean (the reciprocal of the rate)
                      -> Parameter m Double
@@ -88,7 +88,7 @@ randomExponential mu =
 
 -- | Computation that returns a new Erlang random number with the specified scale
 -- (the reciprocal of the rate) and integer shape.
-randomErlang :: MonadSim m
+randomErlang :: Comp m
                 => Double
                 -- ^ the scale (the reciprocal of the rate)
                 -> Int
@@ -101,7 +101,7 @@ randomErlang beta m =
   in generateErlang g beta m
 
 -- | Computation that returns a new Poisson random number with the specified mean.
-randomPoisson :: MonadSim m
+randomPoisson :: Comp m
                  => Double
                  -- ^ the mean
                  -> Parameter m Int
@@ -113,7 +113,7 @@ randomPoisson mu =
 
 -- | Computation that returns a new binomial random number with the specified
 -- probability and trials.
-randomBinomial :: MonadSim m
+randomBinomial :: Comp m
                   => Double  -- ^ the probability
                   -> Int  -- ^ the number of trials
                   -> Parameter m Int
@@ -124,7 +124,7 @@ randomBinomial prob trials =
   in generateBinomial g prob trials
 
 -- | Computation that returns 'True' in case of success.
-randomTrue :: MonadSim m
+randomTrue :: Comp m
               => Double      -- ^ the probability of the success
               -> Parameter m Bool
 {-# INLINE randomTrue #-}              
@@ -133,7 +133,7 @@ randomTrue p =
      return (x <= p)
 
 -- | Computation that returns 'False' in case of success.
-randomFalse :: MonadSim m
+randomFalse :: Comp m
                => Double      -- ^ the probability of the success
                -> Parameter m Bool
 {-# INLINE randomFalse #-}

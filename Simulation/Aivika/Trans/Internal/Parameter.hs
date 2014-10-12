@@ -54,7 +54,7 @@ import Data.Array
 import Simulation.Aivika.Trans.Exception
 import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.Generator
-import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
 
 -- | The 'Parameter' monad that allows specifying the model parameters.
@@ -77,7 +77,7 @@ instance Monad m => Monad (Parameter m) where
        m' r
 
 -- | Run the parameter using the specified specs.
-runParameter :: MonadSim m => Parameter m a -> Specs m -> m a
+runParameter :: Comp m => Parameter m a -> Specs m -> m a
 {-# INLINABLE runParameter #-}
 runParameter (Parameter m) sc =
   do s <- newSession
@@ -92,7 +92,7 @@ runParameter (Parameter m) sc =
 
 -- | Run the given number of parameters using the specified specs, 
 --   where each parameter is distinguished by its index 'parameterIndex'.
-runParameters :: MonadSim m => Parameter m a -> Specs m -> Int -> [m a]
+runParameters :: Comp m => Parameter m a -> Specs m -> Int -> [m a]
 {-# INLINABLE runParameters #-}
 runParameters (Parameter m) sc runs = map f [1 .. runs]
   where f i = do s <- newSession
@@ -195,7 +195,7 @@ instance MonadIO m => MonadIO (Parameter m) where
 class ParameterLift t where
   
   -- | Lift the specified 'Parameter' computation into another computation.
-  liftParameter :: MonadSim m => Parameter m a -> t m a
+  liftParameter :: Comp m => Parameter m a -> t m a
 
 instance ParameterLift Parameter where
   
@@ -203,7 +203,7 @@ instance ParameterLift Parameter where
   liftParameter = id
     
 -- | Exception handling within 'Parameter' computations.
-catchParameter :: MonadSim m => Parameter m a -> (IOException -> Parameter m a) -> Parameter m a
+catchParameter :: Comp m => Parameter m a -> (IOException -> Parameter m a) -> Parameter m a
 {-# INLINABLE catchParameter #-}
 catchParameter (Parameter m) h =
   Parameter $ \r -> 
@@ -211,14 +211,14 @@ catchParameter (Parameter m) h =
   let Parameter m' = h e in m' r
                            
 -- | A computation with finalization part like the 'finally' function.
-finallyParameter :: MonadSim m => Parameter m a -> Parameter m b -> Parameter m a
+finallyParameter :: Comp m => Parameter m a -> Parameter m b -> Parameter m a
 {-# INLINABLE finallyParameter #-}
 finallyParameter (Parameter m) (Parameter m') =
   Parameter $ \r ->
   finallyComp (m r) (m' r)
 
 -- | Like the standard 'throw' function.
-throwParameter :: MonadSim m => IOException -> Parameter m a
+throwParameter :: Comp m => IOException -> Parameter m a
 {-# INLINABLE throwParameter #-}
 throwParameter = throw
 

@@ -15,11 +15,13 @@ module Simulation.Aivika.Trans
         -- module Simulation.Aivika.Trans.Agent,
         -- module Simulation.Aivika.Trans.Arrival,
         -- module Simulation.Aivika.Trans.Circuit,
+        module Simulation.Aivika.Trans.Comp,
         module Simulation.Aivika.Trans.Cont,
         module Simulation.Aivika.Trans.Dynamics,
         module Simulation.Aivika.Trans.Dynamics.Interpolate,
         module Simulation.Aivika.Trans.Dynamics.Memo.Unboxed,
         -- module Simulation.Aivika.Trans.Dynamics.Random,
+        module Simulation.Aivika.Trans.Enq,
         module Simulation.Aivika.Trans.Event,
         module Simulation.Aivika.Trans.EventQueue,
         module Simulation.Aivika.Trans.Generator,
@@ -51,11 +53,13 @@ module Simulation.Aivika.Trans
 -- import Simulation.Aivika.Trans.Agent
 -- import Simulation.Aivika.Trans.Arrival
 -- import Simulation.Aivika.Trans.Circuit
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Cont
 import Simulation.Aivika.Trans.Dynamics
 import Simulation.Aivika.Trans.Dynamics.Interpolate
 import Simulation.Aivika.Trans.Dynamics.Memo.Unboxed
 -- import Simulation.Aivika.Trans.Dynamics.Random
+import Simulation.Aivika.Trans.Enq
 import Simulation.Aivika.Trans.Event
 import Simulation.Aivika.Trans.EventQueue
 import Simulation.Aivika.Trans.Generator

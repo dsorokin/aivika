@@ -62,7 +62,7 @@ import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.ProtoRef
 import qualified Simulation.Aivika.Trans.Vector as V
 import qualified Simulation.Aivika.Trans.Vector.Unboxed as UV
-import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
@@ -111,7 +111,7 @@ handleSignal_ signal h =
      return ()
      
 -- | Create a new signal source.
-newSignalSource :: MonadSim m => Simulation m (SignalSource m a)
+newSignalSource :: Comp m => Simulation m (SignalSource m a)
 {-# INLINE newSignalSource #-}
 newSignalSource =
   Simulation $ \r ->
@@ -133,7 +133,7 @@ newSignalSource =
      return source
 
 -- | Trigger all next signal handlers.
-triggerSignalHandlers :: MonadSim m => SignalHandlerQueue m a -> a -> Point m -> m ()
+triggerSignalHandlers :: Comp m => SignalHandlerQueue m a -> a -> Point m -> m ()
 {-# INLINE triggerSignalHandlers #-}
 triggerSignalHandlers q a p =
   do hs <- readProtoRef (queueList q)
@@ -141,7 +141,7 @@ triggerSignalHandlers q a p =
        invokeEvent p $ handlerComp h a
             
 -- | Enqueue the handler and return its representative in the queue.            
-enqueueSignalHandler :: MonadSim m => SignalHandlerQueue m a -> (a -> Event m ()) -> SessionMarker m -> m (SignalHandler m a)
+enqueueSignalHandler :: Comp m => SignalHandlerQueue m a -> (a -> Event m ()) -> SessionMarker m -> m (SignalHandler m a)
 {-# INLINE enqueueSignalHandler #-}
 enqueueSignalHandler q h m = 
   do let handler = SignalHandler { handlerComp   = h,
@@ -150,7 +150,7 @@ enqueueSignalHandler q h m =
      return handler
 
 -- | Dequeue the handler representative.
-dequeueSignalHandler :: MonadSim m => SignalHandlerQueue m a -> SignalHandler m a -> m ()
+dequeueSignalHandler :: Comp m => SignalHandlerQueue m a -> SignalHandler m a -> m ()
 {-# INLINE dequeueSignalHandler #-}
 dequeueSignalHandler q h = 
   modifyProtoRef (queueList q) (delete h)
@@ -278,14 +278,14 @@ data SignalHistory m a =
                   signalHistoryValues :: V.Vector m a }
 
 -- | Create a history of the signal values.
-newSignalHistory :: MonadSim m => Signal m a -> Event m (SignalHistory m a)
+newSignalHistory :: Comp m => Signal m a -> Event m (SignalHistory m a)
 {-# INLINE newSignalHistory #-}
 newSignalHistory =
   newSignalHistoryStartingWith Nothing
 
 -- | Create a history of the signal values starting with
 -- the optional initial value.
-newSignalHistoryStartingWith :: MonadSim m => Maybe a -> Signal m a -> Event m (SignalHistory m a)
+newSignalHistoryStartingWith :: Comp m => Maybe a -> Signal m a -> Event m (SignalHistory m a)
 {-# INLINE newSignalHistoryStartingWith #-}
 newSignalHistoryStartingWith init signal =
   Event $ \p ->
@@ -307,7 +307,7 @@ newSignalHistoryStartingWith init signal =
                             signalHistoryValues = xs }
        
 -- | Read the history of signal values.
-readSignalHistory :: MonadSim m => SignalHistory m a -> Event m (Array Int Double, Array Int a)
+readSignalHistory :: Comp m => SignalHistory m a -> Event m (Array Int Double, Array Int a)
 {-# INLINE readSignalHistory #-}
 readSignalHistory history =
   Event $ \p ->
@@ -316,13 +316,13 @@ readSignalHistory history =
      return (xs, ys)     
      
 -- | Trigger the signal with the current time.
-triggerSignalWithCurrentTime :: MonadSim m => SignalSource m Double -> Event m ()
+triggerSignalWithCurrentTime :: Comp m => SignalSource m Double -> Event m ()
 {-# INLINE triggerSignalWithCurrentTime #-}
 triggerSignalWithCurrentTime s =
   Event $ \p -> invokeEvent p $ triggerSignal s (pointTime p)
 
 -- | Return a signal that is triggered in the specified time points.
-newSignalInTimes :: MonadEnq m => [Double] -> Event m (Signal m Double)
+newSignalInTimes :: Enq m => [Double] -> Event m (Signal m Double)
 {-# INLINE newSignalInTimes #-}
 newSignalInTimes xs =
   do s <- liftSimulation newSignalSource
@@ -331,7 +331,7 @@ newSignalInTimes xs =
        
 -- | Return a signal that is triggered in the integration time points.
 -- It should be called with help of 'runEventInStartTime'.
-newSignalInIntegTimes :: MonadEnq m => Event m (Signal m Double)
+newSignalInIntegTimes :: Enq m => Event m (Signal m Double)
 {-# INLINE newSignalInIntegTimes #-}
 newSignalInIntegTimes =
   do s <- liftSimulation newSignalSource
@@ -340,7 +340,7 @@ newSignalInIntegTimes =
      
 -- | Return a signal that is triggered in the start time.
 -- It should be called with help of 'runEventInStartTime'.
-newSignalInStartTime :: MonadEnq m => Event m (Signal m Double)
+newSignalInStartTime :: Enq m => Event m (Signal m Double)
 {-# INLINE newSignalInStartTime #-}
 newSignalInStartTime =
   do s <- liftSimulation newSignalSource
@@ -349,7 +349,7 @@ newSignalInStartTime =
      return $ publishSignal s
 
 -- | Return a signal that is triggered in the final time.
-newSignalInStopTime :: MonadEnq m => Event m (Signal m Double)
+newSignalInStopTime :: Enq m => Event m (Signal m Double)
 {-# INLINE newSignalInStopTime #-}
 newSignalInStopTime =
   do s <- liftSimulation newSignalSource
@@ -400,7 +400,7 @@ appendSignalable m1 m2 =
 
 -- | Transform a signal so that the resulting signal returns a sequence of arrivals
 -- saving the information about the time points at which the original signal was received.
-arrivalSignal :: MonadSim m => Signal m a -> Signal m (Arrival a)
+arrivalSignal :: Comp m => Signal m a -> Signal m (Arrival a)
 {-# INLINE arrivalSignal #-}
 arrivalSignal m = 
   Signal { handleSignal = \h ->
