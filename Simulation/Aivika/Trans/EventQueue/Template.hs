@@ -11,7 +11,10 @@
 --
 -- The module defines a template-based implemenation of the event queue.
 --
-module Simulation.Aivika.Trans.EventQueue.Template() where
+module Simulation.Aivika.Trans.EventQueue.Template
+       (-- * Event Queue Processing
+        EventQueueable(..),
+        EventQueueing(..)) where
 
 import Control.Monad
 
@@ -60,6 +63,9 @@ instance TemplateComp m => EventQueueing m where
   {-# INLINE eventQueueCount #-}
   eventQueueCount =
     Event $ PQ.queueCount . queuePQ . runEventQueue . pointRun
+
+instance TemplateComp m => Comp m
+instance TemplateComp m => Enq m
 
 -- | Process the pending events.
 processPendingEventsCore :: TemplateComp m => Bool -> Dynamics m ()
