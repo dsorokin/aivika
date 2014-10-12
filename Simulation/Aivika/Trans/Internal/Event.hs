@@ -44,7 +44,6 @@ module Simulation.Aivika.Trans.Internal.Event
         -- * Disposable
         DisposableEvent(..)) where
 
-import Data.IORef
 import Data.Monoid
 
 import Control.Exception
