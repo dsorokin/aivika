@@ -158,6 +158,11 @@ instance MonadIO m => MonadIO (Dynamics m) where
   {-# INLINE liftIO #-}
   liftIO = Dynamics . const . liftIO
 
+instance CompTrans Dynamics where
+
+  {-# INLINE liftComp #-}
+  liftComp = Dynamics . const
+
 -- | A type class to lift the 'Dynamics' computations into other computations.
 class DynamicsLift t where
   

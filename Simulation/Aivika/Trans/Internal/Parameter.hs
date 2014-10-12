@@ -191,6 +191,11 @@ instance MonadIO m => MonadIO (Parameter m) where
   {-# INLINE liftIO #-}
   liftIO = Parameter . const . liftIO
 
+instance CompTrans Parameter where
+
+  {-# INLINE liftComp #-}
+  liftComp = Parameter . const
+
 -- | A type class to lift the parameters into other computations.
 class ParameterLift t where
   

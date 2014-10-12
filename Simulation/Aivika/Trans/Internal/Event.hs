@@ -103,6 +103,11 @@ instance MonadIO m => MonadIO (Event m) where
   {-# INLINE liftIO #-}
   liftIO = Event . const . liftIO
 
+instance CompTrans Event where
+
+  {-# INLINE liftComp #-}
+  liftComp = Event . const
+
 -- | A type class to lift the 'Event' computations into other computations.
 class EventLift t where
   
