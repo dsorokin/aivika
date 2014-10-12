@@ -19,9 +19,14 @@ module Simulation.Aivika.Trans.Ref
         modifyRef) where
 
 import Data.IORef
+
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Trans.Session
+import Simulation.Aivika.Trans.ProtoRef
+import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Event
 import Simulation.Aivika.Trans.Internal.Signal
@@ -30,40 +35,48 @@ import Simulation.Aivika.Trans.Signal
 -- | The 'Ref' type represents a mutable variable similar to the 'IORef' variable 
 -- but only dependent on the event queue, which allows synchronizing the reference
 -- with the model explicitly through the 'Event' monad.
-data Ref a = 
-  Ref { refValue :: IORef a, 
-        refChangedSource :: SignalSource a }
+data Ref m a = 
+  Ref { refValue :: ProtoRef m a, 
+        refChangedSource :: SignalSource m a }
 
 -- | Create a new reference.
-newRef :: a -> Simulation (Ref a)
+newRef :: MonadSim m => a -> Simulation m (Ref m a)
+{-# INLINE newRef #-}
 newRef a =
-  do x <- liftIO $ newIORef a
-     s <- newSignalSource
+  Simulation $ \r ->
+  do let s = runSession r
+     x <- newProtoRef s a
+     s <- invokeSimulation r newSignalSource
      return Ref { refValue = x, 
                   refChangedSource = s }
      
 -- | Read the value of a reference.
-readRef :: Ref a -> Event a
-readRef r = Event $ \p -> readIORef (refValue r)
+readRef :: MonadSim m => Ref m a -> Event m a
+{-# INLINE readRef #-}
+readRef r = Event $ \p -> readProtoRef (refValue r)
 
 -- | Write a new value into the reference.
-writeRef :: Ref a -> a -> Event ()
+writeRef :: MonadSim m => Ref m a -> a -> Event m ()
+{-# INLINE writeRef #-}
 writeRef r a = Event $ \p -> 
-  do a `seq` writeIORef (refValue r) a
+  do a `seq` writeProtoRef (refValue r) a
      invokeEvent p $ triggerSignal (refChangedSource r) a
 
 -- | Mutate the contents of the reference.
-modifyRef :: Ref a -> (a -> a) -> Event ()
+modifyRef :: MonadSim m => Ref m a -> (a -> a) -> Event m ()
+{-# INLINE modifyRef #-}
 modifyRef r f = Event $ \p -> 
-  do a <- readIORef (refValue r)
+  do a <- readProtoRef (refValue r)
      let b = f a
-     b `seq` writeIORef (refValue r) b
+     b `seq` writeProtoRef (refValue r) b
      invokeEvent p $ triggerSignal (refChangedSource r) b
 
 -- | Return a signal that notifies about every change of the reference state.
-refChanged :: Ref a -> Signal a
+refChanged :: Monad m => Ref m a -> Signal m a
+{-# INLINE refChanged #-}
 refChanged v = publishSignal (refChangedSource v)
 
 -- | Return a signal that notifies about every change of the reference state.
-refChanged_ :: Ref a -> Signal ()
+refChanged_ :: Monad m => Ref m a -> Signal m ()
+{-# INLINE refChanged_ #-}
 refChanged_ r = mapSignal (const ()) $ refChanged r

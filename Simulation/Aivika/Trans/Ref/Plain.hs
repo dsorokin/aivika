@@ -1,16 +1,16 @@
 
 -- |
--- Module     : Simulation.Aivika.Trans.Ref.Light
+-- Module     : Simulation.Aivika.Trans.Ref.Plain
 -- Copyright  : Copyright (c) 2009-2014, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
--- This module defines a light-weight and more fast version of an updatable reference
+-- This module defines a plain and more fast version of an updatable reference
 -- that depends on the event queue but that doesn't supply with the signal notification.
 --
-module Simulation.Aivika.Trans.Ref.Light
+module Simulation.Aivika.Trans.Ref.Plain
        (Ref,
         newRef,
         readRef,
@@ -18,36 +18,47 @@ module Simulation.Aivika.Trans.Ref.Light
         modifyRef) where
 
 import Data.IORef
+
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Trans.Session
+import Simulation.Aivika.Trans.ProtoRef
+import Simulation.Aivika.Trans.MonadSim
+import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Event
 
 -- | The 'Ref' type represents a mutable variable similar to the 'IORef' variable 
 -- but only dependent on the event queue, which allows synchronizing the reference
 -- with the model explicitly through the 'Event' monad.
-newtype Ref a = 
-  Ref { refValue :: IORef a }
+newtype Ref m a = 
+  Ref { refValue :: ProtoRef m a }
 
 -- | Create a new reference.
-newRef :: a -> Simulation (Ref a)
+newRef :: MonadSim m => a -> Simulation m (Ref m a)
+{-# INLINE newRef #-}
 newRef a =
-  do x <- liftIO $ newIORef a
+  Simulation $ \r ->
+  do let s = runSession r
+     x <- newProtoRef s a
      return Ref { refValue = x }
      
 -- | Read the value of a reference.
-readRef :: Ref a -> Event a
-readRef r = Event $ \p -> readIORef (refValue r)
+readRef :: MonadSim m => Ref m a -> Event m a
+{-# INLINE readRef #-}
+readRef r = Event $ \p -> readProtoRef (refValue r)
 
 -- | Write a new value into the reference.
-writeRef :: Ref a -> a -> Event ()
+writeRef :: MonadSim m => Ref m a -> a -> Event m ()
+{-# INLINE writeRef #-}
 writeRef r a = Event $ \p -> 
-  a `seq` writeIORef (refValue r) a
+  a `seq` writeProtoRef (refValue r) a
 
 -- | Mutate the contents of the reference.
-modifyRef :: Ref a -> (a -> a) -> Event ()
+modifyRef :: MonadSim m => Ref m a -> (a -> a) -> Event m ()
+{-# INLINE modifyRef #-}
 modifyRef r f = Event $ \p -> 
-  do a <- readIORef (refValue r)
+  do a <- readProtoRef (refValue r)
      let b = f a
-     b `seq` writeIORef (refValue r) b
+     b `seq` writeProtoRef (refValue r) b
