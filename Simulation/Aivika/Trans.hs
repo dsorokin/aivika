@@ -24,7 +24,7 @@ module Simulation.Aivika.Trans
         module Simulation.Aivika.Trans.Generator,
         -- module Simulation.Aivika.Trans.Net,
         module Simulation.Aivika.Trans.Parameter,
-        -- module Simulation.Aivika.Trans.Parameter.Random,
+        module Simulation.Aivika.Trans.Parameter.Random,
         module Simulation.Aivika.Trans.Process,
         -- module Simulation.Aivika.Trans.Processor,
         -- module Simulation.Aivika.Trans.Processor.RoundRobbin,
@@ -59,7 +59,7 @@ import Simulation.Aivika.Trans.Event
 import Simulation.Aivika.Trans.Generator
 -- import Simulation.Aivika.Trans.Net
 import Simulation.Aivika.Trans.Parameter
--- import Simulation.Aivika.Trans.Parameter.Random
+import Simulation.Aivika.Trans.Parameter.Random
 import Simulation.Aivika.Trans.Process
 -- import Simulation.Aivika.Trans.Processor
 -- import Simulation.Aivika.Trans.Processor.RoundRobbin

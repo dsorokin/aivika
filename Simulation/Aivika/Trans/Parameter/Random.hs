@@ -35,89 +35,108 @@ import System.Random
 import Control.Monad.Trans
 
 import Simulation.Aivika.Trans.Generator
+import Simulation.Aivika.Trans.MonadSim
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Dynamics
 import Simulation.Aivika.Trans.Dynamics.Memo.Unboxed
 
 -- | Computation that generates a new random number distributed uniformly.
-randomUniform :: Double     -- ^ minimum
+randomUniform :: MonadSim m
+                 => Double     -- ^ minimum
                  -> Double  -- ^ maximum
-                 -> Parameter Double
+                 -> Parameter m Double
+{-# INLINE randomUniform #-}
 randomUniform min max =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorUniform g min max
+  in generateUniform g min max
 
 -- | Computation that generates a new random integer number distributed uniformly.
-randomUniformInt :: Int     -- ^ minimum
+randomUniformInt :: MonadSim m
+                    => Int     -- ^ minimum
                     -> Int  -- ^ maximum
-                    -> Parameter Int
+                    -> Parameter m Int
+{-# INLINE randomUniformInt #-}
 randomUniformInt min max =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorUniformInt g min max
+  in generateUniformInt g min max
 
 -- | Computation that generates a new random number distributed normally.
-randomNormal :: Double     -- ^ mean
+randomNormal :: MonadSim m
+                => Double     -- ^ mean
                 -> Double  -- ^ deviation
-                -> Parameter Double
+                -> Parameter m Double
+{-# INLINE randomNormal #-}
 randomNormal mu nu =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorNormal g mu nu
+  in generateNormal g mu nu
 
 -- | Computation that returns a new exponential random number with the specified mean
 -- (the reciprocal of the rate).
-randomExponential :: Double
+randomExponential :: MonadSim m
+                     => Double
                      -- ^ the mean (the reciprocal of the rate)
-                     -> Parameter Double
+                     -> Parameter m Double
+{-# INLINE randomExponential #-}
 randomExponential mu =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorExponential g mu
+  in generateExponential g mu
 
 -- | Computation that returns a new Erlang random number with the specified scale
 -- (the reciprocal of the rate) and integer shape.
-randomErlang :: Double
+randomErlang :: MonadSim m
+                => Double
                 -- ^ the scale (the reciprocal of the rate)
                 -> Int
                 -- ^ the shape
-                -> Parameter Double
+                -> Parameter m Double
+{-# INLINE randomErlang #-}
 randomErlang beta m =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorErlang g beta m
+  in generateErlang g beta m
 
 -- | Computation that returns a new Poisson random number with the specified mean.
-randomPoisson :: Double
+randomPoisson :: MonadSim m
+                 => Double
                  -- ^ the mean
-                 -> Parameter Int
+                 -> Parameter m Int
+{-# INLINE randomPoisson #-}
 randomPoisson mu =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorPoisson g mu
+  in generatePoisson g mu
 
 -- | Computation that returns a new binomial random number with the specified
 -- probability and trials.
-randomBinomial :: Double  -- ^ the probability
+randomBinomial :: MonadSim m
+                  => Double  -- ^ the probability
                   -> Int  -- ^ the number of trials
-                  -> Parameter Int
+                  -> Parameter m Int
+{-# INLINE randomBinomial #-}
 randomBinomial prob trials =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorBinomial g prob trials
+  in generateBinomial g prob trials
 
 -- | Computation that returns 'True' in case of success.
-randomTrue :: Double      -- ^ the probability of the success
-              -> Parameter Bool
+randomTrue :: MonadSim m
+              => Double      -- ^ the probability of the success
+              -> Parameter m Bool
+{-# INLINE randomTrue #-}              
 randomTrue p =
   do x <- randomUniform 0 1
      return (x <= p)
 
 -- | Computation that returns 'False' in case of success.
-randomFalse :: Double      -- ^ the probability of the success
-              -> Parameter Bool
+randomFalse :: MonadSim m
+               => Double      -- ^ the probability of the success
+               -> Parameter m Bool
+{-# INLINE randomFalse #-}
 randomFalse p =
   do x <- randomUniform 0 1
      return (x > p)     
