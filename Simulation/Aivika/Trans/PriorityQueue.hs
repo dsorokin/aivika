@@ -36,7 +36,7 @@ data PriorityQueue m a =
                   pqSize     :: ProtoRef m Int,
                   pqCapacity :: ProtoRef m Int }
 
-increase :: Comp m => PriorityQueue m a -> m ()
+increase :: TemplateComp m => PriorityQueue m a -> m ()
 {-# INLINABLE increase #-}
 increase pq = 
   do let s = pqSession pq
@@ -56,7 +56,7 @@ increase pq =
      writeProtoRef valRef vals'
      writeProtoRef capacityRef capacity'
 
-siftUp :: Comp m 
+siftUp :: TemplateComp m 
           => UA.ProtoArray m Double
           -- ^ keys
           -> A.ProtoArray m a
@@ -83,7 +83,7 @@ siftUp keys vals i k v =
                     A.writeProtoArray vals i vn
                     siftUp keys vals n k v
 
-siftDown :: Comp m 
+siftDown :: TemplateComp m 
             => UA.ProtoArray m Double
             -- ^ keys
             -> A.ProtoArray m a
@@ -125,19 +125,19 @@ siftDown keys vals size i k v =
                               siftDown keys vals size n'' k v
 
 -- | Test whether the priority queue is empty.
-queueNull :: Comp m => PriorityQueue m a -> m Bool
+queueNull :: TemplateComp m => PriorityQueue m a -> m Bool
 {-# INLINABLE queueNull #-}
 queueNull pq =
   do size <- readProtoRef (pqSize pq)
      return $ size == 0
 
 -- | Return the number of elements in the priority queue.
-queueCount :: Comp m => PriorityQueue m a -> m Int
+queueCount :: TemplateComp m => PriorityQueue m a -> m Int
 {-# INLINABLE queueCount #-}
 queueCount pq = readProtoRef (pqSize pq)
 
 -- | Create a new priority queue.
-newQueue :: Comp m => Session m -> m (PriorityQueue m a)
+newQueue :: TemplateComp m => Session m -> m (PriorityQueue m a)
 {-# INLINABLE newQueue #-}
 newQueue session =
   do keys        <- UA.newProtoArray_ session 11
@@ -153,7 +153,7 @@ newQueue session =
                             pqCapacity = capacityRef }
 
 -- | Enqueue a new element with the specified priority.
-enqueue :: Comp m => PriorityQueue m a -> Double -> a -> m ()
+enqueue :: TemplateComp m => PriorityQueue m a -> Double -> a -> m ()
 {-# INLINABLE enqueue #-}
 enqueue pq k v =
   do i <- readProtoRef (pqSize pq)
@@ -165,7 +165,7 @@ enqueue pq k v =
      siftUp keys vals i k v
 
 -- | Dequeue the element with the minimal priority.
-dequeue :: Comp m => PriorityQueue m a -> m ()
+dequeue :: TemplateComp m => PriorityQueue m a -> m ()
 {-# INLINABLE dequeue #-}
 dequeue pq =
   do size <- readProtoRef (pqSize pq)
@@ -183,7 +183,7 @@ dequeue pq =
      siftDown keys vals i 0 k v
 
 -- | Return the element with the minimal priority.
-queueFront :: Comp m => PriorityQueue m a -> m (Double, a)
+queueFront :: TemplateComp m => PriorityQueue m a -> m (Double, a)
 {-# INLINABLE queueFront #-}
 queueFront pq =
   do size <- readProtoRef (pqSize pq)
