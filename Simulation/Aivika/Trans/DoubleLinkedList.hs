@@ -21,133 +21,148 @@ module Simulation.Aivika.Trans.DoubleLinkedList
         listFirst,
         listLast) where 
 
-import Data.IORef
 import Control.Monad
 
+import Simulation.Aivika.Trans.Session
+import Simulation.Aivika.Trans.ProtoRef
+import Simulation.Aivika.Trans.MonadSim
+
 -- | A cell of the double-linked list.
-data DoubleLinkedItem a = 
+data DoubleLinkedItem m a = 
   DoubleLinkedItem { itemVal  :: a,
-                     itemPrev :: IORef (Maybe (DoubleLinkedItem a)),
-                     itemNext :: IORef (Maybe (DoubleLinkedItem a)) }
+                     itemPrev :: ProtoRef m (Maybe (DoubleLinkedItem m a)),
+                     itemNext :: ProtoRef m (Maybe (DoubleLinkedItem m a)) }
   
 -- | The 'DoubleLinkedList' type represents an imperative double-linked list.
-data DoubleLinkedList a =  
-  DoubleLinkedList { listHead :: IORef (Maybe (DoubleLinkedItem a)),
-                     listTail :: IORef (Maybe (DoubleLinkedItem a)), 
-                     listSize :: IORef Int }
+data DoubleLinkedList m a =  
+  DoubleLinkedList { listSession :: Session m,
+                     listHead :: ProtoRef m (Maybe (DoubleLinkedItem m a)),
+                     listTail :: ProtoRef m (Maybe (DoubleLinkedItem m a)), 
+                     listSize :: ProtoRef m Int }
 
 -- | Test whether the list is empty.
-listNull :: DoubleLinkedList a -> IO Bool
+listNull :: ProtoReferring m => DoubleLinkedList m a -> m Bool
+{-# INLINE listNull #-}
 listNull x =
-  do head <- readIORef (listHead x) 
+  do head <- readProtoRef (listHead x) 
      case head of
        Nothing -> return True
        Just _  -> return False
     
 -- | Return the number of elements in the list.
-listCount :: DoubleLinkedList a -> IO Int
-listCount x = readIORef (listSize x)
+listCount :: ProtoReferring m => DoubleLinkedList m a -> m Int
+{-# INLINE listCount #-}
+listCount x = readProtoRef (listSize x)
 
 -- | Create a new list.
-newList :: IO (DoubleLinkedList a)
-newList =
-  do head <- newIORef Nothing 
-     tail <- newIORef Nothing
-     size <- newIORef 0
-     return DoubleLinkedList { listHead = head,
+newList :: ProtoReferring m => Session m -> m (DoubleLinkedList m a)
+{-# INLINE newList #-}
+newList s =
+  do head <- newProtoRef s Nothing 
+     tail <- newProtoRef s Nothing
+     size <- newProtoRef s 0
+     return DoubleLinkedList { listSession = s,
+                               listHead = head,
                                listTail = tail,
                                listSize = size }
 
 -- | Insert a new element in the beginning.
-listInsertFirst :: DoubleLinkedList a -> a -> IO ()
+listInsertFirst :: ProtoReferring m => DoubleLinkedList m a -> a -> m ()
+{-# INLINABLE listInsertFirst #-}
 listInsertFirst x v =
-  do size <- readIORef (listSize x)
-     writeIORef (listSize x) (size + 1)
-     head <- readIORef (listHead x)
+  do let s = listSession x
+     size <- readProtoRef (listSize x)
+     writeProtoRef (listSize x) (size + 1)
+     head <- readProtoRef (listHead x)
      case head of
        Nothing ->
-         do prev <- newIORef Nothing
-            next <- newIORef Nothing
+         do prev <- newProtoRef s Nothing
+            next <- newProtoRef s Nothing
             let item = Just DoubleLinkedItem { itemVal = v, 
                                                itemPrev = prev, 
                                                itemNext = next }
-            writeIORef (listHead x) item
-            writeIORef (listTail x) item
+            writeProtoRef (listHead x) item
+            writeProtoRef (listTail x) item
        Just h ->
-         do prev <- newIORef Nothing
-            next <- newIORef head
+         do prev <- newProtoRef s Nothing
+            next <- newProtoRef s head
             let item = Just DoubleLinkedItem { itemVal = v,
                                                itemPrev = prev,
                                                itemNext = next }
-            writeIORef (itemPrev h) item
-            writeIORef (listHead x) item
+            writeProtoRef (itemPrev h) item
+            writeProtoRef (listHead x) item
 
 -- | Add a new element to the end.
-listAddLast :: DoubleLinkedList a -> a -> IO ()
+listAddLast :: ProtoReferring m => DoubleLinkedList m a -> a -> m ()
+{-# INLINABLE listAddLast #-}
 listAddLast x v =
-  do size <- readIORef (listSize x)
-     writeIORef (listSize x) (size + 1)
-     tail <- readIORef (listTail x)
+  do let s = listSession x
+     size <- readProtoRef (listSize x)
+     writeProtoRef (listSize x) (size + 1)
+     tail <- readProtoRef (listTail x)
      case tail of
        Nothing ->
-         do prev <- newIORef Nothing
-            next <- newIORef Nothing
+         do prev <- newProtoRef s Nothing
+            next <- newProtoRef s Nothing
             let item = Just DoubleLinkedItem { itemVal = v, 
                                                itemPrev = prev, 
                                                itemNext = next }
-            writeIORef (listHead x) item
-            writeIORef (listTail x) item
+            writeProtoRef (listHead x) item
+            writeProtoRef (listTail x) item
        Just t ->
-         do prev <- newIORef tail
-            next <- newIORef Nothing
+         do prev <- newProtoRef s tail
+            next <- newProtoRef s Nothing
             let item = Just DoubleLinkedItem { itemVal = v,
                                                itemPrev = prev,
                                                itemNext = next }
-            writeIORef (itemNext t) item
-            writeIORef (listTail x) item
+            writeProtoRef (itemNext t) item
+            writeProtoRef (listTail x) item
 
 -- | Remove the first element.
-listRemoveFirst :: DoubleLinkedList a -> IO ()
+listRemoveFirst :: ProtoReferring m => DoubleLinkedList m a -> m ()
+{-# INLINABLE listRemoveFirst #-}
 listRemoveFirst x =
-  do head <- readIORef (listHead x) 
+  do head <- readProtoRef (listHead x) 
      case head of
        Nothing ->
          error "Empty list: listRemoveFirst"
        Just h ->
-         do size  <- readIORef (listSize x)
-            writeIORef (listSize x) (size - 1)
-            head' <- readIORef (itemNext h)
+         do size  <- readProtoRef (listSize x)
+            writeProtoRef (listSize x) (size - 1)
+            head' <- readProtoRef (itemNext h)
             case head' of
               Nothing ->
-                do writeIORef (listHead x) Nothing
-                   writeIORef (listTail x) Nothing
+                do writeProtoRef (listHead x) Nothing
+                   writeProtoRef (listTail x) Nothing
               Just h' ->
-                do writeIORef (itemPrev h') Nothing
-                   writeIORef (listHead x) head'
+                do writeProtoRef (itemPrev h') Nothing
+                   writeProtoRef (listHead x) head'
 
 -- | Remove the last element.
-listRemoveLast :: DoubleLinkedList a -> IO ()
+listRemoveLast :: ProtoReferring m => DoubleLinkedList m a -> m ()
+{-# INLINABLE listRemoveLast #-}
 listRemoveLast x =
-  do tail <- readIORef (listTail x) 
+  do tail <- readProtoRef (listTail x) 
      case tail of
        Nothing ->
          error "Empty list: listRemoveLast"
        Just t ->
-         do size  <- readIORef (listSize x)
-            writeIORef (listSize x) (size - 1)
-            tail' <- readIORef (itemPrev t)
+         do size  <- readProtoRef (listSize x)
+            writeProtoRef (listSize x) (size - 1)
+            tail' <- readProtoRef (itemPrev t)
             case tail' of
               Nothing ->
-                do writeIORef (listHead x) Nothing
-                   writeIORef (listTail x) Nothing
+                do writeProtoRef (listHead x) Nothing
+                   writeProtoRef (listTail x) Nothing
               Just t' ->
-                do writeIORef (itemNext t') Nothing
-                   writeIORef (listTail x) tail'
+                do writeProtoRef (itemNext t') Nothing
+                   writeProtoRef (listTail x) tail'
 
 -- | Return the first element.
-listFirst :: DoubleLinkedList a -> IO a
+listFirst :: ProtoReferring m => DoubleLinkedList m a -> m a
+{-# INLINABLE listFirst #-}
 listFirst x =
-  do head <- readIORef (listHead x)
+  do head <- readProtoRef (listHead x)
      case head of
        Nothing ->
          error "Empty list: listFirst"
@@ -155,9 +170,10 @@ listFirst x =
          return $ itemVal h
 
 -- | Return the last element.
-listLast :: DoubleLinkedList a -> IO a
+listLast :: ProtoReferring m => DoubleLinkedList m a -> m a
+{-# INLINABLE listLast #-}
 listLast x =
-  do tail <- readIORef (listTail x)
+  do tail <- readProtoRef (listTail x)
      case tail of
        Nothing ->
          error "Empty list: listLast"
