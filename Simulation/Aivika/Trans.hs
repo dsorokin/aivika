@@ -21,6 +21,7 @@ module Simulation.Aivika.Trans
         module Simulation.Aivika.Trans.Dynamics.Memo.Unboxed,
         -- module Simulation.Aivika.Trans.Dynamics.Random,
         module Simulation.Aivika.Trans.Event,
+        module Simulation.Aivika.Trans.EventQueue,
         module Simulation.Aivika.Trans.Generator,
         -- module Simulation.Aivika.Trans.Net,
         module Simulation.Aivika.Trans.Parameter,
@@ -56,6 +57,7 @@ import Simulation.Aivika.Trans.Dynamics.Interpolate
 import Simulation.Aivika.Trans.Dynamics.Memo.Unboxed
 -- import Simulation.Aivika.Trans.Dynamics.Random
 import Simulation.Aivika.Trans.Event
+import Simulation.Aivika.Trans.EventQueue
 import Simulation.Aivika.Trans.Generator
 -- import Simulation.Aivika.Trans.Net
 import Simulation.Aivika.Trans.Parameter
