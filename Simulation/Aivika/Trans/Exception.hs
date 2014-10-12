@@ -19,21 +19,21 @@ import Control.Exception
 class ExceptionHandling m where
 
   -- | Catch an 'IO' exception within the computation.
-  catchComputation :: m a -> (IOException -> m a) -> m a
+  catchComp :: m a -> (IOException -> m a) -> m a
 
   -- | Introduce a finalisation block.
-  finallyComputation :: m a -> m b -> m a
+  finallyComp :: m a -> m b -> m a
 
   -- | Throw an exception.
-  throwComputation :: IOException -> m a
+  throwComp :: IOException -> m a
 
 instance ExceptionHandling IO where
 
-  {-# INLINE catchComputation #-}
-  catchComputation = catch
+  {-# INLINE catchComp #-}
+  catchComp = catch
 
-  {-# INLINE finallyComputation #-}
-  finallyComputation = finally
+  {-# INLINE finallyComp #-}
+  finallyComp = finally
 
-  {-# INLINE throwComputation #-}
-  throwComputation = throw
+  {-# INLINE throwComp #-}
+  throwComp = throw

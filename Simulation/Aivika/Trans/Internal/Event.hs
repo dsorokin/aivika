@@ -134,7 +134,7 @@ catchEvent :: MonadSim m => Event m a -> (IOException -> Event m a) -> Event m a
 {-# INLINABLE catchEvent #-}
 catchEvent (Event m) h =
   Event $ \p -> 
-  catchComputation (m p) $ \e ->
+  catchComp (m p) $ \e ->
   let Event m' = h e in m' p
                            
 -- | A computation with finalization part like the 'finally' function.
@@ -142,7 +142,7 @@ finallyEvent :: MonadSim m => Event m a -> Event m b -> Event m a
 {-# INLINABLE finallyEvent #-}
 finallyEvent (Event m) (Event m') =
   Event $ \p ->
-  finallyComputation (m p) (m' p)
+  finallyComp (m p) (m' p)
 
 -- | Like the standard 'throw' function.
 throwEvent :: MonadSim m => IOException -> Event m a

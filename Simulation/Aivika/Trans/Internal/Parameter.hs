@@ -207,7 +207,7 @@ catchParameter :: MonadSim m => Parameter m a -> (IOException -> Parameter m a) 
 {-# INLINABLE catchParameter #-}
 catchParameter (Parameter m) h =
   Parameter $ \r -> 
-  catchComputation (m r) $ \e ->
+  catchComp (m r) $ \e ->
   let Parameter m' = h e in m' r
                            
 -- | A computation with finalization part like the 'finally' function.
@@ -215,7 +215,7 @@ finallyParameter :: MonadSim m => Parameter m a -> Parameter m b -> Parameter m 
 {-# INLINABLE finallyParameter #-}
 finallyParameter (Parameter m) (Parameter m') =
   Parameter $ \r ->
-  finallyComputation (m r) (m' r)
+  finallyComp (m r) (m' r)
 
 -- | Like the standard 'throw' function.
 throwParameter :: MonadSim m => IOException -> Parameter m a

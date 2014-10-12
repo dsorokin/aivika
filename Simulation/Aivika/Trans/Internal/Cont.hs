@@ -406,7 +406,7 @@ liftWithCatching m p c =
        else do let s = runSession $ pointRun p
                aref <- newProtoRef s undefined
                eref <- newProtoRef s Nothing
-               catchComputation
+               catchComp
                  (m >>= writeProtoRef aref) 
                  (writeProtoRef eref . Just)
                e <- readProtoRef eref

@@ -151,7 +151,7 @@ catchSimulation :: MonadSim m => Simulation m a -> (IOException -> Simulation m 
 {-# INLINABLE catchSimulation #-}
 catchSimulation (Simulation m) h =
   Simulation $ \r -> 
-  catchComputation (m r) $ \e ->
+  catchComp (m r) $ \e ->
   let Simulation m' = h e in m' r
                            
 -- | A computation with finalization part like the 'finally' function.
@@ -159,7 +159,7 @@ finallySimulation :: MonadSim m => Simulation m a -> Simulation m b -> Simulatio
 {-# INLINABLE finallySimulation #-}
 finallySimulation (Simulation m) (Simulation m') =
   Simulation $ \r ->
-  finallyComputation (m r) (m' r)
+  finallyComp (m r) (m' r)
 
 -- | Like the standard 'throw' function.
 throwSimulation :: MonadSim m => IOException -> Simulation m a

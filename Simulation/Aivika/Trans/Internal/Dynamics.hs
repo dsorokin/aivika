@@ -184,7 +184,7 @@ catchDynamics :: MonadSim m => Dynamics m a -> (IOException -> Dynamics m a) -> 
 {-# INLINABLE catchDynamics #-}
 catchDynamics (Dynamics m) h =
   Dynamics $ \p -> 
-  catchComputation (m p) $ \e ->
+  catchComp (m p) $ \e ->
   let Dynamics m' = h e in m' p
                            
 -- | A computation with finalization part like the 'finally' function.
@@ -192,7 +192,7 @@ finallyDynamics :: MonadSim m => Dynamics m a -> Dynamics m b -> Dynamics m a
 {-# INLINABLE finallyDynamics #-}
 finallyDynamics (Dynamics m) (Dynamics m') =
   Dynamics $ \p ->
-  finallyComputation (m p) (m' p)
+  finallyComp (m p) (m' p)
 
 -- | Like the standard 'throw' function.
 throwDynamics :: MonadSim m => IOException -> Dynamics m a
