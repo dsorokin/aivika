@@ -23,9 +23,6 @@ module Simulation.Aivika.Trans.Internal.Simulation
         catchSimulation,
         finallySimulation,
         throwSimulation,
-        -- * Internal Parameters
-        simulationSession,
-        simulationEventQueue,
         -- * Memoization
         memoSimulation) where
 
@@ -91,16 +88,6 @@ runSimulations (Simulation m) sc runs = map f [1 .. runs]
                          runCount = runs,
                          runEventQueue = q,
                          runGenerator = g }
-
--- | Return the event queue.
-simulationEventQueue :: Monad m => Simulation m (EventQueue m)
-{-# INLINE simulationEventQueue #-}
-simulationEventQueue = Simulation $ return . runEventQueue
-
--- | Return the simulation session.
-simulationSession :: Monad m => Simulation m (Session m)
-{-# INLINE simulationSession #-}
-simulationSession = Simulation $ return . runSession
 
 instance Functor m => Functor (Simulation m) where
   

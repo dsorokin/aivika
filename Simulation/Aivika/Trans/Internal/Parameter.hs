@@ -30,6 +30,8 @@ module Simulation.Aivika.Trans.Internal.Parameter
         simulationIndex,
         simulationCount,
         simulationSpecs,
+        simulationSession,
+        simulationEventQueue,
         starttime,
         stoptime,
         dt,
@@ -291,3 +293,15 @@ dt :: Monad m => Parameter m Double
 {-# INLINE dt #-}
 dt =
   Parameter $ return . spcDT . runSpecs
+
+-- | Return the event queue.
+simulationEventQueue :: Monad m => Parameter m (EventQueue m)
+{-# INLINE simulationEventQueue #-}
+simulationEventQueue =
+  Parameter $ return . runEventQueue
+
+-- | Return the simulation session.
+simulationSession :: Monad m => Parameter m (Session m)
+{-# INLINE simulationSession #-}
+simulationSession =
+  Parameter $ return . runSession

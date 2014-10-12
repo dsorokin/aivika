@@ -639,7 +639,7 @@ timeoutProcessUsingId timeout pid p =
        (liftEvent $
         cancelProcessWithId pid)
      spawnProcessUsingId CancelChildAfterParent pid $
-       do sn <- liftSimulation simulationSession
+       do sn <- liftParameter simulationSession
           r <- liftComp $ newProtoRef sn Nothing
           finallyProcess
             (catchProcess
