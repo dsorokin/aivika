@@ -13,7 +13,6 @@
 --
 module Simulation.Aivika.Trans.Comp
        (ProtoComp(..),
-        TemplateComp(..),
         Comp(..),
         CompTrans(..)) where
 
@@ -36,10 +35,6 @@ class (ExceptionHandling m,
        ProtoArraying m,
        Unboxed m Double,
        Generating m) => ProtoComp m
-
--- | A type class of monads based on which we generate new instances in addition to those
--- ones that we usually define explicitly with help of 'Comp' for efficiency.
-class ProtoComp m => TemplateComp m
 
 -- | An actual type class of monads based on which the simulation monads can be built. 
 class (ProtoComp m, EventQueueable m) => Comp m
