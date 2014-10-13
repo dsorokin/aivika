@@ -49,9 +49,7 @@ class QueueStrategy m s where
                       -- ^ a new queue
 
   -- | Test whether the queue is empty.
-  strategyQueueNull :: s
-                       -- ^ the strategy
-                       -> StrategyQueue m s a
+  strategyQueueNull :: StrategyQueue m s a
                        -- ^ the queue
                        -> Event m Bool
                        -- ^ the result of the test
@@ -60,9 +58,7 @@ class QueueStrategy m s where
 class QueueStrategy m s => DequeueStrategy m s where
 
   -- | Dequeue the front element and return it.
-  strategyDequeue :: s
-                     -- ^ the strategy
-                     -> StrategyQueue m s a
+  strategyDequeue :: StrategyQueue m s a
                      -- ^ the queue
                      -> Event m a
                      -- ^ the dequeued element
@@ -71,9 +67,7 @@ class QueueStrategy m s => DequeueStrategy m s where
 class DequeueStrategy m s => EnqueueStrategy m s where
 
   -- | Enqueue an element.
-  strategyEnqueue :: s
-                     -- ^ the strategy
-                     -> StrategyQueue m s a
+  strategyEnqueue :: StrategyQueue m s a
                      -- ^ the queue
                      -> a
                      -- ^ the element to be enqueued
@@ -84,9 +78,7 @@ class DequeueStrategy m s => EnqueueStrategy m s where
 class DequeueStrategy m s => PriorityQueueStrategy m s p | s -> p where
 
   -- | Enqueue an element with the specified priority.
-  strategyEnqueueWithPriority :: s
-                                 -- ^ the strategy
-                                 -> StrategyQueue m s a
+  strategyEnqueueWithPriority :: StrategyQueue m s a
                                  -- ^ the queue
                                  -> p
                                  -- ^ the priority
@@ -114,13 +106,13 @@ instance QueueStrategy IO FCFS where
   {-# SPECIALISE INLINE newStrategyQueue :: FCFS -> Simulation IO (StrategyQueue IO FCFS a) #-}
   newStrategyQueue s = fmap FCFSQueue $ liftIO LL.newList
 
-  {-# SPECIALISE INLINE strategyQueueNull :: FCFS -> StrategyQueue IO FCFS a -> Event IO Bool #-}
-  strategyQueueNull s (FCFSQueue q) = liftIO $ LL.listNull q
+  {-# SPECIALISE INLINE strategyQueueNull :: StrategyQueue IO FCFS a -> Event IO Bool #-}
+  strategyQueueNull (FCFSQueue q) = liftIO $ LL.listNull q
 
 instance DequeueStrategy IO FCFS where
 
-  {-# SPECIALISE INLINE strategyDequeue :: FCFS -> StrategyQueue IO FCFS a -> Event IO a #-}
-  strategyDequeue s (FCFSQueue q) =
+  {-# SPECIALISE INLINE strategyDequeue :: StrategyQueue IO FCFS a -> Event IO a #-}
+  strategyDequeue (FCFSQueue q) =
     liftIO $
     do i <- LL.listFirst q
        LL.listRemoveFirst q
@@ -128,8 +120,8 @@ instance DequeueStrategy IO FCFS where
 
 instance EnqueueStrategy IO FCFS where
 
-  {-# SPECIALISE INLINE strategyEnqueue :: FCFS -> StrategyQueue IO FCFS a -> a -> Event IO () #-}
-  strategyEnqueue s (FCFSQueue q) i = liftIO $ LL.listAddLast q i
+  {-# SPECIALISE INLINE strategyEnqueue :: StrategyQueue IO FCFS a -> a -> Event IO () #-}
+  strategyEnqueue (FCFSQueue q) i = liftIO $ LL.listAddLast q i
 
 instance QueueStrategy IO LCFS where
 
@@ -138,13 +130,13 @@ instance QueueStrategy IO LCFS where
   {-# SPECIALISE INLINE newStrategyQueue :: LCFS -> Simulation IO (StrategyQueue IO LCFS a) #-}
   newStrategyQueue s = fmap LCFSQueue $ liftIO LL.newList
        
-  {-# SPECIALISE INLINE strategyQueueNull :: LCFS -> StrategyQueue IO LCFS a -> Event IO Bool #-}
-  strategyQueueNull s (LCFSQueue q) = liftIO $ LL.listNull q
+  {-# SPECIALISE INLINE strategyQueueNull :: StrategyQueue IO LCFS a -> Event IO Bool #-}
+  strategyQueueNull (LCFSQueue q) = liftIO $ LL.listNull q
 
 instance DequeueStrategy IO LCFS where
 
-  {-# SPECIALISE INLINE strategyDequeue :: LCFS -> StrategyQueue IO LCFS a -> Event IO a #-}
-  strategyDequeue s (LCFSQueue q) =
+  {-# SPECIALISE INLINE strategyDequeue :: StrategyQueue IO LCFS a -> Event IO a #-}
+  strategyDequeue (LCFSQueue q) =
     liftIO $
     do i <- LL.listFirst q
        LL.listRemoveFirst q
@@ -152,8 +144,8 @@ instance DequeueStrategy IO LCFS where
 
 instance EnqueueStrategy IO LCFS where
 
-  {-# SPECIALISE INLINE strategyEnqueue :: LCFS -> StrategyQueue IO LCFS a -> a -> Event IO () #-}
-  strategyEnqueue s (LCFSQueue q) i = liftIO $ LL.listInsertFirst q i
+  {-# SPECIALISE INLINE strategyEnqueue :: StrategyQueue IO LCFS a -> a -> Event IO () #-}
+  strategyEnqueue (LCFSQueue q) i = liftIO $ LL.listInsertFirst q i
 
 instance QueueStrategy IO StaticPriorities where
 
@@ -162,13 +154,13 @@ instance QueueStrategy IO StaticPriorities where
   {-# SPECIALISE INLINE newStrategyQueue :: StaticPriorities -> Simulation IO (StrategyQueue IO StaticPriorities a) #-}
   newStrategyQueue s = fmap StaticPriorityQueue $ liftIO PQ.newQueue
 
-  {-# SPECIALISE INLINE strategyQueueNull :: StaticPriorities -> StrategyQueue IO StaticPriorities a -> Event IO Bool #-}
-  strategyQueueNull s (StaticPriorityQueue q) = liftIO $ PQ.queueNull q
+  {-# SPECIALISE INLINE strategyQueueNull :: StrategyQueue IO StaticPriorities a -> Event IO Bool #-}
+  strategyQueueNull (StaticPriorityQueue q) = liftIO $ PQ.queueNull q
 
 instance DequeueStrategy IO StaticPriorities where
 
-  {-# SPECIALISE INLINE strategyDequeue :: StaticPriorities -> StrategyQueue IO StaticPriorities a -> Event IO a #-}
-  strategyDequeue s (StaticPriorityQueue q) =
+  {-# SPECIALISE INLINE strategyDequeue :: StrategyQueue IO StaticPriorities a -> Event IO a #-}
+  strategyDequeue (StaticPriorityQueue q) =
     liftIO $
     do (_, i) <- PQ.queueFront q
        PQ.dequeue q
@@ -176,8 +168,8 @@ instance DequeueStrategy IO StaticPriorities where
 
 instance PriorityQueueStrategy IO StaticPriorities Double where
 
-  {-# SPECIALISE INLINE strategyEnqueueWithPriority :: StaticPriorities -> StrategyQueue IO StaticPriorities a -> Double -> a -> Event IO () #-}
-  strategyEnqueueWithPriority s (StaticPriorityQueue q) p i = liftIO $ PQ.enqueue q p i
+  {-# SPECIALISE INLINE strategyEnqueueWithPriority :: StrategyQueue IO StaticPriorities a -> Double -> a -> Event IO () #-}
+  strategyEnqueueWithPriority (StaticPriorityQueue q) p i = liftIO $ PQ.enqueue q p i
 
 instance QueueStrategy IO SIRO where
 
@@ -186,16 +178,16 @@ instance QueueStrategy IO SIRO where
   {-# SPECIALISE INLINE newStrategyQueue :: SIRO -> Simulation IO (StrategyQueue IO SIRO a) #-}
   newStrategyQueue s = fmap SIROQueue $ liftIO V.newVector
 
-  {-# SPECIALISE INLINE strategyQueueNull :: SIRO -> StrategyQueue IO SIRO a -> Event IO Bool #-}
-  strategyQueueNull s (SIROQueue q) =
+  {-# SPECIALISE INLINE strategyQueueNull :: StrategyQueue IO SIRO a -> Event IO Bool #-}
+  strategyQueueNull (SIROQueue q) =
     liftIO $
     do n <- V.vectorCount q
        return (n == 0)
 
 instance DequeueStrategy IO SIRO where
 
-  {-# SPECIALISE INLINE strategyDequeue :: SIRO -> StrategyQueue IO SIRO a -> Event IO a #-}
-  strategyDequeue s (SIROQueue q) =
+  {-# SPECIALISE INLINE strategyDequeue :: StrategyQueue IO SIRO a -> Event IO a #-}
+  strategyDequeue (SIROQueue q) =
     do n <- liftIO $ V.vectorCount q
        i <- liftParameter $ randomUniformInt 0 (n - 1)
        x <- liftIO $ V.readVector q i
@@ -204,5 +196,5 @@ instance DequeueStrategy IO SIRO where
 
 instance EnqueueStrategy IO SIRO where
 
-  {-# SPECIALISE INLINE strategyEnqueue :: SIRO -> StrategyQueue IO SIRO a -> a -> Event IO () #-}
-  strategyEnqueue s (SIROQueue q) i = liftIO $ V.appendVector q i
+  {-# SPECIALISE INLINE strategyEnqueue :: StrategyQueue IO SIRO a -> a -> Event IO () #-}
+  strategyEnqueue (SIROQueue q) i = liftIO $ V.appendVector q i
