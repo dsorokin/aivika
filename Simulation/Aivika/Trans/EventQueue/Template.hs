@@ -27,7 +27,7 @@ import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Internal.Event
 
-instance TemplateComp m => EventQueueable m where
+instance ProtoComp m => EventQueueable m where
 
   data EventQueue m =
     EventQueue { queuePQ :: PQ.PriorityQueue m (Point m -> m ()),
@@ -46,7 +46,7 @@ instance TemplateComp m => EventQueueable m where
                            queueBusy = f,
                            queueTime = t }
 
-instance TemplateComp m => EventQueueing m where
+instance ProtoComp m => EventQueueing m where
   
   {-# INLINE enqueueEvent #-}
   enqueueEvent t (Event m) =
@@ -68,7 +68,7 @@ instance TemplateComp m => Comp m
 instance TemplateComp m => Enq m
 
 -- | Process the pending events.
-processPendingEventsCore :: TemplateComp m => Bool -> Dynamics m ()
+processPendingEventsCore :: ProtoComp m => Bool -> Dynamics m ()
 {-# INLINABLE processPendingEventsCore #-}
 processPendingEventsCore includingCurrentEvents = Dynamics r where
   r p =
@@ -103,7 +103,7 @@ processPendingEventsCore includingCurrentEvents = Dynamics r where
                  call q p
 
 -- | Process the pending events synchronously, i.e. without past.
-processPendingEvents :: TemplateComp m => Bool -> Dynamics m ()
+processPendingEvents :: ProtoComp m => Bool -> Dynamics m ()
 {-# INLINABLE processPendingEvents #-}
 processPendingEvents includingCurrentEvents = Dynamics r where
   r p =
@@ -118,7 +118,7 @@ processPendingEvents includingCurrentEvents = Dynamics r where
   m = processPendingEventsCore includingCurrentEvents
 
 -- | Process the events.
-processEvents :: TemplateComp m => EventProcessing -> Dynamics m ()
+processEvents :: ProtoComp m => EventProcessing -> Dynamics m ()
 {-# INLINE processEvents #-}
 processEvents CurrentEvents = processPendingEvents True
 processEvents EarlierEvents = processPendingEvents False

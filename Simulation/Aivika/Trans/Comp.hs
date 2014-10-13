@@ -12,7 +12,8 @@
 -- It defines a type class of monads based on which the simulation monads can be built.
 --
 module Simulation.Aivika.Trans.Comp
-       (TemplateComp(..),
+       (ProtoComp(..),
+        TemplateComp(..),
         Comp(..),
         CompTrans(..)) where
 
@@ -27,24 +28,21 @@ import Simulation.Aivika.Trans.Unboxed
 import Simulation.Aivika.Trans.Generator
 import Simulation.Aivika.Trans.Internal.Specs
 
--- | A template type class of monads based on which the simulation monads can be built. 
+-- | A prototype of the type class of monads based on which the simulation monads can be built. 
 class (ExceptionHandling m,
        Monad m,
        Sessionning m,
        ProtoReferring m,
        ProtoArraying m,
        Unboxed m Double,
-       Generating m) => TemplateComp m
+       Generating m) => ProtoComp m
+
+-- | A type class of monads based on which we generate new instances in addition to those
+-- ones that we usually define explicitly with help of 'Comp' for efficiency.
+class ProtoComp m => TemplateComp m
 
 -- | An actual type class of monads based on which the simulation monads can be built. 
-class (ExceptionHandling m,
-       Monad m,
-       Sessionning m,
-       ProtoReferring m,
-       ProtoArraying m,
-       Unboxed m Double,
-       Generating m,
-       EventQueueable m) => Comp m
+class (ProtoComp m, EventQueueable m) => Comp m
 
 -- | A variant of the standard 'MonadTrans' type class with one difference:
 -- the computation that will be lifted into another must be 'Comp' instead of
