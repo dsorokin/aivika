@@ -27,7 +27,7 @@ import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Internal.Event
 
-instance ProtoComp m => EventQueueable m where
+instance TemplateComp m => EventQueueable m where
 
   data EventQueue m =
     EventQueue { queuePQ :: PQ.PriorityQueue m (Point m -> m ()),
@@ -37,7 +37,8 @@ instance ProtoComp m => EventQueueable m where
                  queueTime :: ProtoRef m Double
                  -- ^ the actual time of the event queue
                }
-  
+
+  {-# INLINABLE newEventQueue #-}
   newEventQueue session specs = 
     do f <- newProtoRef session False
        t <- newProtoRef session $ spcStartTime specs
@@ -46,21 +47,21 @@ instance ProtoComp m => EventQueueable m where
                            queueBusy = f,
                            queueTime = t }
 
-instance ProtoComp m => EventQueueing m where
-  
-  {-# INLINE enqueueEvent #-}
+instance TemplateComp m => EventQueueing m where
+
+  {-# INLINABLE enqueueEvent #-}
   enqueueEvent t (Event m) =
     Event $ \p ->
     let pq = queuePQ $ runEventQueue $ pointRun p
     in PQ.enqueue pq t m
 
-  {-# INLINE runEventWith #-}
+  {-# INLINABLE runEventWith #-}
   runEventWith processing (Event e) =
     Dynamics $ \p ->
     do invokeDynamics p $ processEvents processing
        e p
 
-  {-# INLINE eventQueueCount #-}
+  {-# INLINABLE eventQueueCount #-}
   eventQueueCount =
     Event $ PQ.queueCount . queuePQ . runEventQueue . pointRun
 
@@ -117,10 +118,30 @@ processPendingEvents includingCurrentEvents = Dynamics r where
          else invokeDynamics p m
   m = processPendingEventsCore includingCurrentEvents
 
+-- | A memoized value.
+processEventsIncludingCurrent :: ProtoComp m => Dynamics m ()
+{-# INLINABLE processEventsIncludingCurrent #-}
+processEventsIncludingCurrent = processPendingEvents True
+
+-- | A memoized value.
+processEventsIncludingEarlier :: ProtoComp m => Dynamics m ()
+{-# INLINABLE processEventsIncludingEarlier #-}
+processEventsIncludingEarlier = processPendingEvents False
+
+-- | A memoized value.
+processEventsIncludingCurrentCore :: ProtoComp m => Dynamics m ()
+{-# INLINABLE processEventsIncludingCurrentCore #-}
+processEventsIncludingCurrentCore = processPendingEventsCore True
+
+-- | A memoized value.
+processEventsIncludingEarlierCore :: ProtoComp m => Dynamics m ()
+{-# INLINABLE processEventsIncludingEarlierCore #-}
+processEventsIncludingEarlierCore = processPendingEventsCore True
+
 -- | Process the events.
 processEvents :: ProtoComp m => EventProcessing -> Dynamics m ()
 {-# INLINE processEvents #-}
-processEvents CurrentEvents = processPendingEvents True
-processEvents EarlierEvents = processPendingEvents False
-processEvents CurrentEventsOrFromPast = processPendingEventsCore True
-processEvents EarlierEventsOrFromPast = processPendingEventsCore False
+processEvents CurrentEvents = processEventsIncludingCurrent
+processEvents EarlierEvents = processEventsIncludingEarlier
+processEvents CurrentEventsOrFromPast = processEventsIncludingCurrentCore
+processEvents EarlierEventsOrFromPast = processEventsIncludingEarlierCore

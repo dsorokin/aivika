@@ -51,3 +51,5 @@ class CompTrans t where
 
   -- | Lift the underlying computation into another within simulation.
   liftComp :: Comp m => m a -> t m a
+
+instance ProtoComp IO

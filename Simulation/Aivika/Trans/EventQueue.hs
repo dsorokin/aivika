@@ -65,7 +65,6 @@ instance EventQueueing IO where
   eventQueueCount =
     Event $ PQ.queueCount . queuePQ . runEventQueue . pointRun
 
-instance ProtoComp IO
 instance Comp IO
 instance Enq IO
 
