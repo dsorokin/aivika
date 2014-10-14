@@ -11,10 +11,8 @@
 --
 -- It allows creating new simulation sessions using template.
 --
-module Simulation.Aivika.Trans.Session.Template
-       (Sessionning(..),
-        Session(..)) where
-
+module Simulation.Aivika.Trans.Session.Template where
+         
 import Control.Monad.Trans
 
 import Simulation.Aivika.Trans.Session

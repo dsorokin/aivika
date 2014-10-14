@@ -22,7 +22,7 @@ import Data.IORef
 import Simulation.Aivika.Trans.Session
 
 -- | Defines a monad whithin which computation the random number generator can work.
-class Generating m where
+class (Functor m, Monad m) => Generating m where
 
   -- | Defines a random number generator.
   data Generator m :: *

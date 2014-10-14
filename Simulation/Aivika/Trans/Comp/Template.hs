@@ -17,9 +17,16 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Trans.Comp
+import Simulation.Aivika.Trans.Session.Template
+import Simulation.Aivika.Trans.ProtoRef.Template
+import Simulation.Aivika.Trans.ProtoArray.Template
+import Simulation.Aivika.Trans.Unboxed.Template
+import Simulation.Aivika.Trans.Generator.Template
 import Simulation.Aivika.Trans.Internal.Template
 
 instance CompTrans TemplateComp where
 
   {-# INLINE liftComp #-}
   liftComp = TemplateComp
+
+instance ProtoComp m => ProtoComp (TemplateComp m)

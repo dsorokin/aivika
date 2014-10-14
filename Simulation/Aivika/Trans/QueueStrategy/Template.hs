@@ -11,17 +11,7 @@
 --
 -- This module defines the queue strategies based on template computation.
 --
-module Simulation.Aivika.Trans.QueueStrategy.Template
-       (-- * Strategy Classes
-        QueueStrategy(..),
-        DequeueStrategy(..),
-        EnqueueStrategy(..),
-        PriorityQueueStrategy(..),
-        -- * Strategy Instances
-        FCFS(..),
-        LCFS(..),
-        SIRO(..),
-        StaticPriorities(..)) where
+module Simulation.Aivika.Trans.QueueStrategy.Template() where
 
 import Control.Monad.Trans
 
