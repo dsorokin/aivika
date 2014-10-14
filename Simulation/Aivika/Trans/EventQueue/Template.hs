@@ -20,31 +20,35 @@ import qualified Simulation.Aivika.Trans.PriorityQueue as PQ
 import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.ProtoRef
 import Simulation.Aivika.Trans.Comp
+import Simulation.Aivika.Trans.Comp.Template
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Internal.Event
 
-instance TemplateComp m => EventQueueable m where
+instance ProtoComp m => EventQueueable (TemplateComp m) where
 
-  data EventQueue m =
-    EventQueue { queuePQ :: PQ.PriorityQueue m (Point m -> m ()),
-                 -- ^ the underlying priority queue
-                 queueBusy :: ProtoRef m Bool,
-                 -- ^ whether the queue is currently processing events
-                 queueTime :: ProtoRef m Double
-                 -- ^ the actual time of the event queue
-               }
+  data EventQueue (TemplateComp m) =
+    TemplateEventQueue { queuePQ :: PQ.PriorityQueue
+                                    (TemplateComp m)
+                                    (Point (TemplateComp m) ->
+                                     (TemplateComp m) ()),
+                         -- ^ the underlying priority queue
+                         queueBusy :: ProtoRef (TemplateComp m) Bool,
+                         -- ^ whether the queue is currently processing events
+                         queueTime :: ProtoRef (TemplateComp m) Double
+                         -- ^ the actual time of the event queue
+                       }
 
   {-# INLINABLE newEventQueue #-}
   newEventQueue session specs = 
     do f <- newProtoRef session False
        t <- newProtoRef session $ spcStartTime specs
        pq <- PQ.newQueue session
-       return EventQueue { queuePQ   = pq,
-                           queueBusy = f,
-                           queueTime = t }
+       return TemplateEventQueue { queuePQ   = pq,
+                                   queueBusy = f,
+                                   queueTime = t }
 
-instance TemplateComp m => EventQueueing m where
+instance ProtoComp m => EventQueueing (TemplateComp m) where
 
   {-# INLINABLE enqueueEvent #-}
   enqueueEvent t (Event m) =
@@ -62,11 +66,11 @@ instance TemplateComp m => EventQueueing m where
   eventQueueCount =
     Event $ PQ.queueCount . queuePQ . runEventQueue . pointRun
 
-instance TemplateComp m => Comp m
-instance TemplateComp m => Enq m
+instance ProtoComp m => Comp (TemplateComp m)
+instance ProtoComp m => Enq (TemplateComp m)
 
 -- | Process the pending events.
-processPendingEventsCore :: ProtoComp m => Bool -> Dynamics m ()
+processPendingEventsCore :: ProtoComp m => Bool -> Dynamics (TemplateComp m) ()
 {-# INLINABLE processPendingEventsCore #-}
 processPendingEventsCore includingCurrentEvents = Dynamics r where
   r p =
@@ -101,7 +105,7 @@ processPendingEventsCore includingCurrentEvents = Dynamics r where
                  call q p
 
 -- | Process the pending events synchronously, i.e. without past.
-processPendingEvents :: ProtoComp m => Bool -> Dynamics m ()
+processPendingEvents :: ProtoComp m => Bool -> Dynamics (TemplateComp m) ()
 {-# INLINABLE processPendingEvents #-}
 processPendingEvents includingCurrentEvents = Dynamics r where
   r p =
@@ -116,27 +120,27 @@ processPendingEvents includingCurrentEvents = Dynamics r where
   m = processPendingEventsCore includingCurrentEvents
 
 -- | A memoized value.
-processEventsIncludingCurrent :: ProtoComp m => Dynamics m ()
+processEventsIncludingCurrent :: ProtoComp m => Dynamics (TemplateComp m) ()
 {-# INLINABLE processEventsIncludingCurrent #-}
 processEventsIncludingCurrent = processPendingEvents True
 
 -- | A memoized value.
-processEventsIncludingEarlier :: ProtoComp m => Dynamics m ()
+processEventsIncludingEarlier :: ProtoComp m => Dynamics (TemplateComp m) ()
 {-# INLINABLE processEventsIncludingEarlier #-}
 processEventsIncludingEarlier = processPendingEvents False
 
 -- | A memoized value.
-processEventsIncludingCurrentCore :: ProtoComp m => Dynamics m ()
+processEventsIncludingCurrentCore :: ProtoComp m => Dynamics (TemplateComp m) ()
 {-# INLINABLE processEventsIncludingCurrentCore #-}
 processEventsIncludingCurrentCore = processPendingEventsCore True
 
 -- | A memoized value.
-processEventsIncludingEarlierCore :: ProtoComp m => Dynamics m ()
+processEventsIncludingEarlierCore :: ProtoComp m => Dynamics (TemplateComp m) ()
 {-# INLINABLE processEventsIncludingEarlierCore #-}
 processEventsIncludingEarlierCore = processPendingEventsCore True
 
 -- | Process the events.
-processEvents :: ProtoComp m => EventProcessing -> Dynamics m ()
+processEvents :: ProtoComp m => EventProcessing -> Dynamics (TemplateComp m) ()
 {-# INLINE processEvents #-}
 processEvents CurrentEvents = processEventsIncludingCurrent
 processEvents EarlierEvents = processEventsIncludingEarlier
