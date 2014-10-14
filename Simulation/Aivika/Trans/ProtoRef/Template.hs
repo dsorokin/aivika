@@ -29,8 +29,8 @@ instance ProtoReferring m => ProtoReferring (TemplateComp m) where
 
   newProtoRef (TemplateSession session) a = lift $ fmap TemplateProtoRef (newProtoRef session a)
 
-  readProtoRef (TemplateProtoRef x) = lift $ TemplateProtoRef (readProtoRef x)
+  readProtoRef (TemplateProtoRef x) = lift $ readProtoRef x
 
-  writeProtoRef (TemplateProtoRef x) = lift $ TemplateProtoRef (writeProtoRef x)
+  writeProtoRef (TemplateProtoRef x) a = lift $ writeProtoRef x a
 
-  modifyProtoRef (TemplateProtoRef x) = lift $ TemplateProtoRef (modifyProtoRef x)
+  modifyProtoRef (TemplateProtoRef x) f = lift $ modifyProtoRef x f
