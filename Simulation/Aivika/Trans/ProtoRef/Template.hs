@@ -11,9 +11,7 @@
 --
 -- It defines a prototype of mutable references.
 --
-module Simulation.Aivika.Trans.ProtoRef.Template
-       (ProtoReferring(..),
-        ProtoRef(..)) where
+module Simulation.Aivika.Trans.ProtoRef.Template where
 
 import Control.Monad.Trans
 

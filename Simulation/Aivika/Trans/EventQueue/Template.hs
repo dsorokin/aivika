@@ -11,10 +11,7 @@
 --
 -- The module defines a template-based implemenation of the event queue.
 --
-module Simulation.Aivika.Trans.EventQueue.Template
-       (-- * Event Queue Processing
-        EventQueueable(..),
-        EventQueueing(..)) where
+module Simulation.Aivika.Trans.EventQueue.Template() where
 
 import Control.Monad
 

@@ -11,8 +11,7 @@
 --
 -- It allows creating mutable arrays using template.
 --
-module Simulation.Aivika.Trans.ProtoArray.Template
-       (ProtoArraying(..)) where
+module Simulation.Aivika.Trans.ProtoArray.Template where
 
 import Data.Array
 
