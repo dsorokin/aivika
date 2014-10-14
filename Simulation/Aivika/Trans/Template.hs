@@ -2,7 +2,7 @@
 {-# LANGUAGE RecursiveDo #-}
 
 -- |
--- Module     : Simulation.Aivika.Trans.Internal.TemplateComp
+-- Module     : Simulation.Aivika.Trans.Template
 -- Copyright  : Copyright (c) 2009-2014, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -12,7 +12,7 @@
 -- The module defines the 'TemplateComp' monad template based on which we can
 -- construct automatically simulation computations with extended functionality.
 --
-module Simulation.Aivika.Trans.Internal.TemplateComp
+module Simulation.Aivika.Trans.Template
        (TemplateComp(..)) where
 
 import Control.Monad
