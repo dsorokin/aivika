@@ -28,6 +28,8 @@ import Simulation.Aivika.Trans.Session
 --
 -- We need a structurally different type to be able for extending
 -- the source simulation computation with new functions.
+--
+-- Note that @TemplateComp IO@ is about in 10 times slower than just 'IO'. 
 newtype TemplateComp m a =
   TemplateComp { runComp :: m a
                  -- ^ Return the source computation.
