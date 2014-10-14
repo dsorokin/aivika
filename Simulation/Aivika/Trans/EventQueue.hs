@@ -11,10 +11,7 @@
 --
 -- The module defines the event queue.
 --
-module Simulation.Aivika.Trans.EventQueue
-       (-- * Event Queue Processing
-        EventQueueable(..),
-        EventQueueing(..)) where
+module Simulation.Aivika.Trans.EventQueue() where
 
 import Data.IORef
 
