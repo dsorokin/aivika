@@ -21,7 +21,7 @@ import Simulation.Aivika.Trans.Session
 
 -- | A monad within which computation we can create and work with
 -- the prototype of mutable reference.
-class Monad m => ProtoReferring m where
+class (Functor m, Monad m) => ProtoReferring m where
   
   -- | A prototype of mutable reference.
   data ProtoRef m :: * -> *
@@ -43,7 +43,7 @@ instance ProtoReferring IO where
   newtype ProtoRef IO a = ProtoRef (IORef a)
 
   {-# SPECIALIZE INLINE newProtoRef :: Session IO -> a -> IO (ProtoRef IO a) #-}
-  newProtoRef session a = fmap ProtoRef $ newIORef a
+  newProtoRef session = fmap ProtoRef . newIORef
 
   {-# SPECIALIZE INLINE readProtoRef :: ProtoRef IO a -> IO a #-}
   readProtoRef (ProtoRef x) = readIORef x

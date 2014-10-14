@@ -18,7 +18,7 @@ module Simulation.Aivika.Trans.Session
 import Data.IORef
 
 -- | A monad within which computation we can create and work with a simulation session.
-class Sessionning m where
+class (Functor m, Monad m) => Sessionning m where
   
   -- | A simulation session.
   data Session m :: *
