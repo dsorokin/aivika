@@ -16,6 +16,7 @@ module Simulation.Aivika.Trans
         -- module Simulation.Aivika.Trans.Arrival,
         -- module Simulation.Aivika.Trans.Circuit,
         module Simulation.Aivika.Trans.Comp,
+        module Simulation.Aivika.Trans.Comp.Template,
         module Simulation.Aivika.Trans.Cont,
         module Simulation.Aivika.Trans.Dynamics,
         module Simulation.Aivika.Trans.Dynamics.Interpolate,
@@ -48,8 +49,6 @@ module Simulation.Aivika.Trans
         -- module Simulation.Aivika.Trans.Stream,
         -- module Simulation.Aivika.Trans.Stream.Random,
         -- module Simulation.Aivika.Trans.Task,
-        module Simulation.Aivika.Trans.Template,
-        module Simulation.Aivika.Trans.Template.Comp,
         -- module Simulation.Aivika.Trans.Transform,
         -- module Simulation.Aivika.Trans.Var.Unboxed) where
        ) where
@@ -58,6 +57,7 @@ module Simulation.Aivika.Trans
 -- import Simulation.Aivika.Trans.Arrival
 -- import Simulation.Aivika.Trans.Circuit
 import Simulation.Aivika.Trans.Comp
+import Simulation.Aivika.Trans.Comp.Template
 import Simulation.Aivika.Trans.Cont
 import Simulation.Aivika.Trans.Dynamics
 import Simulation.Aivika.Trans.Dynamics.Interpolate
@@ -90,7 +90,5 @@ import Simulation.Aivika.Trans.Statistics
 -- import Simulation.Aivika.Trans.Stream
 -- import Simulation.Aivika.Trans.Stream.Random
 -- import Simulation.Aivika.Trans.Task
-import Simulation.Aivika.Trans.Template
-import Simulation.Aivika.Trans.Template.Comp
 -- import Simulation.Aivika.Trans.Transform
 -- import Simulation.Aivika.Trans.Var.Unboxed

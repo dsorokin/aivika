@@ -1,6 +1,6 @@
 
 -- |
--- Module     : Simulation.Aivika.Trans.Template.Comp
+-- Module     : Simulation.Aivika.Trans.Comp.Template
 -- Copyright  : Copyright (c) 2009-2014, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -10,14 +10,14 @@
 -- The module defines the 'TemplateComp' monad template based on which we can
 -- construct automatically simulation computations with extended functionality.
 --
-module Simulation.Aivika.Trans.Template.Comp
+module Simulation.Aivika.Trans.Comp.Template
        (TemplateComp(..)) where
 
 import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika.Trans.Comp
-import Simulation.Aivika.Trans.Template
+import Simulation.Aivika.Trans.Internal.Template
 
 instance CompTrans TemplateComp where
 
