@@ -44,11 +44,13 @@ module Simulation.Aivika.Trans.Resource
         usingResource,
         usingResourceWithPriority) where
 
-import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
 import Control.Exception
 
+import Simulation.Aivika.Trans.Session
+import Simulation.Aivika.Trans.ProtoRef
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Event
@@ -61,110 +63,124 @@ import qualified Simulation.Aivika.Trans.Vector as V
 import qualified Simulation.Aivika.Trans.PriorityQueue as PQ
 
 -- | The ordinary FCFS (First Come - First Serviced) resource.
-type FCFSResource = Resource FCFS DLL.DoubleLinkedList
+type FCFSResource m = Resource m FCFS
 
 -- | The ordinary LCFS (Last Come - First Serviced) resource.
-type LCFSResource = Resource LCFS DLL.DoubleLinkedList
+type LCFSResource m = Resource m LCFS
 
 -- | The SIRO (Serviced in Random Order) resource.
-type SIROResource = Resource SIRO V.Vector
+type SIROResource m = Resource m SIRO
 
 -- | The resource with static priorities.
-type PriorityResource = Resource StaticPriorities PQ.PriorityQueue
+type PriorityResource m = Resource m StaticPriorities
 
 -- | Represents the resource with strategy @s@ applied for queuing the requests.
--- The @q@ type is dependent and it is usually derived automatically.
-data Resource s q = 
+data Resource m s = 
   Resource { resourceStrategy :: s,
              -- ^ Return the strategy applied for queuing the requests.
              resourceMaxCount :: Maybe Int,
              -- ^ Return the maximum count of the resource, where 'Nothing'
              -- means that the resource has no upper bound.
-             resourceCountRef :: IORef Int, 
-             resourceWaitList :: q (Event (Maybe (ContParams ()))) }
-
-instance Eq (Resource s q) where
-  x == y = resourceCountRef x == resourceCountRef y  -- unique references
+             resourceCountRef :: ProtoRef m Int, 
+             resourceWaitList :: StrategyQueue m s (Event m (Maybe (ContParams m ()))) }
 
 -- | Create a new FCFS resource with the specified initial count which value becomes
 -- the upper bound as well.
-newFCFSResource :: Int
+newFCFSResource :: Comp m
+                   => Int
                    -- ^ the initial count (and maximal count too) of the resource
-                   -> Simulation FCFSResource
+                   -> Simulation m (FCFSResource m)
+{-# INLINE newFCFSResource #-}                   
 newFCFSResource = newResource FCFS
 
 -- | Create a new FCFS resource with the specified initial and maximum counts,
 -- where 'Nothing' means that the resource has no upper bound.
-newFCFSResourceWithMaxCount :: Int
+newFCFSResourceWithMaxCount :: Comp m
+                               => Int
                                -- ^ the initial count of the resource
                                -> Maybe Int
                                -- ^ the maximum count of the resource, which can be indefinite
-                               -> Simulation FCFSResource
+                               -> Simulation m (FCFSResource m)
+{-# INLINE newFCFSResourceWithMaxCount #-}
 newFCFSResourceWithMaxCount = newResourceWithMaxCount FCFS
 
 -- | Create a new LCFS resource with the specified initial count which value becomes
 -- the upper bound as well.
-newLCFSResource :: Int
+newLCFSResource :: Comp m
+                   => Int
                    -- ^ the initial count (and maximal count too) of the resource
-                   -> Simulation LCFSResource
+                   -> Simulation m (LCFSResource m)
+{-# INLINE newLCFSResource #-}
 newLCFSResource = newResource LCFS
 
 -- | Create a new LCFS resource with the specified initial and maximum counts,
 -- where 'Nothing' means that the resource has no upper bound.
-newLCFSResourceWithMaxCount :: Int
+newLCFSResourceWithMaxCount :: Comp m
+                               => Int
                                -- ^ the initial count of the resource
                                -> Maybe Int
                                -- ^ the maximum count of the resource, which can be indefinite
-                               -> Simulation LCFSResource
+                               -> Simulation m (LCFSResource m)
+{-# INLINE newLCFSResourceWithMaxCount #-}
 newLCFSResourceWithMaxCount = newResourceWithMaxCount LCFS
 
 -- | Create a new SIRO resource with the specified initial count which value becomes
 -- the upper bound as well.
-newSIROResource :: Int
+newSIROResource :: Comp m
+                   => Int
                    -- ^ the initial count (and maximal count too) of the resource
-                   -> Simulation SIROResource
+                   -> Simulation m (SIROResource m)
+{-# INLINE newSIROResource #-}
 newSIROResource = newResource SIRO
 
 -- | Create a new SIRO resource with the specified initial and maximum counts,
 -- where 'Nothing' means that the resource has no upper bound.
-newSIROResourceWithMaxCount :: Int
+newSIROResourceWithMaxCount :: Comp m
+                               => Int
                                -- ^ the initial count of the resource
                                -> Maybe Int
                                -- ^ the maximum count of the resource, which can be indefinite
-                               -> Simulation SIROResource
+                               -> Simulation m (SIROResource m)
+{-# INLINE newSIROResourceWithMaxCount #-}
 newSIROResourceWithMaxCount = newResourceWithMaxCount SIRO
 
 -- | Create a new priority resource with the specified initial count which value becomes
 -- the upper bound as well.
-newPriorityResource :: Int
+newPriorityResource :: Comp m
+                       => Int
                        -- ^ the initial count (and maximal count too) of the resource
-                       -> Simulation PriorityResource
+                       -> Simulation m (PriorityResource m)
+{-# INLINE newPriorityResource #-}
 newPriorityResource = newResource StaticPriorities
 
 -- | Create a new priority resource with the specified initial and maximum counts,
 -- where 'Nothing' means that the resource has no upper bound.
-newPriorityResourceWithMaxCount :: Int
+newPriorityResourceWithMaxCount :: Comp m
+                                   => Int
                                    -- ^ the initial count of the resource
                                    -> Maybe Int
                                    -- ^ the maximum count of the resource, which can be indefinite
-                                   -> Simulation PriorityResource
+                                   -> Simulation m (PriorityResource m)
+{-# INLINE newPriorityResourceWithMaxCount #-}
 newPriorityResourceWithMaxCount = newResourceWithMaxCount StaticPriorities
 
 -- | Create a new resource with the specified queue strategy and initial count.
 -- The last value becomes the upper bound as well.
-newResource :: QueueStrategy s q
+newResource :: (Comp m, QueueStrategy m s)
                => s
                -- ^ the strategy for managing the queuing requests
                -> Int
                -- ^ the initial count (and maximal count too) of the resource
-               -> Simulation (Resource s q)
+               -> Simulation m (Resource m s)
+{-# INLINABLE newResource #-}
 newResource s count =
   Simulation $ \r ->
   do when (count < 0) $
        error $
        "The resource count cannot be negative: " ++
        "newResource."
-     countRef <- newIORef count
+     let session = runSession r 
+     countRef <- newProtoRef session count
      waitList <- invokeSimulation r $ newStrategyQueue s
      return Resource { resourceStrategy = s,
                        resourceMaxCount = Just count,
@@ -173,14 +189,15 @@ newResource s count =
 
 -- | Create a new resource with the specified queue strategy, initial and maximum counts,
 -- where 'Nothing' means that the resource has no upper bound.
-newResourceWithMaxCount :: QueueStrategy s q
+newResourceWithMaxCount :: (Comp m, QueueStrategy m s)
                            => s
                            -- ^ the strategy for managing the queuing requests
                            -> Int
                            -- ^ the initial count of the resource
                            -> Maybe Int
                            -- ^ the maximum count of the resource, which can be indefinite
-                           -> Simulation (Resource s q)
+                           -> Simulation m (Resource m s)
+{-# INLINABLE newResourceWithMaxCount #-}
 newResourceWithMaxCount s count maxCount =
   Simulation $ \r ->
   do when (count < 0) $
@@ -194,7 +211,8 @@ newResourceWithMaxCount s count maxCount =
          "its maximum value: newResourceWithMaxCount."
        _ ->
          return ()
-     countRef <- newIORef count
+     let session = runSession r
+     countRef <- newProtoRef session count
      waitList <- invokeSimulation r $ newStrategyQueue s
      return Resource { resourceStrategy = s,
                        resourceMaxCount = maxCount,
@@ -202,58 +220,62 @@ newResourceWithMaxCount s count maxCount =
                        resourceWaitList = waitList }
 
 -- | Return the current count of the resource.
-resourceCount :: Resource s q -> Event Int
+resourceCount :: Comp m => Resource m s -> Event m Int
+{-# INLINABLE resourceCount #-}
 resourceCount r =
-  Event $ \p -> readIORef (resourceCountRef r)
+  Event $ \p -> readProtoRef (resourceCountRef r)
 
 -- | Request for the resource decreasing its count in case of success,
 -- otherwise suspending the discontinuous process until some other 
 -- process releases the resource.
-requestResource :: EnqueueStrategy s q
-                   => Resource s q
+requestResource :: (Comp m, EnqueueStrategy m s)
+                   => Resource m s 
                    -- ^ the requested resource
-                   -> Process ()
+                   -> Process m ()
+{-# INLINABLE requestResource #-}
 requestResource r =
   Process $ \pid ->
   Cont $ \c ->
   Event $ \p ->
-  do a <- readIORef (resourceCountRef r)
+  do a <- readProtoRef (resourceCountRef r)
      if a == 0 
        then do c <- invokeEvent p $ contFreeze c
                invokeEvent p $
-                 strategyEnqueue (resourceStrategy r) (resourceWaitList r) c
+                 strategyEnqueue (resourceWaitList r) c
        else do let a' = a - 1
-               a' `seq` writeIORef (resourceCountRef r) a'
+               a' `seq` writeProtoRef (resourceCountRef r) a'
                invokeEvent p $ resumeCont c ()
 
 -- | Request with the priority for the resource decreasing its count
 -- in case of success, otherwise suspending the discontinuous process
 -- until some other process releases the resource.
-requestResourceWithPriority :: PriorityQueueStrategy s q p
-                               => Resource s q
+requestResourceWithPriority :: (Comp m, PriorityQueueStrategy m s p)
+                               => Resource m s
                                -- ^ the requested resource
                                -> p
                                -- ^ the priority
-                               -> Process ()
+                               -> Process m ()
+{-# INLINABLE requestResourceWithPriority #-}
 requestResourceWithPriority r priority =
   Process $ \pid ->
   Cont $ \c ->
   Event $ \p ->
-  do a <- readIORef (resourceCountRef r)
+  do a <- readProtoRef (resourceCountRef r)
      if a == 0 
        then do c <- invokeEvent p $ contFreeze c
                invokeEvent p $
-                 strategyEnqueueWithPriority (resourceStrategy r) (resourceWaitList r) priority c
+                 strategyEnqueueWithPriority (resourceWaitList r) priority c
        else do let a' = a - 1
-               a' `seq` writeIORef (resourceCountRef r) a'
+               a' `seq` writeProtoRef (resourceCountRef r) a'
                invokeEvent p $ resumeCont c ()
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
-releaseResource :: DequeueStrategy s q
-                   => Resource s q
+releaseResource :: (Comp m, DequeueStrategy m s)
+                   => Resource m s
                    -- ^ the resource to release
-                   -> Process ()
+                   -> Process m ()
+{-# INLINABLE releaseResource #-}
 releaseResource r = 
   Process $ \_ ->
   Cont $ \c ->
@@ -263,13 +285,14 @@ releaseResource r =
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
-releaseResourceWithinEvent :: DequeueStrategy s q
-                              => Resource s q
+releaseResourceWithinEvent :: (Comp m, DequeueStrategy m s)
+                              => Resource m s
                               -- ^ the resource to release
-                              -> Event ()
+                              -> Event m ()
+{-# INLINABLE releaseResourceWithinEvent #-}
 releaseResourceWithinEvent r =
   Event $ \p ->
-  do a <- readIORef (resourceCountRef r)
+  do a <- readProtoRef (resourceCountRef r)
      let a' = a + 1
      case resourceMaxCount r of
        Just maxCount | a' > maxCount ->
@@ -279,11 +302,11 @@ releaseResourceWithinEvent r =
        _ ->
          return ()
      f <- invokeEvent p $
-          strategyQueueNull (resourceStrategy r) (resourceWaitList r)
+          strategyQueueNull (resourceWaitList r)
      if f 
-       then a' `seq` writeIORef (resourceCountRef r) a'
+       then a' `seq` writeProtoRef (resourceCountRef r) a'
        else do c <- invokeEvent p $
-                    strategyDequeue (resourceStrategy r) (resourceWaitList r)
+                    strategyDequeue (resourceWaitList r)
                c <- invokeEvent p c
                case c of
                  Nothing ->
@@ -293,27 +316,30 @@ releaseResourceWithinEvent r =
 
 -- | Try to request for the resource decreasing its count in case of success
 -- and returning 'True' in the 'Event' monad; otherwise, returning 'False'.
-tryRequestResourceWithinEvent :: Resource s q
+tryRequestResourceWithinEvent :: Comp m
+                                 => Resource m s
                                  -- ^ the resource which we try to request for
-                                 -> Event Bool
+                                 -> Event m Bool
+{-# INLINABLE tryRequestResourceWithinEvent #-}
 tryRequestResourceWithinEvent r =
   Event $ \p ->
-  do a <- readIORef (resourceCountRef r)
+  do a <- readProtoRef (resourceCountRef r)
      if a == 0 
        then return False
        else do let a' = a - 1
-               a' `seq` writeIORef (resourceCountRef r) a'
+               a' `seq` writeProtoRef (resourceCountRef r) a'
                return True
                
 -- | Acquire the resource, perform some action and safely release the resource               
 -- in the end, even if the 'IOException' was raised within the action. 
-usingResource :: EnqueueStrategy s q
-                 => Resource s q
+usingResource :: (Comp m, EnqueueStrategy m s)
+                 => Resource m s
                  -- ^ the resource we are going to request for and then release in the end
-                 -> Process a
+                 -> Process m a
                  -- ^ the action we are going to apply having the resource
-                 -> Process a
+                 -> Process m a
                  -- ^ the result of the action
+{-# INLINABLE usingResource #-}
 usingResource r m =
   do requestResource r
      finallyProcess m $ releaseResource r
@@ -321,16 +347,17 @@ usingResource r m =
 -- | Acquire the resource with the specified priority, perform some action and
 -- safely release the resource in the end, even if the 'IOException' was raised
 -- within the action.
-usingResourceWithPriority :: PriorityQueueStrategy s q p
-                             => Resource s q
+usingResourceWithPriority :: (Comp m, PriorityQueueStrategy m s p)
+                             => Resource m s
                              -- ^ the resource we are going to request for and then
                              -- release in the end
                              -> p
                              -- ^ the priority
-                             -> Process a
+                             -> Process m a
                              -- ^ the action we are going to apply having the resource
-                             -> Process a
+                             -> Process m a
                              -- ^ the result of the action
+{-# INLINABLE usingResourceWithPriority #-}
 usingResourceWithPriority r priority m =
   do requestResourceWithPriority r priority
      finallyProcess m $ releaseResource r
