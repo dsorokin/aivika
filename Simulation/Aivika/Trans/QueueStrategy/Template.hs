@@ -16,7 +16,9 @@ module Simulation.Aivika.Trans.QueueStrategy.Template() where
 import Control.Monad.Trans
 
 import Simulation.Aivika.Trans.Session
+import Simulation.Aivika.Trans.Session.Template
 import Simulation.Aivika.Trans.Comp
+import Simulation.Aivika.Trans.Comp.Template
 import Simulation.Aivika.Trans.Parameter
 import Simulation.Aivika.Trans.Parameter.Random
 import Simulation.Aivika.Trans.Simulation
@@ -28,21 +30,22 @@ import qualified Simulation.Aivika.Trans.DoubleLinkedList as LL
 import qualified Simulation.Aivika.Trans.PriorityQueue as PQ
 import qualified Simulation.Aivika.Trans.Vector as V
 
-sessionParameter :: TemplateComp m => Simulation m (Session m)
-{-# INLINE sessionParameter #-}
-sessionParameter = liftParameter simulationSession
+instance ProtoComp m => QueueStrategy (TemplateComp m) FCFS where
 
-instance TemplateComp m => QueueStrategy m FCFS where
-
-  newtype StrategyQueue m FCFS a = TemplateFCFSQueue (LL.DoubleLinkedList m a)
+  newtype StrategyQueue (TemplateComp m) FCFS a =
+    TemplateFCFSQueue (LL.DoubleLinkedList (TemplateComp m) a)
 
   {-# INLINE newStrategyQueue #-}
-  newStrategyQueue s = fmap TemplateFCFSQueue $ sessionParameter >>= liftComp . LL.newList
+  newStrategyQueue s =
+    do TemplateSession sn <- liftParameter simulationSession
+       q <- liftComp $ LL.newList sn
+       return $ TemplateFCFSQueue q
 
   {-# INLINE strategyQueueNull #-}
-  strategyQueueNull (TemplateFCFSQueue q) = liftComp $ LL.listNull q
+  strategyQueueNull (TemplateFCFSQueue q) =
+    liftComp $ LL.listNull q
 
-instance TemplateComp m => DequeueStrategy m FCFS where
+instance ProtoComp m => DequeueStrategy (TemplateComp m) FCFS where
 
   {-# INLINE strategyDequeue #-}
   strategyDequeue (TemplateFCFSQueue q) =
@@ -51,22 +54,28 @@ instance TemplateComp m => DequeueStrategy m FCFS where
        LL.listRemoveFirst q
        return i
 
-instance TemplateComp m => EnqueueStrategy m FCFS where
+instance ProtoComp m => EnqueueStrategy (TemplateComp m) FCFS where
 
   {-# INLINE strategyEnqueue #-}
-  strategyEnqueue (TemplateFCFSQueue q) i = liftComp $ LL.listAddLast q i
+  strategyEnqueue (TemplateFCFSQueue q) i =
+    liftComp $ LL.listAddLast q i
 
-instance TemplateComp m => QueueStrategy m LCFS where
+instance ProtoComp m => QueueStrategy (TemplateComp m) LCFS where
 
-  newtype StrategyQueue m LCFS a = TemplateLCFSQueue (LL.DoubleLinkedList m a)
+  newtype StrategyQueue (TemplateComp m) LCFS a =
+    TemplateLCFSQueue (LL.DoubleLinkedList (TemplateComp m) a)
 
   {-# INLINE newStrategyQueue #-}
-  newStrategyQueue s = fmap TemplateLCFSQueue $ sessionParameter >>= liftComp . LL.newList
+  newStrategyQueue s =
+    fmap TemplateLCFSQueue $
+    liftParameter simulationSession >>=
+    liftComp . LL.newList
        
   {-# INLINE strategyQueueNull #-}
-  strategyQueueNull (TemplateLCFSQueue q) = liftComp $ LL.listNull q
+  strategyQueueNull (TemplateLCFSQueue q) =
+    liftComp $ LL.listNull q
 
-instance TemplateComp m => DequeueStrategy m LCFS where
+instance ProtoComp m => DequeueStrategy (TemplateComp m) LCFS where
 
   {-# INLINE strategyDequeue #-}
   strategyDequeue (TemplateLCFSQueue q) =
@@ -75,22 +84,28 @@ instance TemplateComp m => DequeueStrategy m LCFS where
        LL.listRemoveFirst q
        return i
 
-instance TemplateComp m => EnqueueStrategy m LCFS where
+instance ProtoComp m => EnqueueStrategy (TemplateComp m) LCFS where
 
   {-# INLINE strategyEnqueue #-}
-  strategyEnqueue (TemplateLCFSQueue q) i = liftComp $ LL.listInsertFirst q i
+  strategyEnqueue (TemplateLCFSQueue q) i =
+    liftComp $ LL.listInsertFirst q i
 
-instance TemplateComp m => QueueStrategy m StaticPriorities where
+instance ProtoComp m => QueueStrategy (TemplateComp m) StaticPriorities where
 
-  newtype StrategyQueue m StaticPriorities a = TemplateStaticPriorityQueue (PQ.PriorityQueue m a)
+  newtype StrategyQueue (TemplateComp m) StaticPriorities a =
+    TemplateStaticPriorityQueue (PQ.PriorityQueue (TemplateComp m) a)
 
   {-# INLINE newStrategyQueue #-}
-  newStrategyQueue s = fmap TemplateStaticPriorityQueue $ sessionParameter >>= liftComp . PQ.newQueue
+  newStrategyQueue s =
+    fmap TemplateStaticPriorityQueue $
+    liftParameter simulationSession >>=
+    liftComp . PQ.newQueue
 
   {-# INLINE strategyQueueNull #-}
-  strategyQueueNull (TemplateStaticPriorityQueue q) = liftComp $ PQ.queueNull q
+  strategyQueueNull (TemplateStaticPriorityQueue q) =
+    liftComp $ PQ.queueNull q
 
-instance TemplateComp m => DequeueStrategy m StaticPriorities where
+instance ProtoComp m => DequeueStrategy (TemplateComp m) StaticPriorities where
 
   {-# INLINE strategyDequeue #-}
   strategyDequeue (TemplateStaticPriorityQueue q) =
@@ -99,17 +114,22 @@ instance TemplateComp m => DequeueStrategy m StaticPriorities where
        PQ.dequeue q
        return i
 
-instance TemplateComp m => PriorityQueueStrategy m StaticPriorities Double where
+instance ProtoComp m => PriorityQueueStrategy (TemplateComp m) StaticPriorities Double where
 
   {-# INLINE strategyEnqueueWithPriority #-}
-  strategyEnqueueWithPriority (TemplateStaticPriorityQueue q) p i = liftComp $ PQ.enqueue q p i
+  strategyEnqueueWithPriority (TemplateStaticPriorityQueue q) p i =
+    liftComp $ PQ.enqueue q p i
 
-instance TemplateComp m => QueueStrategy m SIRO where
+instance ProtoComp m => QueueStrategy (TemplateComp m) SIRO where
 
-  newtype StrategyQueue m SIRO a = TemplateSIROQueue (V.Vector m a)
+  newtype StrategyQueue (TemplateComp m) SIRO a =
+    TemplateSIROQueue (V.Vector (TemplateComp m) a)
   
   {-# INLINE newStrategyQueue #-}
-  newStrategyQueue s = fmap TemplateSIROQueue $ liftParameter >>= liftComp . V.newVector
+  newStrategyQueue s =
+    fmap TemplateSIROQueue $
+    liftParameter simulationSession >>=
+    liftComp . V.newVector
 
   {-# INLINE strategyQueueNull #-}
   strategyQueueNull (TemplateSIROQueue q) =
@@ -117,7 +137,7 @@ instance TemplateComp m => QueueStrategy m SIRO where
     do n <- V.vectorCount q
        return (n == 0)
 
-instance TemplateComp m => DequeueStrategy m SIRO where
+instance ProtoComp m => DequeueStrategy (TemplateComp m) SIRO where
 
   {-# INLINE strategyDequeue #-}
   strategyDequeue (TemplateSIROQueue q) =
@@ -127,7 +147,8 @@ instance TemplateComp m => DequeueStrategy m SIRO where
        liftComp $ V.vectorDeleteAt q i
        return x
 
-instance TemplateComp m => EnqueueStrategy m SIRO where
+instance ProtoComp m => EnqueueStrategy (TemplateComp m) SIRO where
 
   {-# INLINE strategyEnqueue #-}
-  strategyEnqueue (TemplateSIROQueue q) i = liftComp $ V.appendVector q i
+  strategyEnqueue (TemplateSIROQueue q) i =
+    liftComp $ V.appendVector q i
