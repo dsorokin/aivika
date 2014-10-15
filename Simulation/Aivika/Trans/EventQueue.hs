@@ -118,31 +118,31 @@ processPendingEvents includingCurrentEvents = Dynamics r where
 
 -- | A memoized value.
 processEventsIncludingCurrent :: ProtoComp m => Dynamics m ()
-{-# INLINE processEventsIncludingCurrent #-}
+{-# INLINABLE processEventsIncludingCurrent #-}
 {-# SPECIALISE processEventsIncludingCurrent :: Dynamics IO () #-}
 processEventsIncludingCurrent = processPendingEvents True
 
 -- | A memoized value.
 processEventsIncludingEarlier :: ProtoComp m => Dynamics m ()
-{-# INLINE processEventsIncludingEarlier #-}
+{-# INLINABLE processEventsIncludingEarlier #-}
 {-# SPECIALISE processEventsIncludingEarlier :: Dynamics IO () #-}
 processEventsIncludingEarlier = processPendingEvents False
 
 -- | A memoized value.
 processEventsIncludingCurrentCore :: ProtoComp m => Dynamics m ()
-{-# INLINE processEventsIncludingCurrentCore #-}
+{-# INLINABLE processEventsIncludingCurrentCore #-}
 {-# SPECIALISE processEventsIncludingCurrentCore :: Dynamics IO () #-}
 processEventsIncludingCurrentCore = processPendingEventsCore True
 
 -- | A memoized value.
 processEventsIncludingEarlierCore :: ProtoComp m => Dynamics m ()
-{-# INLINE processEventsIncludingEarlierCore #-}
+{-# INLINABLE processEventsIncludingEarlierCore #-}
 {-# SPECIALISE processEventsIncludingEarlierCore :: Dynamics IO () #-}
 processEventsIncludingEarlierCore = processPendingEventsCore True
 
 -- | Process the events.
 processEvents :: ProtoComp m => EventProcessing -> Dynamics m ()
-{-# INLINE processEvents #-}
+{-# INLINABLE processEvents #-}
 {-# SPECIALISE processEvents :: EventProcessing -> Dynamics IO () #-}
 processEvents CurrentEvents = processEventsIncludingCurrent
 processEvents EarlierEvents = processEventsIncludingEarlier
