@@ -59,10 +59,6 @@ newVar a =
                   varYS = ys, 
                   varChangedSource = s }
 
-readVarFirst :: Comp m => Var m a -> Dynamics m a
-
-readVarLast :: Comp m => Var m a -> Event m a
-
 -- | Read the value of a variable.
 --
 -- It is safe to run the resulting computation with help of the 'runEventWith'
