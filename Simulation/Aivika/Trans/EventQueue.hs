@@ -35,6 +35,7 @@ instance ProtoComp m => EventQueueable m where
                  -- ^ the actual time of the event queue
                }
   
+  {-# INLINABLE newEventQueue #-}
   newEventQueue session specs = 
     do f <- newProtoRef session False
        t <- newProtoRef session $ spcStartTime specs
