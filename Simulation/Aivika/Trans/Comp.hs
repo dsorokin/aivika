@@ -13,6 +13,7 @@
 --
 module Simulation.Aivika.Trans.Comp
        (ProtoComp(..),
+        TemplateComp(..),
         Comp(..),
         CompTrans(..)) where
 
@@ -36,6 +37,9 @@ class (ExceptionHandling m,
        Unboxed m Double,
        Generating m) => ProtoComp m
 
+-- | Whether we generate necessary instances by template?
+class ProtoComp m => TemplateComp m
+
 -- | An actual type class of monads based on which the simulation monads can be built. 
 class (ProtoComp m, EventQueueable m) => Comp m
 
@@ -48,3 +52,4 @@ class CompTrans t where
   liftComp :: Comp m => m a -> t m a
 
 instance ProtoComp IO
+instance TemplateComp IO

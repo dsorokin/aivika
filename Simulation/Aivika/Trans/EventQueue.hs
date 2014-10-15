@@ -24,7 +24,7 @@ import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Internal.Event
 
-instance ProtoComp m => EventQueueable m where
+instance TemplateComp m => EventQueueable m where
 
   data EventQueue m =
     EventQueue { queuePQ :: PQ.PriorityQueue m (Point m -> m ()),
@@ -44,7 +44,7 @@ instance ProtoComp m => EventQueueable m where
                            queueBusy = f,
                            queueTime = t }
 
-instance ProtoComp m => EventQueueing m where
+instance TemplateComp m => EventQueueing m where
   
   {-# INLINE enqueueEvent #-}
   enqueueEvent t (Event m) =
@@ -62,8 +62,8 @@ instance ProtoComp m => EventQueueing m where
   eventQueueCount =
     Event $ PQ.queueCount . queuePQ . runEventQueue . pointRun
 
-instance ProtoComp m => Comp m
-instance ProtoComp m => Enq m
+instance TemplateComp m => Comp m
+instance TemplateComp m => Enq m
 
 -- | Process the pending events.
 processPendingEventsCore :: ProtoComp m => Bool -> Dynamics m ()
