@@ -112,6 +112,11 @@ instance MonadTrans Simulation where
   {-# INLINE lift #-}
   lift = Simulation . const
 
+instance CompTrans Simulation where
+
+  {-# INLINE liftComp #-}
+  liftComp = Simulation . const
+
 instance MonadIO m => MonadIO (Simulation m) where
   
   {-# INLINE liftIO #-}
