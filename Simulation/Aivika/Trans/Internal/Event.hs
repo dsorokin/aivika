@@ -53,8 +53,6 @@ import Control.Monad.Trans
 import Control.Monad.Fix
 import Control.Applicative
 
-import qualified Simulation.Aivika.PriorityQueue as PQ
-
 import Simulation.Aivika.Trans.Exception
 import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.ProtoRef
