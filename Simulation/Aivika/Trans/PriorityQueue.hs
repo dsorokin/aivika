@@ -38,6 +38,7 @@ data PriorityQueue m a =
 
 increase :: ProtoComp m => PriorityQueue m a -> m ()
 {-# INLINABLE increase #-}
+{-# SPECIALISE increase :: PriorityQueue IO Double -> IO () #-}
 increase pq = 
   do let s = pqSession pq
          keyRef = pqKeys pq
@@ -69,6 +70,8 @@ siftUp :: ProtoComp m
           -- ^ value
           -> m ()
 {-# INLINABLE siftUp #-}
+{-# SPECIALISE siftUp :: UA.ProtoArray IO Double -> A.ProtoArray IO a
+                         -> Int -> Double -> a -> IO () #-}
 siftUp keys vals i k v =
   if i == 0 
   then do UA.writeProtoArray keys i k
@@ -98,6 +101,8 @@ siftDown :: ProtoComp m
             -- ^ value
             -> m ()
 {-# INLINABLE siftDown #-}
+{-# SPECIALISE siftDown :: UA.ProtoArray IO Double -> A.ProtoArray IO a
+                           -> Int -> Int -> Double -> a -> IO () #-}
 siftDown keys vals size i k v =
   if i >= (size `div` 2)
   then do UA.writeProtoArray keys i k
