@@ -42,7 +42,7 @@ module Simulation.Aivika.Trans
         module Simulation.Aivika.Trans.Specs,
         module Simulation.Aivika.Trans.Statistics,
         -- module Simulation.Aivika.Trans.Statistics.Accumulator,
-        -- module Simulation.Aivika.Trans.Stream,
+        module Simulation.Aivika.Trans.Stream,
         -- module Simulation.Aivika.Trans.Stream.Random,
         -- module Simulation.Aivika.Trans.Task,
         -- module Simulation.Aivika.Trans.Transform,
@@ -79,7 +79,7 @@ import Simulation.Aivika.Trans.Simulation
 import Simulation.Aivika.Trans.Specs
 import Simulation.Aivika.Trans.Statistics
 -- import Simulation.Aivika.Trans.Statistics.Accumulator
--- import Simulation.Aivika.Trans.Stream
+import Simulation.Aivika.Trans.Stream
 -- import Simulation.Aivika.Trans.Stream.Random
 -- import Simulation.Aivika.Trans.Task
 -- import Simulation.Aivika.Trans.Transform

@@ -358,9 +358,9 @@ finallyCont (Cont m) (Cont m') =
 -- properly within 'Cont' computations, altough it will be still handled 
 -- if it will be hidden under the 'liftIO' function. The problem arises 
 -- namely with the @throw@ function, not 'IO' computations.
-throwCont :: (Comp m, MonadIO m) => IOException -> Cont m a
+throwCont :: Comp m => IOException -> Cont m a
 {-# INLINABLE throwCont #-}
-throwCont e = liftIO $ throw e
+throwCont = liftEvent . throwEvent
 
 -- | Run the 'Cont' computation with the specified cancelation source 
 -- and flag indicating whether to catch exceptions from the beginning.

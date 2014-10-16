@@ -29,8 +29,8 @@ import Simulation.Aivika.Trans.Generator
 import Simulation.Aivika.Trans.Internal.Specs
 
 -- | A prototype of the type class of monads based on which the simulation monads can be built. 
-class (ExceptionHandling m,
-       Monad m,
+class (Monad m,
+       ExceptionHandling m,
        Sessionning m,
        ProtoReferring m,
        ProtoArraying m,

@@ -426,9 +426,9 @@ finallyProcess (Process m) (Process m') =
 -- properly within 'Process' computations, although it will be still 
 -- handled if it will be hidden under the 'liftIO' function. The problem 
 -- arises namely with the @throw@ function, not 'IO' computations.
-throwProcess :: (Comp m, MonadIO m) => IOException -> Process m a
+throwProcess :: Comp m => IOException -> Process m a
 {-# INLINABLE throwProcess #-}
-throwProcess = liftIO . throw
+throwProcess = Process . const . throwCont
 
 -- | Execute the specified computations in parallel within
 -- the current computation and return their results. The cancellation
@@ -533,7 +533,7 @@ data MemoResult a = MemoComputed a
 
 -- | Memoize the process so that it would always return the same value
 -- within the simulation run.
-memoProcess :: (Comp m, MonadIO m) => Process m a -> Simulation m (Process m a)
+memoProcess :: Comp m => Process m a -> Simulation m (Process m a)
 {-# INLINABLE memoProcess #-}
 memoProcess x =
   Simulation $ \r ->

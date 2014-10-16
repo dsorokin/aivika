@@ -10,22 +10,32 @@
 -- It defines a type class of monads with 'IO' exception handling capabilities.
 --
 module Simulation.Aivika.Trans.Exception
-       (ExceptionHandling(..)) where
+       (ExceptionThrowing(..),
+        ExceptionHandling(..)) where
 
+import Control.Monad.Trans
 import Control.Exception
 
--- | A computation within which we can handle 'IO' exceptions
--- as well as define finalisation blocks.
-class ExceptionHandling m where
-
-  -- | Catch an 'IO' exception within the computation.
-  catchComp :: m a -> (IOException -> m a) -> m a
-
-  -- | Introduce a finalisation block.
-  finallyComp :: m a -> m b -> m a
+-- | A computation within which we can throw an exception.
+class ExceptionThrowing m where
 
   -- | Throw an exception.
   throwComp :: IOException -> m a
+
+-- | A computation within which we can handle 'IO' exceptions
+-- as well as define finalisation blocks.
+class (ExceptionThrowing m, MonadIO m) => ExceptionHandling m where
+
+  -- | Catch an 'IO' exception within the computation.
+  catchComp :: MonadIO m => m a -> (IOException -> m a) -> m a
+
+  -- | Introduce a finalisation block.
+  finallyComp :: MonadIO m => m a -> m b -> m a
+
+instance ExceptionThrowing IO where
+
+  {-# INLINE throwComp #-}
+  throwComp = throw
 
 instance ExceptionHandling IO where
 
@@ -34,6 +44,3 @@ instance ExceptionHandling IO where
 
   {-# INLINE finallyComp #-}
   finallyComp = finally
-
-  {-# INLINE throwComp #-}
-  throwComp = throw

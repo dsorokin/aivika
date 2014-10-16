@@ -46,9 +46,8 @@ module Simulation.Aivika.Trans.Stream
         repeatProcess,
         mapStream,
         mapStreamM,
-        apStreamDataFirst,
-        apStreamDataLater,
-        apStreamParallel,
+        apStream,
+        apStreamM,
         filterStream,
         filterStreamM,
         -- * Integrating with Signals
@@ -61,13 +60,16 @@ module Simulation.Aivika.Trans.Stream
         replaceRightStream,
         partitionEitherStream) where
 
-import Data.IORef
 import Data.Maybe
 import Data.Monoid
 
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Trans.Session
+import Simulation.Aivika.Trans.ProtoRef
+import Simulation.Aivika.Trans.Comp
+import Simulation.Aivika.Trans.Parameter
 import Simulation.Aivika.Trans.Simulation
 import Simulation.Aivika.Trans.Dynamics
 import Simulation.Aivika.Trans.Event
@@ -80,36 +82,42 @@ import Simulation.Aivika.Trans.Queue.Infinite
 import Simulation.Aivika.Trans.Internal.Arrival
 
 -- | Represents an infinite stream of data in time,
--- some kind of the cons cell.
-newtype Stream a = Cons { runStream :: Process (a, Stream a)
-                          -- ^ Run the stream.
-                        }
+-- some kind of never-ending cons cell.
+newtype Stream m a = Cons { runStream :: Process m (a, Stream m a)
+                            -- ^ Run the stream.
+                          }
 
-instance Functor Stream where
-  
+instance Comp m => Functor (Stream m) where
+
+  {-# INLINABLE fmap #-}
   fmap f (Cons s) = Cons y where
     y = do ~(x, xs) <- s
            return (f x, fmap f xs)
 
-instance Monoid (Stream a) where
+instance Comp m => Monoid (Stream m a) where
 
+  {-# INLINE mempty #-}
   mempty  = emptyStream
 
+  {-# INLINE mappend #-}
   mappend = mergeStreams
 
+  {-# INLINE mconcat #-}
   mconcat = concatStreams
 
 -- | Create a stream that will use the specified process identifier.
 -- It can be useful to refer to the underlying 'Process' computation which
 -- can be passivated, interrupted, canceled and so on. See also the
 -- 'processUsingId' function for more details.
-streamUsingId :: ProcessId -> Stream a -> Stream a
+streamUsingId :: Comp m => ProcessId m -> Stream m a -> Stream m a
+{-# INLINE streamUsingId #-}
 streamUsingId pid (Cons s) =
   Cons $ processUsingId pid s
 
 -- | Memoize the stream so that it would always return the same data
 -- within the simulation run.
-memoStream :: Stream a -> Simulation (Stream a)
+memoStream :: Comp m => Stream m a -> Simulation m (Stream m a)
+{-# INLINABLE memoStream #-}
 memoStream (Cons s) =
   do p <- memoProcess $
           do ~(x, xs) <- s
@@ -118,7 +126,8 @@ memoStream (Cons s) =
      return (Cons p)
 
 -- | Zip two streams trying to get data sequentially.
-zipStreamSeq :: Stream a -> Stream b -> Stream (a, b)
+zipStreamSeq :: Comp m => Stream m a -> Stream m b -> Stream m (a, b)
+{-# INLINABLE zipStreamSeq #-}
 zipStreamSeq (Cons sa) (Cons sb) = Cons y where
   y = do ~(x, xs) <- sa
          ~(y, ys) <- sb
@@ -126,13 +135,15 @@ zipStreamSeq (Cons sa) (Cons sb) = Cons y where
 
 -- | Zip two streams trying to get data as soon as possible,
 -- launching the sub-processes in parallel.
-zipStreamParallel :: Stream a -> Stream b -> Stream (a, b)
+zipStreamParallel :: Comp m => Stream m a -> Stream m b -> Stream m (a, b)
+{-# INLINABLE zipStreamParallel #-}
 zipStreamParallel (Cons sa) (Cons sb) = Cons y where
   y = do ~((x, xs), (y, ys)) <- zipProcessParallel sa sb
          return ((x, y), zipStreamParallel xs ys)
 
 -- | Zip three streams trying to get data sequentially.
-zip3StreamSeq :: Stream a -> Stream b -> Stream c -> Stream (a, b, c)
+zip3StreamSeq :: Comp m => Stream m a -> Stream m b -> Stream m c -> Stream m (a, b, c)
+{-# INLINABLE zip3StreamSeq #-}
 zip3StreamSeq (Cons sa) (Cons sb) (Cons sc) = Cons y where
   y = do ~(x, xs) <- sa
          ~(y, ys) <- sb
@@ -141,13 +152,15 @@ zip3StreamSeq (Cons sa) (Cons sb) (Cons sc) = Cons y where
 
 -- | Zip three streams trying to get data as soon as possible,
 -- launching the sub-processes in parallel.
-zip3StreamParallel :: Stream a -> Stream b -> Stream c -> Stream (a, b, c)
+zip3StreamParallel :: Comp m => Stream m a -> Stream m b -> Stream m c -> Stream m (a, b, c)
+{-# INLINABLE zip3StreamParallel #-}
 zip3StreamParallel (Cons sa) (Cons sb) (Cons sc) = Cons y where
   y = do ~((x, xs), (y, ys), (z, zs)) <- zip3ProcessParallel sa sb sc
          return ((x, y, z), zip3StreamParallel xs ys zs)
 
 -- | Unzip the stream.
-unzipStream :: Stream (a, b) -> Simulation (Stream a, Stream b)
+unzipStream :: Comp m => Stream m (a, b) -> Simulation m (Stream m a, Stream m b)
+{-# INLINABLE unzipStream #-}
 unzipStream s =
   do s' <- memoStream s
      let sa = mapStream fst s'
@@ -158,7 +171,8 @@ unzipStream s =
 -- read data sequentially from the input streams.
 --
 -- This is a generalization of 'zipStreamSeq'.
-streamSeq :: [Stream a] -> Stream [a]
+streamSeq :: Comp m => [Stream m a] -> Stream m [a]
+{-# INLINABLE streamSeq #-}
 streamSeq xs = Cons y where
   y = do ps <- forM xs runStream
          return (map fst ps, streamSeq $ map snd ps)
@@ -167,51 +181,52 @@ streamSeq xs = Cons y where
 -- read data from the input streams in parallel.
 --
 -- This is a generalization of 'zipStreamParallel'.
-streamParallel :: [Stream a] -> Stream [a]
+streamParallel :: Comp m => [Stream m a] -> Stream m [a]
+{-# INLINABLE streamParallel #-}
 streamParallel xs = Cons y where
   y = do ps <- processParallel $ map runStream xs
          return (map fst ps, streamParallel $ map snd ps)
 
 -- | Return a stream of values generated by the specified process.
-repeatProcess :: Process a -> Stream a
+repeatProcess :: Comp m => Process m a -> Stream m a
+{-# INLINABLE repeatProcess #-}
 repeatProcess p = Cons y where
   y = do a <- p
          return (a, repeatProcess p)
 
 -- | Map the stream according the specified function.
-mapStream :: (a -> b) -> Stream a -> Stream b
+mapStream :: Comp m => (a -> b) -> Stream m a -> Stream m b
+{-# INLINE mapStream #-}
 mapStream = fmap
 
 -- | Compose the stream.
-mapStreamM :: (a -> Process b) -> Stream a -> Stream b
+mapStreamM :: Comp m => (a -> Process m b) -> Stream m a -> Stream m b
+{-# INLINABLE mapStreamM #-}
 mapStreamM f (Cons s) = Cons y where
   y = do (a, xs) <- s
          b <- f a
          return (b, mapStreamM f xs)
 
--- | Transform the stream getting the transformation function after data have come.
-apStreamDataFirst :: Process (a -> b) -> Stream a -> Stream b
-apStreamDataFirst f (Cons s) = Cons y where
-  y = do ~(a, xs) <- s
-         g <- f
-         return (g a, apStreamDataFirst f xs)
+-- | Sequential application.
+apStream :: Comp m => Stream m (a -> b) -> Stream m a -> Stream m b
+{-# INLINABLE apStream #-}
+apStream (Cons sf) (Cons sa) = Cons y where
+  y = do (f, sf') <- sf
+         (a, sa') <- sa
+         return (f a, apStream sf' sa')
 
--- | Transform the stream getting the transformation function before requesting for data.
-apStreamDataLater :: Process (a -> b) -> Stream a -> Stream b
-apStreamDataLater f (Cons s) = Cons y where
-  y = do g <- f
-         ~(a, xs) <- s
-         return (g a, apStreamDataLater f xs)
-
--- | Transform the stream trying to get the transformation function as soon as possible
--- at the same time when requesting for the next portion of data.
-apStreamParallel :: Process (a -> b) -> Stream a -> Stream b
-apStreamParallel f (Cons s) = Cons y where
-  y = do ~(g, (a, xs)) <- zipProcessParallel f s
-         return (g a, apStreamParallel f xs)
+-- | Sequential application.
+apStreamM :: Comp m => Stream m (a -> Process m b) -> Stream m a -> Stream m b
+{-# INLINABLE apStreamM #-}
+apStreamM (Cons sf) (Cons sa) = Cons y where
+  y = do (f, sf') <- sf
+         (a, sa') <- sa
+         x <- f a
+         return (x, apStreamM sf' sa')
 
 -- | Filter only those data values that satisfy to the specified predicate.
-filterStream :: (a -> Bool) -> Stream a -> Stream a
+filterStream :: Comp m => (a -> Bool) -> Stream m a -> Stream m a
+{-# INLINABLE filterStream #-}
 filterStream p (Cons s) = Cons y where
   y = do (a, xs) <- s
          if p a
@@ -219,7 +234,8 @@ filterStream p (Cons s) = Cons y where
            else let Cons z = filterStream p xs in z
 
 -- | Filter only those data values that satisfy to the specified predicate.
-filterStreamM :: (a -> Process Bool) -> Stream a -> Stream a
+filterStreamM :: Comp m => (a -> Process m Bool) -> Stream m a -> Stream m a
+{-# INLINABLE filterStreamM #-}
 filterStreamM p (Cons s) = Cons y where
   y = do (a, xs) <- s
          b <- p a
@@ -228,7 +244,8 @@ filterStreamM p (Cons s) = Cons y where
            else let Cons z = filterStreamM p xs in z
 
 -- | The stream of 'Left' values.
-leftStream :: Stream (Either a b) -> Stream a
+leftStream :: Comp m => Stream m (Either a b) -> Stream m a
+{-# INLINABLE leftStream #-}
 leftStream (Cons s) = Cons y where
   y = do (a, xs) <- s
          case a of
@@ -236,7 +253,8 @@ leftStream (Cons s) = Cons y where
            Right _ -> let Cons z = leftStream xs in z
 
 -- | The stream of 'Right' values.
-rightStream :: Stream (Either a b) -> Stream b
+rightStream :: Comp m => Stream m (Either a b) -> Stream m b
+{-# INLINABLE rightStream #-}
 rightStream (Cons s) = Cons y where
   y = do (a, xs) <- s
          case a of
@@ -244,7 +262,8 @@ rightStream (Cons s) = Cons y where
            Right a -> return (a, rightStream xs)
 
 -- | Replace the 'Left' values.
-replaceLeftStream :: Stream (Either a b) -> Stream c -> Stream (Either c b)
+replaceLeftStream :: Comp m => Stream m (Either a b) -> Stream m c -> Stream m (Either c b)
+{-# INLINABLE replaceLeftStream #-}
 replaceLeftStream (Cons sab) (ys0 @ ~(Cons sc)) = Cons z where
   z = do (a, xs) <- sab
          case a of
@@ -255,7 +274,8 @@ replaceLeftStream (Cons sab) (ys0 @ ~(Cons sc)) = Cons z where
              return (Right a, replaceLeftStream xs ys0)
 
 -- | Replace the 'Right' values.
-replaceRightStream :: Stream (Either a b) -> Stream c -> Stream (Either a c)
+replaceRightStream :: Comp m => Stream m (Either a b) -> Stream m c -> Stream m (Either a c)
+{-# INLINABLE replaceRightStream #-}
 replaceRightStream (Cons sab) (ys0 @ ~(Cons sc)) = Cons z where
   z = do (a, xs) <- sab
          case a of
@@ -266,14 +286,16 @@ replaceRightStream (Cons sab) (ys0 @ ~(Cons sc)) = Cons z where
              return (Left a, replaceRightStream xs ys0)
 
 -- | Partition the stream of 'Either' values into two streams.
-partitionEitherStream :: Stream (Either a b) -> Simulation (Stream a, Stream b)
+partitionEitherStream :: Comp m => Stream m (Either a b) -> Simulation m (Stream m a, Stream m b)
+{-# INLINABLE partitionEitherStream #-}
 partitionEitherStream s =
   do s' <- memoStream s
      return (leftStream s', rightStream s')
 
 -- | Split the input stream into the specified number of output streams
 -- after applying the 'FCFS' strategy for enqueuing the output requests.
-splitStream :: Int -> Stream a -> Simulation [Stream a]
+splitStream :: Comp m => Int -> Stream m a -> Simulation m [Stream m a]
+{-# INLINE splitStream #-}
 splitStream = splitStreamQueueing FCFS
 
 -- | Split the input stream into the specified number of output streams.
@@ -281,53 +303,58 @@ splitStream = splitStreamQueueing FCFS
 -- If you don't know what the strategy to apply, then you probably
 -- need the 'FCFS' strategy, or function 'splitStream' that
 -- does namely this.
-splitStreamQueueing :: EnqueueStrategy s q
+splitStreamQueueing :: (Comp m, EnqueueStrategy m s)
                        => s
                        -- ^ the strategy applied for enqueuing the output requests
                        -> Int
                        -- ^ the number of output streams
-                       -> Stream a
+                       -> Stream m a
                        -- ^ the input stream
-                       -> Simulation [Stream a]
+                       -> Simulation m [Stream m a]
                        -- ^ the splitted output streams
+{-# INLINABLE splitStreamQueueing #-}
 splitStreamQueueing s n x =
-  do ref <- liftIO $ newIORef x
+  do session <- liftParameter simulationSession
+     ref <- liftComp $ newProtoRef session x
      res <- newResource s 1
      let reader =
            usingResource res $
-           do p <- liftIO $ readIORef ref
+           do p <- liftComp $ readProtoRef ref
               (a, xs) <- runStream p
-              liftIO $ writeIORef ref xs
+              liftComp $ writeProtoRef ref xs
               return a
      return $ map (\i -> repeatProcess reader) [1..n]
 
 -- | Split the input stream into a list of output streams
 -- using the specified priorities.
-splitStreamPrioritising :: PriorityQueueStrategy s q p
+splitStreamPrioritising :: (Comp m, PriorityQueueStrategy m s p)
                            => s
                            -- ^ the strategy applied for enqueuing the output requests
-                           -> [Stream p]
+                           -> [Stream m p]
                            -- ^ the streams of priorities
-                           -> Stream a
+                           -> Stream m a
                            -- ^ the input stream
-                           -> Simulation [Stream a]
+                           -> Simulation m [Stream m a]
                            -- ^ the splitted output streams
+{-# INLINABLE splitStreamPrioritising #-}
 splitStreamPrioritising s ps x =
-  do ref <- liftIO $ newIORef x
+  do session <- liftParameter simulationSession
+     ref <- liftComp $ newProtoRef session x
      res <- newResource s 1
      let stream (Cons p) = Cons z where
            z = do (p', ps) <- p
                   a <- usingResourceWithPriority res p' $
-                       do p <- liftIO $ readIORef ref
+                       do p <- liftComp $ readProtoRef ref
                           (a, xs) <- runStream p
-                          liftIO $ writeIORef ref xs
+                          liftComp $ writeProtoRef ref xs
                           return a
                   return (a, stream ps)
      return $ map stream ps
 
 -- | Concatenate the input streams applying the 'FCFS' strategy and
 -- producing one output stream.
-concatStreams :: [Stream a] -> Stream a
+concatStreams :: Comp m => [Stream m a] -> Stream m a
+{-# INLINE concatStreams #-}
 concatStreams = concatQueuedStreams FCFS
 
 -- | Concatenate the input streams producing one output stream.
@@ -335,29 +362,31 @@ concatStreams = concatQueuedStreams FCFS
 -- If you don't know what the strategy to apply, then you probably
 -- need the 'FCFS' strategy, or function 'concatStreams' that
 -- does namely this.
-concatQueuedStreams :: EnqueueStrategy s q
+concatQueuedStreams :: (Comp m, EnqueueStrategy m s)
                        => s
                        -- ^ the strategy applied for enqueuing the input data
-                       -> [Stream a]
+                       -> [Stream m a]
                        -- ^ the input stream
-                       -> Stream a
+                       -> Stream m a
                        -- ^ the combined output stream
+{-# INLINABLE concatQueuedStreams #-}
 concatQueuedStreams s streams = Cons z where
   z = do reading <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
          writing <- liftSimulation $ newResourceWithMaxCount s 1 (Just 1)
          conting <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
-         ref <- liftIO $ newIORef Nothing
+         session <- liftParameter simulationSession
+         ref <- liftComp $ newProtoRef session Nothing
          let writer p =
                do (a, xs) <- runStream p
                   requestResource writing
-                  liftIO $ writeIORef ref (Just a)
+                  liftComp $ writeProtoRef ref (Just a)
                   releaseResource reading
                   requestResource conting
                   writer xs
              reader =
                do requestResource reading
-                  Just a <- liftIO $ readIORef ref
-                  liftIO $ writeIORef ref Nothing
+                  Just a <- liftComp $ readProtoRef ref
+                  liftComp $ writeProtoRef ref Nothing
                   releaseResource writing
                   return a
          forM_ streams $ spawnProcess CancelTogether . writer
@@ -366,29 +395,31 @@ concatQueuedStreams s streams = Cons z where
          return (a, xs)
 
 -- | Concatenate the input priority streams producing one output stream.
-concatPriorityStreams :: PriorityQueueStrategy s q p
+concatPriorityStreams :: (Comp m, PriorityQueueStrategy m s p)
                          => s
                          -- ^ the strategy applied for enqueuing the input data
-                         -> [Stream (p, a)]
+                         -> [Stream m (p, a)]
                          -- ^ the input stream
-                         -> Stream a
+                         -> Stream m a
                          -- ^ the combined output stream
+{-# INLINABLE concatPriorityStreams #-}
 concatPriorityStreams s streams = Cons z where
   z = do reading <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
          writing <- liftSimulation $ newResourceWithMaxCount s 1 (Just 1)
          conting <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
-         ref <- liftIO $ newIORef Nothing
+         session <- liftParameter simulationSession
+         ref <- liftComp $ newProtoRef session Nothing
          let writer p =
                do ((priority, a), xs) <- runStream p
                   requestResourceWithPriority writing priority
-                  liftIO $ writeIORef ref (Just a)
+                  liftComp $ writeProtoRef ref (Just a)
                   releaseResource reading
                   requestResource conting
                   writer xs
              reader =
                do requestResource reading
-                  Just a <- liftIO $ readIORef ref
-                  liftIO $ writeIORef ref Nothing
+                  Just a <- liftComp $ readProtoRef ref
+                  liftComp $ writeProtoRef ref Nothing
                   releaseResource writing
                   return a
          forM_ streams $ spawnProcess CancelTogether . writer
@@ -397,7 +428,8 @@ concatPriorityStreams s streams = Cons z where
          return (a, xs)
 
 -- | Merge two streams applying the 'FCFS' strategy for enqueuing the input data.
-mergeStreams :: Stream a -> Stream a -> Stream a
+mergeStreams :: Comp m => Stream m a -> Stream m a -> Stream m a
+{-# INLINE mergeStreams #-}
 mergeStreams = mergeQueuedStreams FCFS
 
 -- | Merge two streams.
@@ -405,38 +437,42 @@ mergeStreams = mergeQueuedStreams FCFS
 -- If you don't know what the strategy to apply, then you probably
 -- need the 'FCFS' strategy, or function 'mergeStreams' that
 -- does namely this.
-mergeQueuedStreams :: EnqueueStrategy s q
+mergeQueuedStreams :: (Comp m, EnqueueStrategy m s)
                       => s
                       -- ^ the strategy applied for enqueuing the input data
-                      -> Stream a
+                      -> Stream m a
                       -- ^ the fist input stream
-                      -> Stream a
+                      -> Stream m a
                       -- ^ the second input stream
-                      -> Stream a
+                      -> Stream m a
                       -- ^ the output combined stream
+{-# INLINE mergeQueuedStreams #-}
 mergeQueuedStreams s x y = concatQueuedStreams s [x, y]
 
 -- | Merge two priority streams.
-mergePriorityStreams :: PriorityQueueStrategy s q p
+mergePriorityStreams :: (Comp m, PriorityQueueStrategy m s p)
                         => s
                         -- ^ the strategy applied for enqueuing the input data
-                        -> Stream (p, a)
+                        -> Stream m (p, a)
                         -- ^ the fist input stream
-                        -> Stream (p, a)
+                        -> Stream m (p, a)
                         -- ^ the second input stream
-                        -> Stream a
+                        -> Stream m a
                         -- ^ the output combined stream
+{-# INLINE mergePriorityStreams #-}
 mergePriorityStreams s x y = concatPriorityStreams s [x, y]
 
 -- | An empty stream that never returns data.
-emptyStream :: Stream a
+emptyStream :: Comp m => Stream m a
+{-# INLINE emptyStream #-}
 emptyStream = Cons neverProcess
 
 -- | Consume the stream. It returns a process that infinitely reads data
 -- from the stream and then redirects them to the provided function.
 -- It is useful for modeling the process of enqueueing data in the queue
 -- from the input stream.
-consumeStream :: (a -> Process ()) -> Stream a -> Process ()
+consumeStream :: Comp m => (a -> Process m ()) -> Stream m a -> Process m ()
+{-# INLINABLE consumeStream #-}
 consumeStream f = p where
   p (Cons s) = do (a, xs) <- s
                   f a
@@ -446,7 +482,8 @@ consumeStream f = p where
 -- from the stream. The resulting computation can be a moving force
 -- to simulate the whole system of the interconnected streams and
 -- processors.
-sinkStream :: Stream a -> Process ()
+sinkStream :: Comp m => Stream m a -> Process m ()
+{-# INLINABLE sinkStream #-}
 sinkStream = p where
   p (Cons s) = do (a, xs) <- s
                   p xs
@@ -458,21 +495,23 @@ sinkStream = p where
 -- You can think of this as the prefetched stream could place its latest 
 -- data item in some temporary space for later use, which is very useful 
 -- for modeling a sequence of separate and independent work places.
-prefetchStream :: Stream a -> Stream a
+prefetchStream :: Comp m => Stream m a -> Stream m a
+{-# INLINABLE prefetchStream #-}
 prefetchStream s = Cons z where
   z = do reading <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
          writing <- liftSimulation $ newResourceWithMaxCount FCFS 1 (Just 1)
-         ref <- liftIO $ newIORef Nothing
+         session <- liftParameter simulationSession
+         ref <- liftComp $ newProtoRef session Nothing
          let writer p =
                do (a, xs) <- runStream p
                   requestResource writing
-                  liftIO $ writeIORef ref (Just a)
+                  liftComp $ writeProtoRef ref (Just a)
                   releaseResource reading
                   writer xs
              reader =
                do requestResource reading
-                  Just a <- liftIO $ readIORef ref
-                  liftIO $ writeIORef ref Nothing
+                  Just a <- liftComp $ readProtoRef ref
+                  liftComp $ writeProtoRef ref Nothing
                   releaseResource writing
                   return a
          spawnProcess CancelTogether $ writer s
@@ -493,7 +532,8 @@ prefetchStream s = Cons z where
 -- the stream and it is returned within the computation.
 --
 -- Cancel the stream's process to unsubscribe from the specified signal.
-signalStream :: Signal a -> Process (Stream a)
+signalStream :: Comp m => Signal m a -> Process m (Stream m a)
+{-# INLINABLE signalStream #-}
 signalStream s =
   do q <- liftEvent newFCFSQueue
      h <- liftEvent $
@@ -507,7 +547,8 @@ signalStream s =
 -- computation.
 --
 -- Cancel the returned process to stop reading from the specified stream. 
-streamSignal :: Stream a -> Process (Signal a)
+streamSignal :: Comp m => Stream m a -> Process m (Signal m a)
+{-# INLINABLE streamSignal #-}
 streamSignal z =
   do s <- liftSimulation newSignalSource
      spawnProcess CancelTogether $
@@ -517,7 +558,8 @@ streamSignal z =
 -- | Transform a stream so that the resulting stream returns a sequence of arrivals
 -- saving the information about the time points at which the original stream items 
 -- were received by demand.
-arrivalStream :: Stream a -> Stream (Arrival a)
+arrivalStream :: Comp m => Stream m a -> Stream m (Arrival a)
+{-# INLINABLE arrivalStream #-}
 arrivalStream s = Cons $ loop s Nothing where
   loop s t0 = do (a, xs) <- runStream s
                  t <- liftDynamics time
@@ -530,5 +572,6 @@ arrivalStream s = Cons $ loop s Nothing where
                  return (b, Cons $ loop xs (Just t))
 
 -- | Delay the stream by one step using the specified initial value.
-delayStream :: a -> Stream a -> Stream a
+delayStream :: Comp m => a -> Stream m a -> Stream m a
+{-# INLINE delayStream #-}
 delayStream a0 s = Cons $ return (a0, s)

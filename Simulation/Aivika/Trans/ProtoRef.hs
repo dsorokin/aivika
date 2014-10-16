@@ -38,6 +38,9 @@ class (Functor m, Monad m) => ProtoReferring m where
   -- | Modify a value stored in the prototype of mutable reference.
   modifyProtoRef :: ProtoRef m a -> (a -> a) -> m ()
 
+  -- | A strict version of 'modifyProtoRef'.
+  modifyProtoRef' :: ProtoRef m a -> (a -> a) -> m ()
+
 instance ProtoReferring IO where
 
   newtype ProtoRef IO a = ProtoRef (IORef a)
@@ -53,3 +56,6 @@ instance ProtoReferring IO where
 
   {-# SPECIALIZE INLINE modifyProtoRef :: ProtoRef IO a -> (a -> a) -> IO () #-}
   modifyProtoRef (ProtoRef x) = modifyIORef x
+
+  {-# SPECIALIZE INLINE modifyProtoRef' :: ProtoRef IO a -> (a -> a) -> IO () #-}
+  modifyProtoRef' (ProtoRef x) = modifyIORef' x
