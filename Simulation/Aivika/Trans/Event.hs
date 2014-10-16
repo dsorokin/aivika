@@ -18,7 +18,6 @@ module Simulation.Aivika.Trans.Event
         runEventInStartTime,
         runEventInStopTime,
         -- * Event Queue
-        EventQueueable(..),
         EventQueueing(..),
         enqueueEventWithCancellation,
         enqueueEventWithTimes,
@@ -39,4 +38,5 @@ module Simulation.Aivika.Trans.Event
         -- * Disposable
         DisposableEvent(..)) where
 
+import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Event

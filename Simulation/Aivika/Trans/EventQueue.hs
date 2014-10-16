@@ -24,7 +24,7 @@ import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Internal.Event
 
-instance TemplateComp m => EventQueueable m where
+instance TemplateComp m => EventQueueing m where
 
   data EventQueue m =
     EventQueue { queuePQ :: PQ.PriorityQueue m (Point m -> m ()),
@@ -44,8 +44,6 @@ instance TemplateComp m => EventQueueable m where
                            queueBusy = f,
                            queueTime = t }
 
-instance TemplateComp m => EventQueueing m where
-  
   {-# INLINE enqueueEvent #-}
   enqueueEvent t (Event m) =
     Event $ \p ->

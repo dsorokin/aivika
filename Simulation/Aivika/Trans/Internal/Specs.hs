@@ -15,8 +15,12 @@ module Simulation.Aivika.Trans.Internal.Specs
         Method(..),
         Run(..),
         Point(..),
-        EventQueueable(..),
-        EventQueue(..),
+        Parameter(..),
+        Simulation(..),
+        Dynamics(..),
+        Event(..),
+        EventProcessing(..),
+        EventQueueing(..),
         basicTime,
         integIterationBnds,
         integIterationHiBnd,
@@ -67,14 +71,87 @@ data Point m = Point { pointSpecs :: Specs m,      -- ^ the simulation specs
                        pointPhase :: Int           -- ^ the current phase
                      }
 
--- | A type class of monads within which the event queues are defined.
-class EventQueueable m where
+-- | The 'Parameter' monad that allows specifying the model parameters.
+-- For example, they can be used when running the Monte-Carlo simulation.
+-- 
+-- In general, this monad is very useful for representing a computation which is external
+-- relative to the model itself.
+newtype Parameter m a = Parameter (Run m -> m a)
+
+-- | A value in the 'Simulation' monad represents a computation
+-- within the simulation run.
+newtype Simulation m a = Simulation (Run m -> m a)
+
+-- | A value in the 'Dynamics' monad represents a polymorphic time varying function
+-- defined in the whole spectrum of time values as a single entity. It is ideal for
+-- numerical approximating integrals.
+newtype Dynamics m a = Dynamics (Point m -> m a)
+
+-- | A value in the 'Event' monad transformer represents a polymorphic time varying
+-- function which is strongly synchronized with the event queue.
+newtype Event m a = Event (Point m -> m a)
+
+-- | Defines how the events are processed.
+data EventProcessing = CurrentEvents
+                       -- ^ either process all earlier and then current events,
+                       -- or raise an error if the current simulation time is less
+                       -- than the actual time of the event queue (safe within
+                       -- the 'Event' computation as this is protected by the type system)
+                     | EarlierEvents
+                       -- ^ either process all earlier events not affecting
+                       -- the events at the current simulation time,
+                       -- or raise an error if the current simulation time is less
+                       -- than the actual time of the event queue (safe within
+                       -- the 'Event' computation as this is protected by the type system)
+                     | CurrentEventsOrFromPast
+                       -- ^ either process all earlier and then current events,
+                       -- or do nothing if the current simulation time is less
+                       -- than the actual time of the event queue
+                       -- (do not use unless the documentation states the opposite)
+                     | EarlierEventsOrFromPast
+                       -- ^ either process all earlier events,
+                       -- or do nothing if the current simulation time is less
+                       -- than the actual time of the event queue
+                       -- (do not use unless the documentation states the opposite)
+                     deriving (Eq, Ord, Show)
+
+-- | A type class of monads that allow enqueueing the events.
+class EventQueueing m where
 
   -- | It represents the event queue.
   data EventQueue m :: *
 
   -- | Create a new event queue by the specified specs with simulation session.
   newEventQueue :: Session m -> Specs m -> m (EventQueue m)
+
+  -- | Enqueue the event which must be actuated at the specified time.
+  --
+  -- The events are processed when calling the 'runEvent' function. So,
+  -- if you want to insist on their immediate execution then you can apply
+  -- something like
+  --
+  -- @
+  --   liftDynamics $ runEvent IncludingCurrentEvents $ return ()
+  -- @
+  --
+  -- although this is generally not good idea.  
+  enqueueEvent :: Double -> Event m () -> Event m ()
+
+  -- | Run the 'EventT' computation in the current simulation time
+  -- within the 'DynamicsT' computation involving all pending
+  -- 'CurrentEvents' in the processing too.
+  runEvent :: Event m a -> Dynamics m a
+  {-# INLINE runEvent #-}
+  runEvent = runEventWith CurrentEvents
+
+  -- | Run the 'EventT' computation in the current simulation time
+  -- within the 'DynamicsT' computation specifying what pending events 
+  -- should be involved in the processing.
+  runEventWith :: EventProcessing -> Event m a -> Dynamics m a
+
+  -- | Return the number of pending events that should
+  -- be yet actuated.
+  eventQueueCount :: Event m Int
 
 -- | Returns the integration iterations starting from zero.
 integIterations :: Specs m -> [Int]

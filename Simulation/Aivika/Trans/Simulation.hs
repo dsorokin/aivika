@@ -22,4 +22,5 @@ module Simulation.Aivika.Trans.Simulation
         -- * Memoization
         memoSimulation) where
 
+import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Simulation

@@ -17,7 +17,6 @@
 --
 module Simulation.Aivika.Trans.Internal.Parameter
        (-- * Parameter
-        Parameter(..),
         ParameterLift(..),
         invokeParameter,
         runParameter,
@@ -58,13 +57,6 @@ import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.Generator
 import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
-
--- | The 'Parameter' monad that allows specifying the model parameters.
--- For example, they can be used when running the Monte-Carlo simulation.
--- 
--- In general, this monad is very useful for representing a computation which is external
--- relative to the model itself.
-newtype Parameter m a = Parameter (Run m -> m a)
 
 instance Monad m => Monad (Parameter m) where
 

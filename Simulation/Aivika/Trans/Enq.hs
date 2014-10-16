@@ -12,4 +12,4 @@
 module Simulation.Aivika.Trans.Enq
        (Enq(..)) where
 
-import Simulation.Aivika.Trans.Internal.Event
+import Simulation.Aivika.Trans.Comp

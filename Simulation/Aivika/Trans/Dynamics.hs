@@ -28,4 +28,5 @@ module Simulation.Aivika.Trans.Dynamics
         integIteration,
         integPhase) where
 
+import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Dynamics

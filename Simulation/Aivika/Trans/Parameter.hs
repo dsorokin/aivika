@@ -36,4 +36,5 @@ module Simulation.Aivika.Trans.Parameter
         -- * Utilities
         tableParameter) where
 
+import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter

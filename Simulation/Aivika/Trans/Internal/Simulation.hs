@@ -14,7 +14,6 @@
 -- 
 module Simulation.Aivika.Trans.Internal.Simulation
        (-- * Simulation
-        Simulation(..),
         SimulationLift(..),
         invokeSimulation,
         runSimulation,
@@ -43,10 +42,6 @@ import Simulation.Aivika.Trans.Generator
 import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
-
--- | A value in the 'Simulation' monad represents a computation
--- within the simulation run.
-newtype Simulation m a = Simulation (Run m -> m a)
 
 instance Monad m => Monad (Simulation m) where
 

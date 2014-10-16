@@ -13,7 +13,6 @@
 --
 module Simulation.Aivika.Trans.Internal.Dynamics
        (-- * Dynamics
-        Dynamics(..),
         DynamicsLift(..),
         invokeDynamics,
         runDynamicsInStartTime,
@@ -44,11 +43,6 @@ import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
-
--- | A value in the 'Dynamics' monad represents a polymorphic time varying function
--- defined in the whole spectrum of time values as a single entity. It is ideal for
--- numerical approximating integrals.
-newtype Dynamics m a = Dynamics (Point m -> m a)
 
 instance Monad m => Monad (Dynamics m) where
 

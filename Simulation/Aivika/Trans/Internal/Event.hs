@@ -14,16 +14,11 @@
 --
 module Simulation.Aivika.Trans.Internal.Event
        (-- * Event Monad
-        Event(..),
         EventLift(..),
-        EventProcessing(..),
         invokeEvent,
         runEventInStartTime,
         runEventInStopTime,
         -- * Event Queue
-        EventQueueable(..),
-        EventQueueing(..),
-        Enq,
         enqueueEventWithCancellation,
         enqueueEventWithTimes,
         enqueueEventWithPoints,
@@ -61,10 +56,6 @@ import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Dynamics
-
--- | A value in the 'Event' monad transformer represents a polymorphic time varying
--- function which is strongly synchronized with the event queue.
-newtype Event m a = Event (Point m -> m a)
 
 instance Monad m => Monad (Event m) where
 
@@ -163,65 +154,6 @@ instance MonadFix m => MonadFix (Event m) where
   mfix f = 
     Event $ \p ->
     do { rec { a <- invokeEvent p (f a) }; return a }
-
--- | Defines how the events are processed.
-data EventProcessing = CurrentEvents
-                       -- ^ either process all earlier and then current events,
-                       -- or raise an error if the current simulation time is less
-                       -- than the actual time of the event queue (safe within
-                       -- the 'Event' computation as this is protected by the type system)
-                     | EarlierEvents
-                       -- ^ either process all earlier events not affecting
-                       -- the events at the current simulation time,
-                       -- or raise an error if the current simulation time is less
-                       -- than the actual time of the event queue (safe within
-                       -- the 'Event' computation as this is protected by the type system)
-                     | CurrentEventsOrFromPast
-                       -- ^ either process all earlier and then current events,
-                       -- or do nothing if the current simulation time is less
-                       -- than the actual time of the event queue
-                       -- (do not use unless the documentation states the opposite)
-                     | EarlierEventsOrFromPast
-                       -- ^ either process all earlier events,
-                       -- or do nothing if the current simulation time is less
-                       -- than the actual time of the event queue
-                       -- (do not use unless the documentation states the opposite)
-                     deriving (Eq, Ord, Show)
-
--- | A type class of monads that allow enqueueing the events.
-class EventQueueing m where
-
-  -- | Enqueue the event which must be actuated at the specified time.
-  --
-  -- The events are processed when calling the 'runEvent' function. So,
-  -- if you want to insist on their immediate execution then you can apply
-  -- something like
-  --
-  -- @
-  --   liftDynamics $ runEvent IncludingCurrentEvents $ return ()
-  -- @
-  --
-  -- although this is generally not good idea.  
-  enqueueEvent :: Double -> Event m () -> Event m ()
-
-  -- | Run the 'EventT' computation in the current simulation time
-  -- within the 'DynamicsT' computation involving all pending
-  -- 'CurrentEvents' in the processing too.
-  runEvent :: Event m a -> Dynamics m a
-  {-# INLINE runEvent #-}
-  runEvent = runEventWith CurrentEvents
-
-  -- | Run the 'EventT' computation in the current simulation time
-  -- within the 'DynamicsT' computation specifying what pending events 
-  -- should be involved in the processing.
-  runEventWith :: EventProcessing -> Event m a -> Dynamics m a
-
-  -- | Return the number of pending events that should
-  -- be yet actuated.
-  eventQueueCount :: Event m Int
-
--- | Such a simulation monad that allows enqueueing events.
-class (Comp m, EventQueueing m) => Enq m
 
 -- | Run the 'Event' computation in the start time involving all
 -- pending 'CurrentEvents' in the processing too.
