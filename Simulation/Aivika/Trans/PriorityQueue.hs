@@ -70,8 +70,7 @@ siftUp :: ProtoComp m
           -- ^ value
           -> m ()
 {-# INLINABLE siftUp #-}
-{-# SPECIALISE siftUp :: UA.ProtoArray IO Double -> A.ProtoArray IO a
-                         -> Int -> Double -> a -> IO () #-}
+{-# SPECIALISE siftUp :: UA.ProtoArray IO Double -> A.ProtoArray IO a -> Int -> Double -> a -> IO () #-}
 siftUp keys vals i k v =
   if i == 0 
   then do UA.writeProtoArray keys i k
@@ -101,8 +100,7 @@ siftDown :: ProtoComp m
             -- ^ value
             -> m ()
 {-# INLINABLE siftDown #-}
-{-# SPECIALISE siftDown :: UA.ProtoArray IO Double -> A.ProtoArray IO a
-                           -> Int -> Int -> Double -> a -> IO () #-}
+{-# SPECIALISE siftDown :: UA.ProtoArray IO Double -> A.ProtoArray IO a -> Int -> Int -> Double -> a -> IO () #-}
 siftDown keys vals size i k v =
   if i >= (size `div` 2)
   then do UA.writeProtoArray keys i k
