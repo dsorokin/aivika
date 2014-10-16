@@ -608,7 +608,7 @@ rerunCont x cancelSource =
        else worker
 
 -- | Run the 'Cont' computation in parallel but connect the cancellation sources.
-spawnCont :: Enq m => ContCancellation -> Cont m () -> ContCancellationSource m -> Cont m ()
+spawnCont :: Comp m => ContCancellation -> Cont m () -> ContCancellationSource m -> Cont m ()
 {-# INLINABLE spawnCont #-}
 spawnCont cancellation x cancelSource =
   Cont $ \c ->
@@ -640,7 +640,7 @@ spawnCont cancellation x cancelSource =
        else worker
 
 -- | Freeze the computation parameters temporarily.
-contFreeze :: Enq m => ContParams m a -> Event m (Event m (Maybe (ContParams m a)))
+contFreeze :: Comp m => ContParams m a -> Event m (Event m (Maybe (ContParams m a)))
 {-# INLINABLE contFreeze #-}
 contFreeze c =
   Event $ \p ->
@@ -677,7 +677,7 @@ contFreeze c =
           return c
      
 -- | Await the signal.
-contAwait :: Enq m => Signal m a -> Cont m a
+contAwait :: Comp m => Signal m a -> Cont m a
 {-# INLINABLE contAwait #-}
 contAwait signal =
   Cont $ \c ->

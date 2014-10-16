@@ -322,7 +322,7 @@ triggerSignalWithCurrentTime s =
   Event $ \p -> invokeEvent p $ triggerSignal s (pointTime p)
 
 -- | Return a signal that is triggered in the specified time points.
-newSignalInTimes :: Enq m => [Double] -> Event m (Signal m Double)
+newSignalInTimes :: Comp m => [Double] -> Event m (Signal m Double)
 {-# INLINE newSignalInTimes #-}
 newSignalInTimes xs =
   do s <- liftSimulation newSignalSource
@@ -331,7 +331,7 @@ newSignalInTimes xs =
        
 -- | Return a signal that is triggered in the integration time points.
 -- It should be called with help of 'runEventInStartTime'.
-newSignalInIntegTimes :: Enq m => Event m (Signal m Double)
+newSignalInIntegTimes :: Comp m => Event m (Signal m Double)
 {-# INLINE newSignalInIntegTimes #-}
 newSignalInIntegTimes =
   do s <- liftSimulation newSignalSource
@@ -340,7 +340,7 @@ newSignalInIntegTimes =
      
 -- | Return a signal that is triggered in the start time.
 -- It should be called with help of 'runEventInStartTime'.
-newSignalInStartTime :: Enq m => Event m (Signal m Double)
+newSignalInStartTime :: Comp m => Event m (Signal m Double)
 {-# INLINE newSignalInStartTime #-}
 newSignalInStartTime =
   do s <- liftSimulation newSignalSource
@@ -349,7 +349,7 @@ newSignalInStartTime =
      return $ publishSignal s
 
 -- | Return a signal that is triggered in the final time.
-newSignalInStopTime :: Enq m => Event m (Signal m Double)
+newSignalInStopTime :: Comp m => Event m (Signal m Double)
 {-# INLINE newSignalInStopTime #-}
 newSignalInStopTime =
   do s <- liftSimulation newSignalSource

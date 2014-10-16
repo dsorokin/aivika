@@ -157,25 +157,25 @@ instance MonadFix m => MonadFix (Event m) where
 
 -- | Run the 'Event' computation in the start time involving all
 -- pending 'CurrentEvents' in the processing too.
-runEventInStartTime :: Enq m => Event m a -> Simulation m a
+runEventInStartTime :: Comp m => Event m a -> Simulation m a
 {-# INLINE runEventInStartTime #-}
 runEventInStartTime = runDynamicsInStartTime . runEvent
 
 -- | Run the 'Event' computation in the stop time involving all
 -- pending 'CurrentEvents' in the processing too.
-runEventInStopTime :: Enq m => Event m a -> Simulation m a
+runEventInStopTime :: Comp m => Event m a -> Simulation m a
 {-# INLINE runEventInStopTime #-}
 runEventInStopTime = runDynamicsInStopTime . runEvent
 
 -- | Actuate the event handler in the specified time points.
-enqueueEventWithTimes :: Enq m => [Double] -> Event m () -> Event m ()
+enqueueEventWithTimes :: Comp m => [Double] -> Event m () -> Event m ()
 {-# INLINE enqueueEventWithTimes #-}
 enqueueEventWithTimes ts e = loop ts
   where loop []       = return ()
         loop (t : ts) = enqueueEvent t $ e >> loop ts
        
 -- | Actuate the event handler in the specified time points.
-enqueueEventWithPoints :: Enq m => [Point m] -> Event m () -> Event m ()
+enqueueEventWithPoints :: Comp m => [Point m] -> Event m () -> Event m ()
 {-# INLINE enqueueEventWithPoints #-}
 enqueueEventWithPoints xs (Event e) = loop xs
   where loop []       = return ()
@@ -185,7 +185,7 @@ enqueueEventWithPoints xs (Event e) = loop xs
                            invokeEvent p $ loop xs
                            
 -- | Actuate the event handler in the integration time points.
-enqueueEventWithIntegTimes :: Enq m => Event m () -> Event m ()
+enqueueEventWithIntegTimes :: Comp m => Event m () -> Event m ()
 {-# INLINE enqueueEventWithIntegTimes #-}
 enqueueEventWithIntegTimes e =
   Event $ \p ->
@@ -203,7 +203,7 @@ data EventCancellation m =
                     }
 
 -- | Enqueue the event with an ability to cancel it.
-enqueueEventWithCancellation :: Enq m => Double -> Event m () -> Event m (EventCancellation m)
+enqueueEventWithCancellation :: Comp m => Double -> Event m () -> Event m (EventCancellation m)
 {-# INLINE enqueueEventWithCancellation #-}
 enqueueEventWithCancellation t e =
   Event $ \p ->
@@ -274,7 +274,7 @@ memoEventInTime m =
                  return v
 
 -- | Enqueue the event which must be actuated with the current modeling time but later.
-yieldEvent :: Enq m => Event m () -> Event m ()
+yieldEvent :: Comp m => Event m () -> Event m ()
 {-# INLINE yieldEvent #-}
 yieldEvent m =
   Event $ \p ->

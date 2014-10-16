@@ -51,7 +51,6 @@ import Control.Exception
 import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.ProtoRef
 import Simulation.Aivika.Trans.Comp
-import Simulation.Aivika.Trans.Enq
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Event
@@ -229,7 +228,7 @@ resourceCount r =
 -- | Request for the resource decreasing its count in case of success,
 -- otherwise suspending the discontinuous process until some other 
 -- process releases the resource.
-requestResource :: (Enq m, EnqueueStrategy m s)
+requestResource :: (Comp m, EnqueueStrategy m s)
                    => Resource m s 
                    -- ^ the requested resource
                    -> Process m ()
@@ -250,7 +249,7 @@ requestResource r =
 -- | Request with the priority for the resource decreasing its count
 -- in case of success, otherwise suspending the discontinuous process
 -- until some other process releases the resource.
-requestResourceWithPriority :: (Enq m, PriorityQueueStrategy m s p)
+requestResourceWithPriority :: (Comp m, PriorityQueueStrategy m s p)
                                => Resource m s
                                -- ^ the requested resource
                                -> p
@@ -272,7 +271,7 @@ requestResourceWithPriority r priority =
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
-releaseResource :: (Enq m, DequeueStrategy m s)
+releaseResource :: (Comp m, DequeueStrategy m s)
                    => Resource m s
                    -- ^ the resource to release
                    -> Process m ()
@@ -286,7 +285,7 @@ releaseResource r =
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
-releaseResourceWithinEvent :: (Enq m, DequeueStrategy m s)
+releaseResourceWithinEvent :: (Comp m, DequeueStrategy m s)
                               => Resource m s
                               -- ^ the resource to release
                               -> Event m ()
@@ -333,7 +332,7 @@ tryRequestResourceWithinEvent r =
                
 -- | Acquire the resource, perform some action and safely release the resource               
 -- in the end, even if the 'IOException' was raised within the action. 
-usingResource :: (Enq m, EnqueueStrategy m s)
+usingResource :: (Comp m, EnqueueStrategy m s)
                  => Resource m s
                  -- ^ the resource we are going to request for and then release in the end
                  -> Process m a
@@ -348,7 +347,7 @@ usingResource r m =
 -- | Acquire the resource with the specified priority, perform some action and
 -- safely release the resource in the end, even if the 'IOException' was raised
 -- within the action.
-usingResourceWithPriority :: (Enq m, PriorityQueueStrategy m s p)
+usingResourceWithPriority :: (Comp m, PriorityQueueStrategy m s p)
                              => Resource m s
                              -- ^ the resource we are going to request for and then
                              -- release in the end

@@ -61,7 +61,6 @@ instance TemplateComp m => EventQueueing m where
     Event $ PQ.queueCount . queuePQ . runEventQueue . pointRun
 
 instance Comp IO
-instance Enq IO
 
 -- | Process the pending events.
 processPendingEventsCore :: ProtoComp m => Bool -> Dynamics m ()

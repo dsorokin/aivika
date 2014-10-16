@@ -15,7 +15,6 @@ module Simulation.Aivika.Trans.Comp
        (ProtoComp(..),
         TemplateComp(..),
         Comp(..),
-        Enq(..),
         CompTrans(..)) where
 
 import Control.Monad
@@ -43,9 +42,6 @@ class ProtoComp m => TemplateComp m
 
 -- | Such a simulation monad that allows enqueueing events.
 class (ProtoComp m, EventQueueing m) => Comp m
-
--- | Such a simulation monad that allows enqueueing events.
-class Comp m => Enq m
 
 -- | A variant of the standard 'MonadTrans' type class with one difference:
 -- the computation that will be lifted into another must be 'Comp' instead of
