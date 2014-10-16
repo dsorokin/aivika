@@ -105,13 +105,16 @@ module Simulation.Aivika.Trans.Queue
         -- * Overall Signal
         queueChanged_) where
 
-import Data.IORef
 import Data.Monoid
 
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Trans.Session
+import Simulation.Aivika.Trans.ProtoRef
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
+import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Internal.Event
@@ -122,35 +125,26 @@ import Simulation.Aivika.Trans.Resource
 import Simulation.Aivika.Trans.QueueStrategy
 import Simulation.Aivika.Trans.Statistics
 
-import qualified Simulation.Aivika.Trans.DoubleLinkedList as DLL 
-import qualified Simulation.Aivika.Trans.Vector as V
-import qualified Simulation.Aivika.Trans.PriorityQueue as PQ
-
 -- | A type synonym for the ordinary FIFO queue also known as the FCFS
 -- (First Come - First Serviced) queue.
-type FCFSQueue a =
-  Queue FCFS DLL.DoubleLinkedList FCFS DLL.DoubleLinkedList FCFS DLL.DoubleLinkedList a
+type FCFSQueue m a = Queue m FCFS FCFS FCFS a
 
 -- | A type synonym for the ordinary LIFO queue also known as the LCFS
 -- (Last Come - First Serviced) queue.
-type LCFSQueue a =
-  Queue FCFS DLL.DoubleLinkedList LCFS DLL.DoubleLinkedList FCFS DLL.DoubleLinkedList a
+type LCFSQueue m a = Queue m FCFS LCFS FCFS a
 
 -- | A type synonym for the SIRO (Serviced in Random Order) queue.
-type SIROQueue a =
-  Queue FCFS DLL.DoubleLinkedList SIRO V.Vector FCFS DLL.DoubleLinkedList a
+type SIROQueue m a = Queue m FCFS SIRO FCFS a
 
 -- | A type synonym for the queue with static priorities applied when
 -- storing the elements in the queue.
-type PriorityQueue a =
-  Queue FCFS DLL.DoubleLinkedList StaticPriorities PQ.PriorityQueue FCFS DLL.DoubleLinkedList a
+type PriorityQueue m a = Queue m FCFS StaticPriorities FCFS a
 
 -- | Represents a queue using the specified strategies for enqueueing (input), @si@,
 -- internal storing (in memory), @sm@, and dequeueing (output), @so@, where @a@ denotes
--- the type of items stored in the queue. Types @qi@, @qm@ and @qo@ are
--- determined automatically and you should not care about them - they
--- are dependent types.
-data Queue si qi sm qm so qo a =
+-- the type of items stored in the queue. Type @m@ denotes the underlying monad within
+-- which the simulation executes.
+data Queue m si sm so a =
   Queue { queueMaxCount :: Int,
           -- ^ The queue capacity.
           enqueueStrategy :: si,
@@ -159,25 +153,25 @@ data Queue si qi sm qm so qo a =
           -- ^ The strategy applied when storing (in memory) items in the queue.
           dequeueStrategy :: so,
           -- ^ The strategy applied to the dequeueing (output) processes when the queue is empty.
-          enqueueRes :: Resource si qi,
-          queueStore :: qm (QueueItem a),
-          dequeueRes :: Resource so qo,
-          queueCountRef :: IORef Int,
-          queueCountStatsRef :: IORef (TimingStats Int),
-          enqueueCountRef :: IORef Int,
-          enqueueLostCountRef :: IORef Int,
-          enqueueStoreCountRef :: IORef Int,
-          dequeueCountRef :: IORef Int,
-          dequeueExtractCountRef :: IORef Int,
-          queueWaitTimeRef :: IORef (SamplingStats Double),
-          queueTotalWaitTimeRef :: IORef (SamplingStats Double),
-          enqueueWaitTimeRef :: IORef (SamplingStats Double),
-          dequeueWaitTimeRef :: IORef (SamplingStats Double),
-          enqueueInitiatedSource :: SignalSource a,
-          enqueueLostSource :: SignalSource a,
-          enqueueStoredSource :: SignalSource a,
-          dequeueRequestedSource :: SignalSource (),
-          dequeueExtractedSource :: SignalSource a }
+          enqueueRes :: Resource m si,
+          queueStore :: StrategyQueue m sm (QueueItem a),
+          dequeueRes :: Resource m so,
+          queueCountRef :: ProtoRef m Int,
+          queueCountStatsRef :: ProtoRef m (TimingStats Int),
+          enqueueCountRef :: ProtoRef m Int,
+          enqueueLostCountRef :: ProtoRef m Int,
+          enqueueStoreCountRef :: ProtoRef m Int,
+          dequeueCountRef :: ProtoRef m Int,
+          dequeueExtractCountRef :: ProtoRef m Int,
+          queueWaitTimeRef :: ProtoRef m (SamplingStats Double),
+          queueTotalWaitTimeRef :: ProtoRef m (SamplingStats Double),
+          enqueueWaitTimeRef :: ProtoRef m (SamplingStats Double),
+          dequeueWaitTimeRef :: ProtoRef m (SamplingStats Double),
+          enqueueInitiatedSource :: SignalSource m a,
+          enqueueLostSource :: SignalSource m a,
+          enqueueStoredSource :: SignalSource m a,
+          dequeueRequestedSource :: SignalSource m (),
+          dequeueExtractedSource :: SignalSource m a }
 
 -- | Stores the item and a time of its enqueuing. 
 data QueueItem a =
@@ -192,25 +186,26 @@ data QueueItem a =
             }
   
 -- | Create a new FCFS queue with the specified capacity.  
-newFCFSQueue :: Int -> Event (FCFSQueue a)  
+newFCFSQueue :: Comp m => Int -> Event m (FCFSQueue m a)  
 newFCFSQueue = newQueue FCFS FCFS FCFS
   
 -- | Create a new LCFS queue with the specified capacity.  
-newLCFSQueue :: Int -> Event (LCFSQueue a)  
+newLCFSQueue :: Comp m => Int -> Event m (LCFSQueue m a)  
 newLCFSQueue = newQueue FCFS LCFS FCFS
   
 -- | Create a new SIRO queue with the specified capacity.  
-newSIROQueue :: Int -> Event (SIROQueue a)  
+newSIROQueue :: Comp m => Int -> Event m (SIROQueue m a)  
 newSIROQueue = newQueue FCFS SIRO FCFS
   
 -- | Create a new priority queue with the specified capacity.  
-newPriorityQueue :: Int -> Event (PriorityQueue a)  
+newPriorityQueue :: Comp m => Int -> Event m (PriorityQueue m a)  
 newPriorityQueue = newQueue FCFS StaticPriorities FCFS
   
 -- | Create a new queue with the specified strategies and capacity.  
-newQueue :: (QueueStrategy si qi,
-             QueueStrategy sm qm,
-             QueueStrategy so qo) =>
+newQueue :: (Comp m,
+             QueueStrategy m si,
+             QueueStrategy m sm,
+             QueueStrategy m so) =>
             si
             -- ^ the strategy applied to the enqueueing (input) processes when the queue is full
             -> sm
@@ -219,23 +214,24 @@ newQueue :: (QueueStrategy si qi,
             -- ^ the strategy applied to the dequeueing (output) processes when the queue is empty
             -> Int
             -- ^ the queue capacity
-            -> Event (Queue si qi sm qm so qo a)  
+            -> Event m (Queue m si sm so a)  
 newQueue si sm so count =
   do t  <- liftDynamics time
-     i  <- liftIO $ newIORef 0
-     is <- liftIO $ newIORef $ returnTimingStats t 0
-     ci <- liftIO $ newIORef 0
-     cl <- liftIO $ newIORef 0
-     cm <- liftIO $ newIORef 0
-     cr <- liftIO $ newIORef 0
-     co <- liftIO $ newIORef 0
+     sn <- liftParameter simulationSession
+     i  <- liftComp $ newProtoRef sn 0
+     is <- liftComp $ newProtoRef sn $ returnTimingStats t 0
+     ci <- liftComp $ newProtoRef sn 0
+     cl <- liftComp $ newProtoRef sn 0
+     cm <- liftComp $ newProtoRef sn 0
+     cr <- liftComp $ newProtoRef sn 0
+     co <- liftComp $ newProtoRef sn 0
      ri <- liftSimulation $ newResourceWithMaxCount si count (Just count)
      qm <- liftSimulation $ newStrategyQueue sm
      ro <- liftSimulation $ newResourceWithMaxCount so 0 (Just count)
-     w  <- liftIO $ newIORef mempty
-     wt <- liftIO $ newIORef mempty
-     wi <- liftIO $ newIORef mempty
-     wo <- liftIO $ newIORef mempty 
+     w  <- liftComp $ newProtoRef sn mempty
+     wt <- liftComp $ newProtoRef sn mempty
+     wi <- liftComp $ newProtoRef sn mempty
+     wo <- liftComp $ newProtoRef sn mempty 
      s1 <- liftSimulation $ newSignalSource
      s2 <- liftSimulation $ newSignalSource
      s3 <- liftSimulation $ newSignalSource
@@ -268,58 +264,58 @@ newQueue si sm so count =
 -- | Test whether the queue is empty.
 --
 -- See also 'queueNullChanged' and 'queueNullChanged_'.
-queueNull :: Queue si qi sm qm so qo a -> Event Bool
+queueNull :: Comp m => Queue m si sm so a -> Event m Bool
 queueNull q =
   Event $ \p ->
-  do n <- readIORef (queueCountRef q)
+  do n <- readProtoRef (queueCountRef q)
      return (n == 0)
   
 -- | Signal when the 'queueNull' property value has changed.
-queueNullChanged :: Queue si qi sm qm so qo a -> Signal Bool
+queueNullChanged :: Comp m => Queue m si sm so a -> Signal m Bool
 queueNullChanged q =
   mapSignalM (const $ queueNull q) (queueNullChanged_ q)
   
 -- | Signal when the 'queueNull' property value has changed.
-queueNullChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueNullChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 queueNullChanged_ = queueCountChanged_
 
 -- | Test whether the queue is full.
 --
 -- See also 'queueFullChanged' and 'queueFullChanged_'.
-queueFull :: Queue si qi sm qm so qo a -> Event Bool
+queueFull :: Comp m => Queue m si sm so a -> Event m Bool
 queueFull q =
   Event $ \p ->
-  do n <- readIORef (queueCountRef q)
+  do n <- readProtoRef (queueCountRef q)
      return (n == queueMaxCount q)
   
 -- | Signal when the 'queueFull' property value has changed.
-queueFullChanged :: Queue si qi sm qm so qo a -> Signal Bool
+queueFullChanged :: Comp m => Queue m si sm so a -> Signal m Bool
 queueFullChanged q =
   mapSignalM (const $ queueFull q) (queueFullChanged_ q)
   
 -- | Signal when the 'queueFull' property value has changed.
-queueFullChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueFullChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 queueFullChanged_ = queueCountChanged_
 
 -- | Return the current queue size.
 --
 -- See also 'queueCountStats', 'queueCountChanged' and 'queueCountChanged_'.
-queueCount :: Queue si qi sm qm so qo a -> Event Int
+queueCount :: Comp m => Queue m si sm so a -> Event m Int
 queueCount q =
-  Event $ \p -> readIORef (queueCountRef q)
+  Event $ \p -> readProtoRef (queueCountRef q)
 
 -- | Return the queue size statistics.
-queueCountStats :: Queue si qi sm qm so qo a -> Event (TimingStats Int)
+queueCountStats :: Comp m => Queue m si sm so a -> Event m (TimingStats Int)
 queueCountStats q =
-  Event $ \p -> readIORef (queueCountStatsRef q)
+  Event $ \p -> readProtoRef (queueCountStatsRef q)
   
 -- | Signal when the 'queueCount' property value has changed.
-queueCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+queueCountChanged :: Comp m => Queue m si sm so a -> Signal m Int
 queueCountChanged q =
   mapSignalM (const $ queueCount q) (queueCountChanged_ q)
   
 -- | Signal when the 'queueCount' property value has changed.
-queueCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueCountChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 queueCountChanged_ q =
   mapSignal (const ()) (enqueueStored q) <>
   mapSignal (const ()) (dequeueExtracted q)
@@ -327,51 +323,51 @@ queueCountChanged_ q =
 -- | Return the total number of input items that were enqueued.
 --
 -- See also 'enqueueCountChanged' and 'enqueueCountChanged_'.
-enqueueCount :: Queue si qi sm qm so qo a -> Event Int
+enqueueCount :: Comp m => Queue m si sm so a -> Event m Int
 enqueueCount q =
-  Event $ \p -> readIORef (enqueueCountRef q)
+  Event $ \p -> readProtoRef (enqueueCountRef q)
   
 -- | Signal when the 'enqueueCount' property value has changed.
-enqueueCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+enqueueCountChanged :: Comp m => Queue m si sm so a -> Signal m Int
 enqueueCountChanged q =
   mapSignalM (const $ enqueueCount q) (enqueueCountChanged_ q)
   
 -- | Signal when the 'enqueueCount' property value has changed.
-enqueueCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+enqueueCountChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 enqueueCountChanged_ q =
   mapSignal (const ()) (enqueueInitiated q)
   
 -- | Return the number of lost items.
 --
 -- See also 'enqueueLostCountChanged' and 'enqueueLostCountChanged_'.
-enqueueLostCount :: Queue si qi sm qm so qo a -> Event Int
+enqueueLostCount :: Comp m => Queue m si sm so a -> Event m Int
 enqueueLostCount q =
-  Event $ \p -> readIORef (enqueueLostCountRef q)
+  Event $ \p -> readProtoRef (enqueueLostCountRef q)
   
 -- | Signal when the 'enqueueLostCount' property value has changed.
-enqueueLostCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+enqueueLostCountChanged :: Comp m => Queue m si sm so a -> Signal m Int
 enqueueLostCountChanged q =
   mapSignalM (const $ enqueueLostCount q) (enqueueLostCountChanged_ q)
   
 -- | Signal when the 'enqueueLostCount' property value has changed.
-enqueueLostCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+enqueueLostCountChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 enqueueLostCountChanged_ q =
   mapSignal (const ()) (enqueueLost q)
       
 -- | Return the total number of input items that were stored.
 --
 -- See also 'enqueueStoreCountChanged' and 'enqueueStoreCountChanged_'.
-enqueueStoreCount :: Queue si qi sm qm so qo a -> Event Int
+enqueueStoreCount :: Comp m => Queue m si sm so a -> Event m Int
 enqueueStoreCount q =
-  Event $ \p -> readIORef (enqueueStoreCountRef q)
+  Event $ \p -> readProtoRef (enqueueStoreCountRef q)
   
 -- | Signal when the 'enqueueStoreCount' property value has changed.
-enqueueStoreCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+enqueueStoreCountChanged :: Comp m => Queue m si sm so a -> Signal m Int
 enqueueStoreCountChanged q =
   mapSignalM (const $ enqueueStoreCount q) (enqueueStoreCountChanged_ q)
   
 -- | Signal when the 'enqueueStoreCount' property value has changed.
-enqueueStoreCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+enqueueStoreCountChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 enqueueStoreCountChanged_ q =
   mapSignal (const ()) (enqueueStored q)
       
@@ -380,74 +376,74 @@ enqueueStoreCountChanged_ q =
 -- without suspension.
 --
 -- See also 'dequeueCountChanged' and 'dequeueCountChanged_'.
-dequeueCount :: Queue si qi sm qm so qo a -> Event Int
+dequeueCount :: Comp m => Queue m si sm so a -> Event m Int
 dequeueCount q =
-  Event $ \p -> readIORef (dequeueCountRef q)
+  Event $ \p -> readProtoRef (dequeueCountRef q)
       
 -- | Signal when the 'dequeueCount' property value has changed.
-dequeueCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+dequeueCountChanged :: Comp m => Queue m si sm so a -> Signal m Int
 dequeueCountChanged q =
   mapSignalM (const $ dequeueCount q) (dequeueCountChanged_ q)
   
 -- | Signal when the 'dequeueCount' property value has changed.
-dequeueCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+dequeueCountChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 dequeueCountChanged_ q =
   mapSignal (const ()) (dequeueRequested q)
       
 -- | Return the total number of output items that were actually dequeued.
 --
 -- See also 'dequeueExtractCountChanged' and 'dequeueExtractCountChanged_'.
-dequeueExtractCount :: Queue si qi sm qm so qo a -> Event Int
+dequeueExtractCount :: Comp m => Queue m si sm so a -> Event m Int
 dequeueExtractCount q =
-  Event $ \p -> readIORef (dequeueExtractCountRef q)
+  Event $ \p -> readProtoRef (dequeueExtractCountRef q)
       
 -- | Signal when the 'dequeueExtractCount' property value has changed.
-dequeueExtractCountChanged :: Queue si qi sm qm so qo a -> Signal Int
+dequeueExtractCountChanged :: Comp m => Queue m si sm so a -> Signal m Int
 dequeueExtractCountChanged q =
   mapSignalM (const $ dequeueExtractCount q) (dequeueExtractCountChanged_ q)
   
 -- | Signal when the 'dequeueExtractCount' property value has changed.
-dequeueExtractCountChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+dequeueExtractCountChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 dequeueExtractCountChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
 
 -- | Return the load factor: the queue size divided by its maximum size.
 --
 -- See also 'queueLoadFactorChanged' and 'queueLoadFactorChanged_'.
-queueLoadFactor :: Queue si qi sm qm so qo a -> Event Double
+queueLoadFactor :: Comp m => Queue m si sm so a -> Event m Double
 queueLoadFactor q =
   Event $ \p ->
-  do x <- readIORef (queueCountRef q)
+  do x <- readProtoRef (queueCountRef q)
      let y = queueMaxCount q
      return (fromIntegral x / fromIntegral y)
       
 -- | Signal when the 'queueLoadFactor' property value has changed.
-queueLoadFactorChanged :: Queue si qi sm qm so qo a -> Signal Double
+queueLoadFactorChanged :: Comp m => Queue m si sm so a -> Signal m Double
 queueLoadFactorChanged q =
   mapSignalM (const $ queueLoadFactor q) (queueLoadFactorChanged_ q)
   
 -- | Signal when the 'queueLoadFactor' property value has changed.
-queueLoadFactorChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueLoadFactorChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 queueLoadFactorChanged_ q =
   mapSignal (const ()) (enqueueStored q) <>
   mapSignal (const ()) (dequeueExtracted q)
       
 -- | Return the rate of the input items that were enqueued: how many items
 -- per time.
-enqueueRate :: Queue si qi sm qm so qo a -> Event Double
+enqueueRate :: Comp m => Queue m si sm so a -> Event m Double
 enqueueRate q =
   Event $ \p ->
-  do x <- readIORef (enqueueCountRef q)
+  do x <- readProtoRef (enqueueCountRef q)
      let t0 = spcStartTime $ pointSpecs p
          t  = pointTime p
      return (fromIntegral x / (t - t0))
       
 -- | Return the rate of the items that were stored: how many items
 -- per time.
-enqueueStoreRate :: Queue si qi sm qm so qo a -> Event Double
+enqueueStoreRate :: Comp m => Queue m si sm so a -> Event m Double
 enqueueStoreRate q =
   Event $ \p ->
-  do x <- readIORef (enqueueStoreCountRef q)
+  do x <- readProtoRef (enqueueStoreCountRef q)
      let t0 = spcStartTime $ pointSpecs p
          t  = pointTime p
      return (fromIntegral x / (t - t0))
@@ -455,20 +451,20 @@ enqueueStoreRate q =
 -- | Return the rate of the requests for dequeueing the items: how many requests
 -- per time. It does not include the failed attempts to dequeue immediately
 -- without suspension.
-dequeueRate :: Queue si qi sm qm so qo a -> Event Double
+dequeueRate :: Comp m => Queue m si sm so a -> Event m Double
 dequeueRate q =
   Event $ \p ->
-  do x <- readIORef (dequeueCountRef q)
+  do x <- readProtoRef (dequeueCountRef q)
      let t0 = spcStartTime $ pointSpecs p
          t  = pointTime p
      return (fromIntegral x / (t - t0))
       
 -- | Return the rate of the output items that were actually dequeued: how many items
 -- per time.
-dequeueExtractRate :: Queue si qi sm qm so qo a -> Event Double
+dequeueExtractRate :: Comp m => Queue m si sm so a -> Event m Double
 dequeueExtractRate q =
   Event $ \p ->
-  do x <- readIORef (dequeueExtractCountRef q)
+  do x <- readProtoRef (dequeueExtractCountRef q)
      let t0 = spcStartTime $ pointSpecs p
          t  = pointTime p
      return (fromIntegral x / (t - t0))
@@ -477,17 +473,17 @@ dequeueExtractRate q =
 -- the time at which it was dequeued.
 --
 -- See also 'queueWaitTimeChanged' and 'queueWaitTimeChanged_'.
-queueWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
+queueWaitTime :: Comp m => Queue m si sm so a -> Event m (SamplingStats Double)
 queueWaitTime q =
-  Event $ \p -> readIORef (queueWaitTimeRef q)
+  Event $ \p -> readProtoRef (queueWaitTimeRef q)
       
 -- | Signal when the 'queueWaitTime' property value has changed.
-queueWaitTimeChanged :: Queue si qi sm qm so qo a -> Signal (SamplingStats Double)
+queueWaitTimeChanged :: Comp m => Queue m si sm so a -> Signal m (SamplingStats Double)
 queueWaitTimeChanged q =
   mapSignalM (const $ queueWaitTime q) (queueWaitTimeChanged_ q)
   
 -- | Signal when the 'queueWaitTime' property value has changed.
-queueWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueWaitTimeChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 queueWaitTimeChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
       
@@ -497,17 +493,17 @@ queueWaitTimeChanged_ q =
 -- In some sense, @queueTotalWaitTime == queueInputWaitTime + queueWaitTime@.
 --
 -- See also 'queueTotalWaitTimeChanged' and 'queueTotalWaitTimeChanged_'.
-queueTotalWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
+queueTotalWaitTime :: Comp m => Queue m si sm so a -> Event m (SamplingStats Double)
 queueTotalWaitTime q =
-  Event $ \p -> readIORef (queueTotalWaitTimeRef q)
+  Event $ \p -> readProtoRef (queueTotalWaitTimeRef q)
       
 -- | Signal when the 'queueTotalWaitTime' property value has changed.
-queueTotalWaitTimeChanged :: Queue si qi sm qm so qo a -> Signal (SamplingStats Double)
+queueTotalWaitTimeChanged :: Comp m => Queue m si sm so a -> Signal m (SamplingStats Double)
 queueTotalWaitTimeChanged q =
   mapSignalM (const $ queueTotalWaitTime q) (queueTotalWaitTimeChanged_ q)
   
 -- | Signal when the 'queueTotalWaitTime' property value has changed.
-queueTotalWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueTotalWaitTimeChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 queueTotalWaitTimeChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
       
@@ -515,17 +511,17 @@ queueTotalWaitTimeChanged_ q =
 -- was initiated to the time at which the item was stored in the queue.
 --
 -- See also 'enqueueWaitTimeChanged' and 'enqueueWaitTimeChanged_'.
-enqueueWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
+enqueueWaitTime :: Comp m => Queue m si sm so a -> Event m (SamplingStats Double)
 enqueueWaitTime q =
-  Event $ \p -> readIORef (enqueueWaitTimeRef q)
+  Event $ \p -> readProtoRef (enqueueWaitTimeRef q)
       
 -- | Signal when the 'enqueueWaitTime' property value has changed.
-enqueueWaitTimeChanged :: Queue si qi sm qm so qo a -> Signal (SamplingStats Double)
+enqueueWaitTimeChanged :: Comp m => Queue m si sm so a -> Signal m (SamplingStats Double)
 enqueueWaitTimeChanged q =
   mapSignalM (const $ enqueueWaitTime q) (enqueueWaitTimeChanged_ q)
   
 -- | Signal when the 'enqueueWaitTime' property value has changed.
-enqueueWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+enqueueWaitTimeChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 enqueueWaitTimeChanged_ q =
   mapSignal (const ()) (enqueueStored q)
       
@@ -533,17 +529,17 @@ enqueueWaitTimeChanged_ q =
 -- for dequeueing to the time at which it was actually dequeued.
 --
 -- See also 'dequeueWaitTimeChanged' and 'dequeueWaitTimeChanged_'.
-dequeueWaitTime :: Queue si qi sm qm so qo a -> Event (SamplingStats Double)
+dequeueWaitTime :: Comp m => Queue m si sm so a -> Event m (SamplingStats Double)
 dequeueWaitTime q =
-  Event $ \p -> readIORef (dequeueWaitTimeRef q)
+  Event $ \p -> readProtoRef (dequeueWaitTimeRef q)
       
 -- | Signal when the 'dequeueWaitTime' property value has changed.
-dequeueWaitTimeChanged :: Queue si qi sm qm so qo a -> Signal (SamplingStats Double)
+dequeueWaitTimeChanged :: Comp m => Queue m si sm so a -> Signal m (SamplingStats Double)
 dequeueWaitTimeChanged q =
   mapSignalM (const $ dequeueWaitTime q) (dequeueWaitTimeChanged_ q)
   
 -- | Signal when the 'dequeueWaitTime' property value has changed.
-dequeueWaitTimeChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+dequeueWaitTimeChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 dequeueWaitTimeChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
 
@@ -554,31 +550,32 @@ dequeueWaitTimeChanged_ q =
 -- finite and new arrivals may be locked while the queue remains full.
 --
 -- See also 'queueRateChanged' and 'queueRateChanged_'.
-queueRate :: Queue si qi sm qm so qo a -> Event Double
+queueRate :: Comp m => Queue m si sm so a -> Event m Double
 queueRate q =
   Event $ \p ->
-  do x <- readIORef (queueCountStatsRef q)
-     y <- readIORef (queueWaitTimeRef q)
+  do x <- readProtoRef (queueCountStatsRef q)
+     y <- readProtoRef (queueWaitTimeRef q)
      return (timingStatsMean x / samplingStatsMean y) 
       
 -- | Signal when the 'queueRate' property value has changed.
-queueRateChanged :: Queue si qi sm qm so qo a -> Signal Double
+queueRateChanged :: Comp m => Queue m si sm so a -> Signal m Double
 queueRateChanged q =
   mapSignalM (const $ queueRate q) (queueRateChanged_ q)
       
 -- | Signal when the 'queueRate' property value has changed.
-queueRateChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueRateChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 queueRateChanged_ q =
   mapSignal (const ()) (enqueueStored q) <>
   mapSignal (const ()) (dequeueExtracted q)
 
 -- | Dequeue suspending the process if the queue is empty.
-dequeue :: (DequeueStrategy si qi,
-            DequeueStrategy sm qm,
-            EnqueueStrategy so qo)
-           => Queue si qi sm qm so qo a
+dequeue :: (Comp m,
+            DequeueStrategy m si,
+            DequeueStrategy m sm,
+            EnqueueStrategy m so)
+           => Queue m si sm so a
            -- ^ the queue
-           -> Process a
+           -> Process m a
            -- ^ the dequeued value
 dequeue q =
   do t <- liftEvent $ dequeueRequest q
@@ -586,14 +583,15 @@ dequeue q =
      liftEvent $ dequeueExtract q t
   
 -- | Dequeue with the output priority suspending the process if the queue is empty.
-dequeueWithOutputPriority :: (DequeueStrategy si qi,
-                              DequeueStrategy sm qm,
-                              PriorityQueueStrategy so qo po)
-                             => Queue si qi sm qm so qo a
+dequeueWithOutputPriority :: (Comp m,
+                              DequeueStrategy m si,
+                              DequeueStrategy m sm,
+                              PriorityQueueStrategy m so po)
+                             => Queue m si sm so a
                              -- ^ the queue
                              -> po
                              -- ^ the priority for output
-                             -> Process a
+                             -> Process m a
                              -- ^ the dequeued value
 dequeueWithOutputPriority q po =
   do t <- liftEvent $ dequeueRequest q
@@ -601,11 +599,12 @@ dequeueWithOutputPriority q po =
      liftEvent $ dequeueExtract q t
   
 -- | Try to dequeue immediately.
-tryDequeue :: (DequeueStrategy si qi,
-               DequeueStrategy sm qm)
-              => Queue si qi sm qm so qo a
+tryDequeue :: (Comp m,
+               DequeueStrategy m si,
+               DequeueStrategy m sm)
+              => Queue m si sm so a
               -- ^ the queue
-              -> Event (Maybe a)
+              -> Event m (Maybe a)
               -- ^ the dequeued value of 'Nothing'
 tryDequeue q =
   do x <- tryRequestResourceWithinEvent (dequeueRes q)
@@ -615,56 +614,60 @@ tryDequeue q =
        else return Nothing
 
 -- | Enqueue the item suspending the process if the queue is full.  
-enqueue :: (EnqueueStrategy si qi,
-            EnqueueStrategy sm qm,
-            DequeueStrategy so qo)
-           => Queue si qi sm qm so qo a
+enqueue :: (Comp m,
+            EnqueueStrategy m si,
+            EnqueueStrategy m sm,
+            DequeueStrategy m so)
+           => Queue m si sm so a
            -- ^ the queue
            -> a
            -- ^ the item to enqueue
-           -> Process ()
+           -> Process m ()
 enqueue q a =
   do i <- liftEvent $ enqueueInitiate q a
      requestResource (enqueueRes q)
      liftEvent $ enqueueStore q i
      
 -- | Enqueue with the input priority the item suspending the process if the queue is full.  
-enqueueWithInputPriority :: (PriorityQueueStrategy si qi pi,
-                             EnqueueStrategy sm qm,
-                             DequeueStrategy so qo)
-                            => Queue si qi sm qm so qo a
+enqueueWithInputPriority :: (Comp m,
+                             PriorityQueueStrategy m si pi,
+                             EnqueueStrategy m sm,
+                             DequeueStrategy m so)
+                            => Queue m si sm so a
                             -- ^ the queue
                             -> pi
                             -- ^ the priority for input
                             -> a
                             -- ^ the item to enqueue
-                            -> Process ()
+                            -> Process m ()
 enqueueWithInputPriority q pi a =
   do i <- liftEvent $ enqueueInitiate q a
      requestResourceWithPriority (enqueueRes q) pi
      liftEvent $ enqueueStore q i
      
 -- | Enqueue with the storing priority the item suspending the process if the queue is full.  
-enqueueWithStoringPriority :: (EnqueueStrategy si qi,
-                               PriorityQueueStrategy sm qm pm,
-                               DequeueStrategy so qo)
-                              => Queue si qi sm qm so qo a
+enqueueWithStoringPriority :: (Comp m,
+                               EnqueueStrategy m si,
+                               PriorityQueueStrategy m sm pm,
+                               DequeueStrategy m so)
+                              => Queue m si sm so a
                               -- ^ the queue
                               -> pm
                               -- ^ the priority for storing
                               -> a
                               -- ^ the item to enqueue
-                              -> Process ()
+                              -> Process m ()
 enqueueWithStoringPriority q pm a =
   do i <- liftEvent $ enqueueInitiate q a
      requestResource (enqueueRes q)
      liftEvent $ enqueueStoreWithPriority q pm i
      
 -- | Enqueue with the input and storing priorities the item suspending the process if the queue is full.  
-enqueueWithInputStoringPriorities :: (PriorityQueueStrategy si qi pi,
-                                      PriorityQueueStrategy sm qm pm,
-                                      DequeueStrategy so qo)
-                                     => Queue si qi sm qm so qo a
+enqueueWithInputStoringPriorities :: (Comp m,
+                                      PriorityQueueStrategy m si pi,
+                                      PriorityQueueStrategy m sm pm,
+                                      DequeueStrategy m so)
+                                     => Queue m si sm so a
                                      -- ^ the queue
                                      -> pi
                                      -- ^ the priority for input
@@ -672,20 +675,21 @@ enqueueWithInputStoringPriorities :: (PriorityQueueStrategy si qi pi,
                                      -- ^ the priority for storing
                                      -> a
                                      -- ^ the item to enqueue
-                                     -> Process ()
+                                     -> Process m ()
 enqueueWithInputStoringPriorities q pi pm a =
   do i <- liftEvent $ enqueueInitiate q a
      requestResourceWithPriority (enqueueRes q) pi
      liftEvent $ enqueueStoreWithPriority q pm i
      
 -- | Try to enqueue the item. Return 'False' in the monad if the queue is full.
-tryEnqueue :: (EnqueueStrategy sm qm,
-               DequeueStrategy so qo)
-              => Queue si qi sm qm so qo a
+tryEnqueue :: (Comp m,
+               EnqueueStrategy m sm,
+               DequeueStrategy m so)
+              => Queue m si sm so a
               -- ^ the queue
               -> a
               -- ^ the item which we try to enqueue
-              -> Event Bool
+              -> Event m Bool
 tryEnqueue q a =
   do x <- tryRequestResourceWithinEvent (enqueueRes q)
      if x 
@@ -695,15 +699,16 @@ tryEnqueue q a =
 
 -- | Try to enqueue with the storing priority the item. Return 'False' in
 -- the monad if the queue is full.
-tryEnqueueWithStoringPriority :: (PriorityQueueStrategy sm qm pm,
-                                  DequeueStrategy so qo)
-                                 => Queue si qi sm qm so qo a
+tryEnqueueWithStoringPriority :: (Comp m,
+                                  PriorityQueueStrategy m sm pm,
+                                  DequeueStrategy m so)
+                                 => Queue m si sm so a
                                  -- ^ the queue
                                  -> pm
                                  -- ^ the priority for storing
                                  -> a
                                  -- ^ the item which we try to enqueue
-                                 -> Event Bool
+                                 -> Event m Bool
 tryEnqueueWithStoringPriority q pm a =
   do x <- tryRequestResourceWithinEvent (enqueueRes q)
      if x 
@@ -713,13 +718,14 @@ tryEnqueueWithStoringPriority q pm a =
 
 -- | Try to enqueue the item. If the queue is full then the item will be lost
 -- and 'False' will be returned.
-enqueueOrLost :: (EnqueueStrategy sm qm,
-                  DequeueStrategy so qo)
-                 => Queue si qi sm qm so qo a
+enqueueOrLost :: (Comp m,
+                  EnqueueStrategy m sm,
+                  DequeueStrategy m so)
+                 => Queue m si sm so a
                  -- ^ the queue
                  -> a
                  -- ^ the item which we try to enqueue
-                 -> Event Bool
+                 -> Event m Bool
 enqueueOrLost q a =
   do x <- tryRequestResourceWithinEvent (enqueueRes q)
      if x
@@ -730,15 +736,16 @@ enqueueOrLost q a =
 
 -- | Try to enqueue with the storing priority the item. If the queue is full
 -- then the item will be lost and 'False' will be returned.
-enqueueWithStoringPriorityOrLost :: (PriorityQueueStrategy sm qm pm,
-                                     DequeueStrategy so qo)
-                                    => Queue si qi sm qm so qo a
+enqueueWithStoringPriorityOrLost :: (Comp m,
+                                     PriorityQueueStrategy m sm pm,
+                                     DequeueStrategy m so)
+                                    => Queue m si sm so a
                                     -- ^ the queue
                                     -> pm
                                     -- ^ the priority for storing
                                     -> a
                                     -- ^ the item which we try to enqueue
-                                    -> Event Bool
+                                    -> Event m Bool
 enqueueWithStoringPriorityOrLost q pm a =
   do x <- tryRequestResourceWithinEvent (enqueueRes q)
      if x
@@ -748,39 +755,41 @@ enqueueWithStoringPriorityOrLost q pm a =
                return False
 
 -- | Try to enqueue the item. If the queue is full then the item will be lost.
-enqueueOrLost_ :: (EnqueueStrategy sm qm,
-                   DequeueStrategy so qo)
-                  => Queue si qi sm qm so qo a
+enqueueOrLost_ :: (Comp m,
+                   EnqueueStrategy m sm,
+                   DequeueStrategy m so)
+                  => Queue m si sm so a
                   -- ^ the queue
                   -> a
                   -- ^ the item which we try to enqueue
-                  -> Event ()
+                  -> Event m ()
 enqueueOrLost_ q a =
   do x <- enqueueOrLost q a
      return ()
 
 -- | Try to enqueue with the storing priority the item. If the queue is full
 -- then the item will be lost.
-enqueueWithStoringPriorityOrLost_ :: (PriorityQueueStrategy sm qm pm,
-                                      DequeueStrategy so qo)
-                                     => Queue si qi sm qm so qo a
+enqueueWithStoringPriorityOrLost_ :: (Comp m,
+                                      PriorityQueueStrategy m sm pm,
+                                      DequeueStrategy m so)
+                                     => Queue m si sm so a
                                      -- ^ the queue
                                      -> pm
                                      -- ^ the priority for storing
                                      -> a
                                      -- ^ the item which we try to enqueue
-                                     -> Event ()
+                                     -> Event m ()
 enqueueWithStoringPriorityOrLost_ q pm a =
   do x <- enqueueWithStoringPriorityOrLost q pm a
      return ()
 
 -- | Return a signal that notifies when the enqueuing operation is initiated.
-enqueueInitiated :: Queue si qi sm qm so qo a -> Signal a
+enqueueInitiated :: Comp m => Queue m si sm so a -> Signal m a
 enqueueInitiated q = publishSignal (enqueueInitiatedSource q)
 
 -- | Return a signal that notifies when the enqueuing operation is completed
 -- and the item is stored in the internal memory of the queue.
-enqueueStored :: Queue si qi sm qm so qo a -> Signal a
+enqueueStored :: Comp m => Queue m si sm so a -> Signal m a
 enqueueStored q = publishSignal (enqueueStoredSource q)
 
 -- | Return a signal which notifies that the item was lost when 
@@ -794,28 +803,29 @@ enqueueStored q = publishSignal (enqueueStoredSource q)
 -- exception from this rule. If the process trying to enqueue a new element was
 -- suspended but then canceled through 'cancelProcess' from the outside then
 -- the item will not be added.
-enqueueLost :: Queue si qi sm qm so qo a -> Signal a
+enqueueLost :: Comp m => Queue m si sm so a -> Signal m a
 enqueueLost q = publishSignal (enqueueLostSource q)
 
 -- | Return a signal that notifies when the dequeuing operation was requested.
-dequeueRequested :: Queue si qi sm qm so qo a -> Signal ()
+dequeueRequested :: Comp m => Queue m si sm so a -> Signal m ()
 dequeueRequested q = publishSignal (dequeueRequestedSource q)
 
 -- | Return a signal that notifies when the item was extracted from the internal
 -- storage of the queue and prepared for immediate receiving by the dequeuing process.
-dequeueExtracted :: Queue si qi sm qm so qo a -> Signal a
+dequeueExtracted :: Comp m => Queue m si sm so a -> Signal m a
 dequeueExtracted q = publishSignal (dequeueExtractedSource q)
 
 -- | Initiate the process of enqueuing the item.
-enqueueInitiate :: Queue si qi sm qm so qo a
+enqueueInitiate :: Comp m
+                   => Queue m si sm so a
                    -- ^ the queue
                    -> a
                    -- ^ the item to be enqueued
-                   -> Event (QueueItem a)
+                   -> Event m (QueueItem a)
 enqueueInitiate q a =
   Event $ \p ->
   do let t = pointTime p
-     modifyIORef' (enqueueCountRef q) (+ 1)
+     modifyProtoRef' (enqueueCountRef q) (+ 1)
      invokeEvent p $
        triggerSignal (enqueueInitiatedSource q) a
      return QueueItem { itemValue = a,
@@ -824,24 +834,25 @@ enqueueInitiate q a =
                       }
 
 -- | Store the item.
-enqueueStore :: (EnqueueStrategy sm qm,
-                 DequeueStrategy so qo)
-                => Queue si qi sm qm so qo a
+enqueueStore :: (Comp m,
+                 EnqueueStrategy m sm,
+                 DequeueStrategy m so)
+                => Queue m si sm so a
                 -- ^ the queue
                 -> QueueItem a
                 -- ^ the item to be stored
-                -> Event ()
+                -> Event m ()
 enqueueStore q i =
   Event $ \p ->
   do let i' = i { itemStoringTime = pointTime p }  -- now we have the actual time of storing
      invokeEvent p $
-       strategyEnqueue (enqueueStoringStrategy q) (queueStore q) i'
-     c <- readIORef (queueCountRef q)
+       strategyEnqueue (queueStore q) i'
+     c <- readProtoRef (queueCountRef q)
      let c' = c + 1
          t  = pointTime p 
-     c' `seq` writeIORef (queueCountRef q) c'
-     modifyIORef' (queueCountStatsRef q) (addTimingStats t c')
-     modifyIORef' (enqueueStoreCountRef q) (+ 1)
+     c' `seq` writeProtoRef (queueCountRef q) c'
+     modifyProtoRef' (queueCountStatsRef q) (addTimingStats t c')
+     modifyProtoRef' (enqueueStoreCountRef q) (+ 1)
      invokeEvent p $
        enqueueStat q i'
      invokeEvent p $
@@ -850,26 +861,27 @@ enqueueStore q i =
        triggerSignal (enqueueStoredSource q) (itemValue i')
 
 -- | Store with the priority the item.
-enqueueStoreWithPriority :: (PriorityQueueStrategy sm qm pm,
-                             DequeueStrategy so qo)
-                            => Queue si qi sm qm so qo a
+enqueueStoreWithPriority :: (Comp m,
+                             PriorityQueueStrategy m sm pm,
+                             DequeueStrategy m so)
+                            => Queue m si sm so a
                             -- ^ the queue
                             -> pm
                             -- ^ the priority for storing
                             -> QueueItem a
                             -- ^ the item to be enqueued
-                            -> Event ()
+                            -> Event m ()
 enqueueStoreWithPriority q pm i =
   Event $ \p ->
   do let i' = i { itemStoringTime = pointTime p }  -- now we have the actual time of storing
      invokeEvent p $
-       strategyEnqueueWithPriority (enqueueStoringStrategy q) (queueStore q) pm i'
-     c <- readIORef (queueCountRef q)
+       strategyEnqueueWithPriority (queueStore q) pm i'
+     c <- readProtoRef (queueCountRef q)
      let c' = c + 1
          t  = pointTime p
-     c' `seq` writeIORef (queueCountRef q) c'
-     modifyIORef' (queueCountStatsRef q) (addTimingStats t c')
-     modifyIORef' (enqueueStoreCountRef q) (+ 1)
+     c' `seq` writeProtoRef (queueCountRef q) c'
+     modifyProtoRef' (queueCountStatsRef q) (addTimingStats t c')
+     modifyProtoRef' (enqueueStoreCountRef q) (+ 1)
      invokeEvent p $
        enqueueStat q i'
      invokeEvent p $
@@ -878,62 +890,66 @@ enqueueStoreWithPriority q pm i =
        triggerSignal (enqueueStoredSource q) (itemValue i')
 
 -- | Deny the enqueuing.
-enqueueDeny :: Queue si qi sm qm so qo a
+enqueueDeny :: Comp m
+               => Queue m si sm so a
                -- ^ the queue
                -> a
                -- ^ the item to be denied
-               -> Event ()
+               -> Event m ()
 enqueueDeny q a =
   Event $ \p ->
-  do modifyIORef' (enqueueLostCountRef q) $ (+) 1
+  do modifyProtoRef' (enqueueLostCountRef q) $ (+) 1
      invokeEvent p $
        triggerSignal (enqueueLostSource q) a
 
 -- | Update the statistics for the input wait time of the enqueuing operation.
-enqueueStat :: Queue si qi sm qm so qo a
+enqueueStat :: Comp m
+               => Queue m si sm so a
                -- ^ the queue
                -> QueueItem a
                -- ^ the item and its input time
-               -> Event ()
+               -> Event m ()
                -- ^ the action of updating the statistics
 enqueueStat q i =
   Event $ \p ->
   do let t0 = itemInputTime i
          t1 = itemStoringTime i
-     modifyIORef' (enqueueWaitTimeRef q) $
+     modifyProtoRef' (enqueueWaitTimeRef q) $
        addSamplingStats (t1 - t0)
 
 -- | Accept the dequeuing request and return the current simulation time.
-dequeueRequest :: Queue si qi sm qm so qo a
-                 -- ^ the queue
-                 -> Event Double
-                 -- ^ the current time
+dequeueRequest :: Comp m
+                  => Queue m si sm so a
+                  -- ^ the queue
+                  -> Event m Double
+                  -- ^ the current time
 dequeueRequest q =
   Event $ \p ->
-  do modifyIORef' (dequeueCountRef q) (+ 1)
+  do modifyProtoRef' (dequeueCountRef q) (+ 1)
      invokeEvent p $
        triggerSignal (dequeueRequestedSource q) ()
      return $ pointTime p 
 
 -- | Extract an item for the dequeuing request.  
-dequeueExtract :: (DequeueStrategy si qi,
-                   DequeueStrategy sm qm)
-                  => Queue si qi sm qm so qo a
+dequeueExtract :: (Comp m,
+                   DequeueStrategy m si,
+                   DequeueStrategy m sm)
+                  => Queue m si sm so a
                   -- ^ the queue
                   -> Double
                   -- ^ the time of the dequeuing request
-                  -> Event a
+                  -> Event m a
                   -- ^ the dequeued value
 dequeueExtract q t' =
   Event $ \p ->
   do i <- invokeEvent p $
-          strategyDequeue (enqueueStoringStrategy q) (queueStore q)
-     c <- readIORef (queueCountRef q)
+          strategyDequeue (queueStore q)
+     c <- readProtoRef (queueCountRef q)
      let c' = c - 1
          t  = pointTime p
-     c' `seq` writeIORef (queueCountRef q) c'
-     modifyIORef' (queueCountStatsRef q) (addTimingStats t c')
-     modifyIORef' (dequeueExtractCountRef q) (+ 1)
+     c' `seq` writeProtoRef (queueCountRef q) c'
+     modifyProtoRef' (queueCountStatsRef q) (addTimingStats t c')
+     modifyProtoRef' (dequeueExtractCountRef q) (+ 1)
      invokeEvent p $
        dequeueStat q t' i
      invokeEvent p $
@@ -944,28 +960,29 @@ dequeueExtract q t' =
 
 -- | Update the statistics for the output wait time of the dequeuing operation
 -- and the wait time of storing in the queue.
-dequeueStat :: Queue si qi sm qm so qo a
+dequeueStat :: Comp m
+               => Queue m si sm so a
                -- ^ the queue
                -> Double
                -- ^ the time of the dequeuing request
                -> QueueItem a
                -- ^ the item and its input time
-               -> Event ()
+               -> Event m ()
                -- ^ the action of updating the statistics
 dequeueStat q t' i =
   Event $ \p ->
   do let t0 = itemInputTime i
          t1 = itemStoringTime i
          t  = pointTime p
-     modifyIORef' (dequeueWaitTimeRef q) $
+     modifyProtoRef' (dequeueWaitTimeRef q) $
        addSamplingStats (t - t')
-     modifyIORef' (queueTotalWaitTimeRef q) $
+     modifyProtoRef' (queueTotalWaitTimeRef q) $
        addSamplingStats (t - t0)
-     modifyIORef' (queueWaitTimeRef q) $
+     modifyProtoRef' (queueWaitTimeRef q) $
        addSamplingStats (t - t1)
 
 -- | Wait while the queue is full.
-waitWhileFullQueue :: Queue si qi sm qm so qo a -> Process ()
+waitWhileFullQueue :: Comp m => Queue m si sm so a -> Process m ()
 waitWhileFullQueue q =
   do x <- liftEvent (queueFull q)
      when x $
@@ -978,7 +995,7 @@ waitWhileFullQueue q =
 -- similar to the properties but that have no signals. As a rule, such characteristics
 -- already depend on the simulation time and therefore they may change at any
 -- time point.
-queueChanged_ :: Queue si qi sm qm so qo a -> Signal ()
+queueChanged_ :: Comp m => Queue m si sm so a -> Signal m ()
 queueChanged_ q =
   mapSignal (const ()) (enqueueInitiated q) <>
   mapSignal (const ()) (enqueueStored q) <>
@@ -988,7 +1005,7 @@ queueChanged_ q =
 
 -- | Return the summary for the queue with desciption of its
 -- properties and activities using the specified indent.
-queueSummary :: (Show si, Show sm, Show so) => Queue si qi sm qm so qo a -> Int -> Event ShowS
+queueSummary :: (Comp m, Show si, Show sm, Show so) => Queue m si sm so a -> Int -> Event m ShowS
 queueSummary q indent =
   do let si = enqueueStrategy q
          sm = enqueueStoringStrategy q
