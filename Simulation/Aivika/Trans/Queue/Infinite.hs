@@ -600,6 +600,8 @@ dequeueRequest :: Comp m
                   -- ^ the queue
                   -> Event m Double
                   -- ^ the current time
+{-# INLINABLE dequeueRequest #-}
+{-# SPECIALISE dequeueRequest :: Queue IO sm so a -> Event IO Double #-}
 dequeueRequest q =
   Event $ \p ->
   do modifyProtoRef' (dequeueCountRef q) (+ 1)
