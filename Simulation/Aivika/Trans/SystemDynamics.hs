@@ -67,6 +67,7 @@ import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Dynamics.Interpolate
 import Simulation.Aivika.Trans.Comp
+import Simulation.Aivika.Trans.EventQueue
 import Simulation.Aivika.Trans.Unboxed
 import Simulation.Aivika.Trans.Table
 
@@ -79,47 +80,56 @@ import qualified Simulation.Aivika.Trans.Dynamics.Memo.Unboxed as MU
 
 -- | Compare for equality.
 (.==.) :: (Comp m, Eq a) => Dynamics m a -> Dynamics m a -> Dynamics m Bool
-{-# INLINE (.==.) #-}
+{-# INLINABLE (.==.) #-}
+{-# SPECIALISE (.==.) :: Eq a => Dynamics IO a -> Dynamics IO a -> Dynamics IO Bool #-}
 (.==.) = liftM2 (==)
 
 -- | Compare for inequality.
 (./=.) :: (Comp m, Eq a) => Dynamics m a -> Dynamics m a -> Dynamics m Bool
-{-# INLINE (./=.) #-}
+{-# INLINABLE (./=.) #-}
+{-# SPECIALISE (./=.) :: Eq a => Dynamics IO a -> Dynamics IO a -> Dynamics IO Bool #-}
 (./=.) = liftM2 (/=)
 
 -- | Compare for ordering.
 (.<.) :: (Comp m, Ord a) => Dynamics m a -> Dynamics m a -> Dynamics m Bool
-{-# INLINE (.<.) #-}
+{-# INLINABLE (.<.) #-}
+{-# SPECIALISE (.<.) :: Ord a => Dynamics IO a -> Dynamics IO a -> Dynamics IO Bool #-}
 (.<.) = liftM2 (<)
 
 -- | Compare for ordering.
 (.>=.) :: (Comp m, Ord a) => Dynamics m a -> Dynamics m a -> Dynamics m Bool
-{-# INLINE (.>=.) #-}
+{-# INLINABLE (.>=.) #-}
+{-# SPECIALISE (.>=.) :: Ord a => Dynamics IO a -> Dynamics IO a -> Dynamics IO Bool #-}
 (.>=.) = liftM2 (>=)
 
 -- | Compare for ordering.
 (.>.) :: (Comp m, Ord a) => Dynamics m a -> Dynamics m a -> Dynamics m Bool
-{-# INLINE (.>.) #-}
+{-# INLINABLE (.>.) #-}
+{-# SPECIALISE (.>.) :: Ord a => Dynamics IO a -> Dynamics IO a -> Dynamics IO Bool #-}
 (.>.) = liftM2 (>)
 
 -- | Compare for ordering.
 (.<=.) :: (Comp m, Ord a) => Dynamics m a -> Dynamics m a -> Dynamics m Bool
-{-# INLINE (.<=.) #-}
+{-# INLINABLE (.<=.) #-}
+{-# SPECIALISE (.<=.) :: Ord a => Dynamics IO a -> Dynamics IO a -> Dynamics IO Bool #-}
 (.<=.) = liftM2 (<=)
 
 -- | Return the maximum.
 maxDynamics :: (Comp m, Ord a) => Dynamics m a -> Dynamics m a -> Dynamics m a
-{-# INLINE maxDynamics #-}
+{-# INLINABLE maxDynamics #-}
+{-# SPECIALISE maxDynamics :: Ord a => Dynamics IO a -> Dynamics IO a -> Dynamics IO a #-}
 maxDynamics = liftM2 max
 
 -- | Return the minimum.
 minDynamics :: (Comp m, Ord a) => Dynamics m a -> Dynamics m a -> Dynamics m a
-{-# INLINE minDynamics #-}
+{-# INLINABLE minDynamics #-}
+{-# SPECIALISE minDynamics :: Ord a => Dynamics IO a -> Dynamics IO a -> Dynamics IO a #-}
 minDynamics = liftM2 min
 
 -- | Implement the if-then-else operator.
 ifDynamics :: Comp m => Dynamics m Bool -> Dynamics m a -> Dynamics m a -> Dynamics m a
-{-# INLINE ifDynamics #-}
+{-# INLINABLE ifDynamics #-}
+{-# SPECIALISE ifDynamics :: Dynamics IO Bool -> Dynamics IO a -> Dynamics IO a -> Dynamics IO a #-}
 ifDynamics cond x y =
   do a <- cond
      if a then x else y
@@ -135,6 +145,7 @@ integEuler :: Comp m
               -> Point m
               -> m Double
 {-# INLINABLE integEuler #-}
+{-# SPECIALISE integEuler :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Point IO -> IO Double #-}
 integEuler (Dynamics f) (Dynamics i) (Dynamics y) p = 
   case pointIteration p of
     0 -> 
@@ -155,6 +166,7 @@ integRK2 :: Comp m
             -> Point m
             -> m Double
 {-# INLINABLE integRK2 #-}
+{-# SPECIALISE integRK2 :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Point IO -> IO Double #-}
 integRK2 (Dynamics f) (Dynamics i) (Dynamics y) p =
   case pointPhase p of
     0 -> case pointIteration p of
@@ -194,6 +206,7 @@ integRK4 :: Comp m
             -> Point m
             -> m Double
 {-# INLINABLE integRK4 #-}
+{-# SPECIALISE integRK4 :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Point IO -> IO Double #-}
 integRK4 (Dynamics f) (Dynamics i) (Dynamics y) p =
   case pointPhase p of
     0 -> case pointIteration p of
@@ -274,6 +287,7 @@ integ :: (Comp m, MonadFix m)
          -> Dynamics m Double                  -- ^ the initial value
          -> Simulation m (Dynamics m Double)   -- ^ the integral
 {-# INLINABLE integ #-}
+{-# SPECIALISE integ :: Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 integ diff i =
   mdo y <- MU.memoDynamics z
       z <- Simulation $ \r ->
@@ -299,6 +313,7 @@ smoothI :: (Comp m, MonadFix m)
            -> Dynamics m Double                  -- ^ the initial value
            -> Simulation m (Dynamics m Double)   -- ^ the first order exponential smooth
 {-# INLINABLE smoothI #-}
+{-# SPECIALISE smoothI :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 smoothI x t i =
   mdo y <- integ ((x - y) / t) i
       return y
@@ -312,6 +327,7 @@ smooth :: (Comp m, MonadFix m)
           -> Dynamics m Double                  -- ^ time
           -> Simulation m (Dynamics m Double)   -- ^ the first order exponential smooth
 {-# INLINABLE smooth #-}
+{-# SPECIALISE smooth :: Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 smooth x t = smoothI x t x
 
 -- | Return the third order exponential smooth.
@@ -333,6 +349,7 @@ smooth3I :: (Comp m, MonadFix m)
             -> Dynamics m Double                  -- ^ the initial value
             -> Simulation m (Dynamics m Double)   -- ^ the third order exponential smooth
 {-# INLINABLE smooth3I #-}
+{-# SPECIALISE smooth3I :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 smooth3I x t i =
   mdo y  <- integ ((s2 - y) / t') i
       s2 <- integ ((s1 - s2) / t') i
@@ -349,6 +366,7 @@ smooth3 :: (Comp m, MonadFix m)
            -> Dynamics m Double                  -- ^ time
            -> Simulation m (Dynamics m Double)   -- ^ the third order exponential smooth
 {-# INLINABLE smooth3 #-}
+{-# SPECIALISE smooth3 :: Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 smooth3 x t = smooth3I x t x
 
 -- | Return the n'th order exponential smooth.
@@ -364,6 +382,7 @@ smoothNI :: (Comp m, MonadFix m)
             -> Dynamics m Double                  -- ^ the initial value
             -> Simulation m (Dynamics m Double)   -- ^ the n'th order exponential smooth
 {-# INLINABLE smoothNI #-}
+{-# SPECIALISE smoothNI :: Dynamics IO Double -> Dynamics IO Double -> Int -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 smoothNI x t n i =
   mdo s <- forM [1 .. n] $ \k ->
         if k == 1
@@ -383,6 +402,7 @@ smoothN :: (Comp m, MonadFix m)
            -> Int                                -- ^ the order
            -> Simulation m (Dynamics m Double)   -- ^ the n'th order exponential smooth
 {-# INLINABLE smoothN #-}
+{-# SPECIALISE smoothN :: Dynamics IO Double -> Dynamics IO Double -> Int -> Simulation IO (Dynamics IO Double) #-}
 smoothN x t n = smoothNI x t n x
 
 -- | Return the first order exponential delay.
@@ -401,6 +421,7 @@ delay1I :: (Comp m, MonadFix m)
            -> Dynamics m Double                  -- ^ the initial value
            -> Simulation m (Dynamics m Double)   -- ^ the first order exponential delay
 {-# INLINABLE delay1I #-}
+{-# SPECIALISE delay1I :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 delay1I x t i =
   mdo y <- integ (x - y / t) (i * t)
       return $ y / t
@@ -414,6 +435,7 @@ delay1 :: (Comp m, MonadFix m)
           -> Dynamics m Double                  -- ^ time
           -> Simulation m (Dynamics m Double)   -- ^ the first order exponential delay
 {-# INLINABLE delay1 #-}
+{-# SPECIALISE delay1 :: Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 delay1 x t = delay1I x t x
 
 -- | Return the third order exponential delay.
@@ -423,6 +445,7 @@ delay3I :: (Comp m, MonadFix m)
            -> Dynamics m Double                  -- ^ the initial value
            -> Simulation m (Dynamics m Double)   -- ^ the third order exponential delay
 {-# INLINABLE delay3I #-}
+{-# SPECIALISE delay3I :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 delay3I x t i =
   mdo y  <- integ (s2 / t' - y / t') (i * t')
       s2 <- integ (s1 / t' - s2 / t') (i * t')
@@ -439,6 +462,7 @@ delay3 :: (Comp m, MonadFix m)
           -> Dynamics m Double                  -- ^ time
           -> Simulation m (Dynamics m Double)   -- ^ the third order exponential delay
 {-# INLINABLE delay3 #-}
+{-# SPECIALISE delay3 :: Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 delay3 x t = delay3I x t x
 
 -- | Return the n'th order exponential delay.
@@ -449,6 +473,7 @@ delayNI :: (Comp m, MonadFix m)
            -> Dynamics m Double                  -- ^ the initial value
            -> Simulation m (Dynamics m Double)   -- ^ the n'th order exponential delay
 {-# INLINABLE delayNI #-}
+{-# SPECIALISE delayNI :: Dynamics IO Double -> Dynamics IO Double -> Int -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 delayNI x t n i =
   mdo s <- forM [1 .. n] $ \k ->
         if k == 1
@@ -468,6 +493,7 @@ delayN :: (Comp m, MonadFix m)
           -> Int                                -- ^ the order
           -> Simulation m (Dynamics m Double)   -- ^ the n'th order exponential delay
 {-# INLINABLE delayN #-}
+{-# SPECIALISE delayN :: Dynamics IO Double -> Dynamics IO Double -> Int -> Simulation IO (Dynamics IO Double) #-}
 delayN x t n = delayNI x t n x
 
 -- | Return the forecast.
@@ -485,6 +511,7 @@ forecast :: (Comp m, MonadFix m)
             -> Dynamics m Double                  -- ^ the time horizon
             -> Simulation m (Dynamics m Double)   -- ^ the forecast
 {-# INLINABLE forecast #-}
+{-# SPECIALISE forecast :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 forecast x at hz =
   do y <- smooth x at
      return $ x * (1.0 + (x / y - 1.0) / at * hz)
@@ -504,6 +531,7 @@ trend :: (Comp m, MonadFix m)
          -> Dynamics m Double                  -- ^ the initial value
          -> Simulation m (Dynamics m Double)   -- ^ the fractional change rate
 {-# INLINABLE trend #-}
+{-# SPECIALISE trend :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 trend x at i =
   do y <- smoothI x at (x / (1.0 + i * at))
      return $ (x / y - 1.0) / at
@@ -523,6 +551,7 @@ diffsum :: (Comp m, MonadFix m,
            -> Dynamics m a                  -- ^ the initial value
            -> Simulation m (Dynamics m a)   -- ^ the sum
 {-# INLINABLE diffsum #-}
+{-# SPECIALISE diffsum :: (Unboxed IO a, Num a) => Dynamics IO a -> Dynamics IO a -> Simulation IO (Dynamics IO a) #-}
 diffsum (Dynamics diff) (Dynamics i) =
   mdo y <-
         MU.memo0Dynamics $
@@ -549,6 +578,7 @@ diffsum (Dynamics diff) (Dynamics i) =
 -- | Lookup @x@ in a table of pairs @(x, y)@ using linear interpolation.
 lookupDynamics :: Comp m => Dynamics m Double -> Array Int (Double, Double) -> Dynamics m Double
 {-# INLINABLE lookupDynamics #-}
+{-# SPECIALISE lookupDynamics :: Dynamics IO Double -> Array Int (Double, Double) -> Dynamics IO Double #-}
 lookupDynamics (Dynamics m) tbl =
   Dynamics $ \p ->
   do a <- m p
@@ -557,6 +587,7 @@ lookupDynamics (Dynamics m) tbl =
 -- | Lookup @x@ in a table of pairs @(x, y)@ using stepwise function.
 lookupStepwiseDynamics :: Comp m => Dynamics m Double -> Array Int (Double, Double) -> Dynamics m Double
 {-# INLINABLE lookupStepwiseDynamics #-}
+{-# SPECIALISE lookupStepwiseDynamics :: Dynamics IO Double -> Array Int (Double, Double) -> Dynamics IO Double #-}
 lookupStepwiseDynamics (Dynamics m) tbl =
   Dynamics $ \p ->
   do a <- m p
@@ -572,6 +603,7 @@ delay :: Comp m
          -> Dynamics m Double     -- ^ the lag time
          -> Dynamics m a          -- ^ the delayed value
 {-# INLINABLE delay #-}
+{-# SPECIALISE delay :: Dynamics IO a -> Dynamics IO Double -> Dynamics IO a #-}
 delay (Dynamics x) (Dynamics d) = discreteDynamics $ Dynamics r 
   where
     r p = do 
@@ -603,6 +635,7 @@ delayI :: Comp m
           -> Dynamics m a                    -- ^ the initial value
           -> Simulation m (Dynamics m a)     -- ^ the delayed value
 {-# INLINABLE delayI #-}
+{-# SPECIALISE delayI :: Dynamics IO a -> Dynamics IO Double -> Dynamics IO a -> Simulation IO (Dynamics IO a) #-}
 delayI (Dynamics x) (Dynamics d) (Dynamics i) = M.memo0Dynamics $ Dynamics r 
   where
     r p = do 
@@ -644,11 +677,12 @@ delayI (Dynamics x) (Dynamics d) (Dynamics i) = M.memo0Dynamics $ Dynamics r
 -- @
 npv :: (Comp m, MonadFix m)
        => Dynamics m Double                  -- ^ the stream
-       -> Dynamics m  Double                 -- ^ the discount rate
+       -> Dynamics m Double                  -- ^ the discount rate
        -> Dynamics m Double                  -- ^ the initial value
        -> Dynamics m Double                  -- ^ factor
        -> Simulation m (Dynamics m Double)   -- ^ the Net Present Value (NPV)
 {-# INLINABLE npv #-}
+{-# SPECIALISE npv :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 npv stream rate init factor =
   mdo let dt' = liftParameter dt
       df <- integ (- df * rate) 1
@@ -674,6 +708,7 @@ npve :: (Comp m, MonadFix m)
         -> Dynamics m Double                  -- ^ factor
         -> Simulation m (Dynamics m Double)   -- ^ the Net Present Value End (NPVE)
 {-# INLINABLE npve #-}
+{-# SPECIALISE npve :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 npve stream rate init factor =
   mdo let dt' = liftParameter dt
       df <- integ (- df * rate / (1 + rate * dt')) (1 / (1 + rate * dt'))
@@ -688,6 +723,7 @@ step :: Comp m
         -- ^ the step time
         -> Dynamics m Double
 {-# INLINABLE step #-}
+{-# SPECIALISE step :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double #-}
 step h st =
   discreteDynamics $
   Dynamics $ \p ->
@@ -708,6 +744,7 @@ pulse :: Comp m
          -- ^ the interval width
          -> Dynamics m Double
 {-# INLINABLE pulse #-}
+{-# SPECIALISE pulse :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double #-}
 pulse st w =
   discreteDynamics $
   Dynamics $ \p ->
@@ -732,6 +769,7 @@ pulseP :: Comp m
           -- ^ the time period
           -> Dynamics m Double
 {-# INLINABLE pulseP #-}
+{-# SPECIALISE pulseP :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double #-}
 pulseP st w period =
   discreteDynamics $
   Dynamics $ \p ->
@@ -760,6 +798,7 @@ ramp :: Comp m
         -- ^ the end time
         -> Dynamics m Double
 {-# INLINABLE ramp #-}
+{-# SPECIALISE ramp :: Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double -> Dynamics IO Double #-}
 ramp slope st e =
   discreteDynamics $
   Dynamics $ \p ->
