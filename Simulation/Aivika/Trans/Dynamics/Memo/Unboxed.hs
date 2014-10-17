@@ -29,12 +29,14 @@ import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Dynamics.Interpolate
 import Simulation.Aivika.Trans.Unboxed
+import Simulation.Aivika.Trans.EventQueue
 
 -- | Memoize and order the computation in the integration time points using 
 -- the interpolation that knows of the Runge-Kutta method. The values are
 -- calculated sequentially starting from 'starttime'.
 memoDynamics :: (Unboxed m e, Comp m) => Dynamics m e -> Simulation m (Dynamics m e)
 {-# INLINABLE memoDynamics #-}
+{-# SPECIALISE memoDynamics :: Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 memoDynamics (Dynamics m) = 
   Simulation $ \r ->
   do let sc  = runSpecs r
@@ -78,6 +80,7 @@ memoDynamics (Dynamics m) =
 -- prefer the 'memo0Dynamics' function above 'memoDynamics'.
 memo0Dynamics :: (Unboxed m e, Comp m) => Dynamics m e -> Simulation m (Dynamics m e)
 {-# INLINABLE memo0Dynamics #-}
+{-# SPECIALISE memo0Dynamics :: Dynamics IO Double -> Simulation IO (Dynamics IO Double) #-}
 memo0Dynamics (Dynamics m) = 
   Simulation $ \r ->
   do let sc = runSpecs r
