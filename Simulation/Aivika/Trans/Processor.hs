@@ -46,6 +46,7 @@ module Simulation.Aivika.Trans.Processor
 import qualified Control.Category as C
 import Control.Arrow
 
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Simulation
 import Simulation.Aivika.Trans.Dynamics
 import Simulation.Aivika.Trans.Event
@@ -57,15 +58,17 @@ import Simulation.Aivika.Trans.Signal
 import Simulation.Aivika.Trans.Internal.Arrival
 
 -- | Represents a processor of simulation data.
-newtype Processor a b =
-  Processor { runProcessor :: Stream a -> Stream b
+newtype Processor m a b =
+  Processor { runProcessor :: Stream m a -> Stream m b
               -- ^ Run the processor.
             }
 
-instance C.Category Processor where
+instance C.Category (Processor m) where
 
+  {-# INLINE id #-}
   id  = Processor id
 
+  {-# INLINE (.) #-}
   Processor x . Processor y = Processor (x . y)
 
 -- The implementation is based on article
@@ -75,48 +78,56 @@ instance C.Category Processor where
 -- while the pure streams were considered in the
 -- mentioned article.
   
-instance Arrow Processor where
+instance Comp m => Arrow (Processor m) where
 
+  {-# INLINE arr #-}
   arr = Processor . mapStream
 
+  {-# INLINABLE first #-}
   first (Processor f) =
     Processor $ \xys ->
     Cons $
     do (xs, ys) <- liftSimulation $ unzipStream xys
        runStream $ zipStreamSeq (f xs) ys
 
+  {-# INLINABLE second #-}
   second (Processor f) =
     Processor $ \xys ->
     Cons $
     do (xs, ys) <- liftSimulation $ unzipStream xys
        runStream $ zipStreamSeq xs (f ys)
 
+  {-# INLINABLE (***) #-}
   Processor f *** Processor g =
     Processor $ \xys ->
     Cons $
     do (xs, ys) <- liftSimulation $ unzipStream xys
        runStream $ zipStreamSeq (f xs) (g ys)
 
-instance ArrowChoice Processor where
+instance Comp m => ArrowChoice (Processor m) where
 
+  {-# INLINABLE left #-}
   left (Processor f) =
     Processor $ \xs ->
     Cons $
     do ys <- liftSimulation $ memoStream xs
        runStream $ replaceLeftStream ys (f $ leftStream ys)
 
+  {-# INLINABLE right #-}
   right (Processor f) =
     Processor $ \xs ->
     Cons $
     do ys <- liftSimulation $ memoStream xs
        runStream $ replaceRightStream ys (f $ rightStream ys)
 
-instance ArrowZero Processor where
+instance Comp m => ArrowZero (Processor m) where
 
+  {-# INLINABLE zeroArrow #-}
   zeroArrow = Processor $ const emptyStream
 
-instance ArrowPlus Processor where
+instance Comp m => ArrowPlus (Processor m) where
 
+  {-# INLINABLE (<+>) #-}
   (Processor f) <+> (Processor g) =
     Processor $ \xs ->
     Cons $
@@ -124,16 +135,19 @@ instance ArrowPlus Processor where
        runStream $ mergeStreams (f xs1) (g xs2)
 
 -- | A processor that never finishes its work producing an 'emptyStream'.
-emptyProcessor :: Processor a b
+emptyProcessor :: Comp m => Processor m a b
+{-# INLINABLE emptyProcessor #-}
 emptyProcessor = Processor $ const emptyStream
 
 -- | Create a simple processor by the specified handling function
 -- that runs the discontinuous process for each input value to get the output.
-arrProcessor :: (a -> Process b) -> Processor a b
+arrProcessor :: Comp m => (a -> Process m b) -> Processor m a b
+{-# INLINABLE arrProcessor #-}
 arrProcessor = Processor . mapStreamM
 
 -- | Accumulator that outputs a value determined by the supplied function.
-accumProcessor :: (acc -> a -> Process (acc, b)) -> acc -> Processor a b
+accumProcessor :: Comp m => (acc -> a -> Process m (acc, b)) -> acc -> Processor m a b
+{-# INLINABLE accumProcessor #-}
 accumProcessor f acc =
   Processor $ \xs -> Cons $ loop xs acc where
     loop xs acc =
@@ -145,7 +159,8 @@ accumProcessor f acc =
 -- It can be useful to refer to the underlying 'Process' computation which
 -- can be passivated, interrupted, canceled and so on. See also the
 -- 'processUsingId' function for more details.
-processorUsingId :: ProcessId -> Processor a b -> Processor a b
+processorUsingId :: Comp m => ProcessId m -> Processor m a b -> Processor m a b
+{-# INLINABLE processorUsingId #-}
 processorUsingId pid (Processor f) =
   Processor $ Cons . processUsingId pid . runStream . f
 
@@ -155,16 +170,18 @@ processorUsingId pid (Processor f) =
 -- If you don't know what the enqueue strategies to apply, then
 -- you will probably need 'FCFS' for the both parameters, or
 -- function 'processorParallel' that does namely this.
-processorQueuedParallel :: (EnqueueStrategy si qi,
-                            EnqueueStrategy so qo)
+processorQueuedParallel :: (Comp m,
+                            EnqueueStrategy m si,
+                            EnqueueStrategy m so)
                            => si
                            -- ^ the strategy applied for enqueuing the input data
                            -> so
                            -- ^ the strategy applied for enqueuing the output data
-                           -> [Processor a b]
+                           -> [Processor m a b]
                            -- ^ the processors to parallelize
-                           -> Processor a b
+                           -> Processor m a b
                            -- ^ the parallelized processor
+{-# INLINABLE processorQueuedParallel #-}
 processorQueuedParallel si so ps =
   Processor $ \xs ->
   Cons $
@@ -176,16 +193,18 @@ processorQueuedParallel si so ps =
      runStream output
 
 -- | Launches the specified processors in parallel using priorities for combining the output.
-processorPrioritisingOutputParallel :: (EnqueueStrategy si qi,
-                                        PriorityQueueStrategy so qo po)
+processorPrioritisingOutputParallel :: (Comp m,
+                                        EnqueueStrategy m si,
+                                        PriorityQueueStrategy m so po)
                                        => si
                                        -- ^ the strategy applied for enqueuing the input data
                                        -> so
                                        -- ^ the strategy applied for enqueuing the output data
-                                       -> [Processor a (po, b)]
+                                       -> [Processor m a (po, b)]
                                        -- ^ the processors to parallelize
-                                       -> Processor a b
+                                       -> Processor m a b
                                        -- ^ the parallelized processor
+{-# INLINABLE processorPrioritisingOutputParallel #-}
 processorPrioritisingOutputParallel si so ps =
   Processor $ \xs ->
   Cons $
@@ -197,17 +216,19 @@ processorPrioritisingOutputParallel si so ps =
      runStream output
 
 -- | Launches the specified processors in parallel using priorities for consuming the intput.
-processorPrioritisingInputParallel :: (PriorityQueueStrategy si qi pi,
-                                       EnqueueStrategy so qo)
+processorPrioritisingInputParallel :: (Comp m,
+                                       PriorityQueueStrategy m si pi,
+                                       EnqueueStrategy m so)
                                       => si
                                       -- ^ the strategy applied for enqueuing the input data
                                       -> so
                                       -- ^ the strategy applied for enqueuing the output data
-                                      -> [(Stream pi, Processor a b)]
+                                      -> [(Stream m pi, Processor m a b)]
                                       -- ^ the streams of input priorities and the processors
                                       -- to parallelize
-                                      -> Processor a b
+                                      -> Processor m a b
                                       -- ^ the parallelized processor
+{-# INLINABLE processorPrioritisingInputParallel #-}
 processorPrioritisingInputParallel si so ps =
   Processor $ \xs ->
   Cons $
@@ -219,17 +240,19 @@ processorPrioritisingInputParallel si so ps =
 
 -- | Launches the specified processors in parallel using priorities for consuming
 -- the input and combining the output.
-processorPrioritisingInputOutputParallel :: (PriorityQueueStrategy si qi pi,
-                                             PriorityQueueStrategy so qo po)
+processorPrioritisingInputOutputParallel :: (Comp m,
+                                             PriorityQueueStrategy m si pi,
+                                             PriorityQueueStrategy m so po)
                                             => si
                                             -- ^ the strategy applied for enqueuing the input data
                                             -> so
                                             -- ^ the strategy applied for enqueuing the output data
-                                            -> [(Stream pi, Processor a (po, b))]
+                                            -> [(Stream m pi, Processor m a (po, b))]
                                             -- ^ the streams of input priorities and the processors
                                             -- to parallelize
-                                            -> Processor a b
+                                            -> Processor m a b
                                             -- ^ the parallelized processor
+{-# INLINABLE processorPrioritisingInputOutputParallel #-}
 processorPrioritisingInputOutputParallel si so ps =
   Processor $ \xs ->
   Cons $
@@ -242,12 +265,14 @@ processorPrioritisingInputOutputParallel si so ps =
 -- | Launches the processors in parallel consuming the same input stream and producing
 -- a combined output stream. This version applies the 'FCFS' strategy both for input
 -- and output, which suits the most part of uses cases.
-processorParallel :: [Processor a b] -> Processor a b
+processorParallel :: Comp m => [Processor m a b] -> Processor m a b
+{-# INLINABLE processorParallel #-}
 processorParallel = processorQueuedParallel FCFS FCFS
 
 -- | Launches the processors sequentially using the 'prefetchProcessor' between them
 -- to model an autonomous work of each of the processors specified.
-processorSeq :: [Processor a a] -> Processor a a
+processorSeq :: Comp m => [Processor m a a] -> Processor m a a
+{-# INLINABLE processorSeq #-}
 processorSeq []  = emptyProcessor
 processorSeq [p] = p
 processorSeq (p : ps) = p >>> prefetchProcessor >>> processorSeq ps
@@ -256,11 +281,13 @@ processorSeq (p : ps) = p >>> prefetchProcessor >>> processorSeq ps
 -- consumes the input stream but the stream passed in as the second argument
 -- and produced usually by some other process is returned as an output.
 -- This kind of processor is very useful for modeling the queues.
-bufferProcessor :: (Stream a -> Process ())
+bufferProcessor :: Comp m
+                   => (Stream m a -> Process m ())
                    -- ^ a separate process to consume the input 
-                   -> Stream b
+                   -> Stream m b
                    -- ^ the resulting stream of data
-                   -> Processor a b
+                   -> Processor m a b
+{-# INLINABLE bufferProcessor #-}
 bufferProcessor consume output =
   Processor $ \xs ->
   Cons $
@@ -270,18 +297,20 @@ bufferProcessor consume output =
 -- | Like 'bufferProcessor' but allows creating a loop when some items
 -- can be processed repeatedly. It is very useful for modeling the processors 
 -- with queues and loop-backs.
-bufferProcessorLoop :: (Stream a -> Stream c -> Process ())
+bufferProcessorLoop :: Comp m
+                       => (Stream m a -> Stream m c -> Process m ())
                        -- ^ consume two streams: the input values of type @a@
                        -- and the values of type @c@ returned by the loop
-                       -> Stream d
+                       -> Stream m d
                        -- ^ the stream of data that may become results
-                       -> Processor d (Either e b)
+                       -> Processor m d (Either e b)
                        -- ^ process and then decide what values of type @e@
                        -- should be processed in the loop (this is a condition)
-                       -> Processor e c
+                       -> Processor m e c
                        -- ^ process in the loop and then return a value
                        -- of type @c@ to the input again (this is a loop body)
-                       -> Processor a b
+                       -> Processor m a b
+{-# INLINABLE bufferProcessorLoop #-}
 bufferProcessorLoop consume preoutput cond body =
   Processor $ \xs ->
   Cons $
@@ -313,14 +342,16 @@ bufferProcessorLoop consume preoutput cond body =
 -- then you can use a more generic function 'bufferProcessor' which this function is
 -- based on. In case of need, you can even write your own function from scratch. It is
 -- quite easy actually.
-queueProcessor :: (a -> Process ())
+queueProcessor :: Comp m =>
+                  (a -> Process m ())
                   -- ^ enqueue the input item and wait
                   -- while the queue is full if required
                   -- so that there were no hanging items
-                  -> Process b
+                  -> Process m b
                   -- ^ dequeue an output item
-                  -> Processor a b
+                  -> Processor m a b
                   -- ^ the buffering processor
+{-# INLINABLE queueProcessor #-}
 queueProcessor enqueue dequeue =
   bufferProcessor
   (consumeStream enqueue)
@@ -329,23 +360,25 @@ queueProcessor enqueue dequeue =
 -- | Like 'queueProcessor' creates a queue processor but with a loop when some items 
 -- can be processed and then added to the queue again. Also it allows specifying 
 -- how two input streams of data can be merged.
-queueProcessorLoopMerging :: (Stream a -> Stream d -> Stream e)
+queueProcessorLoopMerging :: Comp m
+                             => (Stream m a -> Stream m d -> Stream m e)
                              -- ^ merge two streams: the input values of type @a@
                              -- and the values of type @d@ returned by the loop
-                             -> (e -> Process ())
+                             -> (e -> Process m ())
                              -- ^ enqueue the input item and wait
                              -- while the queue is full if required
                              -- so that there were no hanging items
-                             -> Process c
+                             -> Process m c
                              -- ^ dequeue an item for the further processing
-                             -> Processor c (Either f b)
+                             -> Processor m c (Either f b)
                              -- ^ process and then decide what values of type @f@
                              -- should be processed in the loop (this is a condition)
-                             -> Processor f d
+                             -> Processor m f d
                              -- ^ process in the loop and then return a value
                              -- of type @d@ to the queue again (this is a loop body)
-                             -> Processor a b
+                             -> Processor m a b
                              -- ^ the buffering processor
+{-# INLINABLE queueProcessorLoopMerging #-}
 queueProcessorLoopMerging merge enqueue dequeue =
   bufferProcessorLoop
   (\bs cs ->
@@ -358,20 +391,22 @@ queueProcessorLoopMerging merge enqueue dequeue =
 -- merges two input streams of data: one stream that come from the external source and 
 -- another stream of data returned by the loop. The first stream has a priority over 
 -- the second one.
-queueProcessorLoopSeq :: (a -> Process ())
+queueProcessorLoopSeq :: Comp m
+                         => (a -> Process m ())
                          -- ^ enqueue the input item and wait
                          -- while the queue is full if required
                          -- so that there were no hanging items
-                         -> Process c
+                         -> Process m c
                          -- ^ dequeue an item for the further processing
-                         -> Processor c (Either e b)
+                         -> Processor m c (Either e b)
                          -- ^ process and then decide what values of type @e@
                          -- should be processed in the loop (this is a condition)
-                         -> Processor e a
+                         -> Processor m e a
                          -- ^ process in the loop and then return a value
                          -- of type @a@ to the queue again (this is a loop body)
-                         -> Processor a b
+                         -> Processor m a b
                          -- ^ the buffering processor
+{-# INLINABLE queueProcessorLoopSeq #-}
 queueProcessorLoopSeq =
   queueProcessorLoopMerging mergeStreams
 
@@ -379,20 +414,22 @@ queueProcessorLoopSeq =
 -- some items can be processed and then added to the queue again. Only it runs two 
 -- simultaneous processes to enqueue the input streams of data: one stream that come 
 -- from the external source and another stream of data returned by the loop.
-queueProcessorLoopParallel :: (a -> Process ())
+queueProcessorLoopParallel :: Comp m
+                              => (a -> Process m ())
                               -- ^ enqueue the input item and wait
                               -- while the queue is full if required
                               -- so that there were no hanging items
-                              -> Process c
+                              -> Process m c
                               -- ^ dequeue an item for the further processing
-                              -> Processor c (Either e b)
+                              -> Processor m c (Either e b)
                               -- ^ process and then decide what values of type @e@
                               -- should be processed in the loop (this is a condition)
-                              -> Processor e a
+                              -> Processor m e a
                               -- ^ process in the loop and then return a value
                               -- of type @a@ to the queue again (this is a loop body)
-                              -> Processor a b
+                              -> Processor m a b
                               -- ^ the buffering processor
+{-# INLINABLE queueProcessorLoopParallel #-}
 queueProcessorLoopParallel enqueue dequeue =
   bufferProcessorLoop
   (\bs cs ->
@@ -409,7 +446,8 @@ queueProcessorLoopParallel enqueue dequeue =
 -- You can think of this as the prefetched processor could place its latest 
 -- data item in some temporary space for later use, which is very useful 
 -- for modeling a sequence of separate and independent work places.
-prefetchProcessor :: Processor a a
+prefetchProcessor :: Comp m => Processor m a a
+{-# INLINABLE prefetchProcessor #-}
 prefetchProcessor = Processor prefetchStream
 
 -- | Convert the specified signal transform to a processor.
@@ -423,7 +461,8 @@ prefetchProcessor = Processor prefetchStream
 -- The former is passive, while the latter is active.
 --
 -- Cancel the processor's process to unsubscribe from the signals provided.
-signalProcessor :: (Signal a -> Signal b) -> Processor a b
+signalProcessor :: Comp m => (Signal m a -> Signal m b) -> Processor m a b
+{-# INLINABLE signalProcessor #-}
 signalProcessor f =
   Processor $ \xs ->
   Cons $
@@ -442,7 +481,8 @@ signalProcessor f =
 -- The former is passive, while the latter is active.
 --
 -- Cancel the returned process to unsubscribe from the signal specified.
-processorSignaling :: Processor a b -> Signal a -> Process (Signal b)
+processorSignaling :: Comp m => Processor m a b -> Signal m a -> Process m (Signal m b)
+{-# INLINABLE processorSignaling #-}
 processorSignaling (Processor f) sa =
   do xs <- signalStream sa
      let ys = f xs
@@ -450,9 +490,11 @@ processorSignaling (Processor f) sa =
 
 -- | A processor that adds the information about the time points at which 
 -- the original stream items were received by demand.
-arrivalProcessor :: Processor a (Arrival a)
+arrivalProcessor :: Comp m => Processor m a (Arrival a)
+{-# INLINABLE arrivalProcessor #-}
 arrivalProcessor = Processor arrivalStream
 
 -- | A processor that delays the input stream by one step using the specified initial value.
-delayProcessor :: a -> Processor a a
+delayProcessor :: Comp m => a -> Processor m a a
+{-# INLINABLE delayProcessor #-}
 delayProcessor a0 = Processor $ delayStream a0
