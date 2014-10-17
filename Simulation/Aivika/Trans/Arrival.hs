@@ -25,6 +25,7 @@ module Simulation.Aivika.Trans.Arrival
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Simulation
 import Simulation.Aivika.Trans.Dynamics
 import Simulation.Aivika.Trans.Event
@@ -36,12 +37,13 @@ import Simulation.Aivika.Trans.Signal
 import Simulation.Aivika.Trans.Internal.Arrival
 
 -- | Accumulates the statistics about that how long the arrived events are processed.
-data ArrivalTimer =
-  ArrivalTimer { arrivalProcessingTimeRef :: Ref (SamplingStats Double),
-                 arrivalProcessingTimeChangedSource :: SignalSource () }
+data ArrivalTimer m =
+  ArrivalTimer { arrivalProcessingTimeRef :: Ref m (SamplingStats Double),
+                 arrivalProcessingTimeChangedSource :: SignalSource m () }
 
 -- | Create a new timer that measures how long the arrived events are processed.
-newArrivalTimer :: Simulation ArrivalTimer
+newArrivalTimer :: Comp m => Simulation m (ArrivalTimer m)
+{-# INLINABLE newArrivalTimer #-}
 newArrivalTimer =
   do r <- newRef emptySamplingStats
      s <- newSignalSource
@@ -49,22 +51,26 @@ newArrivalTimer =
                            arrivalProcessingTimeChangedSource = s }
 
 -- | Return the statistics about that how long the arrived events were processed.
-arrivalProcessingTime :: ArrivalTimer -> Event (SamplingStats Double)
+arrivalProcessingTime :: Comp m => ArrivalTimer m -> Event m (SamplingStats Double)
+{-# INLINE arrivalProcessingTime #-}
 arrivalProcessingTime = readRef . arrivalProcessingTimeRef
 
 -- | Return a signal raised when the the processing time statistics changes.
-arrivalProcessingTimeChanged :: ArrivalTimer -> Signal (SamplingStats Double)
+arrivalProcessingTimeChanged :: Comp m => ArrivalTimer m -> Signal m (SamplingStats Double)
+{-# INLINE arrivalProcessingTimeChanged #-}
 arrivalProcessingTimeChanged timer =
   mapSignalM (const $ arrivalProcessingTime timer) (arrivalProcessingTimeChanged_ timer)
 
 -- | Return a signal raised when the the processing time statistics changes.
-arrivalProcessingTimeChanged_ :: ArrivalTimer -> Signal ()
+arrivalProcessingTimeChanged_ :: Comp m => ArrivalTimer m -> Signal m ()
+{-# INLINE arrivalProcessingTimeChanged_ #-}
 arrivalProcessingTimeChanged_ timer =
   publishSignal (arrivalProcessingTimeChangedSource timer)
 
 -- | Return a processor that actually measures how much time has passed from
 -- the time of arriving the events.
-arrivalTimerProcessor :: ArrivalTimer -> Processor (Arrival a) (Arrival a)
+arrivalTimerProcessor :: Comp m => ArrivalTimer m -> Processor m (Arrival a) (Arrival a)
+{-# INLINABLE arrivalTimerProcessor #-}
 arrivalTimerProcessor timer =
   Processor $ \xs -> Cons $ loop xs where
     loop xs =
