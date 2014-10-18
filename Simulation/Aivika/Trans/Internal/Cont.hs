@@ -313,7 +313,7 @@ catchCont :: Comp m => Cont m a -> (IOException -> Cont m a) -> Cont m a
 catchCont (Cont m) h = 
   Cont $ \c0 ->
   Event $ \p -> 
-  do let c = c0 { contAux = (contAux c) { contCatchFlag = True } }
+  do let c = c0 { contAux = (contAux c0) { contCatchFlag = True } }
      z <- contCanceled c
      if z 
        then cancelCont p c
@@ -327,7 +327,7 @@ finallyCont :: Comp m => Cont m a -> Cont m b -> Cont m a
 finallyCont (Cont m) (Cont m') = 
   Cont $ \c0 -> 
   Event $ \p ->
-  do let c = c0 { contAux = (contAux c) { contCatchFlag = True } }
+  do let c = c0 { contAux = (contAux c0) { contCatchFlag = True } }
      z <- contCanceled c
      if z 
        then cancelCont p c
