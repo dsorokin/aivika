@@ -47,6 +47,7 @@ randomStream :: Comp m
                 -> Stream m (Arrival a)
                 -- ^ a stream of delayed events
 {-# INLINABLE randomStream #-}
+{-# SPECIALISE randomStream :: Parameter IO (Double, a) -> Stream IO (Arrival a) #-}
 randomStream delay = Cons $ loop Nothing where
   loop t0 =
     do t1 <- liftDynamics time
@@ -80,6 +81,7 @@ randomUniformStream :: Comp m
                        -> Stream m (Arrival Double)
                        -- ^ the stream of random events with the delays generated
 {-# INLINABLE randomUniformStream #-}
+{-# SPECIALISE randomUniformStream :: Double -> Double -> Stream IO (Arrival Double) #-}
 randomUniformStream min max =
   randomStream $
   randomUniform min max >>= \x ->
@@ -94,6 +96,7 @@ randomUniformIntStream :: Comp m
                           -> Stream m (Arrival Int)
                           -- ^ the stream of random events with the delays generated
 {-# INLINABLE randomUniformIntStream #-}
+{-# SPECIALISE randomUniformIntStream :: Int -> Int -> Stream IO (Arrival Int) #-}
 randomUniformIntStream min max =
   randomStream $
   randomUniformInt min max >>= \x ->
@@ -108,6 +111,7 @@ randomNormalStream :: Comp m
                       -> Stream m (Arrival Double)
                       -- ^ the stream of random events with the delays generated
 {-# INLINABLE randomNormalStream #-}
+{-# SPECIALISE randomNormalStream :: Double -> Double -> Stream IO (Arrival Double) #-}
 randomNormalStream mu nu =
   randomStream $
   randomNormal mu nu >>= \x ->
@@ -121,6 +125,7 @@ randomExponentialStream :: Comp m
                            -> Stream m (Arrival Double)
                            -- ^ the stream of random events with the delays generated
 {-# INLINABLE randomExponentialStream #-}
+{-# SPECIALISE randomExponentialStream :: Double -> Stream IO (Arrival Double) #-}
 randomExponentialStream mu =
   randomStream $
   randomExponential mu >>= \x ->
@@ -136,6 +141,7 @@ randomErlangStream :: Comp m
                       -> Stream m (Arrival Double)
                       -- ^ the stream of random events with the delays generated
 {-# INLINABLE randomErlangStream #-}
+{-# SPECIALISE randomErlangStream :: Double -> Int -> Stream IO (Arrival Double) #-}
 randomErlangStream beta m =
   randomStream $
   randomErlang beta m >>= \x ->
@@ -149,6 +155,7 @@ randomPoissonStream :: Comp m
                        -> Stream m (Arrival Int)
                        -- ^ the stream of random events with the delays generated
 {-# INLINABLE randomPoissonStream #-}
+{-# SPECIALISE randomPoissonStream :: Double -> Stream IO (Arrival Int) #-}
 randomPoissonStream mu =
   randomStream $
   randomPoisson mu >>= \x ->
@@ -164,6 +171,7 @@ randomBinomialStream :: Comp m
                         -> Stream m (Arrival Int)
                         -- ^ the stream of random events with the delays generated
 {-# INLINABLE randomBinomialStream #-}
+{-# SPECIALISE randomBinomialStream :: Double -> Int -> Stream IO (Arrival Int) #-}
 randomBinomialStream prob trials =
   randomStream $
   randomBinomial prob trials >>= \x ->

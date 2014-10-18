@@ -44,6 +44,7 @@ data ArrivalTimer m =
 -- | Create a new timer that measures how long the arrived events are processed.
 newArrivalTimer :: Comp m => Simulation m (ArrivalTimer m)
 {-# INLINABLE newArrivalTimer #-}
+{-# SPECIALISE newArrivalTimer :: Simulation IO (ArrivalTimer IO) #-}
 newArrivalTimer =
   do r <- newRef emptySamplingStats
      s <- newSignalSource
@@ -52,18 +53,21 @@ newArrivalTimer =
 
 -- | Return the statistics about that how long the arrived events were processed.
 arrivalProcessingTime :: Comp m => ArrivalTimer m -> Event m (SamplingStats Double)
-{-# INLINE arrivalProcessingTime #-}
+{-# INLINABLE arrivalProcessingTime #-}
+{-# SPECIALISE arrivalProcessingTime :: ArrivalTimer IO -> Event IO (SamplingStats Double) #-}
 arrivalProcessingTime = readRef . arrivalProcessingTimeRef
 
 -- | Return a signal raised when the the processing time statistics changes.
 arrivalProcessingTimeChanged :: Comp m => ArrivalTimer m -> Signal m (SamplingStats Double)
-{-# INLINE arrivalProcessingTimeChanged #-}
+{-# INLINABLE arrivalProcessingTimeChanged #-}
+{-# SPECIALISE arrivalProcessingTimeChanged :: ArrivalTimer IO -> Signal IO (SamplingStats Double) #-}
 arrivalProcessingTimeChanged timer =
   mapSignalM (const $ arrivalProcessingTime timer) (arrivalProcessingTimeChanged_ timer)
 
 -- | Return a signal raised when the the processing time statistics changes.
 arrivalProcessingTimeChanged_ :: Comp m => ArrivalTimer m -> Signal m ()
-{-# INLINE arrivalProcessingTimeChanged_ #-}
+{-# INLINABLE arrivalProcessingTimeChanged_ #-}
+{-# SPECIALISE arrivalProcessingTimeChanged_ :: ArrivalTimer IO -> Signal IO () #-}
 arrivalProcessingTimeChanged_ timer =
   publishSignal (arrivalProcessingTimeChangedSource timer)
 
@@ -71,6 +75,7 @@ arrivalProcessingTimeChanged_ timer =
 -- the time of arriving the events.
 arrivalTimerProcessor :: Comp m => ArrivalTimer m -> Processor m (Arrival a) (Arrival a)
 {-# INLINABLE arrivalTimerProcessor #-}
+{-# SPECIALISE arrivalTimerProcessor :: ArrivalTimer IO -> Processor IO (Arrival a) (Arrival a) #-}
 arrivalTimerProcessor timer =
   Processor $ \xs -> Cons $ loop xs where
     loop xs =
