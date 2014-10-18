@@ -11,7 +11,8 @@
 --
 -- The module defines the event queue.
 --
-module Simulation.Aivika.Trans.EventQueue() where
+module Simulation.Aivika.Trans.EventQueue
+       (TemplateEventQueueing(..)) where
 
 import Control.Monad
 
@@ -24,7 +25,10 @@ import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Internal.Event
 
-instance TemplateComp m => EventQueueing m where
+-- | A template-based implementation of the 'EventQueueing' class type.
+class ProtoComp m => TemplateEventQueueing m 
+
+instance TemplateEventQueueing m => EventQueueing m where
 
   data EventQueue m =
     EventQueue { queuePQ :: PQ.PriorityQueue m (Point m -> m ()),
@@ -59,6 +63,8 @@ instance TemplateComp m => EventQueueing m where
   {-# INLINE eventQueueCount #-}
   eventQueueCount =
     Event $ PQ.queueCount . queuePQ . runEventQueue . pointRun
+
+instance TemplateEventQueueing IO
 
 instance Comp IO
 
