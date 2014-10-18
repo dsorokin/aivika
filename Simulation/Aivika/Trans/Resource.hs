@@ -1,4 +1,6 @@
 
+{-# LANGUAGE FlexibleContexts #-}
+
 -- |
 -- Module     : Simulation.Aivika.Trans.Resource
 -- Copyright  : Copyright (c) 2009-2014, David Sorokin <david.sorokin@gmail.com>
@@ -90,7 +92,8 @@ newFCFSResource :: Comp m
                    => Int
                    -- ^ the initial count (and maximal count too) of the resource
                    -> Simulation m (FCFSResource m)
-{-# INLINE newFCFSResource #-}                   
+{-# INLINABLE newFCFSResource #-}
+{-# SPECIALISE newFCFSResource :: Int -> Simulation IO (FCFSResource IO) #-}
 newFCFSResource = newResource FCFS
 
 -- | Create a new FCFS resource with the specified initial and maximum counts,
@@ -101,7 +104,8 @@ newFCFSResourceWithMaxCount :: Comp m
                                -> Maybe Int
                                -- ^ the maximum count of the resource, which can be indefinite
                                -> Simulation m (FCFSResource m)
-{-# INLINE newFCFSResourceWithMaxCount #-}
+{-# INLINABLE newFCFSResourceWithMaxCount #-}
+{-# SPECIALISE newFCFSResourceWithMaxCount :: Int -> Maybe Int -> Simulation IO (FCFSResource IO) #-}
 newFCFSResourceWithMaxCount = newResourceWithMaxCount FCFS
 
 -- | Create a new LCFS resource with the specified initial count which value becomes
@@ -110,7 +114,8 @@ newLCFSResource :: Comp m
                    => Int
                    -- ^ the initial count (and maximal count too) of the resource
                    -> Simulation m (LCFSResource m)
-{-# INLINE newLCFSResource #-}
+{-# INLINABLE newLCFSResource #-}
+{-# SPECIALISE newLCFSResource :: Int -> Simulation IO (LCFSResource IO) #-}
 newLCFSResource = newResource LCFS
 
 -- | Create a new LCFS resource with the specified initial and maximum counts,
@@ -121,7 +126,8 @@ newLCFSResourceWithMaxCount :: Comp m
                                -> Maybe Int
                                -- ^ the maximum count of the resource, which can be indefinite
                                -> Simulation m (LCFSResource m)
-{-# INLINE newLCFSResourceWithMaxCount #-}
+{-# INLINABLE newLCFSResourceWithMaxCount #-}
+{-# SPECIALISE newLCFSResourceWithMaxCount :: Int -> Maybe Int -> Simulation IO (LCFSResource IO) #-}
 newLCFSResourceWithMaxCount = newResourceWithMaxCount LCFS
 
 -- | Create a new SIRO resource with the specified initial count which value becomes
@@ -130,7 +136,8 @@ newSIROResource :: Comp m
                    => Int
                    -- ^ the initial count (and maximal count too) of the resource
                    -> Simulation m (SIROResource m)
-{-# INLINE newSIROResource #-}
+{-# INLINABLE newSIROResource #-}
+{-# SPECIALISE newSIROResource :: Int -> Simulation IO (SIROResource IO) #-}
 newSIROResource = newResource SIRO
 
 -- | Create a new SIRO resource with the specified initial and maximum counts,
@@ -141,7 +148,8 @@ newSIROResourceWithMaxCount :: Comp m
                                -> Maybe Int
                                -- ^ the maximum count of the resource, which can be indefinite
                                -> Simulation m (SIROResource m)
-{-# INLINE newSIROResourceWithMaxCount #-}
+{-# INLINABLE newSIROResourceWithMaxCount #-}
+{-# SPECIALISE newSIROResourceWithMaxCount :: Int -> Maybe Int -> Simulation IO (SIROResource IO) #-}
 newSIROResourceWithMaxCount = newResourceWithMaxCount SIRO
 
 -- | Create a new priority resource with the specified initial count which value becomes
@@ -150,7 +158,8 @@ newPriorityResource :: Comp m
                        => Int
                        -- ^ the initial count (and maximal count too) of the resource
                        -> Simulation m (PriorityResource m)
-{-# INLINE newPriorityResource #-}
+{-# INLINABLE newPriorityResource #-}
+{-# SPECIALISE newPriorityResource :: Int -> Simulation IO (PriorityResource IO) #-}
 newPriorityResource = newResource StaticPriorities
 
 -- | Create a new priority resource with the specified initial and maximum counts,
@@ -161,7 +170,8 @@ newPriorityResourceWithMaxCount :: Comp m
                                    -> Maybe Int
                                    -- ^ the maximum count of the resource, which can be indefinite
                                    -> Simulation m (PriorityResource m)
-{-# INLINE newPriorityResourceWithMaxCount #-}
+{-# INLINABLE newPriorityResourceWithMaxCount #-}
+{-# SPECIALISE newPriorityResourceWithMaxCount :: Int -> Maybe Int -> Simulation IO (PriorityResource IO) #-}
 newPriorityResourceWithMaxCount = newResourceWithMaxCount StaticPriorities
 
 -- | Create a new resource with the specified queue strategy and initial count.
@@ -173,6 +183,7 @@ newResource :: (Comp m, QueueStrategy m s)
                -- ^ the initial count (and maximal count too) of the resource
                -> Simulation m (Resource m s)
 {-# INLINABLE newResource #-}
+{-# SPECIALISE newResource :: QueueStrategy IO s => s -> Int -> Simulation IO (Resource IO s) #-}
 newResource s count =
   Simulation $ \r ->
   do when (count < 0) $
@@ -198,6 +209,7 @@ newResourceWithMaxCount :: (Comp m, QueueStrategy m s)
                            -- ^ the maximum count of the resource, which can be indefinite
                            -> Simulation m (Resource m s)
 {-# INLINABLE newResourceWithMaxCount #-}
+{-# SPECIALISE newResourceWithMaxCount :: QueueStrategy IO s => s -> Int -> Maybe Int -> Simulation IO (Resource IO s) #-}
 newResourceWithMaxCount s count maxCount =
   Simulation $ \r ->
   do when (count < 0) $
@@ -222,6 +234,7 @@ newResourceWithMaxCount s count maxCount =
 -- | Return the current count of the resource.
 resourceCount :: Comp m => Resource m s -> Event m Int
 {-# INLINABLE resourceCount #-}
+{-# SPECIALISE resourceCount :: Resource IO s -> Event IO Int #-}
 resourceCount r =
   Event $ \p -> readProtoRef (resourceCountRef r)
 
@@ -233,6 +246,7 @@ requestResource :: (Comp m, EnqueueStrategy m s)
                    -- ^ the requested resource
                    -> Process m ()
 {-# INLINABLE requestResource #-}
+{-# SPECIALISE requestResource :: EnqueueStrategy IO s => Resource IO s -> Process IO () #-}
 requestResource r =
   Process $ \pid ->
   Cont $ \c ->
@@ -256,6 +270,7 @@ requestResourceWithPriority :: (Comp m, PriorityQueueStrategy m s p)
                                -- ^ the priority
                                -> Process m ()
 {-# INLINABLE requestResourceWithPriority #-}
+{-# SPECIALISE requestResourceWithPriority :: PriorityQueueStrategy IO s p => Resource IO s -> p -> Process IO () #-}
 requestResourceWithPriority r priority =
   Process $ \pid ->
   Cont $ \c ->
@@ -276,6 +291,7 @@ releaseResource :: (Comp m, DequeueStrategy m s)
                    -- ^ the resource to release
                    -> Process m ()
 {-# INLINABLE releaseResource #-}
+{-# SPECIALISE releaseResource :: DequeueStrategy IO s => Resource IO s -> Process IO () #-}
 releaseResource r = 
   Process $ \_ ->
   Cont $ \c ->
@@ -290,6 +306,7 @@ releaseResourceWithinEvent :: (Comp m, DequeueStrategy m s)
                               -- ^ the resource to release
                               -> Event m ()
 {-# INLINABLE releaseResourceWithinEvent #-}
+{-# SPECIALISE releaseResourceWithinEvent :: DequeueStrategy IO s => Resource IO s -> Event IO () #-}
 releaseResourceWithinEvent r =
   Event $ \p ->
   do a <- readProtoRef (resourceCountRef r)
@@ -321,6 +338,7 @@ tryRequestResourceWithinEvent :: Comp m
                                  -- ^ the resource which we try to request for
                                  -> Event m Bool
 {-# INLINABLE tryRequestResourceWithinEvent #-}
+{-# SPECIALISE tryRequestResourceWithinEvent :: Resource IO s -> Event IO Bool #-}
 tryRequestResourceWithinEvent r =
   Event $ \p ->
   do a <- readProtoRef (resourceCountRef r)
@@ -340,6 +358,7 @@ usingResource :: (Comp m, EnqueueStrategy m s)
                  -> Process m a
                  -- ^ the result of the action
 {-# INLINABLE usingResource #-}
+{-# SPECIALISE usingResource :: EnqueueStrategy IO s => Resource IO s -> Process IO a -> Process IO a #-}
 usingResource r m =
   do requestResource r
      finallyProcess m $ releaseResource r
@@ -358,6 +377,7 @@ usingResourceWithPriority :: (Comp m, PriorityQueueStrategy m s p)
                              -> Process m a
                              -- ^ the result of the action
 {-# INLINABLE usingResourceWithPriority #-}
+{-# SPECIALISE usingResourceWithPriority :: PriorityQueueStrategy IO s p => Resource IO s -> p -> Process IO a -> Process IO a #-}
 usingResourceWithPriority r priority m =
   do requestResourceWithPriority r priority
      finallyProcess m $ releaseResource r
