@@ -567,7 +567,7 @@ memoProcess x =
                            (\e ->
                              liftComp $ writeProtoRef r (MemoError e)))
                           (liftEvent $
-                           do lift $
+                           do liftComp $
                                 do x <- readProtoRef r
                                    writeProtoRef value (Just x)
                               triggerSignal computed ())
@@ -647,7 +647,7 @@ timeoutProcessUsingId timeout pid p =
              (\e ->
                liftComp $ writeProtoRef r $ Just (Left e)))
             (liftEvent $
-             do x <- lift $ readProtoRef r
+             do x <- liftComp $ readProtoRef r
                 triggerSignal s x)
      x <- processAwait $ publishSignal s
      case x of
