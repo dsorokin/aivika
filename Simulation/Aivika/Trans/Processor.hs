@@ -1,4 +1,6 @@
 
+{-# LANGUAGE FlexibleContexts #-}
+
 -- |
 -- Module     : Simulation.Aivika.Trans.Processor
 -- Copyright  : Copyright (c) 2009-2014, David Sorokin <david.sorokin@gmail.com>
@@ -80,10 +82,12 @@ instance C.Category (Processor m) where
   
 instance Comp m => Arrow (Processor m) where
 
-  {-# INLINE arr #-}
+  {-# INLINABLE arr #-}
+  {-# SPECIALISE arr :: (b -> c) -> Processor IO b c #-}
   arr = Processor . mapStream
 
   {-# INLINABLE first #-}
+  {-# SPECIALISE first :: Processor IO b c -> Processor IO (b, d) (c, d) #-}
   first (Processor f) =
     Processor $ \xys ->
     Cons $
@@ -91,6 +95,7 @@ instance Comp m => Arrow (Processor m) where
        runStream $ zipStreamSeq (f xs) ys
 
   {-# INLINABLE second #-}
+  {-# SPECIALISE second :: Processor IO b c -> Processor IO (d, b) (d, c) #-}
   second (Processor f) =
     Processor $ \xys ->
     Cons $
@@ -98,15 +103,22 @@ instance Comp m => Arrow (Processor m) where
        runStream $ zipStreamSeq xs (f ys)
 
   {-# INLINABLE (***) #-}
+  {-# SPECIALISE (***) :: Processor IO b c -> Processor IO b' c' -> Processor IO (b, b') (c, c') #-}
   Processor f *** Processor g =
     Processor $ \xys ->
     Cons $
     do (xs, ys) <- liftSimulation $ unzipStream xys
        runStream $ zipStreamSeq (f xs) (g ys)
 
+  {-# INLINABLE (&&&) #-}
+  {-# SPECIALISE (&&&) :: Processor IO b c -> Processor IO b c' -> Processor IO b (c, c') #-}
+  Processor f &&& Processor g =
+    Processor $ \xs -> zipStreamSeq (f xs) (g xs)
+
 instance Comp m => ArrowChoice (Processor m) where
 
   {-# INLINABLE left #-}
+  {-# SPECIALISE left :: Processor IO b c -> Processor IO (Either b d) (Either c d) #-}
   left (Processor f) =
     Processor $ \xs ->
     Cons $
@@ -114,6 +126,7 @@ instance Comp m => ArrowChoice (Processor m) where
        runStream $ replaceLeftStream ys (f $ leftStream ys)
 
   {-# INLINABLE right #-}
+  {-# SPECIALISE right :: Processor IO b c -> Processor IO (Either d b) (Either d c) #-}
   right (Processor f) =
     Processor $ \xs ->
     Cons $
@@ -123,11 +136,13 @@ instance Comp m => ArrowChoice (Processor m) where
 instance Comp m => ArrowZero (Processor m) where
 
   {-# INLINABLE zeroArrow #-}
-  zeroArrow = Processor $ const emptyStream
+  {-# SPECIALISE zeroArrow :: Processor IO b c #-}
+  zeroArrow = emptyProcessor
 
 instance Comp m => ArrowPlus (Processor m) where
 
   {-# INLINABLE (<+>) #-}
+  {-# SPECIALISE (<+>) :: Processor IO b c -> Processor IO b c -> Processor IO b c #-}
   (Processor f) <+> (Processor g) =
     Processor $ \xs ->
     Cons $
@@ -137,17 +152,20 @@ instance Comp m => ArrowPlus (Processor m) where
 -- | A processor that never finishes its work producing an 'emptyStream'.
 emptyProcessor :: Comp m => Processor m a b
 {-# INLINABLE emptyProcessor #-}
+{-# SPECIALISE emptyProcessor :: Processor IO a b #-}
 emptyProcessor = Processor $ const emptyStream
 
 -- | Create a simple processor by the specified handling function
 -- that runs the discontinuous process for each input value to get the output.
 arrProcessor :: Comp m => (a -> Process m b) -> Processor m a b
 {-# INLINABLE arrProcessor #-}
+{-# SPECIALISE arrProcessor :: (a -> Process IO b) -> Processor IO a b #-}
 arrProcessor = Processor . mapStreamM
 
 -- | Accumulator that outputs a value determined by the supplied function.
 accumProcessor :: Comp m => (acc -> a -> Process m (acc, b)) -> acc -> Processor m a b
 {-# INLINABLE accumProcessor #-}
+{-# SPECIALISE accumProcessor :: (acc -> a -> Process IO (acc, b)) -> acc -> Processor IO a b #-}
 accumProcessor f acc =
   Processor $ \xs -> Cons $ loop xs acc where
     loop xs acc =
@@ -161,6 +179,7 @@ accumProcessor f acc =
 -- 'processUsingId' function for more details.
 processorUsingId :: Comp m => ProcessId m -> Processor m a b -> Processor m a b
 {-# INLINABLE processorUsingId #-}
+{-# SPECIALISE processorUsingId :: ProcessId IO -> Processor IO a b -> Processor IO a b #-}
 processorUsingId pid (Processor f) =
   Processor $ Cons . processUsingId pid . runStream . f
 
@@ -182,6 +201,7 @@ processorQueuedParallel :: (Comp m,
                            -> Processor m a b
                            -- ^ the parallelized processor
 {-# INLINABLE processorQueuedParallel #-}
+{-# SPECIALISE processorQueuedParallel :: (EnqueueStrategy IO si, EnqueueStrategy IO so) => si -> so -> [Processor IO a b] -> Processor IO a b #-}
 processorQueuedParallel si so ps =
   Processor $ \xs ->
   Cons $
@@ -205,6 +225,7 @@ processorPrioritisingOutputParallel :: (Comp m,
                                        -> Processor m a b
                                        -- ^ the parallelized processor
 {-# INLINABLE processorPrioritisingOutputParallel #-}
+{-# SPECIALISE processorPrioritisingOutputParallel :: (EnqueueStrategy IO si, PriorityQueueStrategy IO so po) => si -> so -> [Processor IO a (po, b)] -> Processor IO a b #-}
 processorPrioritisingOutputParallel si so ps =
   Processor $ \xs ->
   Cons $
@@ -229,6 +250,7 @@ processorPrioritisingInputParallel :: (Comp m,
                                       -> Processor m a b
                                       -- ^ the parallelized processor
 {-# INLINABLE processorPrioritisingInputParallel #-}
+{-# SPECIALISE processorPrioritisingInputParallel :: (PriorityQueueStrategy IO si pi, EnqueueStrategy IO so) => si -> so -> [(Stream IO pi, Processor IO a b)] -> Processor IO a b #-}
 processorPrioritisingInputParallel si so ps =
   Processor $ \xs ->
   Cons $
@@ -253,6 +275,7 @@ processorPrioritisingInputOutputParallel :: (Comp m,
                                             -> Processor m a b
                                             -- ^ the parallelized processor
 {-# INLINABLE processorPrioritisingInputOutputParallel #-}
+{-# SPECIALISE processorPrioritisingInputOutputParallel :: (PriorityQueueStrategy IO si pi, PriorityQueueStrategy IO so po) => si -> so -> [(Stream IO pi, Processor IO a (po, b))] -> Processor IO a b #-}
 processorPrioritisingInputOutputParallel si so ps =
   Processor $ \xs ->
   Cons $
@@ -267,12 +290,14 @@ processorPrioritisingInputOutputParallel si so ps =
 -- and output, which suits the most part of uses cases.
 processorParallel :: Comp m => [Processor m a b] -> Processor m a b
 {-# INLINABLE processorParallel #-}
+{-# SPECIALISE processorParallel :: [Processor IO a b] -> Processor IO a b #-}
 processorParallel = processorQueuedParallel FCFS FCFS
 
 -- | Launches the processors sequentially using the 'prefetchProcessor' between them
 -- to model an autonomous work of each of the processors specified.
 processorSeq :: Comp m => [Processor m a a] -> Processor m a a
 {-# INLINABLE processorSeq #-}
+{-# SPECIALISE processorSeq :: [Processor IO a a] -> Processor IO a a #-}
 processorSeq []  = emptyProcessor
 processorSeq [p] = p
 processorSeq (p : ps) = p >>> prefetchProcessor >>> processorSeq ps
@@ -288,6 +313,7 @@ bufferProcessor :: Comp m
                    -- ^ the resulting stream of data
                    -> Processor m a b
 {-# INLINABLE bufferProcessor #-}
+{-# SPECIALISE bufferProcessor :: (Stream IO a -> Process IO ()) -> Stream IO b -> Processor IO a b #-}
 bufferProcessor consume output =
   Processor $ \xs ->
   Cons $
@@ -311,6 +337,7 @@ bufferProcessorLoop :: Comp m
                        -- of type @c@ to the input again (this is a loop body)
                        -> Processor m a b
 {-# INLINABLE bufferProcessorLoop #-}
+{-# SPECIALISE bufferProcessorLoop :: (Stream IO a -> Stream IO c -> Process IO ()) -> Stream IO d -> Processor IO d (Either e b) -> Processor IO e c -> Processor IO a b #-}
 bufferProcessorLoop consume preoutput cond body =
   Processor $ \xs ->
   Cons $
@@ -352,6 +379,7 @@ queueProcessor :: Comp m =>
                   -> Processor m a b
                   -- ^ the buffering processor
 {-# INLINABLE queueProcessor #-}
+{-# SPECIALISE queueProcessor :: (a -> Process IO ()) -> Process IO b -> Processor IO a b #-}
 queueProcessor enqueue dequeue =
   bufferProcessor
   (consumeStream enqueue)
@@ -379,6 +407,7 @@ queueProcessorLoopMerging :: Comp m
                              -> Processor m a b
                              -- ^ the buffering processor
 {-# INLINABLE queueProcessorLoopMerging #-}
+{-# SPECIALISE queueProcessorLoopMerging :: (Stream IO a -> Stream IO d -> Stream IO e) -> (e -> Process IO ()) -> Process IO c -> Processor IO c (Either f b) -> Processor IO f d -> Processor IO a b #-}
 queueProcessorLoopMerging merge enqueue dequeue =
   bufferProcessorLoop
   (\bs cs ->
@@ -407,6 +436,7 @@ queueProcessorLoopSeq :: Comp m
                          -> Processor m a b
                          -- ^ the buffering processor
 {-# INLINABLE queueProcessorLoopSeq #-}
+{-# SPECIALISE queueProcessorLoopSeq :: (a -> Process IO ()) -> Process IO c -> Processor IO c (Either e b) -> Processor IO e a -> Processor IO a b #-}
 queueProcessorLoopSeq =
   queueProcessorLoopMerging mergeStreams
 
@@ -430,6 +460,7 @@ queueProcessorLoopParallel :: Comp m
                               -> Processor m a b
                               -- ^ the buffering processor
 {-# INLINABLE queueProcessorLoopParallel #-}
+{-# SPECIALISE queueProcessorLoopParallel :: (a -> Process IO ()) -> Process IO c -> Processor IO c (Either e b) -> Processor IO e a -> Processor IO a b #-}
 queueProcessorLoopParallel enqueue dequeue =
   bufferProcessorLoop
   (\bs cs ->
@@ -448,6 +479,7 @@ queueProcessorLoopParallel enqueue dequeue =
 -- for modeling a sequence of separate and independent work places.
 prefetchProcessor :: Comp m => Processor m a a
 {-# INLINABLE prefetchProcessor #-}
+{-# SPECIALISE prefetchProcessor :: Processor IO a a #-}
 prefetchProcessor = Processor prefetchStream
 
 -- | Convert the specified signal transform to a processor.
@@ -463,6 +495,7 @@ prefetchProcessor = Processor prefetchStream
 -- Cancel the processor's process to unsubscribe from the signals provided.
 signalProcessor :: Comp m => (Signal m a -> Signal m b) -> Processor m a b
 {-# INLINABLE signalProcessor #-}
+{-# SPECIALISE signalProcessor :: (Signal IO a -> Signal IO b) -> Processor IO a b #-}
 signalProcessor f =
   Processor $ \xs ->
   Cons $
@@ -483,6 +516,7 @@ signalProcessor f =
 -- Cancel the returned process to unsubscribe from the signal specified.
 processorSignaling :: Comp m => Processor m a b -> Signal m a -> Process m (Signal m b)
 {-# INLINABLE processorSignaling #-}
+{-# SPECIALISE processorSignaling :: Processor IO a b -> Signal IO a -> Process IO (Signal IO b) #-}
 processorSignaling (Processor f) sa =
   do xs <- signalStream sa
      let ys = f xs
@@ -492,9 +526,11 @@ processorSignaling (Processor f) sa =
 -- the original stream items were received by demand.
 arrivalProcessor :: Comp m => Processor m a (Arrival a)
 {-# INLINABLE arrivalProcessor #-}
+{-# SPECIALISE arrivalProcessor :: Processor IO a (Arrival a) #-}
 arrivalProcessor = Processor arrivalStream
 
 -- | A processor that delays the input stream by one step using the specified initial value.
 delayProcessor :: Comp m => a -> Processor m a a
 {-# INLINABLE delayProcessor #-}
+{-# SPECIALISE delayProcessor :: a -> Processor IO a a #-}
 delayProcessor a0 = Processor $ delayStream a0
