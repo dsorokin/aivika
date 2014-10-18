@@ -114,6 +114,7 @@ newServer :: Comp m
              -- ^ provide an output by the specified input
              -> Simulation m (Server m () a b)
 {-# INLINABLE newServer #-}
+{-# SPECIALISE newServer :: (a -> Process IO b) -> Simulation IO (Server IO () a b) #-}
 newServer provide =
   flip newStateServer () $ \s a ->
   do b <- provide a
@@ -130,6 +131,7 @@ newStateServer :: Comp m
                   -- ^ the initial state
                   -> Simulation m (Server m s a b)
 {-# INLINABLE newStateServer #-}
+{-# SPECIALISE newStateServer :: (s -> a -> Process IO (s, b)) -> s -> Simulation IO (Server IO s a b) #-}
 newStateServer provide state =
   do sn <- liftParameter simulationSession
      r0 <- liftComp $ newProtoRef sn state
@@ -179,6 +181,7 @@ newStateServer provide state =
 -- should not be prefetched if it is connected directly with the queue processor.
 serverProcessor :: Comp m => Server m s a b -> Processor m a b
 {-# INLINABLE serverProcessor #-}
+{-# SPECIALISE serverProcessor :: Server IO s a b -> Processor IO a b #-}
 serverProcessor server =
   Processor $ \xs -> loop (serverInitState server) Nothing xs
   where
@@ -220,18 +223,21 @@ serverProcessor server =
 -- See also 'serverStateChanged' and 'serverStateChanged_'.
 serverState :: Comp m => Server m s a b -> Event m s
 {-# INLINABLE serverState #-}
+{-# SPECIALISE serverState :: Server IO s a b -> Event IO s #-}
 serverState server =
   Event $ \p -> readProtoRef (serverStateRef server)
   
 -- | Signal when the 'serverState' property value has changed.
 serverStateChanged :: Comp m => Server m s a b -> Signal m s
 {-# INLINABLE serverStateChanged #-}
+{-# SPECIALISE serverStateChanged :: Server IO s a b -> Signal IO s #-}
 serverStateChanged server =
   mapSignalM (const $ serverState server) (serverStateChanged_ server)
   
 -- | Signal when the 'serverState' property value has changed.
 serverStateChanged_ :: Comp m => Server m s a b -> Signal m ()
 {-# INLINABLE serverStateChanged_ #-}
+{-# SPECIALISE serverStateChanged_ :: Server IO s a b -> Signal IO () #-}
 serverStateChanged_ server =
   mapSignal (const ()) (serverTaskProcessed server)
 
@@ -243,18 +249,21 @@ serverStateChanged_ server =
 -- See also 'serverTotalInputWaitTimeChanged' and 'serverTotalInputWaitTimeChanged_'.
 serverTotalInputWaitTime :: Comp m => Server m s a b -> Event m Double
 {-# INLINABLE serverTotalInputWaitTime #-}
+{-# SPECIALISE serverTotalInputWaitTime :: Server IO s a b -> Event IO Double #-}
 serverTotalInputWaitTime server =
   Event $ \p -> readProtoRef (serverTotalInputWaitTimeRef server)
   
 -- | Signal when the 'serverTotalInputWaitTime' property value has changed.
 serverTotalInputWaitTimeChanged :: Comp m => Server m s a b -> Signal m Double
 {-# INLINABLE serverTotalInputWaitTimeChanged #-}
+{-# SPECIALISE serverTotalInputWaitTimeChanged :: Server IO s a b -> Signal IO Double #-}
 serverTotalInputWaitTimeChanged server =
   mapSignalM (const $ serverTotalInputWaitTime server) (serverTotalInputWaitTimeChanged_ server)
   
 -- | Signal when the 'serverTotalInputWaitTime' property value has changed.
 serverTotalInputWaitTimeChanged_ :: Comp m => Server m s a b -> Signal m ()
 {-# INLINABLE serverTotalInputWaitTimeChanged_ #-}
+{-# SPECIALISE serverTotalInputWaitTimeChanged_ :: Server IO s a b -> Signal IO () #-}
 serverTotalInputWaitTimeChanged_ server =
   mapSignal (const ()) (serverInputReceived server)
 
@@ -266,18 +275,21 @@ serverTotalInputWaitTimeChanged_ server =
 -- See also 'serverTotalProcessingTimeChanged' and 'serverTotalProcessingTimeChanged_'.
 serverTotalProcessingTime :: Comp m => Server m s a b -> Event m Double
 {-# INLINABLE serverTotalProcessingTime #-}
+{-# SPECIALISE serverTotalProcessingTime :: Server IO s a b -> Event IO Double #-}
 serverTotalProcessingTime server =
   Event $ \p -> readProtoRef (serverTotalProcessingTimeRef server)
   
 -- | Signal when the 'serverTotalProcessingTime' property value has changed.
 serverTotalProcessingTimeChanged :: Comp m => Server m s a b -> Signal m Double
 {-# INLINABLE serverTotalProcessingTimeChanged #-}
+{-# SPECIALISE serverTotalProcessingTimeChanged :: Server IO s a b -> Signal IO Double #-}
 serverTotalProcessingTimeChanged server =
   mapSignalM (const $ serverTotalProcessingTime server) (serverTotalProcessingTimeChanged_ server)
   
 -- | Signal when the 'serverTotalProcessingTime' property value has changed.
 serverTotalProcessingTimeChanged_ :: Comp m => Server m s a b -> Signal m ()
 {-# INLINABLE serverTotalProcessingTimeChanged_ #-}
+{-# SPECIALISE serverTotalProcessingTimeChanged_ :: Server IO s a b -> Signal IO () #-}
 serverTotalProcessingTimeChanged_ server =
   mapSignal (const ()) (serverTaskProcessed server)
 
@@ -290,18 +302,21 @@ serverTotalProcessingTimeChanged_ server =
 -- See also 'serverTotalOutputWaitTimeChanged' and 'serverTotalOutputWaitTimeChanged_'.
 serverTotalOutputWaitTime :: Comp m => Server m s a b -> Event m Double
 {-# INLINABLE serverTotalOutputWaitTime #-}
+{-# SPECIALISE serverTotalOutputWaitTime :: Server IO s a b -> Event IO Double #-}
 serverTotalOutputWaitTime server =
   Event $ \p -> readProtoRef (serverTotalOutputWaitTimeRef server)
   
 -- | Signal when the 'serverTotalOutputWaitTime' property value has changed.
 serverTotalOutputWaitTimeChanged :: Comp m => Server m s a b -> Signal m Double
 {-# INLINABLE serverTotalOutputWaitTimeChanged #-}
+{-# SPECIALISE serverTotalOutputWaitTimeChanged :: Server IO s a b -> Signal IO Double #-}
 serverTotalOutputWaitTimeChanged server =
   mapSignalM (const $ serverTotalOutputWaitTime server) (serverTotalOutputWaitTimeChanged_ server)
   
 -- | Signal when the 'serverTotalOutputWaitTime' property value has changed.
 serverTotalOutputWaitTimeChanged_ :: Comp m => Server m s a b -> Signal m ()
 {-# INLINABLE serverTotalOutputWaitTimeChanged_ #-}
+{-# SPECIALISE serverTotalOutputWaitTimeChanged_ :: Server IO s a b -> Signal IO () #-}
 serverTotalOutputWaitTimeChanged_ server =
   mapSignal (const ()) (serverOutputProvided server)
 
@@ -313,18 +328,21 @@ serverTotalOutputWaitTimeChanged_ server =
 -- See also 'serverInputWaitTimeChanged' and 'serverInputWaitTimeChanged_'.
 serverInputWaitTime :: Comp m => Server m s a b -> Event m (SamplingStats Double)
 {-# INLINABLE serverInputWaitTime #-}
+{-# SPECIALISE serverInputWaitTime :: Server IO s a b -> Event IO (SamplingStats Double) #-}
 serverInputWaitTime server =
   Event $ \p -> readProtoRef (serverInputWaitTimeRef server)
   
 -- | Signal when the 'serverInputWaitTime' property value has changed.
 serverInputWaitTimeChanged :: Comp m => Server m s a b -> Signal m (SamplingStats Double)
 {-# INLINABLE serverInputWaitTimeChanged #-}
+{-# SPECIALISE serverInputWaitTimeChanged :: Server IO s a b -> Signal IO (SamplingStats Double) #-}
 serverInputWaitTimeChanged server =
   mapSignalM (const $ serverInputWaitTime server) (serverInputWaitTimeChanged_ server)
   
 -- | Signal when the 'serverInputWaitTime' property value has changed.
 serverInputWaitTimeChanged_ :: Comp m => Server m s a b -> Signal m ()
 {-# INLINABLE serverInputWaitTimeChanged_ #-}
+{-# SPECIALISE serverInputWaitTimeChanged_ :: Server IO s a b -> Signal IO () #-}
 serverInputWaitTimeChanged_ server =
   mapSignal (const ()) (serverInputReceived server)
 
@@ -336,18 +354,21 @@ serverInputWaitTimeChanged_ server =
 -- See also 'serverProcessingTimeChanged' and 'serverProcessingTimeChanged_'.
 serverProcessingTime :: Comp m => Server m s a b -> Event m (SamplingStats Double)
 {-# INLINABLE serverProcessingTime #-}
+{-# SPECIALISE serverProcessingTime :: Server IO s a b -> Event IO (SamplingStats Double) #-}
 serverProcessingTime server =
   Event $ \p -> readProtoRef (serverProcessingTimeRef server)
   
 -- | Signal when the 'serverProcessingTime' property value has changed.
 serverProcessingTimeChanged :: Comp m => Server m s a b -> Signal m (SamplingStats Double)
 {-# INLINABLE serverProcessingTimeChanged #-}
+{-# SPECIALISE serverProcessingTimeChanged :: Server IO s a b -> Signal IO (SamplingStats Double) #-}
 serverProcessingTimeChanged server =
   mapSignalM (const $ serverProcessingTime server) (serverProcessingTimeChanged_ server)
   
 -- | Signal when the 'serverProcessingTime' property value has changed.
 serverProcessingTimeChanged_ :: Comp m => Server m s a b -> Signal m ()
 {-# INLINABLE serverProcessingTimeChanged_ #-}
+{-# SPECIALISE serverProcessingTimeChanged_ :: Server IO s a b -> Signal IO () #-}
 serverProcessingTimeChanged_ server =
   mapSignal (const ()) (serverTaskProcessed server)
 
@@ -360,18 +381,21 @@ serverProcessingTimeChanged_ server =
 -- See also 'serverOutputWaitTimeChanged' and 'serverOutputWaitTimeChanged_'.
 serverOutputWaitTime :: Comp m => Server m s a b -> Event m (SamplingStats Double)
 {-# INLINABLE serverOutputWaitTime #-}
+{-# SPECIALISE serverOutputWaitTime :: Server IO s a b -> Event IO (SamplingStats Double) #-}
 serverOutputWaitTime server =
   Event $ \p -> readProtoRef (serverOutputWaitTimeRef server)
   
 -- | Signal when the 'serverOutputWaitTime' property value has changed.
 serverOutputWaitTimeChanged :: Comp m => Server m s a b -> Signal m (SamplingStats Double)
 {-# INLINABLE serverOutputWaitTimeChanged #-}
+{-# SPECIALISE serverOutputWaitTimeChanged :: Server IO s a b -> Signal IO (SamplingStats Double) #-}
 serverOutputWaitTimeChanged server =
   mapSignalM (const $ serverOutputWaitTime server) (serverOutputWaitTimeChanged_ server)
   
 -- | Signal when the 'serverOutputWaitTime' property value has changed.
 serverOutputWaitTimeChanged_ :: Comp m => Server m s a b -> Signal m ()
 {-# INLINABLE serverOutputWaitTimeChanged_ #-}
+{-# SPECIALISE serverOutputWaitTimeChanged_ :: Server IO s a b -> Signal IO () #-}
 serverOutputWaitTimeChanged_ server =
   mapSignal (const ()) (serverOutputProvided server)
 
@@ -390,6 +414,7 @@ serverOutputWaitTimeChanged_ server =
 -- See also 'serverInputWaitFactorChanged' and 'serverInputWaitFactorChanged_'.
 serverInputWaitFactor :: Comp m => Server m s a b -> Event m Double
 {-# INLINABLE serverInputWaitFactor #-}
+{-# SPECIALISE serverInputWaitFactor :: Server IO s a b -> Event IO Double #-}
 serverInputWaitFactor server =
   Event $ \p ->
   do x1 <- readProtoRef (serverTotalInputWaitTimeRef server)
@@ -400,12 +425,14 @@ serverInputWaitFactor server =
 -- | Signal when the 'serverInputWaitFactor' property value has changed.
 serverInputWaitFactorChanged :: Comp m => Server m s a b -> Signal m Double
 {-# INLINABLE serverInputWaitFactorChanged #-}
+{-# SPECIALISE serverInputWaitFactorChanged :: Server IO s a b -> Signal IO Double #-}
 serverInputWaitFactorChanged server =
   mapSignalM (const $ serverInputWaitFactor server) (serverInputWaitFactorChanged_ server)
   
 -- | Signal when the 'serverInputWaitFactor' property value has changed.
 serverInputWaitFactorChanged_ :: Comp m => Server m s a b -> Signal m ()
 {-# INLINABLE serverInputWaitFactorChanged_ #-}
+{-# SPECIALISE serverInputWaitFactorChanged_ :: Server IO s a b -> Signal IO () #-}
 serverInputWaitFactorChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
@@ -426,6 +453,7 @@ serverInputWaitFactorChanged_ server =
 -- See also 'serverProcessingFactorChanged' and 'serverProcessingFactorChanged_'.
 serverProcessingFactor :: Comp m => Server m s a b -> Event m Double
 {-# INLINABLE serverProcessingFactor #-}
+{-# SPECIALISE serverProcessingFactor :: Server IO s a b -> Event IO Double #-}
 serverProcessingFactor server =
   Event $ \p ->
   do x1 <- readProtoRef (serverTotalInputWaitTimeRef server)
@@ -436,12 +464,14 @@ serverProcessingFactor server =
 -- | Signal when the 'serverProcessingFactor' property value has changed.
 serverProcessingFactorChanged :: Comp m => Server m s a b -> Signal m Double
 {-# INLINABLE serverProcessingFactorChanged #-}
+{-# SPECIALISE serverProcessingFactorChanged :: Server IO s a b -> Signal IO Double #-}
 serverProcessingFactorChanged server =
   mapSignalM (const $ serverProcessingFactor server) (serverProcessingFactorChanged_ server)
   
 -- | Signal when the 'serverProcessingFactor' property value has changed.
 serverProcessingFactorChanged_ :: Comp m => Server m s a b -> Signal m ()
 {-# INLINABLE serverProcessingFactorChanged_ #-}
+{-# SPECIALISE serverProcessingFactorChanged_ :: Server IO s a b -> Signal IO () #-}
 serverProcessingFactorChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
@@ -462,6 +492,7 @@ serverProcessingFactorChanged_ server =
 -- See also 'serverOutputWaitFactorChanged' and 'serverOutputWaitFactorChanged_'.
 serverOutputWaitFactor :: Comp m => Server m s a b -> Event m Double
 {-# INLINABLE serverOutputWaitFactor #-}
+{-# SPECIALISE serverOutputWaitFactor :: Server IO s a b -> Event IO Double #-}
 serverOutputWaitFactor server =
   Event $ \p ->
   do x1 <- readProtoRef (serverTotalInputWaitTimeRef server)
@@ -472,12 +503,14 @@ serverOutputWaitFactor server =
 -- | Signal when the 'serverOutputWaitFactor' property value has changed.
 serverOutputWaitFactorChanged :: Comp m => Server m s a b -> Signal m Double
 {-# INLINABLE serverOutputWaitFactorChanged #-}
+{-# SPECIALISE serverOutputWaitFactorChanged :: Server IO s a b -> Signal IO Double #-}
 serverOutputWaitFactorChanged server =
   mapSignalM (const $ serverOutputWaitFactor server) (serverOutputWaitFactorChanged_ server)
   
 -- | Signal when the 'serverOutputWaitFactor' property value has changed.
 serverOutputWaitFactorChanged_ :: Comp m => Server m s a b -> Signal m ()
 {-# INLINABLE serverOutputWaitFactorChanged_ #-}
+{-# SPECIALISE serverOutputWaitFactorChanged_ :: Server IO s a b -> Signal IO () #-}
 serverOutputWaitFactorChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
@@ -486,21 +519,25 @@ serverOutputWaitFactorChanged_ server =
 -- | Raised when the server receives a new input task.
 serverInputReceived :: Comp m => Server m s a b -> Signal m a
 {-# INLINABLE serverInputReceived #-}
+{-# SPECIALISE serverInputReceived :: Server IO s a b -> Signal IO a #-}
 serverInputReceived = publishSignal . serverInputReceivedSource
 
 -- | Raised when the server has just processed the task.
 serverTaskProcessed :: Comp m => Server m s a b -> Signal m (a, b)
 {-# INLINABLE serverTaskProcessed #-}
+{-# SPECIALISE serverTaskProcessed :: Server IO s a b -> Signal IO (a, b) #-}
 serverTaskProcessed = publishSignal . serverTaskProcessedSource
 
 -- | Raised when the server has just delivered the output.
 serverOutputProvided :: Comp m => Server m s a b -> Signal m (a, b)
 {-# INLINABLE serverOutputProvided #-}
+{-# SPECIALISE serverOutputProvided :: Server IO s a b -> Signal IO (a, b) #-}
 serverOutputProvided = publishSignal . serverOutputProvidedSource
 
 -- | Signal whenever any property of the server changes.
 serverChanged_ :: Comp m => Server m s a b -> Signal m ()
 {-# INLINABLE serverChanged_ #-}
+{-# SPECIALISE serverChanged_ :: Server IO s a b -> Signal IO () #-}
 serverChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
@@ -510,6 +547,7 @@ serverChanged_ server =
 -- properties and activities using the specified indent.
 serverSummary :: Comp m => Server m s a b -> Int -> Event m ShowS
 {-# INLINABLE serverSummary #-}
+{-# SPECIALISE serverSummary :: Server IO s a b -> Int -> Event IO ShowS #-}
 serverSummary server indent =
   Event $ \p ->
   do tx1 <- readProtoRef (serverTotalInputWaitTimeRef server)
