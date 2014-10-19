@@ -72,11 +72,11 @@ modifyRef r f = Event $ \p ->
      invokeEvent p $ triggerSignal (refChangedSource r) b
 
 -- | Return a signal that notifies about every change of the reference state.
-refChanged :: Monad m => Ref m a -> Signal m a
+refChanged :: Comp m => Ref m a -> Signal m a
 {-# INLINE refChanged #-}
 refChanged v = publishSignal (refChangedSource v)
 
 -- | Return a signal that notifies about every change of the reference state.
-refChanged_ :: Monad m => Ref m a -> Signal m ()
+refChanged_ :: Comp m => Ref m a -> Signal m ()
 {-# INLINE refChanged_ #-}
 refChanged_ r = mapSignal (const ()) $ refChanged r
