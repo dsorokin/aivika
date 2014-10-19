@@ -223,7 +223,9 @@ repeatProcess p = Cons y where
 mapStream :: Comp m => (a -> b) -> Stream m a -> Stream m b
 {-# INLINABLE mapStream #-}
 {-# SPECIALISE mapStream :: (a -> b) -> Stream IO a -> Stream IO b #-}
-mapStream = fmap
+mapStream f (Cons s) = Cons y where
+  y = do (a, xs) <- s
+         return (f a, mapStream f xs)
 
 -- | Compose the stream.
 mapStreamM :: Comp m => (a -> Process m b) -> Stream m a -> Stream m b
