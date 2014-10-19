@@ -47,7 +47,7 @@ randomUniform :: Double     -- ^ minimum
 randomUniform min max =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorUniform g min max
+  in generateUniform g min max
 
 -- | Computation that generates a new random integer number distributed uniformly.
 randomUniformInt :: Int     -- ^ minimum
@@ -56,7 +56,7 @@ randomUniformInt :: Int     -- ^ minimum
 randomUniformInt min max =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorUniformInt g min max
+  in generateUniformInt g min max
 
 -- | Computation that generates a new random number distributed normally.
 randomNormal :: Double     -- ^ mean
@@ -65,7 +65,7 @@ randomNormal :: Double     -- ^ mean
 randomNormal mu nu =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorNormal g mu nu
+  in generateNormal g mu nu
 
 -- | Computation that returns a new exponential random number with the specified mean
 -- (the reciprocal of the rate).
@@ -75,7 +75,7 @@ randomExponential :: Double
 randomExponential mu =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorExponential g mu
+  in generateExponential g mu
 
 -- | Computation that returns a new Erlang random number with the specified scale
 -- (the reciprocal of the rate) and integer shape.
@@ -87,7 +87,7 @@ randomErlang :: Double
 randomErlang beta m =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorErlang g beta m
+  in generateErlang g beta m
 
 -- | Computation that returns a new Poisson random number with the specified mean.
 randomPoisson :: Double
@@ -96,7 +96,7 @@ randomPoisson :: Double
 randomPoisson mu =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorPoisson g mu
+  in generatePoisson g mu
 
 -- | Computation that returns a new binomial random number with the specified
 -- probability and trials.
@@ -106,7 +106,7 @@ randomBinomial :: Double  -- ^ the probability
 randomBinomial prob trials =
   Parameter $ \r ->
   let g = runGenerator r
-  in generatorBinomial g prob trials
+  in generateBinomial g prob trials
 
 -- | Computation that returns 'True' in case of success.
 randomTrue :: Double      -- ^ the probability of the success

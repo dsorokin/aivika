@@ -20,50 +20,50 @@ import Data.IORef
 
 -- | Defines a random number generator.
 data Generator =
-  Generator { generatorUniform :: Double -> Double -> IO Double,
+  Generator { generateUniform :: Double -> Double -> IO Double,
               -- ^ Generate an uniform random number
               -- with the specified minimum and maximum.
-              generatorUniformInt :: Int -> Int -> IO Int,
+              generateUniformInt :: Int -> Int -> IO Int,
               -- ^ Generate an uniform integer random number
               -- with the specified minimum and maximum.
-              generatorNormal :: Double -> Double -> IO Double,
+              generateNormal :: Double -> Double -> IO Double,
               -- ^ Generate the normal random number
               -- with the specified mean and deviation.
-              generatorExponential :: Double -> IO Double,
+              generateExponential :: Double -> IO Double,
               -- ^ Generate the random number distributed exponentially
               -- with the specified mean (the reciprocal of the rate).
-              generatorErlang :: Double -> Int -> IO Double,
+              generateErlang :: Double -> Int -> IO Double,
               -- ^ Generate the Erlang random number
               -- with the specified scale (the reciprocal of the rate) and integer shape.
-              generatorPoisson :: Double -> IO Int,
+              generatePoisson :: Double -> IO Int,
               -- ^ Generate the Poisson random number
               -- with the specified mean.
-              generatorBinomial :: Double -> Int -> IO Int
+              generateBinomial :: Double -> Int -> IO Int
               -- ^ Generate the binomial random number
               -- with the specified probability and number of trials.
             }
 
 -- | Generate the uniform random number with the specified minimum and maximum.
-generateUniform :: IO Double
-                   -- ^ the generator
-                   -> Double
-                   -- ^ minimum
-                   -> Double
-                   -- ^ maximum
-                   -> IO Double
-generateUniform g min max =
+generateUniform01 :: IO Double
+                     -- ^ the generator
+                     -> Double
+                     -- ^ minimum
+                     -> Double
+                     -- ^ maximum
+                     -> IO Double
+generateUniform01 g min max =
   do x <- g
      return $ min + x * (max - min)
 
 -- | Generate the uniform random number with the specified minimum and maximum.
-generateUniformInt :: IO Double
-                      -- ^ the generator
-                      -> Int
-                      -- ^ minimum
-                      -> Int
-                      -- ^ maximum
-                      -> IO Int
-generateUniformInt g min max =
+generateUniformInt01 :: IO Double
+                        -- ^ the generator
+                        -> Int
+                        -- ^ minimum
+                        -> Int
+                        -- ^ maximum
+                        -> IO Int
+generateUniformInt01 g min max =
   do x <- g
      let min' = fromIntegral min
          max' = fromIntegral max
@@ -71,10 +71,10 @@ generateUniformInt g min max =
 
 -- | Create a normal random number generator with mean 0 and variance 1
 -- by the specified generator of uniform random numbers from 0 to 1.
-newNormalGenerator :: IO Double
-                      -- ^ the generator
-                      -> IO (IO Double)
-newNormalGenerator g =
+newNormalGenerator01 :: IO Double
+                        -- ^ the generator
+                        -> IO (IO Double)
+newNormalGenerator01 g =
   do nextRef <- newIORef 0.0
      flagRef <- newIORef False
      xi1Ref  <- newIORef 0.0
@@ -110,24 +110,24 @@ newNormalGenerator g =
                     return $ xi1 * psi
 
 -- | Return the exponential random number with the specified mean.
-generateExponential :: IO Double
-                       -- ^ the generator
-                       -> Double
-                       -- ^ the mean
-                       -> IO Double
-generateExponential g mu =
+generateExponential01 :: IO Double
+                         -- ^ the generator
+                         -> Double
+                         -- ^ the mean
+                         -> IO Double
+generateExponential01 g mu =
   do x <- g
      return (- log x * mu)
 
 -- | Return the Erlang random number.
-generateErlang :: IO Double
-                  -- ^ the generator
-                  -> Double
-                  -- ^ the scale
-                  -> Int
-                  -- ^ the shape
-                  -> IO Double
-generateErlang g beta m =
+generateErlang01 :: IO Double
+                    -- ^ the generator
+                    -> Double
+                    -- ^ the scale
+                    -> Int
+                    -- ^ the shape
+                    -> IO Double
+generateErlang01 g beta m =
   do x <- loop m 1
      return (- log x * beta)
        where loop m acc
@@ -137,12 +137,12 @@ generateErlang g beta m =
                                 loop (m - 1) (x * acc)
 
 -- | Generate the Poisson random number with the specified mean.
-generatePoisson :: IO Double
-                   -- ^ the generator
-                   -> Double
-                   -- ^ the mean
-                   -> IO Int
-generatePoisson g mu =
+generatePoisson01 :: IO Double
+                     -- ^ the generator
+                     -> Double
+                     -- ^ the mean
+                     -> IO Int
+generatePoisson01 g mu =
   do prob0 <- g
      let loop prob prod acc
            | prob <= prod = return acc
@@ -153,14 +153,14 @@ generatePoisson g mu =
      loop prob0 (exp (- mu)) 0
 
 -- | Generate a binomial random number with the specified probability and number of trials. 
-generateBinomial :: IO Double
-                    -- ^ the generator
-                    -> Double 
-                    -- ^ the probability
-                    -> Int
-                    -- ^ the number of trials
-                    -> IO Int
-generateBinomial g prob trials = loop trials 0 where
+generateBinomial01 :: IO Double
+                      -- ^ the generator
+                      -> Double 
+                      -- ^ the probability
+                      -> Int
+                      -- ^ the number of trials
+                      -> IO Int
+generateBinomial01 g prob trials = loop trials 0 where
   loop n acc
     | n < 0     = error "Negative number of trials: generateBinomial."
     | n == 0    = return acc
@@ -207,14 +207,14 @@ newRandomGenerator g =
 newRandomGenerator01 :: IO Double -> IO Generator
 newRandomGenerator01 g =
   do let g1 = g
-     g2 <- newNormalGenerator g1
+     g2 <- newNormalGenerator01 g1
      let g3 mu nu =
            do x <- g2
               return $ mu + nu * x
-     return Generator { generatorUniform = generateUniform g1,
-                        generatorUniformInt = generateUniformInt g1,
-                        generatorNormal = g3,
-                        generatorExponential = generateExponential g1,
-                        generatorErlang = generateErlang g1,
-                        generatorPoisson = generatePoisson g1,
-                        generatorBinomial = generateBinomial g1 }
+     return Generator { generateUniform = generateUniform01 g1,
+                        generateUniformInt = generateUniformInt01 g1,
+                        generateNormal = g3,
+                        generateExponential = generateExponential01 g1,
+                        generateErlang = generateErlang01 g1,
+                        generatePoisson = generatePoisson01 g1,
+                        generateBinomial = generateBinomial01 g1 }

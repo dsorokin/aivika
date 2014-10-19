@@ -189,7 +189,6 @@ library
                         FunctionalDependencies,
                         ExistentialQuantification,
                         TypeFamilies,
-                        TypeSynonymInstances,
                         CPP
                      
     ghc-options:     -O2

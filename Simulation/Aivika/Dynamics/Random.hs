@@ -50,7 +50,7 @@ memoRandomUniformDynamics min max =
   do let g = runGenerator $ pointRun p
      min' <- invokeDynamics p min
      max' <- invokeDynamics p max
-     generatorUniform g min' max'
+     generateUniform g min' max'
 
 -- | Computation that generates random integer numbers distributed uniformly and
 -- memoizes them in the integration time points.
@@ -63,7 +63,7 @@ memoRandomUniformIntDynamics min max =
   do let g = runGenerator $ pointRun p
      min' <- invokeDynamics p min
      max' <- invokeDynamics p max
-     generatorUniformInt g min' max'
+     generateUniformInt g min' max'
 
 -- | Computation that generates random numbers distributed normally and
 -- memoizes them in the integration time points.
@@ -76,7 +76,7 @@ memoRandomNormalDynamics mu nu =
   do let g = runGenerator $ pointRun p
      mu' <- invokeDynamics p mu
      nu' <- invokeDynamics p nu
-     generatorNormal g mu' nu'
+     generateNormal g mu' nu'
 
 -- | Computation that generates exponential random numbers with the specified mean
 -- (the reciprocal of the rate) and memoizes them in the integration time points.
@@ -88,7 +88,7 @@ memoRandomExponentialDynamics mu =
   Dynamics $ \p ->
   do let g = runGenerator $ pointRun p
      mu' <- invokeDynamics p mu
-     generatorExponential g mu'
+     generateExponential g mu'
 
 -- | Computation that generates the Erlang random numbers with the specified scale
 -- (the reciprocal of the rate) and integer shape but memoizes them in the integration
@@ -104,7 +104,7 @@ memoRandomErlangDynamics beta m =
   do let g = runGenerator $ pointRun p
      beta' <- invokeDynamics p beta
      m' <- invokeDynamics p m
-     generatorErlang g beta' m'
+     generateErlang g beta' m'
 
 -- | Computation that generats the Poisson random numbers with the specified mean
 -- and memoizes them in the integration time points.
@@ -116,7 +116,7 @@ memoRandomPoissonDynamics mu =
   Dynamics $ \p ->
   do let g = runGenerator $ pointRun p
      mu' <- invokeDynamics p mu
-     generatorPoisson g mu'
+     generatePoisson g mu'
 
 -- | Computation that generates binomial random numbers with the specified
 -- probability and trials but memoizes them in the integration time points.
@@ -129,4 +129,4 @@ memoRandomBinomialDynamics prob trials =
   do let g = runGenerator $ pointRun p
      prob' <- invokeDynamics p prob
      trials' <- invokeDynamics p trials
-     generatorBinomial g prob' trials'
+     generateBinomial g prob' trials'
