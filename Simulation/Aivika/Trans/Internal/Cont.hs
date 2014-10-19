@@ -76,7 +76,8 @@ data ContCancellationSource m =
 
 -- | Create the cancellation source.
 newContCancellationSource :: Comp m => Simulation m (ContCancellationSource m)
-{-# INLINE newContCancellationSource #-}
+{-# INLINABLE newContCancellationSource #-}
+{-# SPECIALISE newContCancellationSource :: Simulation IO (ContCancellationSource IO) #-}
 newContCancellationSource =
   Simulation $ \r ->
   do let sn = runSession r
@@ -96,25 +97,29 @@ contCancellationInitiating =
 
 -- | Whether the cancellation was initiated.
 contCancellationInitiated :: Comp m => ContCancellationSource m -> (Event m Bool)
-{-# INLINE contCancellationInitiated #-}
+{-# INLINABLE contCancellationInitiated #-}
+{-# SPECIALISE contCancellationInitiated :: ContCancellationSource IO -> Event IO Bool #-}
 contCancellationInitiated x =
   Event $ \p -> readProtoRef (contCancellationInitiatedRef x)
 
 -- | Whether the cancellation was activated.
 contCancellationActivated :: Comp m => ContCancellationSource m -> m Bool
-{-# INLINE contCancellationActivated #-}
+{-# INLINABLE contCancellationActivated #-}
+{-# SPECIALISE contCancellationActivated :: ContCancellationSource IO -> IO Bool #-}
 contCancellationActivated =
   readProtoRef . contCancellationActivatedRef
 
 -- | Deactivate the cancellation.
 contCancellationDeactivate :: Comp m => ContCancellationSource m -> m ()
-{-# INLINE contCancellationDeactivate #-}
+{-# INLINABLE contCancellationDeactivate #-}
+{-# SPECIALISE contCancellationDeactivate :: ContCancellationSource IO -> IO () #-}
 contCancellationDeactivate x =
   writeProtoRef (contCancellationActivatedRef x) False
 
 -- | If the main computation is cancelled then all the nested ones will be cancelled too.
 contCancellationBind :: Comp m => ContCancellationSource m -> [ContCancellationSource m] -> Event m (DisposableEvent m)
 {-# INLINABLE contCancellationBind #-}
+{-# SPECIALISE contCancellationBind :: ContCancellationSource IO -> [ContCancellationSource IO] -> Event IO (DisposableEvent IO) #-}
 contCancellationBind x ys =
   Event $ \p ->
   do hs1 <- forM ys $ \y ->
@@ -138,6 +143,7 @@ contCancellationConnect :: Comp m
                            -> Event m (DisposableEvent m)
                            -- ^ computation of the disposable handler
 {-# INLINABLE contCancellationConnect #-}
+{-# SPECIALISE contCancellationConnect :: ContCancellationSource IO -> ContCancellation -> ContCancellationSource IO -> Event IO (DisposableEvent IO) #-}
 contCancellationConnect parent cancellation child =
   Event $ \p ->
   do let m1 =
@@ -162,7 +168,8 @@ contCancellationConnect parent cancellation child =
 
 -- | Initiate the cancellation.
 contCancellationInitiate :: Comp m => ContCancellationSource m -> Event m ()
-{-# INLINE contCancellationInitiate #-}
+{-# INLINABLE contCancellationInitiate #-}
+{-# SPECIALISE contCancellationInitiate :: ContCancellationSource IO -> Event IO () #-}
 contCancellationInitiate x =
   Event $ \p ->
   do f <- readProtoRef (contCancellationInitiatedRef x)
@@ -191,7 +198,7 @@ data ContParamsAux m =
 
 instance Comp m => Monad (Cont m) where
 
-  {-# INLINE return #-}
+  {-# INLINABLE return #-}
   return a = 
     Cont $ \c ->
     Event $ \p ->
@@ -200,7 +207,7 @@ instance Comp m => Monad (Cont m) where
          then cancelCont p c
          else invokeEvent p $ contCont c a
 
-  {-# INLINE (>>=) #-}
+  {-# INLINABLE (>>=) #-}
   (Cont m) >>= k =
     Cont $ \c ->
     Event $ \p ->
