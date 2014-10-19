@@ -46,9 +46,8 @@ module Simulation.Aivika.Stream
         repeatProcess,
         mapStream,
         mapStreamM,
-        apStreamDataFirst,
-        apStreamDataLater,
-        apStreamParallel,
+        apStream,
+        apStreamM,
         filterStream,
         filterStreamM,
         -- * Integrating with Signals
@@ -65,6 +64,7 @@ import Data.IORef
 import Data.Maybe
 import Data.Monoid
 
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 
@@ -88,6 +88,12 @@ newtype Stream a = Cons { runStream :: Process (a, Stream a)
 instance Functor Stream where
   
   fmap = mapStream
+
+instance Applicative Stream where
+
+  pure a = let y = Cons (return (a, y)) in y
+  
+  (<*>) = apStream
 
 instance Monoid (Stream a) where
 
@@ -189,26 +195,20 @@ mapStreamM f (Cons s) = Cons y where
          b <- f a
          return (b, mapStreamM f xs)
 
--- | Transform the stream getting the transformation function after data have come.
-apStreamDataFirst :: Process (a -> b) -> Stream a -> Stream b
-apStreamDataFirst f (Cons s) = Cons y where
-  y = do ~(a, xs) <- s
-         g <- f
-         return (g a, apStreamDataFirst f xs)
+-- | Sequential application.
+apStream :: Stream (a -> b) -> Stream a -> Stream b
+apStream (Cons sf) (Cons sa) = Cons y where
+  y = do (f, sf') <- sf
+         (a, sa') <- sa
+         return (f a, apStream sf' sa')
 
--- | Transform the stream getting the transformation function before requesting for data.
-apStreamDataLater :: Process (a -> b) -> Stream a -> Stream b
-apStreamDataLater f (Cons s) = Cons y where
-  y = do g <- f
-         ~(a, xs) <- s
-         return (g a, apStreamDataLater f xs)
-
--- | Transform the stream trying to get the transformation function as soon as possible
--- at the same time when requesting for the next portion of data.
-apStreamParallel :: Process (a -> b) -> Stream a -> Stream b
-apStreamParallel f (Cons s) = Cons y where
-  y = do ~(g, (a, xs)) <- zipProcessParallel f s
-         return (g a, apStreamParallel f xs)
+-- | Sequential application.
+apStreamM :: Stream (a -> Process b) -> Stream a -> Stream b
+apStreamM (Cons sf) (Cons sa) = Cons y where
+  y = do (f, sf') <- sf
+         (a, sa') <- sa
+         x <- f a
+         return (x, apStreamM sf' sa')
 
 -- | Filter only those data values that satisfy to the specified predicate.
 filterStream :: (a -> Bool) -> Stream a -> Stream a
