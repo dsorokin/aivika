@@ -67,7 +67,7 @@ import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Dynamics.Interpolate
 import Simulation.Aivika.Trans.Comp
-import Simulation.Aivika.Trans.EventQueue
+import Simulation.Aivika.Trans.Comp.IO
 import Simulation.Aivika.Trans.Unboxed
 import Simulation.Aivika.Trans.Table
 
