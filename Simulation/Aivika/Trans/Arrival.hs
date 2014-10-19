@@ -43,8 +43,7 @@ data ArrivalTimer m =
 
 -- | Create a new timer that measures how long the arrived events are processed.
 newArrivalTimer :: Comp m => Simulation m (ArrivalTimer m)
-{-# INLINABLE newArrivalTimer #-}
-{-# SPECIALISE newArrivalTimer :: Simulation IO (ArrivalTimer IO) #-}
+{-# INLINE newArrivalTimer #-}
 newArrivalTimer =
   do r <- newRef emptySamplingStats
      s <- newSignalSource
@@ -53,21 +52,18 @@ newArrivalTimer =
 
 -- | Return the statistics about that how long the arrived events were processed.
 arrivalProcessingTime :: Comp m => ArrivalTimer m -> Event m (SamplingStats Double)
-{-# INLINABLE arrivalProcessingTime #-}
-{-# SPECIALISE arrivalProcessingTime :: ArrivalTimer IO -> Event IO (SamplingStats Double) #-}
+{-# INLINE arrivalProcessingTime #-}
 arrivalProcessingTime = readRef . arrivalProcessingTimeRef
 
 -- | Return a signal raised when the the processing time statistics changes.
 arrivalProcessingTimeChanged :: Comp m => ArrivalTimer m -> Signal m (SamplingStats Double)
-{-# INLINABLE arrivalProcessingTimeChanged #-}
-{-# SPECIALISE arrivalProcessingTimeChanged :: ArrivalTimer IO -> Signal IO (SamplingStats Double) #-}
+{-# INLINE arrivalProcessingTimeChanged #-}
 arrivalProcessingTimeChanged timer =
   mapSignalM (const $ arrivalProcessingTime timer) (arrivalProcessingTimeChanged_ timer)
 
 -- | Return a signal raised when the the processing time statistics changes.
 arrivalProcessingTimeChanged_ :: Comp m => ArrivalTimer m -> Signal m ()
-{-# INLINABLE arrivalProcessingTimeChanged_ #-}
-{-# SPECIALISE arrivalProcessingTimeChanged_ :: ArrivalTimer IO -> Signal IO () #-}
+{-# INLINE arrivalProcessingTimeChanged_ #-}
 arrivalProcessingTimeChanged_ timer =
   publishSignal (arrivalProcessingTimeChangedSource timer)
 
