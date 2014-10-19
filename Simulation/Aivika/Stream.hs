@@ -87,9 +87,7 @@ newtype Stream a = Cons { runStream :: Process (a, Stream a)
 
 instance Functor Stream where
   
-  fmap f (Cons s) = Cons y where
-    y = do ~(x, xs) <- s
-           return (f x, fmap f xs)
+  fmap = mapStream
 
 instance Monoid (Stream a) where
 
@@ -180,7 +178,9 @@ repeatProcess p = Cons y where
 
 -- | Map the stream according the specified function.
 mapStream :: (a -> b) -> Stream a -> Stream b
-mapStream = fmap
+mapStream f (Cons s) = Cons y where
+  y = do (a, xs) <- s
+         return (f a, mapStream f xs)
 
 -- | Compose the stream.
 mapStreamM :: (a -> Process b) -> Stream a -> Stream b
