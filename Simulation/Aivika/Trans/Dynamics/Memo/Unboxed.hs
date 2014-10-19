@@ -23,13 +23,13 @@ import Control.Monad
 import Simulation.Aivika.Trans.ProtoRef
 import Simulation.Aivika.Trans.ProtoArray.Unboxed
 import Simulation.Aivika.Trans.Comp
+import Simulation.Aivika.Trans.Comp.IO
 import Simulation.Aivika.Trans.Internal.Specs
 import Simulation.Aivika.Trans.Internal.Parameter
 import Simulation.Aivika.Trans.Internal.Simulation
 import Simulation.Aivika.Trans.Internal.Dynamics
 import Simulation.Aivika.Trans.Dynamics.Interpolate
 import Simulation.Aivika.Trans.Unboxed
-import Simulation.Aivika.Trans.EventQueue
 
 -- | Memoize and order the computation in the integration time points using 
 -- the interpolation that knows of the Runge-Kutta method. The values are

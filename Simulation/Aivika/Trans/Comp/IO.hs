@@ -1,18 +1,17 @@
 
-{-# LANGUAGE TypeFamilies, FlexibleInstances, UndecidableInstances #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- |
--- Module     : Simulation.Aivika.Trans.EventQueue
+-- Module     : Simulation.Aivika.Trans.Comp.IO
 -- Copyright  : Copyright (c) 2009-2014, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
--- The module defines the event queue.
+-- The module defines the event queue within monad 'IO'.
 --
-module Simulation.Aivika.Trans.EventQueue
-       (TemplateEventQueueing(..)) where
+module Simulation.Aivika.Trans.Comp.IO() where
 
 import Control.Monad
 
@@ -22,20 +21,15 @@ import Simulation.Aivika.Trans.Session
 import Simulation.Aivika.Trans.ProtoRef
 import Simulation.Aivika.Trans.Comp
 import Simulation.Aivika.Trans.Internal.Specs
-import Simulation.Aivika.Trans.Internal.Dynamics
-import Simulation.Aivika.Trans.Internal.Event
 
--- | A template-based implementation of the 'EventQueueing' class type.
-class ProtoComp m => TemplateEventQueueing m 
+instance EventQueueing IO where
 
-instance TemplateEventQueueing m => EventQueueing m where
-
-  data EventQueue m =
-    EventQueue { queuePQ :: PQ.PriorityQueue m (Point m -> m ()),
+  data EventQueue IO =
+    EventQueue { queuePQ :: PQ.PriorityQueue IO (Point IO -> IO ()),
                  -- ^ the underlying priority queue
-                 queueBusy :: ProtoRef m Bool,
+                 queueBusy :: ProtoRef IO Bool,
                  -- ^ whether the queue is currently processing events
-                 queueTime :: ProtoRef m Double
+                 queueTime :: ProtoRef IO Double
                  -- ^ the actual time of the event queue
                }
   
@@ -48,30 +42,27 @@ instance TemplateEventQueueing m => EventQueueing m where
                            queueBusy = f,
                            queueTime = t }
 
-  {-# INLINE enqueueEvent #-}
+  {-# INLINABLE enqueueEvent #-}
   enqueueEvent t (Event m) =
     Event $ \p ->
     let pq = queuePQ $ runEventQueue $ pointRun p
     in PQ.enqueue pq t m
 
-  {-# INLINE runEventWith #-}
+  {-# INLINABLE runEventWith #-}
   runEventWith processing (Event e) =
     Dynamics $ \p ->
     do invokeDynamics p $ processEvents processing
        e p
 
-  {-# INLINE eventQueueCount #-}
+  {-# INLINABLE eventQueueCount #-}
   eventQueueCount =
     Event $ PQ.queueCount . queuePQ . runEventQueue . pointRun
-
-instance TemplateEventQueueing IO
 
 instance Comp IO
 
 -- | Process the pending events.
-processPendingEventsCore :: ProtoComp m => Bool -> Dynamics m ()
+processPendingEventsCore :: Bool -> Dynamics IO ()
 {-# INLINABLE processPendingEventsCore #-}
-{-# SPECIALISE processPendingEventsCore :: Bool -> Dynamics IO () #-}
 processPendingEventsCore includingCurrentEvents = Dynamics r where
   r p =
     do let q = runEventQueue $ pointRun p
@@ -105,9 +96,8 @@ processPendingEventsCore includingCurrentEvents = Dynamics r where
                  call q p
 
 -- | Process the pending events synchronously, i.e. without past.
-processPendingEvents :: ProtoComp m => Bool -> Dynamics m ()
+processPendingEvents :: Bool -> Dynamics IO ()
 {-# INLINABLE processPendingEvents #-}
-{-# SPECIALISE processPendingEvents :: Bool -> Dynamics IO () #-}
 processPendingEvents includingCurrentEvents = Dynamics r where
   r p =
     do let q = runEventQueue $ pointRun p
@@ -121,33 +111,28 @@ processPendingEvents includingCurrentEvents = Dynamics r where
   m = processPendingEventsCore includingCurrentEvents
 
 -- | A memoized value.
-processEventsIncludingCurrent :: ProtoComp m => Dynamics m ()
+processEventsIncludingCurrent :: Dynamics IO ()
 {-# INLINABLE processEventsIncludingCurrent #-}
-{-# SPECIALISE processEventsIncludingCurrent :: Dynamics IO () #-}
 processEventsIncludingCurrent = processPendingEvents True
 
 -- | A memoized value.
-processEventsIncludingEarlier :: ProtoComp m => Dynamics m ()
+processEventsIncludingEarlier :: Dynamics IO ()
 {-# INLINABLE processEventsIncludingEarlier #-}
-{-# SPECIALISE processEventsIncludingEarlier :: Dynamics IO () #-}
 processEventsIncludingEarlier = processPendingEvents False
 
 -- | A memoized value.
-processEventsIncludingCurrentCore :: ProtoComp m => Dynamics m ()
+processEventsIncludingCurrentCore :: Dynamics IO ()
 {-# INLINABLE processEventsIncludingCurrentCore #-}
-{-# SPECIALISE processEventsIncludingCurrentCore :: Dynamics IO () #-}
 processEventsIncludingCurrentCore = processPendingEventsCore True
 
 -- | A memoized value.
-processEventsIncludingEarlierCore :: ProtoComp m => Dynamics m ()
+processEventsIncludingEarlierCore :: Dynamics IO ()
 {-# INLINABLE processEventsIncludingEarlierCore #-}
-{-# SPECIALISE processEventsIncludingEarlierCore :: Dynamics IO () #-}
 processEventsIncludingEarlierCore = processPendingEventsCore True
 
 -- | Process the events.
-processEvents :: ProtoComp m => EventProcessing -> Dynamics m ()
+processEvents :: EventProcessing -> Dynamics IO ()
 {-# INLINABLE processEvents #-}
-{-# SPECIALISE processEvents :: EventProcessing -> Dynamics IO () #-}
 processEvents CurrentEvents = processEventsIncludingCurrent
 processEvents EarlierEvents = processEventsIncludingEarlier
 processEvents CurrentEventsOrFromPast = processEventsIncludingCurrentCore

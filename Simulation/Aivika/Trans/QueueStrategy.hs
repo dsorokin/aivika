@@ -26,11 +26,11 @@ module Simulation.Aivika.Trans.QueueStrategy
 import Control.Monad.Trans
 
 import Simulation.Aivika.Trans.Comp
+import Simulation.Aivika.Trans.Comp.Template
 import Simulation.Aivika.Trans.Parameter
 import Simulation.Aivika.Trans.Parameter.Random
 import Simulation.Aivika.Trans.Simulation
 import Simulation.Aivika.Trans.Event
-import Simulation.Aivika.Trans.EventQueue
 
 import qualified Simulation.Aivika.Trans.DoubleLinkedList as LL
 import qualified Simulation.Aivika.Trans.PriorityQueue as PQ
