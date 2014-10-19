@@ -198,7 +198,7 @@ data ContParamsAux m =
 
 instance Comp m => Monad (Cont m) where
 
-  {-# INLINABLE return #-}
+  {-# INLINE return #-}
   return a = 
     Cont $ \c ->
     Event $ \p ->
@@ -207,7 +207,7 @@ instance Comp m => Monad (Cont m) where
          then cancelCont p c
          else invokeEvent p $ contCont c a
 
-  {-# INLINABLE (>>=) #-}
+  {-# INLINE (>>=) #-}
   (Cont m) >>= k =
     Cont $ \c ->
     Event $ \p ->
