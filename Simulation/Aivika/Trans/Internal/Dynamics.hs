@@ -43,10 +43,12 @@ import Simulation.Aivika.Trans.Internal.Simulation
 
 instance Monad m => Monad (Dynamics m) where
 
-  {-# INLINE return #-}
+  {-# INLINABLE return #-}
+  {-# SPECIALISE return :: a -> Dynamics IO a #-}
   return a = Dynamics $ \p -> return a
 
-  {-# INLINE (>>=) #-}
+  {-# INLINABLE (>>=) #-}
+  {-# SPECIALISE (>>=) :: Dynamics IO a -> (a -> Dynamics IO b) -> Dynamics IO b #-}
   (Dynamics m) >>= k =
     Dynamics $ \p -> 
     do a <- m p
@@ -67,7 +69,8 @@ runDynamicsInStopTime (Dynamics m) =
 
 -- | Run the 'Dynamics' computation in all integration time points.
 runDynamicsInIntegTimes :: Monad m => Dynamics m a -> Simulation m [m a]
-{-# INLINE runDynamicsInIntegTimes #-}
+{-# INLINABLE runDynamicsInIntegTimes #-}
+{-# SPECIALISE runDynamicsInIntegTimes :: Dynamics IO a -> Simulation IO [IO a] #-}
 runDynamicsInIntegTimes (Dynamics m) =
   Simulation $ return . map m . integPoints
 
@@ -79,64 +82,124 @@ runDynamicsInTime t (Dynamics m) =
 
 -- | Run the 'Dynamics' computation in the specified time points.
 runDynamicsInTimes :: Monad m => [Double] -> Dynamics m a -> Simulation m [m a]
-{-# INLINE runDynamicsInTimes #-}
+{-# INLINABLE runDynamicsInTimes #-}
+{-# SPECIALISE runDynamicsInTimes :: [Double] -> Dynamics IO a -> Simulation IO [IO a] #-}
 runDynamicsInTimes ts (Dynamics m) =
   Simulation $ \r -> return $ map (m . pointAt r) ts 
 
 instance Functor m => Functor (Dynamics m) where
   
-  {-# INLINE fmap #-}
+  {-# INLINABLE fmap #-}
+  {-# SPECIALISE fmap :: (a -> b) -> Dynamics IO a -> Dynamics IO b #-}
   fmap f (Dynamics x) = Dynamics $ \p -> fmap f $ x p
 
 instance Applicative m => Applicative (Dynamics m) where
   
-  {-# INLINE pure #-}
+  {-# INLINABLE pure #-}
+  {-# SPECIALISE pure :: a -> Dynamics IO a #-}
   pure = Dynamics . const . pure
   
-  {-# INLINE (<*>) #-}
+  {-# INLINABLE (<*>) #-}
+  {-# SPECIALISE (<*>) :: Dynamics IO (a -> b) -> Dynamics IO a -> Dynamics IO b #-}
   (Dynamics x) <*> (Dynamics y) = Dynamics $ \p -> x p <*> y p
 
 liftMD :: Monad m => (a -> b) -> Dynamics m a -> Dynamics m b
-{-# INLINE liftMD #-}
+{-# INLINABLE liftMD #-}
+{-# SPECIALISE liftMD :: (a -> b) -> Dynamics IO a -> Dynamics IO b #-}
 liftMD f (Dynamics x) =
   Dynamics $ \p -> do { a <- x p; return $ f a }
 
 liftM2D :: Monad m => (a -> b -> c) -> Dynamics m a -> Dynamics m b -> Dynamics m c
-{-# INLINE liftM2D #-}
+{-# INLINABLE liftM2D #-}
+{-# SPECIALISE liftM2D :: (a -> b -> c) -> Dynamics IO a -> Dynamics IO b -> Dynamics IO c #-}
 liftM2D f (Dynamics x) (Dynamics y) =
   Dynamics $ \p -> do { a <- x p; b <- y p; return $ f a b }
 
 instance (Num a, Monad m) => Num (Dynamics m a) where
+
+  {-# INLINE (+) #-}
   x + y = liftM2D (+) x y
+
+  {-# INLINE (-) #-}
   x - y = liftM2D (-) x y
+
+  {-# INLINE (*) #-}
   x * y = liftM2D (*) x y
+
+  {-# INLINE negate #-}
   negate = liftMD negate
+
+  {-# INLINE abs #-}
   abs = liftMD abs
+
+  {-# INLINE signum #-}
   signum = liftMD signum
+
+  {-# INLINE fromInteger #-}
   fromInteger i = return $ fromInteger i
 
 instance (Fractional a, Monad m) => Fractional (Dynamics m a) where
+
+  {-# INLINE (/) #-}
   x / y = liftM2D (/) x y
+
+  {-# INLINE recip #-}
   recip = liftMD recip
+
+  {-# INLINE fromRational #-}
   fromRational t = return $ fromRational t
 
 instance (Floating a, Monad m) => Floating (Dynamics m a) where
+
+  {-# INLINE pi #-}
   pi = return pi
+
+  {-# INLINE exp #-}
   exp = liftMD exp
+
+  {-# INLINE log #-}
   log = liftMD log
+
+  {-# INLINE sqrt #-}
   sqrt = liftMD sqrt
+
+  {-# INLINE (**) #-}
   x ** y = liftM2D (**) x y
+
+  {-# INLINE sin #-}
   sin = liftMD sin
+
+  {-# INLINE cos #-}
   cos = liftMD cos
+
+  {-# INLINE tan #-}
   tan = liftMD tan
+
+  {-# INLINE asin #-}
   asin = liftMD asin
+
+  {-# INLINE acos #-}
   acos = liftMD acos
+
+  {-# INLINE atan #-}
   atan = liftMD atan
+
+  {-# INLINE sinh #-}
   sinh = liftMD sinh
+
+  {-# INLINE cosh #-}
   cosh = liftMD cosh
+
+  {-# INLINE tanh #-}
   tanh = liftMD tanh
+
+  {-# INLINE asinh #-}
   asinh = liftMD asinh
+
+  {-# INLINE acosh #-}
   acosh = liftMD acosh
+
+  {-# INLINE atanh #-}
   atanh = liftMD atanh
 
 instance MonadTrans Dynamics where
@@ -178,6 +241,7 @@ instance ParameterLift Dynamics where
 -- | Exception handling within 'Dynamics' computations.
 catchDynamics :: (Comp m, Exception e) => Dynamics m a -> (e -> Dynamics m a) -> Dynamics m a
 {-# INLINABLE catchDynamics #-}
+{-# SPECIALISE catchDynamics :: Exception e => Dynamics IO a -> (e -> Dynamics IO a) -> Dynamics IO a #-}
 catchDynamics (Dynamics m) h =
   Dynamics $ \p -> 
   catchComp (m p) $ \e ->
@@ -186,6 +250,7 @@ catchDynamics (Dynamics m) h =
 -- | A computation with finalization part like the 'finally' function.
 finallyDynamics :: Comp m => Dynamics m a -> Dynamics m b -> Dynamics m a
 {-# INLINABLE finallyDynamics #-}
+{-# SPECIALISE finallyDynamics :: Dynamics IO a -> Dynamics IO b -> Dynamics IO a #-}
 finallyDynamics (Dynamics m) (Dynamics m') =
   Dynamics $ \p ->
   finallyComp (m p) (m' p)
@@ -193,32 +258,38 @@ finallyDynamics (Dynamics m) (Dynamics m') =
 -- | Like the standard 'throw' function.
 throwDynamics :: (Comp m, Exception e) => e -> Dynamics m a
 {-# INLINABLE throwDynamics #-}
+{-# SPECIALISE throwDynamics :: Exception e => e -> Dynamics IO a #-}
 throwDynamics = throw
 
 instance MonadFix m => MonadFix (Dynamics m) where
 
-  {-# INLINE mfix #-}
+  {-# INLINABLE mfix #-}
+  {-# SPECIALISE mfix :: (a -> Dynamics IO a) -> Dynamics IO a #-}
   mfix f = 
     Dynamics $ \p ->
     do { rec { a <- invokeDynamics p (f a) }; return a }
 
 -- | Computation that returns the current simulation time.
 time :: Monad m => Dynamics m Double
-{-# INLINE time #-}
+{-# INLINABLE time #-}
+{-# SPECIALISE time :: Dynamics IO Double #-}
 time = Dynamics $ return . pointTime 
 
 -- | Whether the current time is an integration time.
 isTimeInteg :: Monad m => Dynamics m Bool
-{-# INLINE isTimeInteg #-}
+{-# INLINABLE isTimeInteg #-}
+{-# SPECIALISE isTimeInteg :: Dynamics IO Bool #-}
 isTimeInteg = Dynamics $ \p -> return $ pointPhase p >= 0
 
 -- | Return the integration iteration closest to the current simulation time.
 integIteration :: Monad m => Dynamics m Int
-{-# INLINE integIteration #-}
+{-# INLINABLE integIteration #-}
+{-# SPECIALISE integIteration :: Dynamics IO Int #-}
 integIteration = Dynamics $ return . pointIteration
 
 -- | Return the integration phase for the current simulation time.
 -- It is @(-1)@ for non-integration time points.
 integPhase :: Monad m => Dynamics m Int
-{-# INLINE integPhase #-}
+{-# INLINABLE integPhase #-}
+{-# SPECIALISE integPhase :: Dynamics IO Int #-}
 integPhase = Dynamics $ return . pointPhase
