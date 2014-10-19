@@ -29,9 +29,7 @@ module Simulation.Aivika.Trans.Internal.Dynamics
         integIteration,
         integPhase) where
 
-import qualified Control.Exception as C
-import Control.Exception (IOException, throw, finally)
-
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
@@ -178,7 +176,7 @@ instance ParameterLift Dynamics where
   liftParameter (Parameter x) = Dynamics $ x . pointRun
   
 -- | Exception handling within 'Dynamics' computations.
-catchDynamics :: Comp m => Dynamics m a -> (IOException -> Dynamics m a) -> Dynamics m a
+catchDynamics :: (Comp m, Exception e) => Dynamics m a -> (e -> Dynamics m a) -> Dynamics m a
 {-# INLINABLE catchDynamics #-}
 catchDynamics (Dynamics m) h =
   Dynamics $ \p -> 
@@ -193,7 +191,7 @@ finallyDynamics (Dynamics m) (Dynamics m') =
   finallyComp (m p) (m' p)
 
 -- | Like the standard 'throw' function.
-throwDynamics :: Comp m => IOException -> Dynamics m a
+throwDynamics :: (Comp m, Exception e) => e -> Dynamics m a
 {-# INLINABLE throwDynamics #-}
 throwDynamics = throw
 

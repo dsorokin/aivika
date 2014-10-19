@@ -41,7 +41,6 @@ module Simulation.Aivika.Trans.Internal.Event
 import Data.Monoid
 
 import Control.Exception
-
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
@@ -123,7 +122,7 @@ instance ParameterLift Event where
   liftParameter (Parameter x) = Event $ x . pointRun
 
 -- | Exception handling within 'Event' computations.
-catchEvent :: Comp m => Event m a -> (IOException -> Event m a) -> Event m a
+catchEvent :: (Comp m, Exception e) => Event m a -> (e -> Event m a) -> Event m a
 {-# INLINABLE catchEvent #-}
 catchEvent (Event m) h =
   Event $ \p -> 
@@ -138,7 +137,7 @@ finallyEvent (Event m) (Event m') =
   finallyComp (m p) (m' p)
 
 -- | Like the standard 'throw' function.
-throwEvent :: Comp m => IOException -> Event m a
+throwEvent :: (Comp m, Exception e) => e -> Event m a
 {-# INLINABLE throwEvent #-}
 throwEvent = throw
 

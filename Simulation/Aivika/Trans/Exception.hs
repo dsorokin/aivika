@@ -20,14 +20,14 @@ import Control.Exception
 class ExceptionThrowing m where
 
   -- | Throw an exception.
-  throwComp :: IOException -> m a
+  throwComp :: Exception e => e -> m a
 
 -- | A computation within which we can handle 'IO' exceptions
 -- as well as define finalisation blocks.
 class (ExceptionThrowing m, MonadIO m) => ExceptionHandling m where
 
   -- | Catch an 'IO' exception within the computation.
-  catchComp :: MonadIO m => m a -> (IOException -> m a) -> m a
+  catchComp :: (Exception e, MonadIO m) => m a -> (e -> m a) -> m a
 
   -- | Introduce a finalisation block.
   finallyComp :: MonadIO m => m a -> m b -> m a

@@ -24,15 +24,11 @@ module Simulation.Aivika.Trans.Internal.Simulation
         -- * Memoization
         memoSimulation) where
 
-import qualified Control.Exception as C
-import Control.Exception (IOException, throw, finally)
-
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
 import Control.Applicative
-
-import Data.IORef
 
 import Simulation.Aivika.Trans.Exception
 import Simulation.Aivika.Trans.Session
@@ -133,7 +129,7 @@ instance ParameterLift Simulation where
   liftParameter (Parameter x) = Simulation x
     
 -- | Exception handling within 'Simulation' computations.
-catchSimulation :: Comp m => Simulation m a -> (IOException -> Simulation m a) -> Simulation m a
+catchSimulation :: (Comp m, Exception e) => Simulation m a -> (e -> Simulation m a) -> Simulation m a
 {-# INLINABLE catchSimulation #-}
 catchSimulation (Simulation m) h =
   Simulation $ \r -> 
@@ -148,7 +144,7 @@ finallySimulation (Simulation m) (Simulation m') =
   finallyComp (m r) (m' r)
 
 -- | Like the standard 'throw' function.
-throwSimulation :: Comp m => IOException -> Simulation m a
+throwSimulation :: (Comp m, Exception e) => e -> Simulation m a
 {-# INLINABLE throwSimulation #-}
 throwSimulation = throw
 

@@ -79,7 +79,7 @@ module Simulation.Aivika.Trans.Internal.Process
 
 import Data.Maybe
 
-import Control.Exception (IOException, throw)
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Applicative
@@ -320,7 +320,7 @@ cancelProcess :: (Comp m, MonadIO m) => Process m a
 cancelProcess =
   do pid <- processId
      liftEvent $ cancelProcessWithId pid
-     throwProcess $ error "The process must be cancelled already: cancelProcess."
+     error "The process must be cancelled already: cancelProcess."
 
 -- | Test whether the process with the specified identifier was cancelled.
 processCancelled :: Comp m => ProcessId m -> Event m Bool
@@ -407,7 +407,7 @@ instance ProcessLift Process where
   liftProcess = id
 
 -- | Exception handling within 'Process' computations.
-catchProcess :: Comp m => Process m a -> (IOException -> Process m a) -> Process m a
+catchProcess :: (Comp m, Exception e) => Process m a -> (e -> Process m a) -> Process m a
 {-# INLINABLE catchProcess #-}
 catchProcess (Process m) h =
   Process $ \pid ->
@@ -422,11 +422,13 @@ finallyProcess (Process m) (Process m') =
   finallyCont (m pid) (m' pid)
 
 -- | Throw the exception with the further exception handling.
--- By some reasons, the standard 'throw' function per se is not handled 
--- properly within 'Process' computations, although it will be still 
--- handled if it will be hidden under the 'liftIO' function. The problem 
--- arises namely with the @throw@ function, not 'IO' computations.
-throwProcess :: Comp m => IOException -> Process m a
+-- 
+-- By some reason, an exception raised with help of the standard 'throw' function
+-- is not handled properly within 'Process' computation, altough it will be still handled 
+-- if it will be wrapped in the 'IO' monad. Therefore, you should use specialised
+-- functions like the stated one that use the 'throw' function but within the 'IO' computation,
+-- which allows already handling the exception.
+throwProcess :: (Comp m, Exception e) => e -> Process m a
 {-# INLINABLE throwProcess #-}
 throwProcess = Process . const . throwCont
 
@@ -653,7 +655,7 @@ timeoutProcessUsingId timeout pid p =
      case x of
        Nothing -> return Nothing
        Just (Right a) -> return (Just a)
-       Just (Left e) -> throwProcess e
+       Just (Left (SomeException e)) -> throwProcess e
 
 -- | Yield to allow other 'Process' and 'Event' computations to run
 -- at the current simulation time point.

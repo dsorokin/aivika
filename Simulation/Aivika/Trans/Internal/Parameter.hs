@@ -39,9 +39,8 @@ module Simulation.Aivika.Trans.Internal.Parameter
         -- * Utilities
         tableParameter) where
 
-import Control.Exception (IOException, throw, finally)
+import Control.Exception
 import Control.Concurrent.MVar
-
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
@@ -269,9 +268,9 @@ instance ParameterLift Parameter where
   liftParameter = id
     
 -- | Exception handling within 'Parameter' computations.
-catchParameter :: Comp m => Parameter m a -> (IOException -> Parameter m a) -> Parameter m a
+catchParameter :: (Comp m, Exception e) => Parameter m a -> (e -> Parameter m a) -> Parameter m a
 {-# INLINABLE catchParameter #-}
-{-# SPECIALISE catchParameter :: Parameter IO a -> (IOException -> Parameter IO a) -> Parameter IO a #-}
+{-# SPECIALISE catchParameter :: Exception e => Parameter IO a -> (e -> Parameter IO a) -> Parameter IO a #-}
 catchParameter (Parameter m) h =
   Parameter $ \r -> 
   catchComp (m r) $ \e ->
@@ -286,9 +285,9 @@ finallyParameter (Parameter m) (Parameter m') =
   finallyComp (m r) (m' r)
 
 -- | Like the standard 'throw' function.
-throwParameter :: Comp m => IOException -> Parameter m a
+throwParameter :: (Comp m, Exception e) => e -> Parameter m a
 {-# INLINABLE throwParameter #-}
-{-# SPECIALISE throwParameter :: IOException -> Parameter IO a #-}
+{-# SPECIALISE throwParameter :: Exception e => e -> Parameter IO a #-}
 throwParameter = throw
 
 instance MonadFix m => MonadFix (Parameter m) where

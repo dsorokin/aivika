@@ -40,8 +40,7 @@ module Simulation.Aivika.Trans.Internal.Cont
 import Data.Array
 import Data.Monoid
 
-import Control.Exception (IOException, throw)
-
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Applicative
@@ -184,7 +183,7 @@ data ContParams m a =
 
 -- | The auxiliary continuation parameters.
 data ContParamsAux m =
-  ContParamsAux { contECont :: IOException -> Event m (),
+  ContParamsAux { contECont :: SomeException -> Event m (),
                   contCCont :: () -> Event m (),
                   contCancelSource :: ContCancellationSource m,
                   contCancelFlag :: m Bool,
@@ -308,7 +307,7 @@ callCont k a c =
        else invokeEvent p $ invokeCont c (k a)
 
 -- | Exception handling within 'Cont' computations.
-catchCont :: Comp m => Cont m a -> (IOException -> Cont m a) -> Cont m a
+catchCont :: (Comp m, Exception e) => Cont m a -> (e -> Cont m a) -> Cont m a
 {-# INLINABLE catchCont #-}
 catchCont (Cont m) h = 
   Cont $ \c0 ->
@@ -318,7 +317,10 @@ catchCont (Cont m) h =
      if z 
        then cancelCont p c
        else invokeEvent p $ m $
-            let econt e = callCont h e c
+            let econt e0 =
+                  case fromException e0 of
+                    Just e  -> callCont h e c
+                    Nothing -> (contECont . contAux $ c) e0
             in c { contAux = (contAux c) { contECont = econt } }
                
 -- | A computation with finalization part.
@@ -354,11 +356,13 @@ finallyCont (Cont m) (Cont m') =
                                             contCCont = ccont } }
 
 -- | Throw the exception with the further exception handling.
--- By some reasons, the standard 'throw' function per se is not handled 
--- properly within 'Cont' computations, altough it will be still handled 
--- if it will be hidden under the 'liftIO' function. The problem arises 
--- namely with the @throw@ function, not 'IO' computations.
-throwCont :: Comp m => IOException -> Cont m a
+--
+-- By some reason, an exception raised with help of the standard 'throw' function
+-- is not handled properly within 'Cont' computation, altough it will be still handled 
+-- if it will be wrapped in the 'IO' monad. Therefore, you should use specialised
+-- functions like the stated one that use the 'throw' function but within the 'IO' computation,
+-- which allows already handling the exception.
+throwCont :: (Comp m, Exception e) => e -> Cont m a
 {-# INLINABLE throwCont #-}
 throwCont = liftEvent . throwEvent
 
@@ -369,7 +373,7 @@ runCont :: Comp m
            -- ^ the computation to run
            -> (a -> Event m ())
            -- ^ the main branch 
-           -> (IOError -> Event m ())
+           -> (SomeException -> Event m ())
            -- ^ the branch for handing exceptions
            -> (() -> Event m ())
            -- ^ the branch for cancellation
@@ -430,7 +434,7 @@ resumeCont c a =
        else invokeEvent p $ contCont c a
 
 -- | Resume the exception handling by the specified parameters.
-resumeECont :: Comp m => ContParams m a -> IOException -> Event m ()
+resumeECont :: Comp m => ContParams m a -> SomeException -> Event m ()
 {-# INLINE resumeECont #-}
 resumeECont c e = 
   Event $ \p ->
