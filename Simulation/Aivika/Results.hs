@@ -1445,7 +1445,7 @@ queueResultSource :: (Show si, Show sm, Show so,
                       ResultItemable (ResultValue si),
                       ResultItemable (ResultValue sm),
                       ResultItemable (ResultValue so))
-                     => ResultContainer (Q.Queue si qi sm qm so qo a)
+                     => ResultContainer (Q.Queue si sm so a)
                      -- ^ the queue container
                      -> ResultSource
 queueResultSource c =
@@ -1483,7 +1483,7 @@ queueResultSource c =
 
 -- | Return the summary by the specified finite queue.
 queueResultSummary :: (Show si, Show sm, Show so)
-                      => ResultContainer (Q.Queue si qi sm qm so qo a)
+                      => ResultContainer (Q.Queue si sm so a)
                       -- ^ the queue container
                       -> ResultSource
 queueResultSummary c =
@@ -1510,7 +1510,7 @@ queueResultSummary c =
 infiniteQueueResultSource :: (Show sm, Show so,
                               ResultItemable (ResultValue sm),
                               ResultItemable (ResultValue so))
-                             => ResultContainer (IQ.Queue sm qm so qo a)
+                             => ResultContainer (IQ.Queue sm so a)
                              -- ^ the queue container
                              -> ResultSource
 infiniteQueueResultSource c =
@@ -1539,7 +1539,7 @@ infiniteQueueResultSource c =
 
 -- | Return the summary by the specified infinite queue.
 infiniteQueueResultSummary :: (Show sm, Show so)
-                              => ResultContainer (IQ.Queue sm qm so qo a)
+                              => ResultContainer (IQ.Queue sm so a)
                               -- ^ the queue container
                               -> ResultSource
 infiniteQueueResultSummary c =
@@ -1817,7 +1817,7 @@ instance (Show si, Show sm, Show so,
           ResultItemable (ResultValue si),
           ResultItemable (ResultValue sm),
           ResultItemable (ResultValue so))
-         => ResultProvider (Q.Queue si qi sm qm so qo a) where
+         => ResultProvider (Q.Queue si sm so a) where
 
   resultSource' name i m =
     queueResultSource $ ResultContainer name i m (ResultSignal $ Q.queueChanged_ m)
@@ -1825,7 +1825,7 @@ instance (Show si, Show sm, Show so,
 instance (Show sm, Show so,
           ResultItemable (ResultValue sm),
           ResultItemable (ResultValue so))
-         => ResultProvider (IQ.Queue sm qm so qo a) where
+         => ResultProvider (IQ.Queue sm so a) where
 
   resultSource' name i m =
     infiniteQueueResultSource $ ResultContainer name i m (ResultSignal $ IQ.queueChanged_ m)

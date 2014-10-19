@@ -281,7 +281,7 @@ splitStream = splitStreamQueueing FCFS
 -- If you don't know what the strategy to apply, then you probably
 -- need the 'FCFS' strategy, or function 'splitStream' that
 -- does namely this.
-splitStreamQueueing :: EnqueueStrategy s q
+splitStreamQueueing :: EnqueueStrategy s
                        => s
                        -- ^ the strategy applied for enqueuing the output requests
                        -> Int
@@ -303,7 +303,7 @@ splitStreamQueueing s n x =
 
 -- | Split the input stream into a list of output streams
 -- using the specified priorities.
-splitStreamPrioritising :: PriorityQueueStrategy s q p
+splitStreamPrioritising :: PriorityQueueStrategy s p
                            => s
                            -- ^ the strategy applied for enqueuing the output requests
                            -> [Stream p]
@@ -335,7 +335,7 @@ concatStreams = concatQueuedStreams FCFS
 -- If you don't know what the strategy to apply, then you probably
 -- need the 'FCFS' strategy, or function 'concatStreams' that
 -- does namely this.
-concatQueuedStreams :: EnqueueStrategy s q
+concatQueuedStreams :: EnqueueStrategy s
                        => s
                        -- ^ the strategy applied for enqueuing the input data
                        -> [Stream a]
@@ -366,7 +366,7 @@ concatQueuedStreams s streams = Cons z where
          return (a, xs)
 
 -- | Concatenate the input priority streams producing one output stream.
-concatPriorityStreams :: PriorityQueueStrategy s q p
+concatPriorityStreams :: PriorityQueueStrategy s p
                          => s
                          -- ^ the strategy applied for enqueuing the input data
                          -> [Stream (p, a)]
@@ -405,7 +405,7 @@ mergeStreams = mergeQueuedStreams FCFS
 -- If you don't know what the strategy to apply, then you probably
 -- need the 'FCFS' strategy, or function 'mergeStreams' that
 -- does namely this.
-mergeQueuedStreams :: EnqueueStrategy s q
+mergeQueuedStreams :: EnqueueStrategy s
                       => s
                       -- ^ the strategy applied for enqueuing the input data
                       -> Stream a
@@ -417,7 +417,7 @@ mergeQueuedStreams :: EnqueueStrategy s q
 mergeQueuedStreams s x y = concatQueuedStreams s [x, y]
 
 -- | Merge two priority streams.
-mergePriorityStreams :: PriorityQueueStrategy s q p
+mergePriorityStreams :: PriorityQueueStrategy s p
                         => s
                         -- ^ the strategy applied for enqueuing the input data
                         -> Stream (p, a)

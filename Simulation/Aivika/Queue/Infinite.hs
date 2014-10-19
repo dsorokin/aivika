@@ -92,35 +92,29 @@ import qualified Simulation.Aivika.PriorityQueue as PQ
 
 -- | A type synonym for the ordinary FIFO queue also known as the FCFS
 -- (First Come - First Serviced) queue.
-type FCFSQueue a =
-  Queue FCFS DLL.DoubleLinkedList FCFS DLL.DoubleLinkedList a
+type FCFSQueue a = Queue FCFS FCFS a
 
 -- | A type synonym for the ordinary LIFO queue also known as the LCFS
 -- (Last Come - First Serviced) queue.
-type LCFSQueue a =
-  Queue LCFS DLL.DoubleLinkedList FCFS DLL.DoubleLinkedList a
+type LCFSQueue a = Queue LCFS FCFS a
 
 -- | A type synonym for the SIRO (Serviced in Random Order) queue.
-type SIROQueue a =
-  Queue SIRO V.Vector FCFS DLL.DoubleLinkedList a
+type SIROQueue a = Queue SIRO FCFS a
 
 -- | A type synonym for the queue with static priorities applied when
 -- storing the elements in the queue.
-type PriorityQueue a =
-  Queue StaticPriorities PQ.PriorityQueue FCFS DLL.DoubleLinkedList a
+type PriorityQueue a = Queue StaticPriorities FCFS a
 
 -- | Represents an infinite queue using the specified strategies for
 -- internal storing (in memory), @sm@, and dequeueing (output), @so@, where @a@ denotes
--- the type of items stored in the queue. Types @qm@ and @qo@ are
--- determined automatically and you should not care about them - they
--- are dependent types.
-data Queue sm qm so qo a =
+-- the type of items stored in the queue.
+data Queue sm so a =
   Queue { enqueueStoringStrategy :: sm,
           -- ^ The strategy applied when storing (in memory) items in the queue.
           dequeueStrategy :: so,
           -- ^ The strategy applied to the dequeueing (output) processes.
-          queueStore :: qm (QueueItem a),
-          dequeueRes :: Resource so qo,
+          queueStore :: StrategyQueue sm (QueueItem a),
+          dequeueRes :: Resource so,
           queueCountRef :: IORef Int,
           queueCountStatsRef :: IORef (TimingStats Int),
           enqueueStoreCountRef :: IORef Int,
@@ -157,13 +151,13 @@ newPriorityQueue :: Event (PriorityQueue a)
 newPriorityQueue = newQueue StaticPriorities FCFS
   
 -- | Create a new infinite queue with the specified strategies.  
-newQueue :: (QueueStrategy sm qm,
-             QueueStrategy so qo) =>
+newQueue :: (QueueStrategy sm,
+             QueueStrategy so) =>
             sm
             -- ^ the strategy applied when storing items in the queue
             -> so
             -- ^ the strategy applied to the dequeueing (output) processes when the queue is empty
-            -> Event (Queue sm qm so qo a)  
+            -> Event (Queue sm so a)  
 newQueue sm so =
   do t  <- liftDynamics time
      i  <- liftIO $ newIORef 0
@@ -196,40 +190,40 @@ newQueue sm so =
 -- | Test whether the queue is empty.
 --
 -- See also 'queueNullChanged' and 'queueNullChanged_'.
-queueNull :: Queue sm qm so qo a -> Event Bool
+queueNull :: Queue sm so a -> Event Bool
 queueNull q =
   Event $ \p ->
   do n <- readIORef (queueCountRef q)
      return (n == 0)
   
 -- | Signal when the 'queueNull' property value has changed.
-queueNullChanged :: Queue sm qm so qo a -> Signal Bool
+queueNullChanged :: Queue sm so a -> Signal Bool
 queueNullChanged q =
   mapSignalM (const $ queueNull q) (queueNullChanged_ q)
   
 -- | Signal when the 'queueNull' property value has changed.
-queueNullChanged_ :: Queue sm qm so qo a -> Signal ()
+queueNullChanged_ :: Queue sm so a -> Signal ()
 queueNullChanged_ = queueCountChanged_
 
 -- | Return the current queue size.
 --
 -- See also 'queueCountStats', 'queueCountChanged' and 'queueCountChanged_'.
-queueCount :: Queue sm qm so qo a -> Event Int
+queueCount :: Queue sm so a -> Event Int
 queueCount q =
   Event $ \p -> readIORef (queueCountRef q)
 
 -- | Return the queue size statistics.
-queueCountStats :: Queue sm qm so qo a -> Event (TimingStats Int)
+queueCountStats :: Queue sm so a -> Event (TimingStats Int)
 queueCountStats q =
   Event $ \p -> readIORef (queueCountStatsRef q)
   
 -- | Signal when the 'queueCount' property value has changed.
-queueCountChanged :: Queue sm qm so qo a -> Signal Int
+queueCountChanged :: Queue sm so a -> Signal Int
 queueCountChanged q =
   mapSignalM (const $ queueCount q) (queueCountChanged_ q)
   
 -- | Signal when the 'queueCount' property value has changed.
-queueCountChanged_ :: Queue sm qm so qo a -> Signal ()
+queueCountChanged_ :: Queue sm so a -> Signal ()
 queueCountChanged_ q =
   mapSignal (const ()) (enqueueStored q) <>
   mapSignal (const ()) (dequeueExtracted q)
@@ -237,17 +231,17 @@ queueCountChanged_ q =
 -- | Return the total number of input items that were stored.
 --
 -- See also 'enqueueStoreCountChanged' and 'enqueueStoreCountChanged_'.
-enqueueStoreCount :: Queue sm qm so qo a -> Event Int
+enqueueStoreCount :: Queue sm so a -> Event Int
 enqueueStoreCount q =
   Event $ \p -> readIORef (enqueueStoreCountRef q)
   
 -- | Signal when the 'enqueueStoreCount' property value has changed.
-enqueueStoreCountChanged :: Queue sm qm so qo a -> Signal Int
+enqueueStoreCountChanged :: Queue sm so a -> Signal Int
 enqueueStoreCountChanged q =
   mapSignalM (const $ enqueueStoreCount q) (enqueueStoreCountChanged_ q)
   
 -- | Signal when the 'enqueueStoreCount' property value has changed.
-enqueueStoreCountChanged_ :: Queue sm qm so qo a -> Signal ()
+enqueueStoreCountChanged_ :: Queue sm so a -> Signal ()
 enqueueStoreCountChanged_ q =
   mapSignal (const ()) (enqueueStored q)
       
@@ -256,40 +250,40 @@ enqueueStoreCountChanged_ q =
 -- without suspension.
 --
 -- See also 'dequeueCountChanged' and 'dequeueCountChanged_'.
-dequeueCount :: Queue sm qm so qo a -> Event Int
+dequeueCount :: Queue sm so a -> Event Int
 dequeueCount q =
   Event $ \p -> readIORef (dequeueCountRef q)
       
 -- | Signal when the 'dequeueCount' property value has changed.
-dequeueCountChanged :: Queue sm qm so qo a -> Signal Int
+dequeueCountChanged :: Queue sm so a -> Signal Int
 dequeueCountChanged q =
   mapSignalM (const $ dequeueCount q) (dequeueCountChanged_ q)
   
 -- | Signal when the 'dequeueCount' property value has changed.
-dequeueCountChanged_ :: Queue sm qm so qo a -> Signal ()
+dequeueCountChanged_ :: Queue sm so a -> Signal ()
 dequeueCountChanged_ q =
   mapSignal (const ()) (dequeueRequested q)
       
 -- | Return the total number of output items that were actually dequeued.
 --
 -- See also 'dequeueExtractCountChanged' and 'dequeueExtractCountChanged_'.
-dequeueExtractCount :: Queue sm qm so qo a -> Event Int
+dequeueExtractCount :: Queue sm so a -> Event Int
 dequeueExtractCount q =
   Event $ \p -> readIORef (dequeueExtractCountRef q)
       
 -- | Signal when the 'dequeueExtractCount' property value has changed.
-dequeueExtractCountChanged :: Queue sm qm so qo a -> Signal Int
+dequeueExtractCountChanged :: Queue sm so a -> Signal Int
 dequeueExtractCountChanged q =
   mapSignalM (const $ dequeueExtractCount q) (dequeueExtractCountChanged_ q)
   
 -- | Signal when the 'dequeueExtractCount' property value has changed.
-dequeueExtractCountChanged_ :: Queue sm qm so qo a -> Signal ()
+dequeueExtractCountChanged_ :: Queue sm so a -> Signal ()
 dequeueExtractCountChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
 
 -- | Return the rate of the items that were stored: how many items
 -- per time.
-enqueueStoreRate :: Queue sm qm so qo a -> Event Double
+enqueueStoreRate :: Queue sm so a -> Event Double
 enqueueStoreRate q =
   Event $ \p ->
   do x <- readIORef (enqueueStoreCountRef q)
@@ -300,7 +294,7 @@ enqueueStoreRate q =
 -- | Return the rate of the requests for dequeueing the items: how many requests
 -- per time. It does not include the failed attempts to dequeue immediately
 -- without suspension.
-dequeueRate :: Queue sm qm so qo a -> Event Double
+dequeueRate :: Queue sm so a -> Event Double
 dequeueRate q =
   Event $ \p ->
   do x <- readIORef (dequeueCountRef q)
@@ -310,7 +304,7 @@ dequeueRate q =
       
 -- | Return the rate of the output items that were dequeued: how many items
 -- per time.
-dequeueExtractRate :: Queue sm qm so qo a -> Event Double
+dequeueExtractRate :: Queue sm so a -> Event Double
 dequeueExtractRate q =
   Event $ \p ->
   do x <- readIORef (dequeueExtractCountRef q)
@@ -322,17 +316,17 @@ dequeueExtractRate q =
 -- the time at which it was dequeued.
 --
 -- See also 'queueWaitTimeChanged' and 'queueWaitTimeChanged_'.
-queueWaitTime :: Queue sm qm so qo a -> Event (SamplingStats Double)
+queueWaitTime :: Queue sm so a -> Event (SamplingStats Double)
 queueWaitTime q =
   Event $ \p -> readIORef (queueWaitTimeRef q)
       
 -- | Signal when the 'queueWaitTime' property value has changed.
-queueWaitTimeChanged :: Queue sm qm so qo a -> Signal (SamplingStats Double)
+queueWaitTimeChanged :: Queue sm so a -> Signal (SamplingStats Double)
 queueWaitTimeChanged q =
   mapSignalM (const $ queueWaitTime q) (queueWaitTimeChanged_ q)
   
 -- | Signal when the 'queueWaitTime' property value has changed.
-queueWaitTimeChanged_ :: Queue sm qm so qo a -> Signal ()
+queueWaitTimeChanged_ :: Queue sm so a -> Signal ()
 queueWaitTimeChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
       
@@ -340,17 +334,17 @@ queueWaitTimeChanged_ q =
 -- for dequeueing to the time at which it was actually dequeued.
 --
 -- See also 'dequeueWaitTimeChanged' and 'dequeueWaitTimeChanged_'.
-dequeueWaitTime :: Queue sm qm so qo a -> Event (SamplingStats Double)
+dequeueWaitTime :: Queue sm so a -> Event (SamplingStats Double)
 dequeueWaitTime q =
   Event $ \p -> readIORef (dequeueWaitTimeRef q)
       
 -- | Signal when the 'dequeueWaitTime' property value has changed.
-dequeueWaitTimeChanged :: Queue sm qm so qo a -> Signal (SamplingStats Double)
+dequeueWaitTimeChanged :: Queue sm so a -> Signal (SamplingStats Double)
 dequeueWaitTimeChanged q =
   mapSignalM (const $ dequeueWaitTime q) (dequeueWaitTimeChanged_ q)
   
 -- | Signal when the 'dequeueWaitTime' property value has changed.
-dequeueWaitTimeChanged_ :: Queue sm qm so qo a -> Signal ()
+dequeueWaitTimeChanged_ :: Queue sm so a -> Signal ()
 dequeueWaitTimeChanged_ q =
   mapSignal (const ()) (dequeueExtracted q)
 
@@ -358,7 +352,7 @@ dequeueWaitTimeChanged_ q =
 -- the average queue size divided by the average wait time.
 --
 -- See also 'queueRateChanged' and 'queueRateChanged_'.
-queueRate :: Queue sm qm so qo a -> Event Double
+queueRate :: Queue sm so a -> Event Double
 queueRate q =
   Event $ \p ->
   do x <- readIORef (queueCountStatsRef q)
@@ -366,20 +360,20 @@ queueRate q =
      return (timingStatsMean x / samplingStatsMean y) 
 
 -- | Signal when the 'queueRate' property value has changed.
-queueRateChanged :: Queue sm qm so qo a -> Signal Double
+queueRateChanged :: Queue sm so a -> Signal Double
 queueRateChanged q =
   mapSignalM (const $ queueRate q) (queueRateChanged_ q)
 
 -- | Signal when the 'queueRate' property value has changed.
-queueRateChanged_ :: Queue sm qm so qo a -> Signal ()
+queueRateChanged_ :: Queue sm so a -> Signal ()
 queueRateChanged_ q =
   mapSignal (const ()) (enqueueStored q) <>
   mapSignal (const ()) (dequeueExtracted q)
   
 -- | Dequeue suspending the process if the queue is empty.
-dequeue :: (DequeueStrategy sm qm,
-            EnqueueStrategy so qo)
-           => Queue sm qm so qo a
+dequeue :: (DequeueStrategy sm,
+            EnqueueStrategy so)
+           => Queue sm so a
            -- ^ the queue
            -> Process a
            -- ^ the dequeued value
@@ -389,9 +383,9 @@ dequeue q =
      liftEvent $ dequeueExtract q t
   
 -- | Dequeue with the output priority suspending the process if the queue is empty.
-dequeueWithOutputPriority :: (DequeueStrategy sm qm,
-                              PriorityQueueStrategy so qo po)
-                             => Queue sm qm so qo a
+dequeueWithOutputPriority :: (DequeueStrategy sm,
+                              PriorityQueueStrategy so po)
+                             => Queue sm so a
                              -- ^ the queue
                              -> po
                              -- ^ the priority for output
@@ -403,8 +397,8 @@ dequeueWithOutputPriority q po =
      liftEvent $ dequeueExtract q t
   
 -- | Try to dequeue immediately.
-tryDequeue :: DequeueStrategy sm qm
-              => Queue sm qm so qo a
+tryDequeue :: DequeueStrategy sm
+              => Queue sm so a
               -- ^ the queue
               -> Event (Maybe a)
               -- ^ the dequeued value of 'Nothing'
@@ -416,9 +410,9 @@ tryDequeue q =
        else return Nothing
 
 -- | Enqueue the item.  
-enqueue :: (EnqueueStrategy sm qm,
-            DequeueStrategy so qo)
-           => Queue sm qm so qo a
+enqueue :: (EnqueueStrategy sm,
+            DequeueStrategy so)
+           => Queue sm so a
            -- ^ the queue
            -> a
            -- ^ the item to enqueue
@@ -426,9 +420,9 @@ enqueue :: (EnqueueStrategy sm qm,
 enqueue = enqueueStore
      
 -- | Enqueue with the storing priority the item.  
-enqueueWithStoringPriority :: (PriorityQueueStrategy sm qm pm,
-                               DequeueStrategy so qo)
-                              => Queue sm qm so qo a
+enqueueWithStoringPriority :: (PriorityQueueStrategy sm pm,
+                               DequeueStrategy so)
+                              => Queue sm so a
                               -- ^ the queue
                               -> pm
                               -- ^ the priority for storing
@@ -439,22 +433,22 @@ enqueueWithStoringPriority = enqueueStoreWithPriority
 
 -- | Return a signal that notifies when the enqueued item
 -- is stored in the internal memory of the queue.
-enqueueStored :: Queue sm qm so qo a -> Signal a
+enqueueStored :: Queue sm so a -> Signal a
 enqueueStored q = publishSignal (enqueueStoredSource q)
 
 -- | Return a signal that notifies when the dequeuing operation was requested.
-dequeueRequested :: Queue sm qm so qo a -> Signal ()
+dequeueRequested :: Queue sm so a -> Signal ()
 dequeueRequested q = publishSignal (dequeueRequestedSource q)
 
 -- | Return a signal that notifies when the item was extracted from the internal
 -- storage of the queue and prepared for immediate receiving by the dequeuing process.
-dequeueExtracted :: Queue sm qm so qo a -> Signal a
+dequeueExtracted :: Queue sm so a -> Signal a
 dequeueExtracted q = publishSignal (dequeueExtractedSource q)
 
 -- | Store the item.
-enqueueStore :: (EnqueueStrategy sm qm,
-                 DequeueStrategy so qo)
-                => Queue sm qm so qo a
+enqueueStore :: (EnqueueStrategy sm,
+                 DequeueStrategy so)
+                => Queue sm so a
                 -- ^ the queue
                 -> a
                 -- ^ the item to be stored
@@ -464,7 +458,7 @@ enqueueStore q a =
   do let i = QueueItem { itemValue = a,
                          itemStoringTime = pointTime p }
      invokeEvent p $
-       strategyEnqueue (enqueueStoringStrategy q) (queueStore q) i
+       strategyEnqueue (queueStore q) i
      c <- readIORef (queueCountRef q)
      let c' = c + 1
          t  = pointTime p
@@ -477,9 +471,9 @@ enqueueStore q a =
        triggerSignal (enqueueStoredSource q) (itemValue i)
 
 -- | Store with the priority the item.
-enqueueStoreWithPriority :: (PriorityQueueStrategy sm qm pm,
-                             DequeueStrategy so qo)
-                            => Queue sm qm so qo a
+enqueueStoreWithPriority :: (PriorityQueueStrategy sm pm,
+                             DequeueStrategy so)
+                            => Queue sm so a
                             -- ^ the queue
                             -> pm
                             -- ^ the priority for storing
@@ -491,7 +485,7 @@ enqueueStoreWithPriority q pm a =
   do let i = QueueItem { itemValue = a,
                          itemStoringTime = pointTime p }
      invokeEvent p $
-       strategyEnqueueWithPriority (enqueueStoringStrategy q) (queueStore q) pm i
+       strategyEnqueueWithPriority (queueStore q) pm i
      c <- readIORef (queueCountRef q)
      let c' = c + 1
          t  = pointTime p
@@ -504,7 +498,7 @@ enqueueStoreWithPriority q pm a =
        triggerSignal (enqueueStoredSource q) (itemValue i)
 
 -- | Accept the dequeuing request and return the current simulation time.
-dequeueRequest :: Queue sm qm so qo a
+dequeueRequest :: Queue sm so a
                  -- ^ the queue
                  -> Event Double
                  -- ^ the current time
@@ -516,8 +510,8 @@ dequeueRequest q =
      return $ pointTime p 
 
 -- | Extract an item for the dequeuing request.  
-dequeueExtract :: DequeueStrategy sm qm
-                  => Queue sm qm so qo a
+dequeueExtract :: DequeueStrategy sm
+                  => Queue sm so a
                   -- ^ the queue
                   -> Double
                   -- ^ the time of the dequeuing request
@@ -526,7 +520,7 @@ dequeueExtract :: DequeueStrategy sm qm
 dequeueExtract q t' =
   Event $ \p ->
   do i <- invokeEvent p $
-          strategyDequeue (enqueueStoringStrategy q) (queueStore q)
+          strategyDequeue (queueStore q)
      c <- readIORef (queueCountRef q)
      let c' = c - 1
          t  = pointTime p
@@ -541,7 +535,7 @@ dequeueExtract q t' =
 
 -- | Update the statistics for the output wait time of the dequeuing operation
 -- and the wait time of storing in the queue.
-dequeueStat :: Queue sm qm so qo a
+dequeueStat :: Queue sm so a
                -- ^ the queue
                -> Double
                -- ^ the time of the dequeuing request
@@ -564,7 +558,7 @@ dequeueStat q t' i =
 -- similar to the properties but that have no signals. As a rule, such characteristics
 -- already depend on the simulation time and therefore they may change at any
 -- time point.
-queueChanged_ :: Queue sm qm so qo a -> Signal ()
+queueChanged_ :: Queue sm so a -> Signal ()
 queueChanged_ q =
   mapSignal (const ()) (enqueueStored q) <>
   dequeueRequested q <>
@@ -572,7 +566,7 @@ queueChanged_ q =
 
 -- | Return the summary for the queue with desciption of its
 -- properties and activities using the specified indent.
-queueSummary :: (Show sm, Show so) => Queue sm qm so qo a -> Int -> Event ShowS
+queueSummary :: (Show sm, Show so) => Queue sm so a -> Int -> Event ShowS
 queueSummary q indent =
   do let sm = enqueueStoringStrategy q
          so = dequeueStrategy q

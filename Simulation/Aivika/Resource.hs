@@ -61,29 +61,28 @@ import qualified Simulation.Aivika.Vector as V
 import qualified Simulation.Aivika.PriorityQueue as PQ
 
 -- | The ordinary FCFS (First Come - First Serviced) resource.
-type FCFSResource = Resource FCFS DLL.DoubleLinkedList
+type FCFSResource = Resource FCFS
 
 -- | The ordinary LCFS (Last Come - First Serviced) resource.
-type LCFSResource = Resource LCFS DLL.DoubleLinkedList
+type LCFSResource = Resource LCFS
 
 -- | The SIRO (Serviced in Random Order) resource.
-type SIROResource = Resource SIRO V.Vector
+type SIROResource = Resource SIRO
 
 -- | The resource with static priorities.
-type PriorityResource = Resource StaticPriorities PQ.PriorityQueue
+type PriorityResource = Resource StaticPriorities
 
 -- | Represents the resource with strategy @s@ applied for queuing the requests.
--- The @q@ type is dependent and it is usually derived automatically.
-data Resource s q = 
+data Resource s = 
   Resource { resourceStrategy :: s,
              -- ^ Return the strategy applied for queuing the requests.
              resourceMaxCount :: Maybe Int,
              -- ^ Return the maximum count of the resource, where 'Nothing'
              -- means that the resource has no upper bound.
              resourceCountRef :: IORef Int, 
-             resourceWaitList :: q (Event (Maybe (ContParams ()))) }
+             resourceWaitList :: StrategyQueue s (Event (Maybe (ContParams ()))) }
 
-instance Eq (Resource s q) where
+instance Eq (Resource s) where
   x == y = resourceCountRef x == resourceCountRef y  -- unique references
 
 -- | Create a new FCFS resource with the specified initial count which value becomes
@@ -152,12 +151,12 @@ newPriorityResourceWithMaxCount = newResourceWithMaxCount StaticPriorities
 
 -- | Create a new resource with the specified queue strategy and initial count.
 -- The last value becomes the upper bound as well.
-newResource :: QueueStrategy s q
+newResource :: QueueStrategy s
                => s
                -- ^ the strategy for managing the queuing requests
                -> Int
                -- ^ the initial count (and maximal count too) of the resource
-               -> Simulation (Resource s q)
+               -> Simulation (Resource s)
 newResource s count =
   Simulation $ \r ->
   do when (count < 0) $
@@ -173,14 +172,14 @@ newResource s count =
 
 -- | Create a new resource with the specified queue strategy, initial and maximum counts,
 -- where 'Nothing' means that the resource has no upper bound.
-newResourceWithMaxCount :: QueueStrategy s q
+newResourceWithMaxCount :: QueueStrategy s
                            => s
                            -- ^ the strategy for managing the queuing requests
                            -> Int
                            -- ^ the initial count of the resource
                            -> Maybe Int
                            -- ^ the maximum count of the resource, which can be indefinite
-                           -> Simulation (Resource s q)
+                           -> Simulation (Resource s)
 newResourceWithMaxCount s count maxCount =
   Simulation $ \r ->
   do when (count < 0) $
@@ -202,15 +201,15 @@ newResourceWithMaxCount s count maxCount =
                        resourceWaitList = waitList }
 
 -- | Return the current count of the resource.
-resourceCount :: Resource s q -> Event Int
+resourceCount :: Resource s -> Event Int
 resourceCount r =
   Event $ \p -> readIORef (resourceCountRef r)
 
 -- | Request for the resource decreasing its count in case of success,
 -- otherwise suspending the discontinuous process until some other 
 -- process releases the resource.
-requestResource :: EnqueueStrategy s q
-                   => Resource s q
+requestResource :: EnqueueStrategy s
+                   => Resource s
                    -- ^ the requested resource
                    -> Process ()
 requestResource r =
@@ -221,7 +220,7 @@ requestResource r =
      if a == 0 
        then do c <- invokeEvent p $ contFreeze c
                invokeEvent p $
-                 strategyEnqueue (resourceStrategy r) (resourceWaitList r) c
+                 strategyEnqueue (resourceWaitList r) c
        else do let a' = a - 1
                a' `seq` writeIORef (resourceCountRef r) a'
                invokeEvent p $ resumeCont c ()
@@ -229,8 +228,8 @@ requestResource r =
 -- | Request with the priority for the resource decreasing its count
 -- in case of success, otherwise suspending the discontinuous process
 -- until some other process releases the resource.
-requestResourceWithPriority :: PriorityQueueStrategy s q p
-                               => Resource s q
+requestResourceWithPriority :: PriorityQueueStrategy s p
+                               => Resource s
                                -- ^ the requested resource
                                -> p
                                -- ^ the priority
@@ -243,15 +242,15 @@ requestResourceWithPriority r priority =
      if a == 0 
        then do c <- invokeEvent p $ contFreeze c
                invokeEvent p $
-                 strategyEnqueueWithPriority (resourceStrategy r) (resourceWaitList r) priority c
+                 strategyEnqueueWithPriority (resourceWaitList r) priority c
        else do let a' = a - 1
                a' `seq` writeIORef (resourceCountRef r) a'
                invokeEvent p $ resumeCont c ()
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
-releaseResource :: DequeueStrategy s q
-                   => Resource s q
+releaseResource :: DequeueStrategy s
+                   => Resource s
                    -- ^ the resource to release
                    -> Process ()
 releaseResource r = 
@@ -263,8 +262,8 @@ releaseResource r =
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended processes as possible.
-releaseResourceWithinEvent :: DequeueStrategy s q
-                              => Resource s q
+releaseResourceWithinEvent :: DequeueStrategy s
+                              => Resource s
                               -- ^ the resource to release
                               -> Event ()
 releaseResourceWithinEvent r =
@@ -279,11 +278,11 @@ releaseResourceWithinEvent r =
        _ ->
          return ()
      f <- invokeEvent p $
-          strategyQueueNull (resourceStrategy r) (resourceWaitList r)
+          strategyQueueNull (resourceWaitList r)
      if f 
        then a' `seq` writeIORef (resourceCountRef r) a'
        else do c <- invokeEvent p $
-                    strategyDequeue (resourceStrategy r) (resourceWaitList r)
+                    strategyDequeue (resourceWaitList r)
                c <- invokeEvent p c
                case c of
                  Nothing ->
@@ -293,7 +292,7 @@ releaseResourceWithinEvent r =
 
 -- | Try to request for the resource decreasing its count in case of success
 -- and returning 'True' in the 'Event' monad; otherwise, returning 'False'.
-tryRequestResourceWithinEvent :: Resource s q
+tryRequestResourceWithinEvent :: Resource s
                                  -- ^ the resource which we try to request for
                                  -> Event Bool
 tryRequestResourceWithinEvent r =
@@ -307,8 +306,8 @@ tryRequestResourceWithinEvent r =
                
 -- | Acquire the resource, perform some action and safely release the resource               
 -- in the end, even if the 'IOException' was raised within the action. 
-usingResource :: EnqueueStrategy s q
-                 => Resource s q
+usingResource :: EnqueueStrategy s
+                 => Resource s
                  -- ^ the resource we are going to request for and then release in the end
                  -> Process a
                  -- ^ the action we are going to apply having the resource
@@ -321,8 +320,8 @@ usingResource r m =
 -- | Acquire the resource with the specified priority, perform some action and
 -- safely release the resource in the end, even if the 'IOException' was raised
 -- within the action.
-usingResourceWithPriority :: PriorityQueueStrategy s q p
-                             => Resource s q
+usingResourceWithPriority :: PriorityQueueStrategy s p
+                             => Resource s
                              -- ^ the resource we are going to request for and then
                              -- release in the end
                              -> p

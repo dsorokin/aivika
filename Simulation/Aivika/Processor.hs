@@ -155,8 +155,8 @@ processorUsingId pid (Processor f) =
 -- If you don't know what the enqueue strategies to apply, then
 -- you will probably need 'FCFS' for the both parameters, or
 -- function 'processorParallel' that does namely this.
-processorQueuedParallel :: (EnqueueStrategy si qi,
-                            EnqueueStrategy so qo)
+processorQueuedParallel :: (EnqueueStrategy si,
+                            EnqueueStrategy so)
                            => si
                            -- ^ the strategy applied for enqueuing the input data
                            -> so
@@ -176,8 +176,8 @@ processorQueuedParallel si so ps =
      runStream output
 
 -- | Launches the specified processors in parallel using priorities for combining the output.
-processorPrioritisingOutputParallel :: (EnqueueStrategy si qi,
-                                        PriorityQueueStrategy so qo po)
+processorPrioritisingOutputParallel :: (EnqueueStrategy si,
+                                        PriorityQueueStrategy so po)
                                        => si
                                        -- ^ the strategy applied for enqueuing the input data
                                        -> so
@@ -197,8 +197,8 @@ processorPrioritisingOutputParallel si so ps =
      runStream output
 
 -- | Launches the specified processors in parallel using priorities for consuming the intput.
-processorPrioritisingInputParallel :: (PriorityQueueStrategy si qi pi,
-                                       EnqueueStrategy so qo)
+processorPrioritisingInputParallel :: (PriorityQueueStrategy si pi,
+                                       EnqueueStrategy so)
                                       => si
                                       -- ^ the strategy applied for enqueuing the input data
                                       -> so
@@ -219,8 +219,8 @@ processorPrioritisingInputParallel si so ps =
 
 -- | Launches the specified processors in parallel using priorities for consuming
 -- the input and combining the output.
-processorPrioritisingInputOutputParallel :: (PriorityQueueStrategy si qi pi,
-                                             PriorityQueueStrategy so qo po)
+processorPrioritisingInputOutputParallel :: (PriorityQueueStrategy si pi,
+                                             PriorityQueueStrategy so po)
                                             => si
                                             -- ^ the strategy applied for enqueuing the input data
                                             -> so
