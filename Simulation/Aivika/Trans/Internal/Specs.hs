@@ -21,6 +21,10 @@ module Simulation.Aivika.Trans.Internal.Specs
         Event(..),
         EventProcessing(..),
         EventQueueing(..),
+        invokeParameter,
+        invokeSimulation,
+        invokeDynamics,
+        invokeEvent,
         basicTime,
         integIterationBnds,
         integIterationHiBnd,
@@ -90,6 +94,26 @@ newtype Dynamics m a = Dynamics (Point m -> m a)
 -- | A value in the 'Event' monad transformer represents a polymorphic time varying
 -- function which is strongly synchronized with the event queue.
 newtype Event m a = Event (Point m -> m a)
+
+-- | Invoke the 'Parameter' computation.
+invokeParameter :: Run m -> Parameter m a -> m a
+{-# INLINE invokeParameter #-}
+invokeParameter r (Parameter m) = m r
+
+-- | Invoke the 'Simulation' computation.
+invokeSimulation :: Run m -> Simulation m a -> m a
+{-# INLINE invokeSimulation #-}
+invokeSimulation r (Simulation m) = m r
+
+-- | Invoke the 'Dynamics' computation.
+invokeDynamics :: Point m -> Dynamics m a -> m a
+{-# INLINE invokeDynamics #-}
+invokeDynamics p (Dynamics m) = m p
+
+-- | Invoke the 'Event' computation.
+invokeEvent :: Point m -> Event m a -> m a
+{-# INLINE invokeEvent #-}
+invokeEvent p (Event m) = m p
 
 -- | Defines how the events are processed.
 data EventProcessing = CurrentEvents

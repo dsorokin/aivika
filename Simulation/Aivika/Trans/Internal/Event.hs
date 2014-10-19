@@ -15,7 +15,6 @@
 module Simulation.Aivika.Trans.Internal.Event
        (-- * Event Monad
         EventLift(..),
-        invokeEvent,
         runEventInStartTime,
         runEventInStopTime,
         -- * Event Queue
@@ -142,11 +141,6 @@ finallyEvent (Event m) (Event m') =
 throwEvent :: Comp m => IOException -> Event m a
 {-# INLINABLE throwEvent #-}
 throwEvent = throw
-
--- | Invoke the 'Event' computation.
-invokeEvent :: Point m -> Event m a -> m a
-{-# INLINE invokeEvent #-}
-invokeEvent p (Event m) = m p
 
 instance MonadFix m => MonadFix (Event m) where
 

@@ -15,7 +15,6 @@
 module Simulation.Aivika.Trans.Internal.Simulation
        (-- * Simulation
         SimulationLift(..),
-        invokeSimulation,
         runSimulation,
         runSimulations,
         -- * Error Handling
@@ -152,11 +151,6 @@ finallySimulation (Simulation m) (Simulation m') =
 throwSimulation :: Comp m => IOException -> Simulation m a
 {-# INLINABLE throwSimulation #-}
 throwSimulation = throw
-
--- | Invoke the 'Simulation' computation.
-invokeSimulation :: Run m -> Simulation m a -> m a
-{-# INLINE invokeSimulation #-}
-invokeSimulation r (Simulation m) = m r
 
 instance MonadFix m => MonadFix (Simulation m) where
 

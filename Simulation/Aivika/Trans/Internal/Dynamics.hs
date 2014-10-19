@@ -14,7 +14,6 @@
 module Simulation.Aivika.Trans.Internal.Dynamics
        (-- * Dynamics
         DynamicsLift(..),
-        invokeDynamics,
         runDynamicsInStartTime,
         runDynamicsInStopTime,
         runDynamicsInIntegTimes,
@@ -197,11 +196,6 @@ finallyDynamics (Dynamics m) (Dynamics m') =
 throwDynamics :: Comp m => IOException -> Dynamics m a
 {-# INLINABLE throwDynamics #-}
 throwDynamics = throw
-
--- | Invoke the 'Dynamics' computation.
-invokeDynamics :: Point m -> Dynamics m a -> m a
-{-# INLINE invokeDynamics #-}
-invokeDynamics p (Dynamics m) = m p
 
 instance MonadFix m => MonadFix (Dynamics m) where
 

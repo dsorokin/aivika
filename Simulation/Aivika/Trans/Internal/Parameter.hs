@@ -18,7 +18,6 @@
 module Simulation.Aivika.Trans.Internal.Parameter
        (-- * Parameter
         ParameterLift(..),
-        invokeParameter,
         runParameter,
         runParameters,
         -- * Error Handling
@@ -220,11 +219,6 @@ finallyParameter (Parameter m) (Parameter m') =
 throwParameter :: Comp m => IOException -> Parameter m a
 {-# INLINABLE throwParameter #-}
 throwParameter = throw
-
--- | Invoke the 'Parameter' computation.
-invokeParameter :: Run m -> Parameter m a -> m a
-{-# INLINE invokeParameter #-}
-invokeParameter r (Parameter m) = m r
 
 instance MonadFix m => MonadFix (Parameter m) where
 
