@@ -43,12 +43,10 @@ import Simulation.Aivika.Trans.Internal.Simulation
 
 instance Monad m => Monad (Dynamics m) where
 
-  {-# INLINABLE return #-}
-  {-# SPECIALISE return :: a -> Dynamics IO a #-}
+  {-# SPECIALISE INLINE return :: a -> Dynamics IO a #-}
   return a = Dynamics $ \p -> return a
 
-  {-# INLINABLE (>>=) #-}
-  {-# SPECIALISE (>>=) :: Dynamics IO a -> (a -> Dynamics IO b) -> Dynamics IO b #-}
+  {-# SPECIALISE INLINE (>>=) :: Dynamics IO a -> (a -> Dynamics IO b) -> Dynamics IO b #-}
   (Dynamics m) >>= k =
     Dynamics $ \p -> 
     do a <- m p
@@ -89,18 +87,15 @@ runDynamicsInTimes ts (Dynamics m) =
 
 instance Functor m => Functor (Dynamics m) where
   
-  {-# INLINABLE fmap #-}
-  {-# SPECIALISE fmap :: (a -> b) -> Dynamics IO a -> Dynamics IO b #-}
+  {-# SPECIALISE INLINE fmap :: (a -> b) -> Dynamics IO a -> Dynamics IO b #-}
   fmap f (Dynamics x) = Dynamics $ \p -> fmap f $ x p
 
 instance Applicative m => Applicative (Dynamics m) where
   
-  {-# INLINABLE pure #-}
-  {-# SPECIALISE pure :: a -> Dynamics IO a #-}
+  {-# SPECIALISE INLINE pure :: a -> Dynamics IO a #-}
   pure = Dynamics . const . pure
   
-  {-# INLINABLE (<*>) #-}
-  {-# SPECIALISE (<*>) :: Dynamics IO (a -> b) -> Dynamics IO a -> Dynamics IO b #-}
+  {-# SPECIALISE INLINE (<*>) :: Dynamics IO (a -> b) -> Dynamics IO a -> Dynamics IO b #-}
   (Dynamics x) <*> (Dynamics y) = Dynamics $ \p -> x p <*> y p
 
 liftMD :: Monad m => (a -> b) -> Dynamics m a -> Dynamics m b
@@ -263,8 +258,7 @@ throwDynamics = throw
 
 instance MonadFix m => MonadFix (Dynamics m) where
 
-  {-# INLINABLE mfix #-}
-  {-# SPECIALISE mfix :: (a -> Dynamics IO a) -> Dynamics IO a #-}
+  {-# SPECIALISE INLINE mfix :: (a -> Dynamics IO a) -> Dynamics IO a #-}
   mfix f = 
     Dynamics $ \p ->
     do { rec { a <- invokeDynamics p (f a) }; return a }

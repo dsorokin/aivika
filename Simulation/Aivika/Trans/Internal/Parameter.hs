@@ -59,12 +59,10 @@ import Simulation.Aivika.Trans.Internal.Specs
 
 instance Monad m => Monad (Parameter m) where
 
-  {-# INLINABLE return #-}
-  {-# SPECIALISE return :: a -> Parameter IO a #-}
+  {-# SPECIALISE INLINE return :: a -> Parameter IO a #-}
   return a = Parameter $ \r -> return a
 
-  {-# INLINABLE (>>=) #-}
-  {-# SPECIALISE (>>=) :: Parameter IO a -> (a -> Parameter IO b) -> Parameter IO b #-}
+  {-# SPECIALISE INLINE (>>=) :: Parameter IO a -> (a -> Parameter IO b) -> Parameter IO b #-}
   (Parameter m) >>= k =
     Parameter $ \r -> 
     do a <- m r
@@ -128,18 +126,15 @@ generatorParameter = Parameter $ return . runGenerator
 
 instance Functor m => Functor (Parameter m) where
   
-  {-# INLINABLE fmap #-}
-  {-# SPECIALISE fmap :: (a -> b) -> Parameter IO a -> Parameter IO b #-}
+  {-# SPECIALISE INLINE fmap :: (a -> b) -> Parameter IO a -> Parameter IO b #-}
   fmap f (Parameter x) = Parameter $ \r -> fmap f $ x r
 
 instance Applicative m => Applicative (Parameter m) where
   
-  {-# INLINABLE pure #-}
-  {-# SPECIALISE pure :: a -> Parameter IO a #-}
+  {-# SPECIALISE INLINE pure :: a -> Parameter IO a #-}
   pure = Parameter . const . pure
   
-  {-# INLINABLE (<*>) #-}
-  {-# SPECIALISE (<*>) :: Parameter IO (a -> b) -> Parameter IO a -> Parameter IO b #-}
+  {-# SPECIALISE INLINE (<*>) :: Parameter IO (a -> b) -> Parameter IO a -> Parameter IO b #-}
   (Parameter x) <*> (Parameter y) = Parameter $ \r -> x r <*> y r
 
 liftMP :: Monad m => (a -> b) -> Parameter m a -> Parameter m b
@@ -292,8 +287,7 @@ throwParameter = throw
 
 instance MonadFix m => MonadFix (Parameter m) where
 
-  {-# INLINABLE mfix #-}
-  {-# SPECIALISE mfix :: (a -> Parameter IO a) -> Parameter IO a #-}
+  {-# SPECIALISE INLINE mfix :: (a -> Parameter IO a) -> Parameter IO a #-}
   mfix f = 
     Parameter $ \r ->
     do { rec { a <- invokeParameter r (f a) }; return a }

@@ -40,12 +40,10 @@ import Simulation.Aivika.Trans.Internal.Parameter
 
 instance Monad m => Monad (Simulation m) where
 
-  {-# INLINABLE return #-}
-  {-# SPECIALISE return :: a -> Simulation IO a #-}
+  {-# SPECIALISE INLINE return :: a -> Simulation IO a #-}
   return a = Simulation $ \r -> return a
 
-  {-# INLINABLE (>>=) #-}
-  {-# SPECIALISE (>>=) :: Simulation IO a -> (a -> Simulation IO b) -> Simulation IO b #-}
+  {-# SPECIALISE INLINE (>>=) :: Simulation IO a -> (a -> Simulation IO b) -> Simulation IO b #-}
   (Simulation m) >>= k =
     Simulation $ \r -> 
     do a <- m r
@@ -85,18 +83,15 @@ runSimulations (Simulation m) sc runs = map f [1 .. runs]
 
 instance Functor m => Functor (Simulation m) where
   
-  {-# INLINABLE fmap #-}
-  {-# SPECIALISE fmap :: (a -> b) -> Simulation IO a -> Simulation IO b #-}
+  {-# SPECIALISE INLINE fmap :: (a -> b) -> Simulation IO a -> Simulation IO b #-}
   fmap f (Simulation x) = Simulation $ \r -> fmap f $ x r
 
 instance Applicative m => Applicative (Simulation m) where
   
-  {-# INLINABLE pure #-}
-  {-# SPECIALISE pure :: a -> Simulation IO a #-}
+  {-# SPECIALISE INLINE pure :: a -> Simulation IO a #-}
   pure = Simulation . const . pure
   
-  {-# INLINABLE (<*>) #-}
-  {-# SPECIALISE (<*>) :: Simulation IO (a -> b) -> Simulation IO a -> Simulation IO b #-}
+  {-# SPECIALISE INLINE (<*>) :: Simulation IO (a -> b) -> Simulation IO a -> Simulation IO b #-}
   (Simulation x) <*> (Simulation y) = Simulation $ \r -> x r <*> y r
 
 liftMS :: Monad m => (a -> b) -> Simulation m a -> Simulation m b
@@ -161,8 +156,7 @@ throwSimulation = throw
 
 instance MonadFix m => MonadFix (Simulation m) where
 
-  {-# INLINABLE mfix #-}
-  {-# SPECIALISE mfix :: (a -> Simulation IO a) -> Simulation IO a #-}
+  {-# SPECIALISE INLINE mfix :: (a -> Simulation IO a) -> Simulation IO a #-}
   mfix f = 
     Simulation $ \r ->
     do { rec { a <- invokeSimulation r (f a) }; return a }
