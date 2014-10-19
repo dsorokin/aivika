@@ -40,10 +40,12 @@ import Simulation.Aivika.Trans.Internal.Parameter
 
 instance Monad m => Monad (Simulation m) where
 
-  {-# INLINE return #-}
+  {-# INLINABLE return #-}
+  {-# SPECIALISE return :: a -> Simulation IO a #-}
   return a = Simulation $ \r -> return a
 
-  {-# INLINE (>>=) #-}
+  {-# INLINABLE (>>=) #-}
+  {-# SPECIALISE (>>=) :: Simulation IO a -> (a -> Simulation IO b) -> Simulation IO b #-}
   (Simulation m) >>= k =
     Simulation $ \r -> 
     do a <- m r
@@ -53,6 +55,7 @@ instance Monad m => Monad (Simulation m) where
 -- | Run the simulation using the specified specs.
 runSimulation :: Comp m => Simulation m a -> Specs m -> m a
 {-# INLINABLE runSimulation #-}
+{-# SPECIALISE runSimulation :: Simulation IO a -> Specs IO -> IO a #-}
 runSimulation (Simulation m) sc =
   do s <- newSession
      q <- newEventQueue s sc
@@ -68,6 +71,7 @@ runSimulation (Simulation m) sc =
 --   where each simulation is distinguished by its index 'simulationIndex'.
 runSimulations :: Comp m => Simulation m a -> Specs m -> Int -> [m a]
 {-# INLINABLE runSimulations #-}
+{-# SPECIALISE runSimulations :: Simulation IO a -> Specs IO -> Int -> [IO a] #-}
 runSimulations (Simulation m) sc runs = map f [1 .. runs]
   where f i = do s <- newSession
                  q <- newEventQueue s sc
@@ -81,19 +85,23 @@ runSimulations (Simulation m) sc runs = map f [1 .. runs]
 
 instance Functor m => Functor (Simulation m) where
   
-  {-# INLINE fmap #-}
+  {-# INLINABLE fmap #-}
+  {-# SPECIALISE fmap :: (a -> b) -> Simulation IO a -> Simulation IO b #-}
   fmap f (Simulation x) = Simulation $ \r -> fmap f $ x r
 
 instance Applicative m => Applicative (Simulation m) where
   
-  {-# INLINE pure #-}
+  {-# INLINABLE pure #-}
+  {-# SPECIALISE pure :: a -> Simulation IO a #-}
   pure = Simulation . const . pure
   
-  {-# INLINE (<*>) #-}
+  {-# INLINABLE (<*>) #-}
+  {-# SPECIALISE (<*>) :: Simulation IO (a -> b) -> Simulation IO a -> Simulation IO b #-}
   (Simulation x) <*> (Simulation y) = Simulation $ \r -> x r <*> y r
 
 liftMS :: Monad m => (a -> b) -> Simulation m a -> Simulation m b
-{-# INLINE liftMS #-}
+{-# INLINABLE liftMS #-}
+{-# SPECIALISE liftMS :: (a -> b) -> Simulation IO a -> Simulation IO b #-}
 liftMS f (Simulation x) =
   Simulation $ \r -> do { a <- x r; return $ f a }
 
@@ -131,6 +139,7 @@ instance ParameterLift Simulation where
 -- | Exception handling within 'Simulation' computations.
 catchSimulation :: (Comp m, Exception e) => Simulation m a -> (e -> Simulation m a) -> Simulation m a
 {-# INLINABLE catchSimulation #-}
+{-# SPECIALISE catchSimulation :: Exception e => Simulation IO a -> (e -> Simulation IO a) -> Simulation IO a #-}
 catchSimulation (Simulation m) h =
   Simulation $ \r -> 
   catchComp (m r) $ \e ->
@@ -139,6 +148,7 @@ catchSimulation (Simulation m) h =
 -- | A computation with finalization part like the 'finally' function.
 finallySimulation :: Comp m => Simulation m a -> Simulation m b -> Simulation m a
 {-# INLINABLE finallySimulation #-}
+{-# SPECIALISE finallySimulation :: Simulation IO a -> Simulation IO b -> Simulation IO a #-}
 finallySimulation (Simulation m) (Simulation m') =
   Simulation $ \r ->
   finallyComp (m r) (m' r)
@@ -146,11 +156,13 @@ finallySimulation (Simulation m) (Simulation m') =
 -- | Like the standard 'throw' function.
 throwSimulation :: (Comp m, Exception e) => e -> Simulation m a
 {-# INLINABLE throwSimulation #-}
+{-# SPECIALISE throwSimulation :: Exception e => e -> Simulation IO a #-}
 throwSimulation = throw
 
 instance MonadFix m => MonadFix (Simulation m) where
 
-  {-# INLINE mfix #-}
+  {-# INLINABLE mfix #-}
+  {-# SPECIALISE mfix :: (a -> Simulation IO a) -> Simulation IO a #-}
   mfix f = 
     Simulation $ \r ->
     do { rec { a <- invokeSimulation r (f a) }; return a }
@@ -159,6 +171,7 @@ instance MonadFix m => MonadFix (Simulation m) where
 -- within a simulation run.
 memoSimulation :: Comp m => Simulation m a -> Simulation m (Simulation m a)
 {-# INLINABLE memoSimulation #-}
+{-# SPECIALISE memoSimulation :: Simulation IO a -> Simulation IO (Simulation IO a) #-}
 memoSimulation m =
   Simulation $ \r ->
   do let s = runSession r

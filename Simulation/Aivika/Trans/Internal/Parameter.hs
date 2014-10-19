@@ -292,7 +292,8 @@ throwParameter = throw
 
 instance MonadFix m => MonadFix (Parameter m) where
 
-  {-# INLINE mfix #-}
+  {-# INLINABLE mfix #-}
+  {-# SPECIALISE mfix :: (a -> Parameter IO a) -> Parameter IO a #-}
   mfix f = 
     Parameter $ \r ->
     do { rec { a <- invokeParameter r (f a) }; return a }
