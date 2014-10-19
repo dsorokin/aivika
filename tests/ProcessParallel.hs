@@ -2,17 +2,17 @@
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Trans
-import Simulation.Aivika.Trans.Queue
+import Simulation.Aivika
+import Simulation.Aivika.Queue
 
 specs = Specs 0 1 0.1 RungeKutta4 SimpleGenerator
 
 n1 = 3
 n2 = 5
 
-model :: Simulation IO ()
+model :: Simulation ()
 model =
-  do let timer :: Int -> Int -> Process IO Int
+  do let timer :: Int -> Int -> Process Int
          timer i n =
            do t'  <- liftDynamics time
               dt' <- liftParameter dt

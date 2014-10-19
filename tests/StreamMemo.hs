@@ -3,11 +3,11 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Arrow
 
-import Simulation.Aivika.Trans
+import Simulation.Aivika
 
 specs = Specs 0 10 0.1 RungeKutta4 SimpleGenerator
 
-model :: Simulation IO ()
+model :: Simulation ()
 model =
   do let display n a =
            do t <- liftDynamics time
@@ -19,7 +19,7 @@ model =
                    putStr ", a = "
                    putStrLn $ show a
                    
-     let trace :: Show a => String -> Stream IO (Arrival a) -> Process IO ()
+     let trace :: Show a => String -> Stream (Arrival a) -> Process ()
          trace name =
            consumeStream (\a -> display name a)
      
