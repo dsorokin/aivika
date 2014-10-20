@@ -125,7 +125,7 @@ import Simulation.Aivika.Signal
 import Simulation.Aivika.Statistics
 import Simulation.Aivika.Statistics.Accumulator
 import Simulation.Aivika.Ref
-import qualified Simulation.Aivika.Ref.Light as LR
+import qualified Simulation.Aivika.Ref.Plain as LR
 import Simulation.Aivika.Var
 import Simulation.Aivika.QueueStrategy
 import qualified Simulation.Aivika.Queue as Q

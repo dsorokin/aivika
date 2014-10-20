@@ -137,7 +137,7 @@ library
                      Simulation.Aivika.Queue.Infinite
                      Simulation.Aivika.QueueStrategy
                      Simulation.Aivika.Ref
-                     Simulation.Aivika.Ref.Light
+                     Simulation.Aivika.Ref.Plain
                      Simulation.Aivika.Resource
                      Simulation.Aivika.Results.Locale
                      Simulation.Aivika.Results
