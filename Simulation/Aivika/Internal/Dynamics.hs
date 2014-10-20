@@ -31,9 +31,7 @@ module Simulation.Aivika.Internal.Dynamics
         integIteration,
         integPhase) where
 
-import qualified Control.Exception as C
-import Control.Exception (IOException, throw, finally)
-
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
@@ -172,20 +170,20 @@ instance DynamicsLift Dynamics where
   liftDynamics = id
   
 -- | Exception handling within 'Dynamics' computations.
-catchDynamics :: Dynamics a -> (IOException -> Dynamics a) -> Dynamics a
+catchDynamics :: Exception e => Dynamics a -> (e -> Dynamics a) -> Dynamics a
 catchDynamics (Dynamics m) h =
   Dynamics $ \p -> 
-  C.catch (m p) $ \e ->
+  catch (m p) $ \e ->
   let Dynamics m' = h e in m' p
                            
 -- | A computation with finalization part like the 'finally' function.
 finallyDynamics :: Dynamics a -> Dynamics b -> Dynamics a
 finallyDynamics (Dynamics m) (Dynamics m') =
   Dynamics $ \p ->
-  C.finally (m p) (m' p)
+  finally (m p) (m' p)
 
 -- | Like the standard 'throw' function.
-throwDynamics :: IOException -> Dynamics a
+throwDynamics :: Exception e => e -> Dynamics a
 throwDynamics = throw
 
 -- | Invoke the 'Dynamics' computation.

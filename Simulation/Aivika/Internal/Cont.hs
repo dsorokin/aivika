@@ -42,9 +42,7 @@ import Data.Array
 import Data.Array.IO.Safe
 import Data.Monoid
 
-import qualified Control.Exception as C
-import Control.Exception (IOException, throw)
-
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Applicative
@@ -172,7 +170,7 @@ data ContParams a =
 
 -- | The auxiliary continuation parameters.
 data ContParamsAux =
-  ContParamsAux { contECont :: IOException -> Event (),
+  ContParamsAux { contECont :: SomeException -> Event (),
                   contCCont :: () -> Event (),
                   contCancelSource :: ContCancellationSource,
                   contCancelFlag :: IO Bool,
@@ -226,22 +224,10 @@ returnC a =
        then cancelCont p c
        else invokeEvent p $ contCont c a
                           
--- bindC :: Cont a -> (a -> Cont b) -> Cont b
--- {-# INLINE bindC #-}
--- bindC m k = 
---   Cont $ \c -> 
---   if (contCatchFlag . contAux $ c) 
---   then bindWithCatch m k c
---   else bindWithoutCatch m k c
-  
 bindC :: Cont a -> (a -> Cont b) -> Cont b
 {-# INLINE bindC #-}
-bindC m k = 
-  Cont $ bindWithoutCatch m k  -- Another version is not tail recursive!
-  
-bindWithoutCatch :: Cont a -> (a -> Cont b) -> ContParams b -> Event ()
-{-# INLINE bindWithoutCatch #-}
-bindWithoutCatch (Cont m) k c = 
+bindC (Cont m) k =
+  Cont $ \c ->
   Event $ \p ->
   do z <- contCanceled c
      if z 
@@ -250,67 +236,38 @@ bindWithoutCatch (Cont m) k c =
             let cont a = invokeCont c (k a)
             in c { contCont = cont }
 
--- -- It is not tail recursive!
--- bindWithCatch :: Cont a -> (a -> Cont b) -> ContParams b -> Event ()
--- {-# NOINLINE bindWithCatch #-}
--- bindWithCatch (Cont m) k c = 
---   Event $ \p ->
---   do z <- contCanceled c
---      if z 
---        then cancelCont p c
---        else invokeEvent p $ m $ 
---             let cont a = catchEvent 
---                          (invokeCont c (k a))
---                          (contECont $ contAux c)
---             in c { contCont = cont }
-
--- Like "bindWithoutCatch (return a) k"
-callWithoutCatch :: (a -> Cont b) -> a -> ContParams b -> Event ()
-callWithoutCatch k a c =
+-- | Like @return a >>= k@.
+callCont :: (a -> Cont b) -> a -> ContParams b -> Event ()
+callCont k a c =
   Event $ \p ->
   do z <- contCanceled c
      if z 
        then cancelCont p c
        else invokeEvent p $ invokeCont c (k a)
 
--- -- Like "bindWithCatch (return a) k" but it is not tail recursive!
--- callWithCatch :: (a -> Cont b) -> a -> ContParams b -> Event ()
--- callWithCatch k a c =
---   Event $ \p ->
---   do z <- contCanceled c
---      if z 
---        then cancelCont p c
---        else invokeEvent p $ catchEvent 
---             (invokeCont c (k a))
---             (contECont $ contAux c)
-
 -- | Exception handling within 'Cont' computations.
-catchCont :: Cont a -> (IOException -> Cont a) -> Cont a
-catchCont m h = 
-  Cont $ \c ->
-  catchWithCatch m h (c { contAux = (contAux c) { contCatchFlag = True } })
-  
-catchWithCatch :: Cont a -> (IOException -> Cont a) -> ContParams a -> Event ()
-catchWithCatch (Cont m) h c =
-  Event $ \p -> 
-  do z <- contCanceled c
+catchCont :: Exception e => Cont a -> (e -> Cont a) -> Cont a
+catchCont (Cont m) h = 
+  Cont $ \c0 ->
+  Event $ \p ->
+  do let c = c0 { contAux = (contAux c0) { contCatchFlag = True } }
+     z <- contCanceled c
      if z 
        then cancelCont p c
        else invokeEvent p $ m $
-            -- let econt e = callWithCatch h e c   -- not tail recursive!
-            let econt e = callWithoutCatch h e c
+            let econt e0 =
+                  case fromException e0 of
+                    Just e  -> callCont h e c
+                    Nothing -> (contECont . contAux $ c) e0
             in c { contAux = (contAux c) { contECont = econt } }
                
 -- | A computation with finalization part.
 finallyCont :: Cont a -> Cont b -> Cont a
-finallyCont m m' = 
-  Cont $ \c -> 
-  finallyWithCatch m m' (c { contAux = (contAux c) { contCatchFlag = True } })
-  
-finallyWithCatch :: Cont a -> Cont b -> ContParams a -> Event ()               
-finallyWithCatch (Cont m) (Cont m') c =
+finallyCont (Cont m) (Cont m') = 
+  Cont $ \c0 ->
   Event $ \p ->
-  do z <- contCanceled c
+  do let c = c0 { contAux = (contAux c0) { contCatchFlag = True } }
+     z <- contCanceled c
      if z 
        then cancelCont p c
        else invokeEvent p $ m $
@@ -336,12 +293,14 @@ finallyWithCatch (Cont m) (Cont m') c =
                                             contCCont = ccont } }
 
 -- | Throw the exception with the further exception handling.
--- By some reasons, the standard 'throw' function per se is not handled 
--- properly within 'Cont' computations, altough it will be still handled 
--- if it will be hidden under the 'liftIO' function. The problem arises 
--- namely with the @throw@ function, not 'IO' computations.
+--
+-- By some reason, an exception raised with help of the standard 'throw' function
+-- is not handled properly within 'Cont' computation, altough it will be still handled 
+-- if it will be wrapped in the 'IO' monad. Therefore, you should use specialised
+-- functions like the stated one that use the 'throw' function but within the 'IO' computation,
+-- which allows already handling the exception.
 throwCont :: IOException -> Cont a
-throwCont e = liftIO $ throw e
+throwCont = liftIO . throw
 
 -- | Run the 'Cont' computation with the specified cancelation source 
 -- and flag indicating whether to catch exceptions from the beginning.
@@ -349,7 +308,7 @@ runCont :: Cont a
            -- ^ the computation to run
            -> (a -> Event ())
            -- ^ the main branch 
-           -> (IOError -> Event ())
+           -> (SomeException -> Event ())
            -- ^ the branch for handing exceptions
            -> (() -> Event ())
            -- ^ the branch for cancellation
@@ -429,7 +388,7 @@ liftIOWithCatch m p c =
        then cancelCont p c
        else do aref <- newIORef undefined
                eref <- newIORef Nothing
-               C.catch (m >>= writeIORef aref) 
+               catch (m >>= writeIORef aref) 
                  (writeIORef eref . Just)
                e <- readIORef eref
                case e of
@@ -452,7 +411,7 @@ resumeCont c a =
        else invokeEvent p $ contCont c a
 
 -- | Resume the exception handling by the specified parameters.
-resumeECont :: ContParams a -> IOException -> Event ()
+resumeECont :: ContParams a -> SomeException -> Event ()
 {-# INLINE resumeECont #-}
 resumeECont c e = 
   Event $ \p ->

@@ -28,9 +28,7 @@ module Simulation.Aivika.Internal.Simulation
         -- * Memoization
         memoSimulation) where
 
-import qualified Control.Exception as C
-import Control.Exception (IOException, throw, finally)
-
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
@@ -122,20 +120,20 @@ liftPS (Parameter x) =
   Simulation x
     
 -- | Exception handling within 'Simulation' computations.
-catchSimulation :: Simulation a -> (IOException -> Simulation a) -> Simulation a
+catchSimulation :: Exception e => Simulation a -> (e -> Simulation a) -> Simulation a
 catchSimulation (Simulation m) h =
   Simulation $ \r -> 
-  C.catch (m r) $ \e ->
+  catch (m r) $ \e ->
   let Simulation m' = h e in m' r
                            
 -- | A computation with finalization part like the 'finally' function.
 finallySimulation :: Simulation a -> Simulation b -> Simulation a
 finallySimulation (Simulation m) (Simulation m') =
   Simulation $ \r ->
-  C.finally (m r) (m' r)
+  finally (m r) (m' r)
 
 -- | Like the standard 'throw' function.
-throwSimulation :: IOException -> Simulation a
+throwSimulation :: Exception e => e -> Simulation a
 throwSimulation = throw
 
 -- | Invoke the 'Simulation' computation.

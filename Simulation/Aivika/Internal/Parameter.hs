@@ -39,8 +39,7 @@ module Simulation.Aivika.Internal.Parameter
         -- * Utilities
         tableParameter) where
 
-import qualified Control.Exception as C
-import Control.Exception (IOException, throw, finally)
+import Control.Exception
 import Control.Concurrent.MVar
 
 import Control.Monad
@@ -186,20 +185,20 @@ instance ParameterLift Parameter where
   liftParameter = id
     
 -- | Exception handling within 'Parameter' computations.
-catchParameter :: Parameter a -> (IOException -> Parameter a) -> Parameter a
+catchParameter :: Exception e => Parameter a -> (e -> Parameter a) -> Parameter a
 catchParameter (Parameter m) h =
   Parameter $ \r -> 
-  C.catch (m r) $ \e ->
+  catch (m r) $ \e ->
   let Parameter m' = h e in m' r
                            
 -- | A computation with finalization part like the 'finally' function.
 finallyParameter :: Parameter a -> Parameter b -> Parameter a
 finallyParameter (Parameter m) (Parameter m') =
   Parameter $ \r ->
-  C.finally (m r) (m' r)
+  finally (m r) (m' r)
 
 -- | Like the standard 'throw' function.
-throwParameter :: IOException -> Parameter a
+throwParameter :: Exception e => e -> Parameter a
 throwParameter = throw
 
 -- | Invoke the 'Parameter' computation.

@@ -80,7 +80,7 @@ module Simulation.Aivika.Internal.Process
 import Data.Maybe
 import Data.IORef
 
-import Control.Exception (IOException, throw)
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Applicative
@@ -297,7 +297,8 @@ cancelProcess :: Process a
 cancelProcess =
   do pid <- processId
      liftEvent $ cancelProcessWithId pid
-     throwProcess $ error "The process must be cancelled already: cancelProcess."
+     throwProcess $
+       (error "The process must be cancelled already: cancelProcess." :: SomeException)
 
 -- | Test whether the process with the specified identifier was cancelled.
 processCancelled :: ProcessId -> Event Bool
@@ -377,7 +378,7 @@ liftIOP :: IO a -> Process a
 liftIOP m = Process $ \pid -> liftIO m
 
 -- | Exception handling within 'Process' computations.
-catchProcess :: Process a -> (IOException -> Process a) -> Process a
+catchProcess :: Exception e => Process a -> (e -> Process a) -> Process a
 catchProcess (Process m) h =
   Process $ \pid ->
   catchCont (m pid) $ \e ->
@@ -390,11 +391,13 @@ finallyProcess (Process m) (Process m') =
   finallyCont (m pid) (m' pid)
 
 -- | Throw the exception with the further exception handling.
--- By some reasons, the standard 'throw' function per se is not handled 
--- properly within 'Process' computations, although it will be still 
--- handled if it will be hidden under the 'liftIO' function. The problem 
--- arises namely with the @throw@ function, not 'IO' computations.
-throwProcess :: IOException -> Process a
+--
+-- By some reason, an exception raised with help of the standard 'throw' function
+-- is not handled properly within 'Process' computation, altough it will be still handled 
+-- if it will be wrapped in the 'IO' monad. Therefore, you should use specialised
+-- functions like the stated one that use the 'throw' function but within the 'IO' computation,
+-- which allows already handling the exception.
+throwProcess :: Exception e => e -> Process a
 throwProcess = liftIO . throw
 
 -- | Execute the specified computations in parallel within
@@ -601,7 +604,7 @@ timeoutProcessUsingId timeout pid p =
      case x of
        Nothing -> return Nothing
        Just (Right a) -> return (Just a)
-       Just (Left e) -> throwProcess e
+       Just (Left (SomeException e)) -> throwProcess e
 
 -- | Yield to allow other 'Process' and 'Event' computations to run
 -- at the current simulation time point.

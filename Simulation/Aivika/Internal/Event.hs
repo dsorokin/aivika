@@ -48,9 +48,7 @@ module Simulation.Aivika.Internal.Event
 import Data.IORef
 import Data.Monoid
 
-import qualified Control.Exception as C
-import Control.Exception (IOException, throw, finally)
-
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
@@ -132,20 +130,20 @@ instance EventLift Event where
   liftEvent = id
   
 -- | Exception handling within 'Event' computations.
-catchEvent :: Event a -> (IOException -> Event a) -> Event a
+catchEvent :: Exception e => Event a -> (e -> Event a) -> Event a
 catchEvent (Event m) h =
   Event $ \p -> 
-  C.catch (m p) $ \e ->
+  catch (m p) $ \e ->
   let Event m' = h e in m' p
                            
 -- | A computation with finalization part like the 'finally' function.
 finallyEvent :: Event a -> Event b -> Event a
 finallyEvent (Event m) (Event m') =
   Event $ \p ->
-  C.finally (m p) (m' p)
+  finally (m p) (m' p)
 
 -- | Like the standard 'throw' function.
-throwEvent :: IOException -> Event a
+throwEvent :: Exception e => e -> Event a
 throwEvent = throw
 
 -- | Invoke the 'Event' computation.
