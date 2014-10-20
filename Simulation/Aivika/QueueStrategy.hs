@@ -17,6 +17,8 @@ module Simulation.Aivika.QueueStrategy
         DequeueStrategy(..),
         EnqueueStrategy(..),
         PriorityQueueStrategy(..),
+        -- * Strategy Queues
+        StrategyQueue(..),
         -- * Strategy Instances
         FCFS(..),
         LCFS(..),
@@ -35,6 +37,7 @@ import qualified Simulation.Aivika.Vector as V
 -- | Defines the basic queue strategy.
 class QueueStrategy s where
 
+  -- | A queue used by the strategy.
   data StrategyQueue s :: * -> *
 
   -- | Create a new queue by the specified strategy.
@@ -96,6 +99,7 @@ data StaticPriorities = StaticPriorities deriving (Eq, Ord, Show)
 
 instance QueueStrategy FCFS where
 
+  -- | A queue used by the 'FCFS' strategy.
   newtype StrategyQueue FCFS i = FCFSQueue (DoubleLinkedList i)
 
   newStrategyQueue s = fmap FCFSQueue $ liftIO newList
@@ -116,6 +120,7 @@ instance EnqueueStrategy FCFS where
 
 instance QueueStrategy LCFS where
 
+  -- | A queue used by the 'LCFS' strategy.
   newtype StrategyQueue LCFS i = LCFSQueue (DoubleLinkedList i)
   
   newStrategyQueue s = fmap LCFSQueue $ liftIO newList
@@ -136,6 +141,7 @@ instance EnqueueStrategy LCFS where
 
 instance QueueStrategy StaticPriorities where
 
+  -- | A queue used by the 'StaticPriorities' strategy.
   newtype StrategyQueue StaticPriorities i = StaticPriorityQueue (PQ.PriorityQueue i)
   
   newStrategyQueue s = fmap StaticPriorityQueue $ liftIO PQ.newQueue
@@ -156,6 +162,7 @@ instance PriorityQueueStrategy StaticPriorities Double where
 
 instance QueueStrategy SIRO where
 
+  -- | A queue used by the 'SIRO' strategy.
   newtype StrategyQueue SIRO i = SIROQueue (V.Vector i)
 
   newStrategyQueue s = fmap SIROQueue $ liftIO V.newVector
