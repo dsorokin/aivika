@@ -28,7 +28,7 @@ import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Parameter
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
-import Simulation.Aivika.Dynamics.Interpolate
+import Simulation.Aivika.Dynamics.Extra
 
 -- | Create a boxed array with default values.
 newBoxedArray_ :: Ix i => (i, i) -> IO (IOArray i e)

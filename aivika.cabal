@@ -119,8 +119,7 @@ library
                      Simulation.Aivika.Cont
                      Simulation.Aivika.DoubleLinkedList
                      Simulation.Aivika.Dynamics
-                     Simulation.Aivika.Dynamics.Fold
-                     Simulation.Aivika.Dynamics.Interpolate
+                     Simulation.Aivika.Dynamics.Extra
                      Simulation.Aivika.Dynamics.Memo
                      Simulation.Aivika.Dynamics.Memo.Unboxed
                      Simulation.Aivika.Dynamics.Random

@@ -17,7 +17,7 @@ module Simulation.Aivika
         module Simulation.Aivika.Circuit,
         module Simulation.Aivika.Cont,
         module Simulation.Aivika.Dynamics,
-        module Simulation.Aivika.Dynamics.Interpolate,
+        module Simulation.Aivika.Dynamics.Extra,
         module Simulation.Aivika.Dynamics.Memo.Unboxed,
         module Simulation.Aivika.Dynamics.Random,
         module Simulation.Aivika.Event,
@@ -51,7 +51,7 @@ import Simulation.Aivika.Arrival
 import Simulation.Aivika.Circuit
 import Simulation.Aivika.Cont
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Interpolate
+import Simulation.Aivika.Dynamics.Extra
 import Simulation.Aivika.Dynamics.Memo.Unboxed
 import Simulation.Aivika.Dynamics.Random
 import Simulation.Aivika.Event
