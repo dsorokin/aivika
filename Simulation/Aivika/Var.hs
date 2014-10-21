@@ -8,9 +8,9 @@
 -- Tested with: GHC 7.8.3
 --
 -- This module defines a variable that is bound up with the event queue and 
--- that keeps the history of changes storing the values in an array, which
--- allows using the variable in differential and difference equations under
--- some conditions.
+-- that keeps the history of changes storing the values in arrays, which
+-- allows using the variable in differential and difference equations of
+-- System Dynamics within hybrid discrete-continuous simulation.
 --
 module Simulation.Aivika.Var
        (Var,
@@ -25,24 +25,27 @@ module Simulation.Aivika.Var
 
 import Data.Array
 import Data.Array.IO.Safe
-import Data.IORef
 
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Signal
+import Simulation.Aivika.Ref
 import Simulation.Aivika.Signal
 
 import qualified Simulation.Aivika.Vector as V
 import qualified Simulation.Aivika.Vector.Unboxed as UV
 
 -- | Like the 'Ref' reference but keeps the history of changes in 
--- different time points. The 'Var' variable is usually safe in the hybrid 
--- simulation, for example, when it can be used in the differential or
--- difference equations unless you update the variable twice in the
--- same integration time point. Only this variable is much slower than
--- the reference.
+-- different time points. The 'Var' variable is safe to be used in
+-- the hybrid discrete-continuous simulation.
+--
+-- For example, the memoised values of a variable can be used in
+-- the differential or difference equations of System Dynamics, while
+-- the variable iself can be updated wihin the discrete event simulation.
+--
+-- Only this variable is much slower than the reference.
 data Var a = 
   Var { varXS    :: UV.Vector Double,
         varMS    :: V.Vector a,
