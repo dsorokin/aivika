@@ -18,6 +18,7 @@ module Simulation.Aivika.Var
         varChanged_,
         newVar,
         readVar,
+        varMemo,
         writeVar,
         modifyVar,
         freezeVar) where
@@ -28,6 +29,7 @@ import Data.IORef
 
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
+import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Signal
 import Simulation.Aivika.Signal
@@ -42,7 +44,8 @@ import qualified Simulation.Aivika.Vector.Unboxed as UV
 -- same integration time point. Only this variable is much slower than
 -- the reference.
 data Var a = 
-  Var { varXS    :: UV.Vector Double, 
+  Var { varXS    :: UV.Vector Double,
+        varMS    :: V.Vector a,
         varYS    :: V.Vector a,
         varChangedSource :: SignalSource a }
      
@@ -51,24 +54,51 @@ newVar :: a -> Simulation (Var a)
 newVar a =
   Simulation $ \r ->
   do xs <- UV.newVector
+     ms <- V.newVector
      ys <- V.newVector
      UV.appendVector xs $ spcStartTime $ runSpecs r
+     V.appendVector ms a
      V.appendVector ys a
      s  <- invokeSimulation r newSignalSource
      return Var { varXS = xs,
-                  varYS = ys, 
+                  varMS = ms,
+                  varYS = ms,
                   varChangedSource = s }
 
--- | Read the value of a variable.
+-- | Read the first actual, i.e. memoised, value of a variable for the requested time
+-- actuating the current events from the queue if needed.
 --
--- It is safe to run the resulting computation with help of the 'runEventWith'
--- function using modes 'CurrentEventsOrFromPast' and 'EarlierEventsOrFromPast', 
--- which is necessary if you are going to use the variable in the differential 
--- or difference equations. Only it is preferrable if the variable is not updated twice
--- in the same integration time point; otherwise, different values can be returned
--- for the same point.
+-- This computation can be used in the ordinary differential and
+-- difference equations of System Dynamics.
+varMemo :: Var a -> Dynamics a
+varMemo v =
+  runEventWith CurrentEventsOrFromPast $
+  Event $ \p ->
+  do let xs = varXS v
+         ms = varMS v
+         ys = varYS v
+         t  = pointTime p
+     count <- UV.vectorCount xs
+     let i = count - 1
+     x <- UV.readVector xs i
+     if x < t
+       then do a <- V.readVector ys i
+               UV.appendVector xs t
+               V.appendVector ms a
+               V.appendVector ys a
+               return a
+       else if x == t
+            then V.readVector ms i
+            else do i <- UV.vectorBinarySearch xs t
+                    if i >= 0
+                      then V.readVector ms i
+                      else V.readVector ms $ - (i + 1) - 1
+
+-- | Read the recent actual value of a variable for the requested time.
+--
+-- This computation is destined for using within discrete event simulation.
 readVar :: Var a -> Event a
-readVar v =
+readVar v = 
   Event $ \p ->
   do let xs = varXS v
          ys = varYS v
@@ -88,6 +118,7 @@ writeVar :: Var a -> a -> Event ()
 writeVar v a =
   Event $ \p ->
   do let xs = varXS v
+         ms = varMS v
          ys = varYS v
          t  = pointTime p
          s  = varChangedSource v
@@ -99,6 +130,7 @@ writeVar v a =
        else if t == x
             then V.writeVector ys i $! a
             else do UV.appendVector xs t
+                    V.appendVector ms $! a
                     V.appendVector ys $! a
      invokeEvent p $ triggerSignal s a
 
@@ -107,6 +139,7 @@ modifyVar :: Var a -> (a -> a) -> Event ()
 modifyVar v f =
   Event $ \p ->
   do let xs = varXS v
+         ms = varMS v
          ys = varYS v
          t  = pointTime p
          s  = varChangedSource v
@@ -123,23 +156,25 @@ modifyVar v f =
             else do a <- V.readVector ys i
                     let b = f a
                     UV.appendVector xs t
+                    V.appendVector ms $! b
                     V.appendVector ys $! b
                     invokeEvent p $ triggerSignal s b
 
 -- | Freeze the variable and return in arrays the time points and corresponded 
--- values when the variable had changed in different time points: (1) the last
--- actual value per each time point is provided and (2) the time points are
--- sorted in ascending order.
+-- first and last values when the variable had changed or had been memoised in
+-- different time points: (1) the time points are sorted in ascending order;
+-- (2) the first and last actual values per each time point are provided.
 --
 -- If you need to get all changes including those ones that correspond to the same
 -- simulation time points then you can use the 'newSignalHistory' function passing
 -- in the 'varChanged' signal to it and then call function 'readSignalHistory'.
-freezeVar :: Var a -> Event (Array Int Double, Array Int a)
+freezeVar :: Var a -> Event (Array Int Double, Array Int a, Array Int a)
 freezeVar v =
   Event $ \p ->
   do xs <- UV.freezeVector (varXS v)
+     ms <- V.freezeVector (varMS v)
      ys <- V.freezeVector (varYS v)
-     return (xs, ys)
+     return (xs, ms, ys)
      
 -- | Return a signal that notifies about every change of the variable state.
 varChanged :: Var a -> Signal a
