@@ -119,7 +119,7 @@ traversePath source target =
               continue st' p
 
 -- | Add to the state a timeout handler that will be actuated 
--- in the specified time period, while the state remains active.
+-- in the specified time period if the state will remain active.
 addTimeout :: AgentState -> Double -> Event () -> Event ()
 addTimeout st dt action =
   Event $ \p ->
