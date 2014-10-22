@@ -87,7 +87,7 @@ scan1Dynamics f tr m =
 
 -- | Like the standard 'scanl' function but applied to values in 
 -- the integration time points. The accumulator values are transformed
--- according to the second argument, which should be either function
+-- according to the third argument, which should be either function
 -- 'memo0Dynamics' or its unboxed version.
 scanDynamics :: (a -> b -> a)
                 -> a
