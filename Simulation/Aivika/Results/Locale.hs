@@ -176,6 +176,7 @@ data ResultId = TimeId
                 -- ^ An user defined description.
               | LocalisedResultId (M.Map ResultLocale ResultDescription)
                 -- ^ A localised property or object name.
+              deriving (Eq, Ord, Show)
 
 -- | The Russian locale.
 russianResultLocale :: ResultLocale

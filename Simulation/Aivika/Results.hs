@@ -22,6 +22,7 @@ module Simulation.Aivika.Results
         resultSummary,
         resultByName,
         resultByProperty,
+        resultById,
         resultByIndex,
         resultBySubscript,
         ResultComputing(..),
@@ -1011,7 +1012,9 @@ resultByName name rs =
       "Not found result source with name " ++ name ++
       ": resultByName"
 
--- | Take a result from the object with the specified property label.
+-- | Take a result from the object with the specified property label,
+-- but it is more preferrable to refer to the property by its 'ResultId'
+-- identifier with help of the 'resultById' function.
 resultByProperty :: ResultName -> ResultTransform
 resultByProperty label rs = flip composeResults rs loop
   where
@@ -1036,6 +1039,46 @@ resultByProperty label rs = flip composeResults rs loop
           "Result source " ++ resultSourceName x ++
           " is neither object, nor vector " ++
           ": resultByProperty"
+
+-- | Take a result from the object with the specified identifier. It can identify
+-- an item, object property, the object iself, vector or its elements.
+resultById :: ResultId -> ResultTransform
+resultById i rs = flip composeResults rs loop
+  where
+    loop x =
+      case x of
+        ResultItemSource (ResultItem s) ->
+          if resultItemId s == i
+          then [x]
+          else error $
+               "Expected to find item with Id = " ++ show i ++
+               ", while the item " ++ resultItemName s ++
+               " has actual Id = " ++ show (resultItemId s) ++
+               ": resultById"
+        ResultObjectSource s ->
+          if resultObjectId s == i
+          then [x]
+          else let ps =
+                     flip filter (resultObjectProperties s) $ \p ->
+                     resultPropertyId p == i
+               in case ps of
+                 [] ->
+                   error $
+                   "Not found property with Id = " ++ show i ++
+                   " for object " ++ resultObjectName s ++
+                   " that has actual Id = " ++ show (resultObjectId s) ++
+                   ": resultById"
+                 ps ->
+                   map resultPropertySource ps
+        ResultVectorSource s ->
+          if resultVectorId s == i
+          then [x]
+          else concat $ map loop $ A.elems $ resultVectorItems s
+        x ->
+          error $
+          "Result source " ++ resultSourceName x ++
+          " is neither item, nor object, nor vector " ++
+          ": resultById"
 
 -- | Take a result from the vector by the specified integer index.
 resultByIndex :: Int -> ResultTransform
