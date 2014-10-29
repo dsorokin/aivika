@@ -33,6 +33,7 @@ import qualified Simulation.Aivika.Queue as Q
 import qualified Simulation.Aivika.Queue.Infinite as IQ
 import Simulation.Aivika.Arrival
 import Simulation.Aivika.Server
+import Simulation.Aivika.Activity
 
 -- | A locale to output the simulation results.
 --
@@ -172,6 +173,24 @@ data ResultId = TimeId
                 -- ^ Property 'serverProcessingFactor'.
               | ServerOutputWaitFactorId
                 -- ^ Property 'serverOutputWaitFactor'.
+              | ActivityId
+                -- ^ Represents an 'Activity'.
+              | ActivityInitStateId
+                -- ^ Property 'activityInitState'.
+              | ActivityStateId
+                -- ^ Property 'activityState'.
+              | ActivityTotalUtilisationTimeId
+                -- ^ Property 'activityTotalUtilisationTime'.
+              | ActivityTotalIdleTimeId
+                -- ^ Property 'activityTotalIdleTime'.
+              | ActivityUtilisationTimeId
+                -- ^ Property 'activityUtilisationTime'.
+              | ActivityIdleTimeId
+                -- ^ Property 'activityIdleTime'.
+              | ActivityUtilisationFactorId
+                -- ^ Property 'activityUtilisationFactor'.
+              | ActivityIdleFactorId
+                -- ^ Property 'activityIdleFactor'.
               | UserDefinedResultId ResultDescription
                 -- ^ An user defined description.
               | LocalisedResultId (M.Map ResultLocale ResultDescription)
@@ -251,6 +270,15 @@ russianResultLocalisation ServerOutputWaitTimeId = "время блокиров�
 russianResultLocalisation ServerInputWaitFactorId = "относительное время блокировки в ожидании ввода (от 0 до 1)"
 russianResultLocalisation ServerProcessingFactorId = "относительное время, потраченное на саму обработку заданий (от 0 до 1)"
 russianResultLocalisation ServerOutputWaitFactorId = "относительное время блокировки при попытке доставить вывод (от 0 до 1)"
+russianResultLocalisation ActivityId = "активность"
+russianResultLocalisation ActivityInitStateId = "начальное состояние"
+russianResultLocalisation ActivityStateId = "текущее состояние"
+russianResultLocalisation ActivityTotalUtilisationTimeId = "общее время использования"
+russianResultLocalisation ActivityTotalIdleTimeId = "общее время простоя"
+russianResultLocalisation ActivityUtilisationTimeId = "статистика времени использования"
+russianResultLocalisation ActivityIdleTimeId = "статистика времени простоя"
+russianResultLocalisation ActivityUtilisationFactorId = "относительное время использования (от 0 до 1)"
+russianResultLocalisation ActivityIdleFactorId = "относительное время простоя (от 0 до 1)"
 russianResultLocalisation (UserDefinedResultId m) = m
 russianResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation russianResultLocale x
@@ -320,6 +348,15 @@ englishResultLocalisation ServerOutputWaitTimeId = "the time spent on delivering
 englishResultLocalisation ServerInputWaitFactorId = "the relative time spent while waiting for input (from 0 to 1)"
 englishResultLocalisation ServerProcessingFactorId = "the relative time spent on processing the tasks (from 0 to 1)"
 englishResultLocalisation ServerOutputWaitFactorId = "the relative time spent on delivering the output (from 0 to 1)"
+englishResultLocalisation ActivityId = "the activity"
+englishResultLocalisation ActivityInitStateId = "the initial state"
+englishResultLocalisation ActivityStateId = "the current state"
+englishResultLocalisation ActivityTotalUtilisationTimeId = "the total time of utilisation"
+englishResultLocalisation ActivityTotalIdleTimeId = "the total idle time"
+englishResultLocalisation ActivityUtilisationTimeId = "the utilisation time"
+englishResultLocalisation ActivityIdleTimeId = "the idle time"
+englishResultLocalisation ActivityUtilisationFactorId = "the relative utilisation time (от 0 до 1)"
+englishResultLocalisation ActivityIdleFactorId = "the relative idle time (от 0 до 1)"
 englishResultLocalisation (UserDefinedResultId m) = m
 englishResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation englishResultLocale x
