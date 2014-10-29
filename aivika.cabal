@@ -113,6 +113,7 @@ flag haste-inst
 library
 
     exposed-modules: Simulation.Aivika
+                     Simulation.Aivika.Activity
                      Simulation.Aivika.Agent
                      Simulation.Aivika.Arrival
                      Simulation.Aivika.Circuit
