@@ -701,7 +701,7 @@ instance ResultItemable (ResultValue String) where
   resultItemToDoubleStatsValue = voidResultValue
   resultItemToDoubleTimingStatsValue = voidResultValue
 
-  resultItemToStringValue = fmap show
+  resultItemToStringValue = id
 
   resultItemExpansion = ResultItemSource . ResultItem
   resultItemSummary = ResultItemSource . ResultItem
