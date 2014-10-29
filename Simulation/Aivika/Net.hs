@@ -27,6 +27,7 @@
 module Simulation.Aivika.Net
        (-- * Net Arrow
         Net(..),
+        iterateNet,
         -- * Net Primitives
         emptyNet,
         arrNet,
@@ -240,3 +241,9 @@ delayNet :: a -> Net a a
 delayNet a0 =
   Net $ \a ->
   return (a0, delayNet a)
+
+-- | Iterate infinitely using the specified initial value.
+iterateNet :: Net a a -> a -> Process ()
+iterateNet (Net f) a =
+  do (a', x) <- f a
+     iterateNet x a'
