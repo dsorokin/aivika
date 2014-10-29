@@ -360,7 +360,7 @@ concatQueuedStreams s streams = Cons z where
                   liftIO $ writeIORef ref Nothing
                   releaseResource writing
                   return a
-         forM_ streams $ spawnProcess CancelTogether . writer
+         forM_ streams $ spawnProcess . writer
          a <- reader
          let xs = repeatProcess (releaseResource conting >> reader)
          return (a, xs)
@@ -391,7 +391,7 @@ concatPriorityStreams s streams = Cons z where
                   liftIO $ writeIORef ref Nothing
                   releaseResource writing
                   return a
-         forM_ streams $ spawnProcess CancelTogether . writer
+         forM_ streams $ spawnProcess . writer
          a <- reader
          let xs = repeatProcess (releaseResource conting >> reader)
          return (a, xs)
@@ -475,7 +475,7 @@ prefetchStream s = Cons z where
                   liftIO $ writeIORef ref Nothing
                   releaseResource writing
                   return a
-         spawnProcess CancelTogether $ writer s
+         spawnProcess $ writer s
          runStream $ repeatProcess reader
 
 -- | Return a stream of values triggered by the specified signal.
@@ -510,7 +510,7 @@ signalStream s =
 streamSignal :: Stream a -> Process (Signal a)
 streamSignal z =
   do s <- liftSimulation newSignalSource
-     spawnProcess CancelTogether $
+     spawnProcess $
        consumeStream (liftEvent . triggerSignal s) z
      return $ publishSignal s
 

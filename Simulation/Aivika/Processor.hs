@@ -264,7 +264,7 @@ bufferProcessor :: (Stream a -> Process ())
 bufferProcessor consume output =
   Processor $ \xs ->
   Cons $
-  do spawnProcess CancelTogether (consume xs)
+  do spawnProcess (consume xs)
      runStream output
 
 -- | Like 'bufferProcessor' but allows creating a loop when some items
@@ -289,7 +289,7 @@ bufferProcessorLoop consume preoutput cond body =
        liftSimulation $
        partitionEitherStream $
        runProcessor cond preoutput
-     spawnProcess CancelTogether 
+     spawnProcess 
        (consume xs $ runProcessor body reverted)
      runStream output
 
@@ -396,9 +396,9 @@ queueProcessorLoopParallel :: (a -> Process ())
 queueProcessorLoopParallel enqueue dequeue =
   bufferProcessorLoop
   (\bs cs ->
-    do spawnProcess CancelTogether $
+    do spawnProcess $
          consumeStream enqueue bs
-       spawnProcess CancelTogether $
+       spawnProcess $
          consumeStream enqueue cs)
   (repeatProcess dequeue)
 

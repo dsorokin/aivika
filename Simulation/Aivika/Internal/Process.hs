@@ -33,6 +33,8 @@ module Simulation.Aivika.Internal.Process
         -- * Spawning Processes
         spawnProcess,
         spawnProcessUsingId,
+        spawnProcessWith,
+        spawnProcessUsingIdWith,
         -- * Enqueuing Process
         enqueueProcess,
         enqueueProcessUsingId,
@@ -466,17 +468,28 @@ processUsingId pid x =
   do liftEvent $ processIdPrepare pid
      rerunCont (invokeProcess pid x) (processCancelSource pid)
 
--- | Spawn the child process specifying how the child and parent processes
--- should be cancelled in case of need.
-spawnProcess :: ContCancellation -> Process () -> Process ()
-spawnProcess cancellation x =
-  do pid <- liftSimulation newProcessId
-     spawnProcessUsingId cancellation pid x
+-- | Spawn the child process. In case of cancelling one of the processes,
+-- other process will be cancelled too.
+spawnProcess :: Process () -> Process ()
+spawnProcess = spawnProcessWith CancelTogether
+
+-- | Spawn the child process with the specified process identifier.
+-- In case of cancelling one of the processes, other process will
+-- be cancelled too.
+spawnProcessUsingId :: ProcessId -> Process () -> Process ()
+spawnProcessUsingId = spawnProcessUsingIdWith CancelTogether
 
 -- | Spawn the child process specifying how the child and parent processes
 -- should be cancelled in case of need.
-spawnProcessUsingId :: ContCancellation -> ProcessId -> Process () -> Process ()
-spawnProcessUsingId cancellation pid x =
+spawnProcessWith :: ContCancellation -> Process () -> Process ()
+spawnProcessWith cancellation x =
+  do pid <- liftSimulation newProcessId
+     spawnProcessUsingIdWith cancellation pid x
+
+-- | Spawn the child process specifying how the child and parent processes
+-- should be cancelled in case of need.
+spawnProcessUsingIdWith :: ContCancellation -> ProcessId -> Process () -> Process ()
+spawnProcessUsingIdWith cancellation pid x =
   Process $ \pid' ->
   do liftEvent $ processIdPrepare pid
      spawnCont cancellation (invokeProcess pid x) (processCancelSource pid)
@@ -584,12 +597,12 @@ timeoutProcessUsingId :: Double -> ProcessId -> Process a -> Process (Maybe a)
 timeoutProcessUsingId timeout pid p =
   do s <- liftSimulation newSignalSource
      timeoutPid <- liftSimulation newProcessId
-     spawnProcessUsingId CancelChildAfterParent timeoutPid $
+     spawnProcessUsingIdWith CancelChildAfterParent timeoutPid $
        finallyProcess
        (holdProcess timeout)
        (liftEvent $
         cancelProcessWithId pid)
-     spawnProcessUsingId CancelChildAfterParent pid $
+     spawnProcessUsingIdWith CancelChildAfterParent pid $
        do r <- liftIO $ newIORef Nothing
           finallyProcess
             (catchProcess

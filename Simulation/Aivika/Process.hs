@@ -35,6 +35,8 @@ module Simulation.Aivika.Process
         -- * Spawning Processes
         spawnProcess,
         spawnProcessUsingId,
+        spawnProcessWith,
+        spawnProcessUsingIdWith,
         -- * Enqueueing Process
         enqueueProcess,
         enqueueProcessUsingId,
