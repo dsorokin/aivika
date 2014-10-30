@@ -25,6 +25,7 @@ module Simulation.Aivika.SystemDynamics
         ifDynamics,
         -- * Ordinary Differential Equations
         integ,
+        integEither,
         smoothI,
         smooth,
         smooth3I,
@@ -261,6 +262,41 @@ integ diff i =
           Euler -> return $ Dynamics $ integEuler diff i y
           RungeKutta2 -> return $ Dynamics $ integRK2 diff i y
           RungeKutta4 -> return $ Dynamics $ integRK4 diff i y
+      return y
+
+integEulerEither :: Dynamics (Either Double Double)
+                    -> Dynamics Double 
+                    -> Dynamics Double 
+                    -> Point -> IO Double
+integEulerEither (Dynamics f) (Dynamics i) (Dynamics y) p = 
+  case pointIteration p of
+    0 -> 
+      i p
+    n -> do 
+      let sc = pointSpecs p
+          ty = basicTime sc (n - 1) 0
+          py = p { pointTime = ty, pointIteration = n - 1, pointPhase = 0 }
+      b <- f py
+      case b of
+        Left  b -> return b
+        Right b -> do
+          a <- y py
+          let !v = a + spcDT (pointSpecs p) * b
+          return v
+
+-- | Like 'integ' but allows either setting a new 'Left' integral value,
+-- or integrating using the 'Right' derivative directly within computation.
+--
+-- This function always uses Euler's method.
+integEither :: Dynamics (Either Double Double)
+               -- ^ either set a new 'Left' integral value, or use a 'Right' derivative
+               -> Dynamics Double
+               -- ^ the initial value
+               -> Simulation (Dynamics Double)
+integEither diff i =
+  mdo y <- MU.memoDynamics z
+      z <- Simulation $ \r ->
+        return $ Dynamics $ integEulerEither diff i y
       return y
 
 -- | Return the first order exponential smooth.
