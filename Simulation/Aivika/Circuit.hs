@@ -42,7 +42,9 @@ module Simulation.Aivika.Circuit
         circuitProcessor,
         -- * Integrals and Difference Equations
         integCircuit,
+        integCircuitEither,
         sumCircuit,
+        sumCircuitEither,
         -- * The Circuit Transform
         circuitTransform) where
 
@@ -330,6 +332,32 @@ integCircuit init = start
              v  = v0 + a0 * dt
          v `seq` return (v, next t v a)
 
+-- | Like 'integCircuit' but allows either setting a new 'Left' integral value,
+-- or using the 'Right' derivative when integrating by Euler's method.
+integCircuitEither :: Double
+                      -- ^ the initial value
+                      -> Circuit (Either Double Double) Double
+                      -- ^ map either a new 'Left' value or
+                      -- the 'Right' derivative to an integral
+integCircuitEither init = start
+  where
+    start = 
+      Circuit $ \a ->
+      Event $ \p ->
+      do let t = pointTime p
+         return (init, next t init a)
+    next t0 v0 a0 =
+      Circuit $ \a ->
+      Event $ \p ->
+      do let t = pointTime p
+         case a0 of
+           Left v ->
+             v `seq` return (v, next t v a)
+           Right a0 -> do
+             let dt = t - t0
+                 v  = v0 + a0 * dt
+             v `seq` return (v, next t v a)
+
 -- | A sum of differences starting from the specified initial value.
 --
 -- Consider using the more accurate 'diffsum' function whener possible as
@@ -358,6 +386,30 @@ sumCircuit init = start
       Event $ \p ->
       do let v = v0 + a0
          v `seq` return (v, next v a)
+
+-- | Like 'sumCircuit' but allows either setting a new 'Left' value for the sum, or updating it
+-- by specifying the 'Right' difference.
+sumCircuitEither :: Num a =>
+                    a
+                    -- ^ the initial value
+                    -> Circuit (Either a a) a
+                    -- ^ map either a new 'Left' value or
+                    -- the 'Right' difference to a sum
+sumCircuitEither init = start
+  where
+    start = 
+      Circuit $ \a ->
+      Event $ \p ->
+      return (init, next init a)
+    next v0 a0 =
+      Circuit $ \a ->
+      Event $ \p ->
+      case a0 of
+        Left v ->
+          v `seq` return (v, next v a)
+        Right a0 -> do
+          let v = v0 + a0
+          v `seq` return (v, next v a)
 
 -- | Approximate the circuit as a transform of time varying function,
 -- calculating the values in the integration time points and then
