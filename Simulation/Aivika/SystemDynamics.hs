@@ -42,6 +42,7 @@ module Simulation.Aivika.SystemDynamics
         trend,
         -- * Difference Equations
         diffsum,
+        diffsumEither,
         -- * Table Functions
         lookupDynamics,
         lookupStepwiseDynamics,
@@ -526,6 +527,36 @@ diffsum (Dynamics diff) (Dynamics i) =
             b <- diff py
             let !v = a + b
             return v
+      return y
+
+-- | Like 'diffsum' but allows either setting a new 'Left' sum value, or adding the 'Right' difference.
+diffsumEither :: (Num a, Unboxed a)
+                 => Dynamics (Either a a)
+                 -- ^ either set the 'Left' value for the sum, or add the 'Right' difference to the sum
+                 -> Dynamics a
+                 -- ^ the initial value
+                 -> Simulation (Dynamics a)
+                 -- ^ the sum
+diffsumEither (Dynamics diff) (Dynamics i) =
+  mdo y <-
+        MU.memo0Dynamics $
+        Dynamics $ \p ->
+        case pointIteration p of
+          0 -> i p
+          n -> do 
+            let Dynamics m = y
+                sc = pointSpecs p
+                ty = basicTime sc (n - 1) 0
+                py = p { pointTime = ty, 
+                         pointIteration = n - 1, 
+                         pointPhase = 0 }
+            b <- diff py
+            case b of
+              Left b  -> return b
+              Right b -> do
+                a <- m py
+                let !v = a + b
+                return v
       return y
 
 --
