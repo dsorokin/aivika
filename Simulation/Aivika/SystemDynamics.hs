@@ -279,7 +279,8 @@ integEulerEither (Dynamics f) (Dynamics i) (Dynamics y) p =
           py = p { pointTime = ty, pointIteration = n - 1, pointPhase = 0 }
       b <- f py
       case b of
-        Left  b -> return b
+        Left v ->
+          return v
         Right b -> do
           a <- y py
           let !v = a + spcDT (pointSpecs p) * b
@@ -552,7 +553,8 @@ diffsumEither (Dynamics diff) (Dynamics i) =
                          pointPhase = 0 }
             b <- diff py
             case b of
-              Left b  -> return b
+              Left v ->
+                return v
               Right b -> do
                 a <- m py
                 let !v = a + b
