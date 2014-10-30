@@ -21,7 +21,9 @@ module Simulation.Aivika.Transform
         timeTransform,
         -- * Differential and Difference Equations
         integTransform,
-        sumTransform) where
+        integTransformEither,
+        sumTransform,
+        sumTransformEither) where
 
 import qualified Control.Category as C
 import Control.Arrow
@@ -112,15 +114,32 @@ integTransform :: Dynamics Double
                   -- ^ the initial value
                   -> Transform Double Double
                   -- ^ map the derivative to an integral
-integTransform = Transform . integ
+integTransform init = Transform $ \diff -> integ diff init
+  
+-- | Like 'integTransform' but allows either setting a new 'Left' value of the integral,
+-- or updating it by the specified 'Right' derivative.
+integTransformEither :: Dynamics Double
+                        -- ^ the initial value
+                        -> Transform (Either Double Double) Double
+                        -- ^ map either a new 'Left' value or the 'Right' derivative to an integral
+integTransformEither init = Transform $ \diff -> integEither diff init
 
 -- | Return a transform that maps the difference to a sum
 -- by the specified initial value.
 --
 -- This is actually the 'diffsum' function wrapped in the 'Transform' type. 
-sumTransform :: (Num a, Unboxed a) =>
-                Dynamics a
+sumTransform :: (Num a, Unboxed a)
+                => Dynamics a
                 -- ^ the initial value
                 -> Transform a a
                 -- ^ map the difference to a sum
-sumTransform = Transform . diffsum
+sumTransform init = Transform $ \diff -> diffsum diff init
+
+-- | Like 'sumTransform' but allows either setting a new 'Left' value of the sum,
+-- or updating it by the specified 'Right' difference.
+sumTransformEither :: (Num a, Unboxed a)
+                      => Dynamics a
+                      -- ^ the initial value
+                      -> Transform (Either a a) a
+                      -- ^ map either a new 'Left' value or the 'Right' difference to a sum
+sumTransformEither init = Transform $ \diff -> diffsumEither diff init
