@@ -468,7 +468,7 @@ iterateCircuitInPoints ps cir a =
 iterateCircuitInIntegTimes_ :: Circuit a a -> a -> Event ()
 iterateCircuitInIntegTimes_ cir a =
   Event $ \p ->
-  do let ps = nextIntegPoints (pointRun p) (pointIteration p + 1)
+  do let ps = integPointsStartingFrom p
      invokeEvent p $ 
        iterateCircuitInPoints_ ps cir a
 
@@ -485,7 +485,7 @@ iterateCircuitInTimes_ ts cir a =
 iterateCircuitInIntegTimes :: Circuit a a -> a -> Event (Task a)
 iterateCircuitInIntegTimes cir a =
   Event $ \p ->
-  do let ps = nextIntegPoints (pointRun p) (pointIteration p + 1)
+  do let ps = integPointsStartingFrom p
      invokeEvent p $ 
        iterateCircuitInPoints ps cir a
 
@@ -516,7 +516,7 @@ iterateCircuitInPointsMaybe (p : ps) cir a =
 iterateCircuitInIntegTimesMaybe :: Circuit a (Maybe a) -> a -> Event ()
 iterateCircuitInIntegTimesMaybe cir a =
   Event $ \p ->
-  do let ps = nextIntegPoints (pointRun p) (pointIteration p + 1)
+  do let ps = integPointsStartingFrom p
      invokeEvent p $ 
        iterateCircuitInPointsMaybe ps cir a
 
@@ -554,7 +554,7 @@ iterateCircuitInPointsEither ps cir a =
 iterateCircuitInIntegTimesEither :: Circuit a (Either b a) -> a -> Event (Task (Either b a))
 iterateCircuitInIntegTimesEither cir a =
   Event $ \p ->
-  do let ps = nextIntegPoints (pointRun p) (pointIteration p + 1)
+  do let ps = integPointsStartingFrom p
      invokeEvent p $ 
        iterateCircuitInPointsEither ps cir a
 

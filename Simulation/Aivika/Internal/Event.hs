@@ -304,7 +304,7 @@ enqueueEventWithPoints xs (Event e) = loop xs
 enqueueEventWithIntegTimes :: Event () -> Event ()
 enqueueEventWithIntegTimes e =
   Event $ \p ->
-  let points = nextIntegPoints (pointRun p) (pointIteration p + 1)
+  let points = integPointsStartingFrom p
   in invokeEvent p $ enqueueEventWithPoints points e
 
 -- | It allows cancelling the event.
