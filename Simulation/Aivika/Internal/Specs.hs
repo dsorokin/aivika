@@ -26,7 +26,8 @@ module Simulation.Aivika.Internal.Specs
         integPoints,
         integStartPoint,
         integStopPoint,
-        pointAt) where
+        pointAt,
+        nextIntegPoints) where
 
 import Data.IORef
 
@@ -221,3 +222,15 @@ pointAt r t = p
                     pointTime = t,
                     pointIteration = n,
                     pointPhase = -1 }
+
+-- | Return the integration time points startin from the specified iteration.
+nextIntegPoints :: Run -> Int -> [Point]
+nextIntegPoints r n0 = points
+  where sc = runSpecs r
+        (nl, nu) = integIterationBnds sc
+        points   = map point [n0 .. nu]
+        point n  = Point { pointSpecs = sc,
+                           pointRun = r,
+                           pointTime = basicTime sc n 0,
+                           pointIteration = n,
+                           pointPhase = 0 }
