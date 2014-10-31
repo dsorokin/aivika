@@ -101,6 +101,7 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/Furnace.hs
                      examples/InspectionAdjustmentStations.hs
                      examples/WorkStationsInSeries.hs
+                     examples/QuarryOperations.hs
                      examples/TimeOut.hs
                      examples/TimeOutInt.hs
                      examples/TimeOutWait.hs
