@@ -28,6 +28,8 @@ module Simulation.Aivika.Net
        (-- * Net Arrow
         Net(..),
         iterateNet,
+        iterateNetMaybe,
+        iterateNetEither,
         -- * Net Primitives
         emptyNet,
         arrNet,
@@ -247,3 +249,21 @@ iterateNet :: Net a a -> a -> Process ()
 iterateNet (Net f) a =
   do (a', x) <- f a
      iterateNet x a'
+
+-- | Iterate the net using the specified initial value
+-- until 'Nothing' is returned within the 'Net' computation.
+iterateNetMaybe :: Net a (Maybe a) -> a -> Process ()
+iterateNetMaybe (Net f) a =
+  do (a', x) <- f a
+     case a' of
+       Nothing -> return ()
+       Just a' -> iterateNetMaybe x a'
+
+-- | Iterate the net using the specified initial value
+-- until the 'Left' result is returned within the 'Net' computation.
+iterateNetEither :: Net a (Either b a) -> a -> Process b
+iterateNetEither (Net f) a =
+  do (ba', x) <- f a
+     case ba' of
+       Left b'  -> return b'
+       Right a' -> iterateNetEither x a'
