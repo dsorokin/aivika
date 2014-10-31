@@ -20,8 +20,12 @@ module Simulation.Aivika.Circuit
         Circuit(..),
         iterateCircuitInIntegTimes,
         iterateCircuitInIntegTimes_,
+        iterateCircuitInIntegTimesMaybe,
+        iterateCircuitInIntegTimesEither,
         iterateCircuitInTimes,
         iterateCircuitInTimes_,
+        iterateCircuitInTimesMaybe,
+        iterateCircuitInTimesEither,
         -- * Circuit Primitives
         arrCircuit,
         accumCircuit,
@@ -456,8 +460,9 @@ iterateCircuitInPoints ps cir a =
            do (a', cir') <- invokeEvent p $ runCircuit cir a
               invokeEvent p $ loop ps cir' a' source
      source <- liftSimulation newSignalSource
+     task <- runTask $ processAwait $ publishSignal source
      loop ps cir a source
-     runTask $ processAwait $ publishSignal source
+     return task
 
 -- | Iterate the circuit in the integration time points.
 iterateCircuitInIntegTimes_ :: Circuit a a -> a -> Event ()
@@ -492,3 +497,74 @@ iterateCircuitInTimes ts cir a =
   do let ps = map (pointAt $ pointRun p) ts
      invokeEvent p $ 
        iterateCircuitInPoints ps cir a 
+
+-- | Iterate the circuit in the specified time points, interrupting the iteration
+-- immediately if 'Nothing' is returned within the 'Circuit' computation.
+iterateCircuitInPointsMaybe :: [Point] -> Circuit a (Maybe a) -> a -> Event ()
+iterateCircuitInPointsMaybe [] cir a = return ()
+iterateCircuitInPointsMaybe (p : ps) cir a =
+  enqueueEvent (pointTime p) $
+  Event $ \p' ->
+  do (a', cir') <- invokeEvent p $ runCircuit cir a
+     case a' of
+       Nothing -> return ()
+       Just a' ->
+         invokeEvent p $ iterateCircuitInPointsMaybe ps cir' a'
+
+-- | Iterate the circuit in the integration time points, interrupting the iteration
+-- immediately if 'Nothing' is returned within the 'Circuit' computation.
+iterateCircuitInIntegTimesMaybe :: Circuit a (Maybe a) -> a -> Event ()
+iterateCircuitInIntegTimesMaybe cir a =
+  Event $ \p ->
+  do let ps = integPoints $ pointRun p
+     invokeEvent p $ 
+       iterateCircuitInPointsMaybe ps cir a
+
+-- | Iterate the circuit in the specified time points, interrupting the iteration
+-- immediately if 'Nothing' is returned within the 'Circuit' computation.
+iterateCircuitInTimesMaybe :: [Double] -> Circuit a (Maybe a) -> a -> Event ()
+iterateCircuitInTimesMaybe ts cir a =
+  Event $ \p ->
+  do let ps = map (pointAt $ pointRun p) ts
+     invokeEvent p $ 
+       iterateCircuitInPointsMaybe ps cir a
+
+-- | Iterate the circuit in the specified time points returning a task
+-- that computes the final output of the circuit either after all points
+-- are exhausted, or after the 'Left' result of type @b@ is received,
+-- which interrupts the computation immediately.
+iterateCircuitInPointsEither :: [Point] -> Circuit a (Either b a) -> a -> Event (Task (Either b a))
+iterateCircuitInPointsEither ps cir a =
+  do let loop [] cir ba source = triggerSignal source ba
+         loop ps cir ba@(Left b) source = triggerSignal source ba 
+         loop (p : ps) cir (Right a) source =
+           enqueueEvent (pointTime p) $
+           Event $ \p' ->
+           do (ba', cir') <- invokeEvent p $ runCircuit cir a
+              invokeEvent p $ loop ps cir' ba' source
+     source <- liftSimulation newSignalSource
+     task <- runTask $ processAwait $ publishSignal source
+     loop ps cir (Right a) source
+     return task
+
+-- | Iterate the circuit in the integration time points returning a task
+-- that computes the final output of the circuit either after all points
+-- are exhausted, or after the 'Left' result of type @b@ is received,
+-- which interrupts the computation immediately.
+iterateCircuitInIntegTimesEither :: Circuit a (Either b a) -> a -> Event (Task (Either b a))
+iterateCircuitInIntegTimesEither cir a =
+  Event $ \p ->
+  do let ps = integPoints $ pointRun p
+     invokeEvent p $ 
+       iterateCircuitInPointsEither ps cir a
+
+-- | Iterate the circuit in the specified time points returning a task
+-- that computes the final output of the circuit either after all points
+-- are exhausted, or after the 'Left' result of type @b@ is received,
+-- which interrupts the computation immediately.
+iterateCircuitInTimesEither :: [Double] -> Circuit a (Either b a) -> a -> Event (Task (Either b a))
+iterateCircuitInTimesEither ts cir a =
+  Event $ \p ->
+  do let ps = map (pointAt $ pointRun p) ts
+     invokeEvent p $ 
+       iterateCircuitInPointsEither ps cir a
