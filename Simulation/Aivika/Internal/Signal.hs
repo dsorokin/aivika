@@ -49,7 +49,9 @@ module Simulation.Aivika.Internal.Signal
         Signalable(..),
         signalableChanged,
         emptySignalable,
-        appendSignalable) where
+        appendSignalable,
+        -- * Debugging
+        traceSignal) where
 
 import Data.IORef
 import Data.Monoid
@@ -378,3 +380,9 @@ arrivalSignal m =
                                        Nothing -> Nothing
                                        Just t0 -> Just (t - t0) }
          }
+
+-- | Show the debug message with the current simulation time.
+traceSignal :: String -> Signal a -> Signal a 
+traceSignal message m =
+  Signal { handleSignal = \h ->
+            handleSignal m $ traceEvent message . h }
