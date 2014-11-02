@@ -1833,6 +1833,16 @@ instance ResultComputing m => ResultProvider (m (TimingStats Double)) where
   resultSource' name i m =
     ResultItemSource $ ResultItem $ computeResultValue name i m
 
+instance ResultComputing m => ResultProvider (m (SamplingCounter Double)) where
+
+  resultSource' name i m =
+    samplingCounterResultSource $ computeResultValue name i m
+
+instance ResultComputing m => ResultProvider (m (TimingCounter Double)) where
+
+  resultSource' name i m =
+    timingCounterResultSource $ computeResultValue name i m
+
 instance ResultComputing m => ResultProvider (m Int) where
 
   resultSource' name i m =
