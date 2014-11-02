@@ -166,6 +166,7 @@ memoSimulation m =
 
 -- | The root of simulation exceptions.
 data SimulationException = forall e . Exception e => SimulationException e
+                           -- ^ A particular simulation exception.
                          deriving Typeable
 
 instance Show SimulationException where
@@ -173,7 +174,7 @@ instance Show SimulationException where
 
 instance Exception SimulationException
 
--- ^ An exception that signals of aborting the simulation.
+-- | An exception that signals of aborting the simulation.
 data SimulationAbort = SimulationAbort
                        -- ^ The exception to abort the simulation.
                      deriving (Show, Typeable)
