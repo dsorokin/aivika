@@ -467,4 +467,5 @@ traceProcessor :: Maybe String
                   -> Processor a b
                   -- ^ a processor
                   -> Processor a b
-traceProcessor request response (Processor f) = Processor $ traceStream request response . f 
+traceProcessor request response (Processor f) =
+  Processor $ traceStream request response . f 
