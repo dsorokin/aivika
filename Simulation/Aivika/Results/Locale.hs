@@ -69,6 +69,12 @@ data ResultId = TimeId
                 -- ^ Property 'samplingStatsVariance'.
               | SamplingStatsDeviationId
                 -- ^ Property 'samplingStatsDeviation'.
+              | SamplingCounterId
+                -- ^ A 'SamplingCounter' value.
+              | SamplingCounterValueId
+                -- ^ Property 'samplingCounterValue'.
+              | SamplingCounterStatsId
+                -- ^ Property 'samplingCounterStats'.
               | TimingStatsId
                 -- ^ A 'TimingStats' value.
               | TimingStatsCountId
@@ -95,6 +101,12 @@ data ResultId = TimeId
                 -- ^ Property 'timingStatsSum'.
               | TimingStatsSum2Id
                 -- ^ Property 'timingStatsSum2'.
+              | TimingCounterId
+                -- ^ A 'TimingCounter' value.
+              | TimingCounterValueId
+                -- ^ Property 'timingCounterValue'.
+              | TimingCounterStatsId
+                -- ^ Property 'timingCounterStats'.
               | FiniteQueueId
                 -- ^ A finite 'Q.Queue'.
               | InfiniteQueueId
@@ -218,6 +230,9 @@ russianResultLocalisation SamplingStatsMeanId = "среднее значение
 russianResultLocalisation SamplingStatsMean2Id = "среднее квадратов"
 russianResultLocalisation SamplingStatsVarianceId = "дисперсия"
 russianResultLocalisation SamplingStatsDeviationId = "среднеквадратическое отклонение"
+russianResultLocalisation SamplingCounterId = "счетчик"
+russianResultLocalisation SamplingCounterValueId = "текущее значение"
+russianResultLocalisation SamplingCounterStatsId = "статистика"
 russianResultLocalisation TimingStatsId = "временная статистика"
 russianResultLocalisation TimingStatsCountId = "количество"
 russianResultLocalisation TimingStatsMinId = "минимальное значение"
@@ -231,6 +246,9 @@ russianResultLocalisation TimingStatsStartTimeId = "начальное врем�
 russianResultLocalisation TimingStatsLastTimeId = "конечное время сбора статистики"
 russianResultLocalisation TimingStatsSumId = "сумма"
 russianResultLocalisation TimingStatsSum2Id = "сумма квадратов"
+russianResultLocalisation TimingCounterId = "временной счетчик"
+russianResultLocalisation TimingCounterValueId = "текущее значение"
+russianResultLocalisation TimingCounterStatsId = "статистика"
 russianResultLocalisation FiniteQueueId = "конечная очередь"
 russianResultLocalisation InfiniteQueueId = "бесконечная очередь"
 russianResultLocalisation EnqueueStrategyId = "стратегия добавления элементов"
@@ -296,6 +314,9 @@ englishResultLocalisation SamplingStatsMeanId = "mean"
 englishResultLocalisation SamplingStatsMean2Id = "mean square"
 englishResultLocalisation SamplingStatsVarianceId = "variance"
 englishResultLocalisation SamplingStatsDeviationId = "deviation"
+englishResultLocalisation SamplingCounterId = "counter"
+englishResultLocalisation SamplingCounterValueId = "current value"
+englishResultLocalisation SamplingCounterStatsId = "statistics"
 englishResultLocalisation TimingStatsId = "timing statistics"
 englishResultLocalisation TimingStatsCountId = "count"
 englishResultLocalisation TimingStatsMinId = "minimum"
@@ -309,6 +330,9 @@ englishResultLocalisation TimingStatsStartTimeId = "the start time"
 englishResultLocalisation TimingStatsLastTimeId = "the last time"
 englishResultLocalisation TimingStatsSumId = "sum"
 englishResultLocalisation TimingStatsSum2Id = "sum square"
+englishResultLocalisation TimingCounterId = "timing counter"
+englishResultLocalisation TimingCounterValueId = "current value"
+englishResultLocalisation TimingCounterStatsId = "statistics"
 englishResultLocalisation FiniteQueueId = "the finite queue"
 englishResultLocalisation InfiniteQueueId = "the infinite queue"
 englishResultLocalisation EnqueueStrategyId = "the enqueueing strategy"

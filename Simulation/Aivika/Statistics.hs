@@ -27,7 +27,21 @@ module Simulation.Aivika.Statistics
         timingStatsDeviation,
         timingStatsSummary,
         returnTimingStats,
-        fromIntTimingStats) where 
+        fromIntTimingStats,
+        -- * Simple Counter
+        SamplingCounter(..),
+        emptySamplingCounter,
+        incSamplingCounter,
+        decSamplingCounter,
+        resetSamplingCounter,
+        returnSamplingCounter,
+        -- * Timing Counter
+        TimingCounter(..),
+        emptyTimingCounter,
+        incTimingCounter,
+        decTimingCounter,
+        resetTimingCounter,
+        returnTimingCounter) where
 
 import Data.Monoid
 
@@ -60,7 +74,7 @@ data SamplingStats a =
   deriving (Eq, Ord)
            
 -- | Specifies data type from which values we can gather the statistics.           
-class SamplingData a where           
+class Num a => SamplingData a where           
   
   -- | An empty statistics that has no samples.           
   emptySamplingStats :: SamplingStats a
@@ -245,7 +259,7 @@ data TimingStats a =
                 } deriving (Eq, Ord)
                            
 -- | Defines the data type from which values we can gather the timing statistics.
-class TimingData a where                           
+class Num a => TimingData a where                           
   
   -- | An empty statistics that has no samples.
   emptyTimingStats :: TimingStats a
@@ -415,3 +429,83 @@ timingStatsSummary stats indent =
      showString "t in [" . shows (timingStatsStartTime stats) .
      showString ", " . shows (timingStatsLastTime stats) .
      showString "]"
+
+-- | A counter for which the statistics is collected too.
+data SamplingCounter a =
+  SamplingCounter { samplingCounterValue :: a,
+                    -- ^ The counter value.
+                    samplingCounterStats :: SamplingStats a
+                    -- ^ The counter statistics.
+                  } deriving (Eq, Ord, Show)
+
+-- | An empty counter.
+emptySamplingCounter :: SamplingData a => SamplingCounter a
+emptySamplingCounter =
+  SamplingCounter { samplingCounterValue = 0,
+                    samplingCounterStats = emptySamplingStats }
+
+-- | Increase the counter.
+incSamplingCounter :: SamplingData a => a -> SamplingCounter a -> SamplingCounter a
+incSamplingCounter a counter =
+  SamplingCounter { samplingCounterValue = a',
+                    samplingCounterStats = addSamplingStats a' (samplingCounterStats counter) }
+  where a' = samplingCounterValue counter + a
+
+-- | Decrease the counter.
+decSamplingCounter :: SamplingData a => a -> SamplingCounter a -> SamplingCounter a
+decSamplingCounter a counter =
+  SamplingCounter { samplingCounterValue = a',
+                    samplingCounterStats = addSamplingStats a' (samplingCounterStats counter) }
+  where a' = samplingCounterValue counter - a
+
+-- | Reset the counter.
+resetSamplingCounter :: SamplingData a => SamplingCounter a -> SamplingCounter a
+resetSamplingCounter counter =
+  SamplingCounter { samplingCounterValue = 0,
+                    samplingCounterStats = addSamplingStats 0 (samplingCounterStats counter) }
+
+-- | Create a counter with the specified initial value.
+returnSamplingCounter :: SamplingData  a => a -> SamplingCounter a
+returnSamplingCounter a =
+  SamplingCounter { samplingCounterValue = a,
+                    samplingCounterStats = returnSamplingStats a }
+
+-- | A counter for which the timing statistics is collected too.
+data TimingCounter a =
+  TimingCounter { timingCounterValue :: a,
+                  -- ^ The counter value.
+                  timingCounterStats :: TimingStats a
+                  -- ^ The counter statistics.
+                } deriving (Eq, Ord, Show)
+
+-- | An empty counter.
+emptyTimingCounter :: TimingData a => TimingCounter a
+emptyTimingCounter =
+  TimingCounter { timingCounterValue = 0,
+                  timingCounterStats = emptyTimingStats }
+
+-- | Increase the counter at the specified time.
+incTimingCounter :: TimingData a => Double -> a -> TimingCounter a -> TimingCounter a
+incTimingCounter t a counter =
+  TimingCounter { timingCounterValue = a',
+                  timingCounterStats = addTimingStats t a' (timingCounterStats counter) }
+  where a' = timingCounterValue counter + a
+
+-- | Decrease the counter at the specified time.
+decTimingCounter :: TimingData a => Double -> a -> TimingCounter a -> TimingCounter a
+decTimingCounter t a counter =
+  TimingCounter { timingCounterValue = a',
+                  timingCounterStats = addTimingStats t a' (timingCounterStats counter) }
+  where a' = timingCounterValue counter - a
+
+-- | Reset the counter at the specified time.
+resetTimingCounter :: TimingData a => Double -> TimingCounter a -> TimingCounter a
+resetTimingCounter t counter =
+  TimingCounter { timingCounterValue = 0,
+                  timingCounterStats = addTimingStats t 0 (timingCounterStats counter) }
+
+-- | Create a timing counter with the specified initial value at the given time.
+returnTimingCounter :: TimingData a => Double -> a -> TimingCounter a
+returnTimingCounter t a =
+  TimingCounter { timingCounterValue = a,
+                  timingCounterStats = returnTimingStats t a }
