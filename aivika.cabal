@@ -99,6 +99,7 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/MachRep1TimeDriven.hs
                      examples/MachRep2.hs
                      examples/MachRep3.hs
+                     examples/MachineBreakdowns.hs
                      examples/Furnace.hs
                      examples/InspectionAdjustmentStations.hs
                      examples/InventorySystem.hs
