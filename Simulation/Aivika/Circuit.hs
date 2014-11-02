@@ -50,7 +50,9 @@ module Simulation.Aivika.Circuit
         sumCircuit,
         sumCircuitEither,
         -- * The Circuit Transform
-        circuitTransform) where
+        circuitTransform,
+        -- * Debugging
+        traceCircuit) where
 
 import qualified Control.Category as C
 import Control.Arrow
@@ -568,3 +570,25 @@ iterateCircuitInTimesEither ts cir a =
   do let ps = map (pointAt $ pointRun p) ts
      invokeEvent p $ 
        iterateCircuitInPointsEither ps cir a
+
+-- | Show the debug message with the current simulation time.
+traceCircuit :: Maybe String
+                -- ^ the request message
+                -> Maybe String
+                -- ^ the response message
+                -> Circuit a b
+                -- ^ a circuit
+                -> Circuit a b
+traceCircuit request response cir = Circuit $ loop cir where
+  loop cir a =
+    do (b, cir') <-
+         case request of
+           Nothing -> runCircuit cir a
+           Just message -> 
+             traceEvent message $
+             runCircuit cir a
+       case response of
+         Nothing -> return (b, Circuit $ loop cir')
+         Just message ->
+           traceEvent message $
+           return (b, Circuit $ loop cir') 

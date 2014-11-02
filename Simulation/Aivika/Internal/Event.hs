@@ -43,7 +43,9 @@ module Simulation.Aivika.Internal.Event
         memoEvent,
         memoEventInTime,
         -- * Disposable
-        DisposableEvent(..)) where
+        DisposableEvent(..),
+        -- * Debugging
+        traceEvent) where
 
 import Data.IORef
 import Data.Monoid
@@ -53,6 +55,8 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
 import Control.Applicative
+
+import Debug.Trace (trace)
 
 import qualified Simulation.Aivika.PriorityQueue as PQ
 
@@ -397,3 +401,10 @@ instance Monoid DisposableEvent where
 
   mempty = DisposableEvent $ return ()
   mappend (DisposableEvent x) (DisposableEvent y) = DisposableEvent $ x >> y
+
+-- | Show the debug message with the current simulation time.
+traceEvent :: String -> Event a -> Event a
+traceEvent message m =
+  Event $ \p ->
+  trace ("t = " ++ show (pointTime p) ++ ": " ++ message) $
+  invokeEvent p m

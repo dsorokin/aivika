@@ -29,13 +29,17 @@ module Simulation.Aivika.Internal.Dynamics
         time,
         isTimeInteg,
         integIteration,
-        integPhase) where
+        integPhase,
+        -- * Debugging
+        traceDynamics) where
 
 import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
 import Control.Applicative
+
+import Debug.Trace
 
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Parameter
@@ -212,3 +216,10 @@ integIteration = Dynamics $ return . pointIteration
 -- It is @(-1)@ for non-integration time points.
 integPhase :: Dynamics Int
 integPhase = Dynamics $ return . pointPhase
+
+-- | Show the debug message with the current simulation time.
+traceDynamics :: String -> Dynamics a -> Dynamics a
+traceDynamics message m =
+  Dynamics $ \p ->
+  trace ("t = " ++ show (pointTime p) ++ ": " ++ message) $
+  invokeDynamics p m

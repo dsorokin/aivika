@@ -39,6 +39,8 @@ module Simulation.Aivika.Event
         memoEvent,
         memoEventInTime,
         -- * Disposable
-        DisposableEvent(..)) where
+        DisposableEvent(..),
+        -- * Debugging
+        traceEvent) where
 
 import Simulation.Aivika.Internal.Event

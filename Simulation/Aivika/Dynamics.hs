@@ -26,6 +26,8 @@ module Simulation.Aivika.Dynamics
         time,
         isTimeInteg,
         integIteration,
-        integPhase) where
+        integPhase,
+        -- * Debugging
+        traceDynamics) where
 
 import Simulation.Aivika.Internal.Dynamics

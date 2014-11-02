@@ -77,7 +77,9 @@ module Simulation.Aivika.Internal.Process
         -- * Memoizing Process
         memoProcess,
         -- * Never Ending Process
-        neverProcess) where
+        neverProcess,
+        -- * Debugging
+        traceProcess) where
 
 import Data.Maybe
 import Data.IORef
@@ -641,3 +643,10 @@ neverProcess =
   let signal = processCancelling pid
   in handleSignal_ signal $ \_ ->
      resumeCont c $ error "It must never be computed: neverProcess"
+
+-- | Show the debug message with the current simulation time.
+traceProcess :: String -> Process a -> Process a
+traceProcess message m =
+  Process $ \pid ->
+  traceCont message $
+  invokeProcess pid m
