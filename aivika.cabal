@@ -195,6 +195,7 @@ library
                         FunctionalDependencies,
                         ExistentialQuantification,
                         TypeFamilies,
+                        DeriveDataTypeable,
                         CPP
                      
     ghc-options:     -O2

@@ -1,5 +1,5 @@
 
-{-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE RecursiveDo, ExistentialQuantification, DeriveDataTypeable #-}
 
 -- |
 -- Module     : Simulation.Aivika.Internal.Simulation
@@ -26,7 +26,10 @@ module Simulation.Aivika.Internal.Simulation
         -- * Utilities
         simulationEventQueue,
         -- * Memoization
-        memoSimulation) where
+        memoSimulation,
+        -- * Exceptions
+        SimulationException(..),
+        SimulationAbort(..)) where
 
 import Control.Exception
 import Control.Monad
@@ -35,6 +38,7 @@ import Control.Monad.Fix
 import Control.Applicative
 
 import Data.IORef
+import Data.Typeable
 
 import Simulation.Aivika.Generator
 import Simulation.Aivika.Internal.Specs
@@ -159,3 +163,22 @@ memoSimulation m =
               do v <- invokeSimulation r m
                  writeIORef ref (Just v)
                  return v
+
+-- | The root of simulation exceptions.
+data SimulationException = forall e . Exception e => SimulationException e
+                         deriving Typeable
+
+instance Show SimulationException where
+  show (SimulationException e) = show e
+
+instance Exception SimulationException
+
+-- ^ An exception that signals of aborting the simulation.
+data SimulationAbort = SimulationAbort
+                       -- ^ The exception to abort the simulation.
+                     deriving (Show, Typeable)
+
+instance Exception SimulationAbort where
+  
+  toException = toException . SimulationException
+  fromException x = do { SimulationException a <- fromException x; cast a }

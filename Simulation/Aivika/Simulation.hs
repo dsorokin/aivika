@@ -20,6 +20,9 @@ module Simulation.Aivika.Simulation
         finallySimulation,
         throwSimulation,
         -- * Memoization
-        memoSimulation) where
+        memoSimulation,
+        -- * Exceptions
+        SimulationException(..),
+        SimulationAbort(..)) where
 
 import Simulation.Aivika.Internal.Simulation
