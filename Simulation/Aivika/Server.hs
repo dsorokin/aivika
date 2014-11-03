@@ -11,6 +11,7 @@
 module Simulation.Aivika.Server
        (-- * Server
         Server,
+        ServerInterruption,
         newServer,
         newStateServer,
         -- * Processing
@@ -52,6 +53,7 @@ module Simulation.Aivika.Server
         serverOutputWaitFactorChanged_,
         -- * Basic Signals
         serverInputReceived,
+        serverTaskInterrupted,
         serverTaskProcessed,
         serverOutputProvided,
         -- * Overall Signal
@@ -60,6 +62,7 @@ module Simulation.Aivika.Server
 import Data.IORef
 import Data.Monoid
 
+import Control.Monad
 import Control.Monad.Trans
 import Control.Arrow
 
@@ -82,6 +85,8 @@ data Server s a b =
            -- ^ The current state of the server.
            serverProcess :: s -> a -> Process (s, b),
            -- ^ Provide @b@ by specified @a@.
+           serverProcessInterruptible :: Bool,
+           -- ^ Whether the process is interruptible.
            serverTotalInputWaitTimeRef :: IORef Double,
            -- ^ The counted total time spent in awating the input.
            serverTotalProcessingTimeRef :: IORef Double,
@@ -96,12 +101,24 @@ data Server s a b =
            -- ^ The statistics for the time spent for delivering the output.
            serverInputReceivedSource :: SignalSource a,
            -- ^ A signal raised when the server recieves a new input to process.
+           serverTaskInterruptedSource :: SignalSource (ServerInterruption a),
+           -- ^ A signal raised when the task was interrupted.
            serverTaskProcessedSource :: SignalSource (a, b),
            -- ^ A signal raised when the input is processed and
            -- the output is prepared for deliverying.
            serverOutputProvidedSource :: SignalSource (a, b)
            -- ^ A signal raised when the server has supplied the output.
          }
+
+-- | Contains data about the interrupted task.
+data ServerInterruption a =
+  ServerInterruption { serverInterruptedInput :: a,
+                       -- ^ The input task that was interrupted.
+                       serverStartProcessingTime :: Double,
+                       -- ^ The start time of processing the task.
+                       serverInterruptionTime :: Double
+                       -- ^ The time of interrupting the task.
+                     }
 
 -- | Create a new server that can provide output @b@ by input @a@.
 newServer :: (a -> Process b)
@@ -131,9 +148,11 @@ newStateServer provide state =
      s1 <- newSignalSource
      s2 <- newSignalSource
      s3 <- newSignalSource
+     s4 <- newSignalSource
      let server = Server { serverInitState = state,
                            serverStateRef = r0,
                            serverProcess = provide,
+                           serverProcessInterruptible = False,
                            serverTotalInputWaitTimeRef = r1,
                            serverTotalProcessingTimeRef = r2,
                            serverTotalOutputWaitTimeRef = r3,
@@ -141,8 +160,9 @@ newStateServer provide state =
                            serverProcessingTimeRef = r5,
                            serverOutputWaitTimeRef = r6,
                            serverInputReceivedSource = s1,
-                           serverTaskProcessedSource = s2,
-                           serverOutputProvidedSource = s3 }
+                           serverTaskInterruptedSource = s2,
+                           serverTaskProcessedSource = s3,
+                           serverOutputProvidedSource = s4 }
      return server
 
 -- | Return a processor for the specified server.
@@ -192,7 +212,10 @@ serverProcessor server =
                      addSamplingStats (t1 - t0)
               triggerSignal (serverInputReceivedSource server) a
          -- provide the service
-         (s', b) <- serverProcess server s a
+         (s', b) <-
+           if serverProcessInterruptible server
+           then serverProcessInterrupting server s a
+           else serverProcess server s a
          t2 <- liftDynamics time
          liftEvent $
            do liftIO $
@@ -202,6 +225,24 @@ serverProcessor server =
                      addSamplingStats (t2 - t1)
               triggerSignal (serverTaskProcessedSource server) (a, b)
          return (b, loop s' (Just (t2, a, b)) xs')
+
+-- | Process the input with ability to handle a possible interruption.
+serverProcessInterrupting :: Server s a b -> s -> a -> Process (s, b)
+serverProcessInterrupting server s a =
+  do pid <- processId
+     t1  <- liftDynamics time
+     finallyProcess
+       (serverProcess server s a)
+       (liftEvent $
+        do cancelled <- processCancelled pid
+           when cancelled $
+             do t2 <- liftDynamics time
+                liftIO $
+                  do modifyIORef' (serverTotalProcessingTimeRef server) (+ (t2 - t1))
+                     modifyIORef' (serverProcessingTimeRef server) $
+                       addSamplingStats (t2 - t1)
+                let x = ServerInterruption a t1 t2
+                triggerSignal (serverTaskInterruptedSource server) x)
 
 -- | Return the current state of the server.
 --
@@ -445,6 +486,9 @@ serverOutputWaitFactorChanged_ server =
 serverInputReceived :: Server s a b -> Signal a
 serverInputReceived = publishSignal . serverInputReceivedSource
 
+serverTaskInterrupted :: Server s a b -> Signal (ServerInterruption a)
+serverTaskInterrupted = publishSignal . serverTaskInterruptedSource
+
 -- | Raised when the server has just processed the task.
 serverTaskProcessed :: Server s a b -> Signal (a, b)
 serverTaskProcessed = publishSignal . serverTaskProcessedSource
@@ -457,6 +501,7 @@ serverOutputProvided = publishSignal . serverOutputProvidedSource
 serverChanged_ :: Server s a b -> Signal ()
 serverChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
+  mapSignal (const ()) (serverTaskInterrupted server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
   mapSignal (const ()) (serverOutputProvided server)
 
