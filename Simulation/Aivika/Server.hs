@@ -14,6 +14,8 @@ module Simulation.Aivika.Server
         ServerInterruption,
         newServer,
         newStateServer,
+        newInterruptibleServer,
+        newInterruptibleStateServer,
         -- * Processing
         serverProcessor,
         -- * Server Properties and Activities
@@ -121,23 +123,51 @@ data ServerInterruption a =
                      }
 
 -- | Create a new server that can provide output @b@ by input @a@.
+--
+-- By default, it is assumed that the server cannot be interrupted,
+-- because the handling of possible task interruption is rather costly
+-- operation.
 newServer :: (a -> Process b)
              -- ^ provide an output by the specified input
              -> Simulation (Server () a b)
-newServer provide =
-  flip newStateServer () $ \s a ->
-  do b <- provide a
-     return (s, b)
+newServer = newInterruptibleServer False
 
 -- | Create a new server that can provide output @b@ by input @a@
 -- starting from state @s@.
+--
+-- By default, it is assumed that the server cannot be interrupted,
+-- because the handling of possible task interruption is rather costly
+-- operation.
 newStateServer :: (s -> a -> Process (s, b))
                   -- ^ provide a new state and output by the specified 
                   -- old state and input
                   -> s
                   -- ^ the initial state
                   -> Simulation (Server s a b)
-newStateServer provide state =
+newStateServer = newInterruptibleStateServer False
+
+-- | Create a new interruptible server that can provide output @b@ by input @a@.
+newInterruptibleServer :: Bool
+                          -- ^ whether the server can be interrupted
+                          -> (a -> Process b)
+                          -- ^ provide an output by the specified input
+                          -> Simulation (Server () a b)
+newInterruptibleServer interruptible provide =
+  flip (newInterruptibleStateServer interruptible) () $ \s a ->
+  do b <- provide a
+     return (s, b)
+
+-- | Create a new interruptible server that can provide output @b@ by input @a@
+-- starting from state @s@.
+newInterruptibleStateServer :: Bool
+                               -- ^ whether the server can be interrupted
+                               -> (s -> a -> Process (s, b))
+                               -- ^ provide a new state and output by the specified 
+                               -- old state and input
+                               -> s
+                               -- ^ the initial state
+                               -> Simulation (Server s a b)
+newInterruptibleStateServer interruptible provide state =
   do r0 <- liftIO $ newIORef state
      r1 <- liftIO $ newIORef 0
      r2 <- liftIO $ newIORef 0
@@ -152,7 +182,7 @@ newStateServer provide state =
      let server = Server { serverInitState = state,
                            serverStateRef = r0,
                            serverProcess = provide,
-                           serverProcessInterruptible = False,
+                           serverProcessInterruptible = interruptible,
                            serverTotalInputWaitTimeRef = r1,
                            serverTotalProcessingTimeRef = r2,
                            serverTotalOutputWaitTimeRef = r3,
