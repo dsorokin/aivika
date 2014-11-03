@@ -535,7 +535,7 @@ arrivalStream s = Cons $ loop s Nothing where
 delayStream :: a -> Stream a -> Stream a
 delayStream a0 s = Cons $ return (a0, s)
 
--- | Show the debug message with the current simulation time.
+-- | Show the debug messages with the current simulation time.
 traceStream :: Maybe String
                -- ^ the request message
                -> Maybe String

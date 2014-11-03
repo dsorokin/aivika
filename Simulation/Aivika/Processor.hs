@@ -459,7 +459,7 @@ arrivalProcessor = Processor arrivalStream
 delayProcessor :: a -> Processor a a
 delayProcessor a0 = Processor $ delayStream a0
 
--- | Show the debug message with the current simulation time.
+-- | Show the debug messages with the current simulation time.
 traceProcessor :: Maybe String
                   -- ^ the request message
                   -> Maybe String

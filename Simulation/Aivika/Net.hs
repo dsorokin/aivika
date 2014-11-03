@@ -270,7 +270,7 @@ iterateNetEither (Net f) a =
        Left b'  -> return b'
        Right a' -> iterateNetEither x a'
 
--- | Show the debug message with the current simulation time.
+-- | Show the debug messages with the current simulation time.
 traceNet :: Maybe String
             -- ^ the request message
             -> Maybe String
