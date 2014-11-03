@@ -58,14 +58,44 @@ model :: Simulation Results
 model = do
   -- create an input queue
   inputQueue <- runEventInStartTime $ IQ.newFCFSQueue
-  -- create an output queue (to count the completed jobs)
-  outputQueue <- runEventInStartTime $ IQ.newFCFSQueue
   -- a counter of jobs completed
   jobsCompleted <- newArrivalTimer
+  -- create an input stream
+  let inputStream =
+        traceStream Nothing (Just "taking a job from the queue") $
+        repeatProcess $ IQ.dequeue inputQueue
+  -- create the machine tool
+  machine <-
+    newInterruptibleServer True $ \a ->
+    do -- set up the machine
+       setUpTime <-
+         liftParameter $
+         randomUniform minSetUpTime maxSetUpTime
+       holdProcess setUpTime
+       -- process the job
+       let job = arrivalValue a
+       holdProcess $ jobRemainingTime job
+       -- return the completed job
+       return a { arrivalValue = job { jobRemainingTime = 0 } }
+  -- define the network
+  let network =
+        traceProcessor Nothing (Just "the job completed") $
+        serverProcessor machine >>> arrivalTimerProcessor jobsCompleted
+  -- enqueue the interrupted jobs again
+  runEventInStartTime $
+    handleSignal_ (serverTaskInterrupted machine) $ \x ->
+    traceEvent "interrupting the job.." $
+    do let t1 = serverStartProcessingTime x
+           t2 = serverInterruptionTime x
+           dt = t2 - t1
+           a  = serverInterruptedInput x
+           a' = a { arrivalValue = job' }
+           job  = arrivalValue a
+           job' = job { jobRemainingTime =
+                           max 0 $ jobRemainingTime job - dt }
+       IQ.enqueue inputQueue a'
   -- launch the machine tool
   let launch = do
-        -- get the process Id
-        pid <- processId
         -- breakdown the machine tool in time (a bound child process)
         spawnProcess $ do
           breakdownTime <-
@@ -75,39 +105,10 @@ model = do
           traceProcess "breakdown" $
             cancelProcess
         -- model the machine tool itself
-        let loop = do
-              -- set up the machine
-              setUpTime <-
-                liftParameter $
-                randomUniform minSetUpTime maxSetUpTime
-              holdProcess setUpTime
-              -- process the job
-              t0 <- liftDynamics time
-              jobArrival <- IQ.dequeue inputQueue
-              let job = arrivalValue jobArrival 
-              finallyProcess
-                (do holdProcess $ jobRemainingTime job
-                    -- count the job completed
-                    t <- liftDynamics time
-                    liftEvent $
-                      traceEvent "the job is complete" $
-                      do IQ.enqueue outputQueue $
-                           jobArrival {
-                             arrivalValue =
-                                job { jobRemainingTime = 0 } })
-                (liftEvent $
-                 do cancelled <- processCancelled pid
-                    -- if the process was cancelled then return the job
-                    when cancelled $
-                      traceEvent "interrupting the job.." $
-                      do t <- liftDynamics time
-                         IQ.enqueue inputQueue $
-                           jobArrival {
-                             arrivalValue =
-                                job { jobRemainingTime =
-                                         max 0 $ jobRemainingTime job - (t - t0) } })
-              -- proceed to the next job
-              loop
+        let loop =
+              -- process the jobs until interrupting
+              sinkStream $
+                runProcessor network inputStream
         -- model the repairing of the tool
         let repair = do
               -- at first repair the machine
@@ -138,13 +139,6 @@ model = do
       IQ.enqueue inputQueue $
         a { arrivalValue =
                Job jobProcessingTime jobProcessingTime }
-  -- create an output stream
-  let outputStream =
-        repeatProcess (IQ.dequeue outputQueue)
-  -- start counting the jobs completed
-  runProcessInStartTime $
-    sinkStream $
-    runProcessor (arrivalTimerProcessor jobsCompleted) outputStream
   -- return the simulation results in start time
   return $
     results
@@ -153,8 +147,8 @@ model = do
      inputQueue,
      --
      resultSource
-     "outputQueue" "the queue of jobs completed"
-     outputQueue,
+     "machine" "the machine tool (the set up time is included in the processing one)"
+     machine,
      --
      resultSource
      "jobsCompleted" "a counter of the completed jobs"
