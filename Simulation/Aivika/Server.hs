@@ -11,7 +11,7 @@
 module Simulation.Aivika.Server
        (-- * Server
         Server,
-        ServerInterruption,
+        ServerInterruption(..),
         newServer,
         newStateServer,
         newInterruptibleServer,
@@ -516,6 +516,7 @@ serverOutputWaitFactorChanged_ server =
 serverInputReceived :: Server s a b -> Signal a
 serverInputReceived = publishSignal . serverInputReceivedSource
 
+-- | Raised when the task processing by the server was interrupted.
 serverTaskInterrupted :: Server s a b -> Signal (ServerInterruption a)
 serverTaskInterrupted = publishSignal . serverTaskInterruptedSource
 
