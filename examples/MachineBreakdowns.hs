@@ -64,15 +64,19 @@ model = do
   let inputStream =
         traceStream Nothing (Just "taking a job from the queue") $
         repeatProcess $ IQ.dequeue inputQueue
-  -- create the machine tool
-  machine <-
-    newInterruptibleServer True $ \a ->
+  -- create the setting up phase of processing
+  machineSettingUp <-
+    newServer $ \a ->
     do -- set up the machine
        setUpTime <-
          liftParameter $
          randomUniform minSetUpTime maxSetUpTime
        holdProcess setUpTime
-       -- process the job
+       return a
+  -- create the processing phase itself
+  machineProcessing <-
+    newInterruptibleServer True $ \a ->
+    do -- process the job
        let job = arrivalValue a
        holdProcess $ jobRemainingTime job
        -- return the completed job
@@ -80,10 +84,12 @@ model = do
   -- define the network
   let network =
         traceProcessor Nothing (Just "the job completed") $
-        serverProcessor machine >>> arrivalTimerProcessor jobsCompleted
+        serverProcessor machineSettingUp >>>
+        serverProcessor machineProcessing >>>
+        arrivalTimerProcessor jobsCompleted
   -- enqueue the interrupted jobs again
   runEventInStartTime $
-    handleSignal_ (serverTaskInterrupted machine) $ \x ->
+    handleSignal_ (serverTaskInterrupted machineProcessing) $ \x ->
     traceEvent "interrupting the job.." $
     do let t1 = serverStartProcessingTime x
            t2 = serverInterruptionTime x
@@ -147,8 +153,12 @@ model = do
      inputQueue,
      --
      resultSource
-     "machine" "the machine tool (the set up time is included in the processing one)"
-     machine,
+     "machineSettingUp" "the machine tool (the setting up phase)"
+     machineSettingUp,
+     --
+     resultSource
+     "machineProcessing" "the machine tool (the processing phase)"
+     machineProcessing,
      --
      resultSource
      "jobsCompleted" "a counter of the completed jobs"
