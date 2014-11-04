@@ -244,6 +244,8 @@ data TimingStats a =
                 -- ^ Return the minimum value.
                 timingStatsMax       :: !a,
                 -- ^ Return the maximum value.
+                timingStatsLast      :: !a,
+                -- ^ Return the last value.
                 timingStatsMinTime   :: !Double,
                 -- ^ Return the time at which the minimum is attained.
                 timingStatsMaxTime   :: !Double,
@@ -279,6 +281,7 @@ instance TimingData Double where
     TimingStats { timingStatsCount     = 0,
                   timingStatsMin       = 1 / 0,
                   timingStatsMax       = (-1) / 0,
+                  timingStatsLast      = 0 / 0,
                   timingStatsMinTime   = 1 / 0,
                   timingStatsMaxTime   = (-1) / 0,
                   timingStatsStartTime = 1 / 0,
@@ -296,6 +299,7 @@ instance TimingData Int where
     TimingStats { timingStatsCount     = 0,
                   timingStatsMin       = maxBound,
                   timingStatsMax       = minBound,
+                  timingStatsLast      = 0,
                   timingStatsMinTime   = 1 / 0,
                   timingStatsMaxTime   = (-1) / 0,
                   timingStatsStartTime = 1 / 0,
@@ -314,6 +318,7 @@ addTimingStatsGeneric t a stats
   | count == 1 = TimingStats { timingStatsCount     = 1,
                                timingStatsMin       = a,
                                timingStatsMax       = a,
+                               timingStatsLast      = a,
                                timingStatsMinTime   = t,
                                timingStatsMaxTime   = t,
                                timingStatsStartTime = t,
@@ -323,6 +328,7 @@ addTimingStatsGeneric t a stats
   | otherwise  = TimingStats { timingStatsCount     = count,
                                timingStatsMin       = minX,
                                timingStatsMax       = maxX,
+                               timingStatsLast      = a,
                                timingStatsMinTime   = minT,
                                timingStatsMaxTime   = maxT,
                                timingStatsStartTime = t0,
@@ -340,11 +346,13 @@ addTimingStatsGeneric t a stats
                | otherwise = timingStatsMaxTime stats
           t0 = timingStatsStartTime stats
           t' = timingStatsLastTime stats
+          a' = timingStatsLast stats
           x  = convertToDouble a
+          x' = convertToDouble a'
           sumX'  = timingStatsSum stats
-          sumX   = sumX' + (t - t') * x
+          sumX   = sumX' + (t - t') * x'
           sumX2' = timingStatsSum2 stats
-          sumX2  = sumX2' + (t - t') * x * x
+          sumX2  = sumX2' + (t - t') * x' * x'
       
 timingStatsMeanGeneric :: ConvertableToDouble a => TimingStats a -> Double
 timingStatsMeanGeneric stats
@@ -384,8 +392,9 @@ returnTimingStats t a = addTimingStats t a emptyTimingStats
 -- | Convert the statistics from integer to double values.
 fromIntTimingStats :: TimingStats Int -> TimingStats Double
 fromIntTimingStats stats =
-  stats { timingStatsMin = fromIntegral $ timingStatsMin stats,
-          timingStatsMax = fromIntegral $ timingStatsMax stats }
+  stats { timingStatsMin  = fromIntegral $ timingStatsMin stats,
+          timingStatsMax  = fromIntegral $ timingStatsMax stats,
+          timingStatsLast = fromIntegral $ timingStatsLast stats }
 
 -- | Show the summary of the statistics.       
 showTimingStats :: (Show a, TimingData a) => TimingStats a -> ShowS
