@@ -215,7 +215,7 @@ newInterruptibleStateServer interruptible provide state =
 --
 -- The queue processors usually have the prefetching capabilities per se, where
 -- the items are already stored in the queue. Therefore, the server processor
--- should not be prefetched if it is connected directly with the queue processor.
+-- should not be prefetched if it is connected directly to the queue processor.
 serverProcessor :: Server s a b -> Processor a b
 serverProcessor server =
   Processor $ \xs -> loop (serverInitState server) Nothing xs
