@@ -60,6 +60,8 @@ model = do
   inputQueue <- runEventInStartTime $ IQ.newFCFSQueue
   -- a counter of jobs completed
   jobsCompleted <- newArrivalTimer
+  -- a counter of interrupted jobs but then returned for the further processing
+  jobsInterrupted <- newRef (0 :: Int)
   -- create an input stream
   let inputStream =
         traceStream Nothing (Just "taking a job from the queue") $
@@ -99,6 +101,7 @@ model = do
            job  = arrivalValue a
            job' = job { jobRemainingTime =
                            max 0 $ jobRemainingTime job - dt }
+       modifyRef jobsInterrupted (+ 1)
        IQ.enqueue inputQueue a'
   -- launch the machine tool
   let launch = do
@@ -159,6 +162,10 @@ model = do
      resultSource
      "machineProcessing" "the machine tool (the processing phase)"
      machineProcessing,
+     --
+     resultSource
+     "jobsInterrupted" "a counter of the interrupted jobs"
+     jobsInterrupted,
      --
      resultSource
      "jobsCompleted" "a counter of the completed jobs"
