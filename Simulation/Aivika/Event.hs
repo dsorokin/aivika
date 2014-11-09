@@ -10,6 +10,12 @@
 -- The module defines the 'Event' monad which is very similar to the 'Dynamics'
 -- monad but only now the computation is strongly synchronized with the event queue.
 --
+-- The @Dynamics@ computation is defined in all time points simultaneously, while
+-- the @Event@ computation can be described in every time point differently and can change
+-- in discrete steps. Therefore, the former is destined for differential and difference
+-- equations of System Dynamics, while the latter is destined for discrete event simulation,
+-- being its core actually.
+--
 module Simulation.Aivika.Event
        (-- * Event Monad
         Event,

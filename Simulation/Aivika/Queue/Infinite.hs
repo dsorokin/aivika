@@ -80,7 +80,6 @@ import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Process
-import Simulation.Aivika.Internal.Signal
 import Simulation.Aivika.Signal
 import Simulation.Aivika.Resource
 import Simulation.Aivika.QueueStrategy

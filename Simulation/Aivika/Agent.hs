@@ -33,7 +33,7 @@ import Control.Monad
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Event
-import Simulation.Aivika.Internal.Signal
+import Simulation.Aivika.Signal
 
 --
 -- Agent-based Modeling

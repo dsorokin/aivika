@@ -7,6 +7,8 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
+-- This is an internal implementation module that should never be used directly.
+--
 -- A value in the 'Process' monad represents a discontinuous process that 
 -- can suspend in any simulation time point and then resume later in the same 
 -- or another time point. 
@@ -16,6 +18,9 @@
 -- the @Event@ computation.
 --
 -- A value of the 'ProcessId' type is just an identifier of such a process.
+--
+-- The characteristic property of the @Process@ type is function 'holdProcess'
+-- that suspends the current process for the specified time interval.
 --
 module Simulation.Aivika.Internal.Process
        (-- * Process Monad
@@ -95,7 +100,7 @@ import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Cont
-import Simulation.Aivika.Internal.Signal
+import Simulation.Aivika.Signal
 
 -- | Represents a process identifier.
 data ProcessId = 

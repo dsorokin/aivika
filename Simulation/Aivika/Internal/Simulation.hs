@@ -9,8 +9,10 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
--- The module defines the 'Simulation' monad that represents a computation
--- within the simulation run.
+-- This is an internal implementation module that should never be used directly.
+--
+-- The module defines the 'Simulation' monad that represents a computation within
+-- the simulation run.
 -- 
 module Simulation.Aivika.Internal.Simulation
        (-- * Simulation

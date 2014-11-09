@@ -7,7 +7,9 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
--- The 'Cont' monad is a variation of the standard Cont monad 
+-- This is an internal implementation module that should never be used directly.
+--
+-- The 'Cont' monad is a variation of the standard @Cont@ monad 
 -- and F# async workflow, where the result of applying 
 -- the continuations is the 'Event' computation.
 --
@@ -55,7 +57,7 @@ import Simulation.Aivika.Internal.Parameter
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
-import Simulation.Aivika.Internal.Signal
+import Simulation.Aivika.Signal
 
 -- | It defines how the parent and child computations should be cancelled.
 data ContCancellation = CancelTogether

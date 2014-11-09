@@ -30,7 +30,6 @@ import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
-import Simulation.Aivika.Internal.Signal
 import Simulation.Aivika.Ref
 import Simulation.Aivika.Signal
 

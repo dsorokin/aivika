@@ -7,7 +7,8 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
--- The module defines the 'Simulation' monad that represents a simulation run.
+-- The module defines the 'Simulation' monad that represents a computation within
+-- the simulation run.
 -- 
 module Simulation.Aivika.Simulation
        (-- * Simulation

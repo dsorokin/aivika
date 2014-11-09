@@ -48,7 +48,7 @@ import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Cont
 import Simulation.Aivika.Internal.Process
-import Simulation.Aivika.Internal.Signal
+import Simulation.Aivika.Signal
 
 -- | The task represents a process that was already started in background.
 data Task a =

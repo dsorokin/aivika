@@ -172,7 +172,6 @@ library
                      Simulation.Aivika.Internal.Event
                      Simulation.Aivika.Internal.Parameter
                      Simulation.Aivika.Internal.Process
-                     Simulation.Aivika.Internal.Signal
                      Simulation.Aivika.Internal.Simulation
                      Simulation.Aivika.Internal.Specs
                      Simulation.Aivika.Internal.Arrival

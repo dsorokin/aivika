@@ -9,6 +9,8 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
+-- This is an internal implementation module that should never be used directly.
+--
 -- The module defines the 'Dynamics' monad representing a time varying polymorphic function. 
 --
 module Simulation.Aivika.Internal.Dynamics

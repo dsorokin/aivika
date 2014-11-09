@@ -24,7 +24,6 @@ import Control.Monad.Trans
 
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Event
-import Simulation.Aivika.Internal.Signal
 import Simulation.Aivika.Signal
 
 -- | The 'Ref' type represents a mutable variable similar to the 'IORef' variable 
