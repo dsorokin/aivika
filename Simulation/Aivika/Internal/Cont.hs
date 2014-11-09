@@ -163,7 +163,7 @@ contCancellationInitiate x =
           writeIORef (contCancellationActivatedRef x) True
           invokeEvent p $ triggerSignal (contCancellationInitiatingSource x) ()
 
--- | The 'Cont' type is similar to the standard Cont monad 
+-- | The 'Cont' type is similar to the standard @Cont@ monad 
 -- and F# async workflow but only the result of applying
 -- the continuations return the 'Event' computation.
 newtype Cont a = Cont (ContParams a -> Event ())
