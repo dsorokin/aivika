@@ -215,24 +215,24 @@ selectState st =
             invokeEvent p $ traversePath x0 st
 
 -- | Set the activation computation for the specified state.
-setStateActivation :: AgentState -> Event () -> Simulation ()
+setStateActivation :: AgentState -> Event () -> Event ()
 setStateActivation st action =
-  Simulation $ \r ->
+  Event $ \p ->
   writeIORef (stateActivateRef st) action
   
 -- | Set the deactivation computation for the specified state.
-setStateDeactivation :: AgentState -> Event () -> Simulation ()
+setStateDeactivation :: AgentState -> Event () -> Event ()
 setStateDeactivation st action =
-  Simulation $ \r ->
+  Event $ \p ->
   writeIORef (stateDeactivateRef st) action
   
 -- | Set the transition state which will be next and which is used only
 -- when selecting the state directly with help of 'selectState'.
 -- If the state was activated intermediately, when selecting
 -- another state, then this computation is not used.
-setStateTransition :: AgentState -> Event (Maybe AgentState) -> Simulation ()
+setStateTransition :: AgentState -> Event (Maybe AgentState) -> Event ()
 setStateTransition st action =
-  Simulation $ \r ->
+  Event $ \p ->
   writeIORef (stateTransitRef st) action
   
 -- | Trigger the signal when the agent state changes.

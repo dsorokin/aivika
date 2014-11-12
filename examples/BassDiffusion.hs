@@ -42,7 +42,7 @@ createPersons =
           return (i, p)
      return $ array (1, n) list
      
-definePerson :: Person -> Array Int Person -> Ref Int -> Ref Int -> Simulation ()
+definePerson :: Person -> Array Int Person -> Ref Int -> Ref Int -> Event ()
 definePerson p ps potentialAdopters adopters =
   do setStateActivation (personPotentialAdopter p) $
        do modifyRef potentialAdopters $ \a -> a + 1
@@ -71,7 +71,7 @@ definePerson p ps potentialAdopters adopters =
      setStateDeactivation (personAdopter p) $
        modifyRef adopters $ \a -> a - 1
         
-definePersons :: Array Int Person -> Ref Int -> Ref Int -> Simulation ()
+definePersons :: Array Int Person -> Ref Int -> Ref Int -> Event ()
 definePersons ps potentialAdopters adopters =
   forM_ (elems ps) $ \p -> 
   definePerson p ps potentialAdopters adopters
@@ -88,9 +88,9 @@ model =
   do potentialAdopters <- newRef 0
      adopters <- newRef 0
      ps <- createPersons
-     definePersons ps potentialAdopters adopters
      runEventInStartTime $
-       activatePersons ps
+       do definePersons ps potentialAdopters adopters
+          activatePersons ps
      return $ 
        results
        [resultSource 
