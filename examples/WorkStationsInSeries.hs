@@ -59,10 +59,6 @@ newWorkStationExponential meanTime =
         randomExponential meanTime)
      return a
 
--- interpose the prefetch processor between two processors
-interposePrefetchProcessor x y = 
-  x >>> prefetchProcessor >>> y
-
 model :: Simulation Results
 model = do
   -- it will gather the statistics of the processing time
@@ -97,10 +93,10 @@ model = do
   let entireProcessor =
         queueProcessor1 >>>
         processorParallel (map serverProcessor workStation1s) >>>
-        -- foldr1 interposePrefetchProcessor (map serverProcessor workStation1s) >>>
+        -- processorSeq (map serverProcessor workStation1s) >>>
         queueProcessor2 >>>
         processorParallel (map serverProcessor workStation2s) >>>
-        -- foldr1 interposePrefetchProcessor (map serverProcessor workStation2s) >>>
+        -- processorSeq (map serverProcessor workStation2s) >>>
         arrivalTimerProcessor arrivalTimer
   -- start simulating the model
   runProcessInStartTime $
