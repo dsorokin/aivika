@@ -107,24 +107,18 @@ hPrintResultSourceIndentedLabelled :: Handle
                                       -- ^ a localisation
                                       -> ResultSourcePrint
 hPrintResultSourceIndentedLabelled h indent label loc (ResultItemSource (ResultItem x)) =
-  case resultValueData (resultItemToStringValue x) of
-    Just m ->
-      do a <- m
-         let tab = replicate indent ' '
-         liftIO $
-           do hPutStr h tab
-              hPutStr h "-- "
-              hPutStr h (loc $ resultItemId x)
-              hPutStrLn h ""
-              hPutStr h tab
-              hPutStr h label
-              hPutStr h " = "
-              hPutStrLn h a
-              hPutStrLn h ""
-    _ ->
-      error $
-      "Expected to see a string value for variable " ++
-      (resultItemName x) ++ ": hPrintResultSourceIndentedLabelled"
+  do a <- resultValueData $ resultItemToStringValue x
+     let tab = replicate indent ' '
+     liftIO $
+       do hPutStr h tab
+          hPutStr h "-- "
+          hPutStr h (loc $ resultItemId x)
+          hPutStrLn h ""
+          hPutStr h tab
+          hPutStr h label
+          hPutStr h " = "
+          hPutStrLn h a
+          hPutStrLn h ""
 hPrintResultSourceIndentedLabelled h indent label loc (ResultVectorSource x) =
   do let tab = replicate indent ' '
      liftIO $
@@ -229,24 +223,18 @@ showResultSourceIndentedLabelled :: Int
                                    -- ^ a localisation
                                    -> ResultSourceShowS
 showResultSourceIndentedLabelled indent label loc (ResultItemSource (ResultItem x)) =
-  case resultValueData (resultItemToStringValue x) of
-    Just m ->
-      do a <- m
-         let tab = replicate indent ' '
-         return $
-           showString tab .
-           showString "-- " .
-           showString (loc $ resultItemId x) .
-           showString "\n" .
-           showString tab .
-           showString label .
-           showString " = " .
-           showString a .
-           showString "\n\n"
-    _ ->
-      error $
-      "Expected to see a string value for variable " ++
-      (resultItemName x) ++ ": showResultSourceIndentedLabelled"
+  do a <- resultValueData $ resultItemToStringValue x
+     let tab = replicate indent ' '
+     return $
+       showString tab .
+       showString "-- " .
+       showString (loc $ resultItemId x) .
+       showString "\n" .
+       showString tab .
+       showString label .
+       showString " = " .
+       showString a .
+       showString "\n\n"
 showResultSourceIndentedLabelled indent label loc (ResultVectorSource x) =
   do let tab = replicate indent ' '
          items = A.elems (resultVectorItems x)
