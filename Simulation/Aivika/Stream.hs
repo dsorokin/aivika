@@ -98,6 +98,12 @@ instance Applicative Stream where
   
   (<*>) = apStream
 
+instance Alternative Stream where
+
+  empty = emptyStream
+
+  (<|>) = mergeStreams
+
 instance Monoid (Stream a) where
 
   mempty  = emptyStream
