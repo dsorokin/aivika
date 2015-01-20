@@ -69,7 +69,7 @@ model = do
   lostSalesCount <- newRef (0 :: Int)
   -- whether the procurement initiated?
   procuring <- newRef False
-  -- the inventotyPosition
+  -- the inventory position
   let inventoryPosition = do
         x1 <- readRef radioStock
         x2 <- readRef orderCount
