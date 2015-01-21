@@ -57,7 +57,7 @@ data Job = Job { jobProcessingTime :: Double,
 model :: Simulation Results
 model = do
   -- create an input queue
-  inputQueue <- runEventInStartTime $ IQ.newFCFSQueue
+  inputQueue <- runEventInStartTime IQ.newPriorityQueue
   -- a counter of jobs completed
   jobsCompleted <- newArrivalTimer
   -- a counter of interrupted jobs but then returned for the further processing
@@ -93,7 +93,8 @@ model = do
   runEventInStartTime $
     handleSignal_ (serverTaskInterrupted machineProcessing) $ \x ->
     traceEvent "interrupting the job.." $
-    do let t1 = serverStartProcessingTime x
+    do let t0 = arrivalTime a
+           t1 = serverStartProcessingTime x
            t2 = serverInterruptionTime x
            dt = t2 - t1
            a  = serverInterruptedInput x
@@ -102,7 +103,7 @@ model = do
            job' = job { jobRemainingTime =
                            max 0 $ jobRemainingTime job - dt }
        modifyRef jobsInterrupted (+ 1)
-       IQ.enqueue inputQueue a'
+       IQ.enqueueWithStoringPriority inputQueue t0 a'
   -- launch the machine tool
   let launch = do
         -- breakdown the machine tool in time (a bound child process)
@@ -145,7 +146,8 @@ model = do
         liftParameter $
         randomNormal jobProcessingMu jobProcessingSigma
       -- enqueue the job
-      IQ.enqueue inputQueue $
+      let t0 = arrivalTime a
+      IQ.enqueueWithStoringPriority inputQueue t0 $
         a { arrivalValue =
                Job jobProcessingTime jobProcessingTime }
   -- return the simulation results in start time
