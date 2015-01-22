@@ -12,6 +12,7 @@ import Control.Monad.Trans
 import Control.Category
 
 import Data.Monoid
+import Data.List
 
 import Simulation.Aivika
 import qualified Simulation.Aivika.Queue.Infinite as IQ
@@ -73,22 +74,18 @@ model = do
        setUpTime <-
          liftParameter $
          randomUniform minSetUpTime maxSetUpTime
-       holdProcess setUpTime
+       traceProcess "setting up the machine" $
+         holdProcess setUpTime
        return a
   -- create the processing phase itself
   machineProcessing <-
     newInterruptibleServer True $ \a ->
     do -- process the job
        let job = arrivalValue a
-       holdProcess $ jobRemainingTime job
+       traceProcess "processing the job" $
+         holdProcess $ jobRemainingTime job
        -- return the completed job
        return a { arrivalValue = job { jobRemainingTime = 0 } }
-  -- define the network
-  let network =
-        traceProcessor Nothing (Just "the job completed") $
-        serverProcessor machineSettingUp >>>
-        serverProcessor machineProcessing >>>
-        arrivalTimerProcessor jobsCompleted
   -- enqueue the interrupted jobs again
   runEventInStartTime $
     handleSignal_ (serverTaskInterrupted machineProcessing) $ \x ->
@@ -104,36 +101,42 @@ model = do
                            max 0 $ jobRemainingTime job - dt }
        modifyRef jobsInterrupted (+ 1)
        IQ.enqueueWithStoringPriority inputQueue t0 a'
-  -- launch the machine tool
-  let launch = do
-        -- breakdown the machine tool in time (a bound child process)
-        spawnProcess $ do
-          breakdownTime <-
-            liftParameter $
-            randomNormal breakdownMu breakdownSigma
-          when (breakdownTime > 0) $
-            holdProcess breakdownTime
-          traceProcess "breakdown" $
-            cancelProcess
-        -- model the machine tool itself
-        let loop =
-              -- process the jobs until interrupting
-              sinkStream $
-                runProcessor network inputStream
-        -- model the repairing of the tool
-        let repair = do
-              -- at first repair the machine
-              repairTime <- liftParameter $
-                            randomErlang repairMu 3
-              holdProcess repairTime
-              -- then launch it again (an independent process)
-              traceProcess "repaired" $
-                liftEvent $
-                runProcess launch
-        -- start simulating the machine tool with an ability to repair
-        finallyProcess loop repair
+  let -- launch the machine tool again and again
+      machineLaunch =
+        joinProcessor $
+        do spawnProcess $
+             do -- breakdown the machine tool in time (a bound child process)
+                breakdownTime <-
+                  liftParameter $
+                  randomNormal breakdownMu breakdownSigma
+                when (breakdownTime > 0) $
+                  holdProcess breakdownTime
+                traceProcess "breakdown" $
+                  cancelProcess
+           return $
+             serverProcessor machineSettingUp >>>
+             serverProcessor machineProcessing
+      -- repair the machine tool
+      machineRepair =
+        do repairTime <- liftParameter $
+                         randomErlang repairMu 3
+           holdProcess repairTime
+      -- launch after repairing the machine tool
+      machineRepairAndLaunch =
+        joinProcessor $
+        do machineRepair
+           traceProcess "repaired" $
+             return machineLaunch
+      -- machine loop
+      machineLoop = machineLaunch : repeat machineRepairAndLaunch
+      -- the network
+      network = 
+        traceProcessor Nothing (Just "the job completed") $
+        failoverProcessor machineLoop >>>
+        arrivalTimerProcessor jobsCompleted
   -- start the machine tool
-  runProcessInStartTime launch
+  runProcessInStartTime $
+    sinkStream $ runProcessor network inputStream
   -- model a stream of jobs
   let jobs =
         traceStream Nothing (Just "a new job") $
