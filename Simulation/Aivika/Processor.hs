@@ -39,6 +39,10 @@ module Simulation.Aivika.Processor
         processorPrioritisingInputOutputParallel,
         -- * Arrival Processor
         arrivalProcessor,
+        -- * Utilities
+        joinProcessor,
+        -- * Failover
+        failoverProcessor,
         -- * Integrating with Signals
         signalProcessor,
         processorSignaling,
@@ -458,6 +462,19 @@ arrivalProcessor = Processor arrivalStream
 -- | A processor that delays the input stream by one step using the specified initial value.
 delayProcessor :: a -> Processor a a
 delayProcessor a0 = Processor $ delayStream a0
+
+-- | Removes one level of the computation, projecting its bound processor into the outer level.
+joinProcessor :: Process (Processor a b) -> Processor a b
+joinProcessor m =
+  Processor $ \xs ->
+  Cons $
+  do Processor f <- m
+     runStream $ f xs
+
+-- | Takes the next processor from the list after the current processor is failed because of cancelling the underlying process.
+failoverProcessor :: [Processor a b] -> Processor a b
+failoverProcessor ps =
+  Processor $ \xs -> failoverStream [runProcessor p xs | p <- ps]
 
 -- | Show the debug messages with the current simulation time.
 traceProcessor :: Maybe String

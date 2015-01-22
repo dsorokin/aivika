@@ -51,6 +51,9 @@ module Simulation.Aivika.Stream
         filterStream,
         filterStreamM,
         singletonStream,
+        joinStream,
+        -- * Failover
+        failoverStream,
         -- * Integrating with Signals
         signalStream,
         streamSignal,
@@ -545,6 +548,53 @@ delayStream a0 s = Cons $ return (a0, s)
 -- | Return a stream consisting of exactly one element and inifinite tail.
 singletonStream :: a -> Stream a
 singletonStream a = Cons $ return (a, emptyStream)
+
+-- | Removes one level of the computation, projecting its bound stream into the outer level.
+joinStream :: Process (Stream a) -> Stream a
+joinStream m = Cons $ m >>= runStream
+
+-- | Takes the next stream from the list after the current stream is failed because of cancelling the underlying process.
+failoverStream :: [Stream a] -> Stream a
+failoverStream ps = Cons z where
+  z = do reading <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
+         writing <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
+         ref <- liftIO $ newIORef Nothing
+         pid <- processId
+         let writer p =
+               do requestResource writing
+                  pid' <- processId
+                  (a, xs) <-
+                    finallyProcess (runStream p) $
+                    liftEvent $
+                    do cancelled' <- processCancelled pid'
+                       when cancelled' $
+                         releaseResourceWithinEvent writing
+                  liftIO $ writeIORef ref (Just a)
+                  releaseResource reading
+                  writer xs
+             reader =
+               do releaseResource writing
+                  requestResource reading
+                  Just a <- liftIO $ readIORef ref
+                  liftIO $ writeIORef ref Nothing
+                  return a
+             loop [] = neverProcess
+             loop (p: ps) =
+               do pid' <- processId
+                  h' <- liftEvent $
+                        handleSignal (processCancelling pid) $ \() ->
+                        cancelProcessWithId pid'
+                  finallyProcess (writer p) $
+                    liftEvent $
+                    do disposeEvent h'
+                       cancelled <- processCancelled pid
+                       unless cancelled $
+                         do cancelled' <- processCancelled pid'
+                            unless cancelled' $
+                              error "Expected the sub-process to be cancelled: failoverStream"
+                            runProcess $ loop ps
+         liftEvent $ runProcess $ loop ps
+         runStream $ repeatProcess reader
 
 -- | Show the debug messages with the current simulation time.
 traceStream :: Maybe String
