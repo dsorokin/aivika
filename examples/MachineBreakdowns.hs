@@ -111,7 +111,8 @@ model = do
           breakdownTime <-
             liftParameter $
             randomNormal breakdownMu breakdownSigma
-          holdProcess breakdownTime
+          when (breakdownTime > 0) $
+            holdProcess breakdownTime
           traceProcess "breakdown" $
             cancelProcess
         -- model the machine tool itself
@@ -147,9 +148,9 @@ model = do
         randomNormal jobProcessingMu jobProcessingSigma
       -- enqueue the job
       let t0 = arrivalTime a
+          dt = max 0 jobProcessingTime
       IQ.enqueueWithStoringPriority inputQueue t0 $
-        a { arrivalValue =
-               Job jobProcessingTime jobProcessingTime }
+        a { arrivalValue = Job dt dt }
   -- return the simulation results in start time
   return $
     results
