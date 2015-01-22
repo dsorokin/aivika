@@ -553,7 +553,7 @@ singletonStream a = Cons $ return (a, emptyStream)
 joinStream :: Process (Stream a) -> Stream a
 joinStream m = Cons $ m >>= runStream
 
--- | Takes the next stream from the list after the current stream is failed because of cancelling the underlying process.
+-- | Takes the next stream from the list after the current stream fails because of cancelling the underlying process.
 failoverStream :: [Stream a] -> Stream a
 failoverStream ps = Cons z where
   z = do reading <- liftSimulation $ newResourceWithMaxCount FCFS 0 (Just 1)
