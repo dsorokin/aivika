@@ -94,7 +94,7 @@ model =
      return $ 
        results
        [resultSource 
-        "potentialAdopter" "potential adopters" potentialAdopters,
+        "potentialAdopters" "potential adopters" potentialAdopters,
         resultSource 
         "adopters" "adopters" adopters]
 
