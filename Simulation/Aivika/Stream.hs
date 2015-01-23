@@ -578,7 +578,7 @@ failoverStream ps = Cons z where
                   Just a <- liftIO $ readIORef ref
                   liftIO $ writeIORef ref Nothing
                   return a
-             loop [] = neverProcess
+             loop [] = return ()
              loop (p: ps) =
                do pid' <- processId
                   h' <- liftEvent $
