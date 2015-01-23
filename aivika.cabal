@@ -108,6 +108,7 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/TimeOut.hs
                      examples/TimeOutInt.hs
                      examples/TimeOutWait.hs
+                     CHANGELOG.md
 
 flag haste-inst
     
