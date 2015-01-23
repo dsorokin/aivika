@@ -9,7 +9,7 @@ further repairing of the server).
 modeling of servers.
 
 * Checking the argument, i.e. time period, in the holdProcess
-function. It must be not negative.
+function. It must not be negative.
 
 * The taskProcess computation behaves exactly like the background
   process, i.e. now its cancellation leads to immediate cancelling the background
