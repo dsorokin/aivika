@@ -55,6 +55,19 @@ data Job = Job { jobProcessingTime :: Double,
                  -- ^ the remaining processing time (may differ after return).
                }
 
+-- | Return the remaining job after interruption.
+remainingJobInput :: ServerInterruption (Arrival Job) -> Arrival Job
+remainingJobInput x = a'
+  where
+    t1 = serverStartProcessingTime x
+    t2 = serverInterruptionTime x
+    dt = t2 - t1
+    a  = serverInterruptedInput x
+    a' = a { arrivalValue = job' }
+    job  = arrivalValue a
+    job' = job { jobRemainingTime =
+                    max 0 $ jobRemainingTime job - dt }
+
 model :: Simulation Results
 model = do
   -- create an input queue
@@ -69,7 +82,7 @@ model = do
         repeatProcess $ IQ.dequeue inputQueue
   -- create the setting up phase of processing
   machineSettingUp <-
-    newServer $ \a ->
+    newInterruptibleServer True $ \a ->
     do -- set up the machine
        setUpTime <-
          liftParameter $
@@ -88,19 +101,17 @@ model = do
        return a { arrivalValue = job { jobRemainingTime = 0 } }
   -- enqueue the interrupted jobs again
   runEventInStartTime $
-    handleSignal_ (serverTaskInterrupted machineProcessing) $ \x ->
-    traceEvent "interrupting the job.." $
-    do let t0 = arrivalTime a
-           t1 = serverStartProcessingTime x
-           t2 = serverInterruptionTime x
-           dt = t2 - t1
-           a  = serverInterruptedInput x
-           a' = a { arrivalValue = job' }
-           job  = arrivalValue a
-           job' = job { jobRemainingTime =
-                           max 0 $ jobRemainingTime job - dt }
-       modifyRef jobsInterrupted (+ 1)
-       IQ.enqueueWithStoringPriority inputQueue t0 a'
+    do handleSignal_ (serverTaskInterrupted machineSettingUp) $ \x ->
+         traceEvent "returning the job..." $
+         do let a = serverInterruptedInput x
+                t = arrivalTime a
+            IQ.enqueueWithStoringPriority inputQueue t a
+       handleSignal_ (serverTaskInterrupted machineProcessing) $ \x ->
+         traceEvent "interrupting the job..." $
+         do let a = remainingJobInput x
+                t = arrivalTime a
+            modifyRef jobsInterrupted (+ 1)
+            IQ.enqueueWithStoringPriority inputQueue t a
   let -- launch the machine tool again and again
       machineLaunch =
         joinProcessor $
