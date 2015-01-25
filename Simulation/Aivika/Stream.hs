@@ -50,6 +50,12 @@ module Simulation.Aivika.Stream
         apStreamM,
         filterStream,
         filterStreamM,
+        takeStream,
+        takeStreamWhile,
+        takeStreamWhileM,
+        dropStream,
+        dropStreamWhile,
+        dropStreamWhileM,
         singletonStream,
         joinStream,
         -- * Failover
@@ -595,6 +601,62 @@ failoverStream ps = Cons z where
                             runProcess $ loop ps
          liftEvent $ runProcess $ loop ps
          runStream $ repeatProcess reader
+
+-- | Return the prefix of the stream of the specified length.
+takeStream :: Int -> Stream a -> Stream a
+takeStream n s
+  | n <= 0    = emptyStream
+  | otherwise =
+    Cons $
+    do (a, xs) <- runStream s
+       return (a, takeStream (n - 1) xs)
+
+-- | Return the longest prefix of the stream of elements that satisfy the predicate.
+takeStreamWhile :: (a -> Bool) -> Stream a -> Stream a
+takeStreamWhile p s =
+  Cons $
+  do (a, xs) <- runStream s
+     if p a
+       then return (a, takeStreamWhile p xs)
+       else neverProcess
+
+-- | Return the longest prefix of the stream of elements that satisfy the computation.
+takeStreamWhileM :: (a -> Process Bool) -> Stream a -> Stream a
+takeStreamWhileM p s =
+  Cons $
+  do (a, xs) <- runStream s
+     f <- p a
+     if f
+       then return (a, takeStreamWhileM p xs)
+       else neverProcess
+
+-- | Return the suffix of the stream after the specified first elements.
+dropStream :: Int -> Stream a -> Stream a
+dropStream n s
+  | n <= 0    = s
+  | otherwise =
+    Cons $
+    do (a, xs) <- runStream s
+       runStream $ dropStream (n - 1) xs
+
+-- | Return the suffix of the stream of elements remaining after 'takeStreamWhile'.
+dropStreamWhile :: (a -> Bool) -> Stream a -> Stream a
+dropStreamWhile p s =
+  Cons $
+  do (a, xs) <- runStream s
+     if p a
+       then runStream $ dropStreamWhile p xs
+       else return (a, xs)
+
+-- | Return the suffix of the stream of elements remaining after 'takeStreamWhileM'.
+dropStreamWhileM :: (a -> Process Bool) -> Stream a -> Stream a
+dropStreamWhileM p s =
+  Cons $
+  do (a, xs) <- runStream s
+     f <- p a
+     if f
+       then runStream $ dropStreamWhileM p xs
+       else return (a, xs)
 
 -- | Show the debug messages with the current simulation time.
 traceStream :: Maybe String
