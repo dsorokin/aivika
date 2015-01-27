@@ -1,4 +1,6 @@
 
+-- CAUTION: THE MODEL IS NOT COMPLETE YET!
+--
 -- Example: Machine Tool with Breakdowns 
 --
 -- It is described in different sources [1, 2]. So, this is chapter 13 of [2] and section 6.12 of [1].
