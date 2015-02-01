@@ -16,14 +16,21 @@
 module Simulation.Aivika.Internal.Cont
        (ContCancellation(..),
         ContId,
+        ContEvent,
         Cont(..),
         ContParams,
         newContId,
+        contChanged,
         contCancellationInitiated,
         contCancellationInitiate,
         contCancellationInitiating,
         contCancellationBind,
         contCancellationConnect,
+        contPreempting,
+        contPreempted,
+        contPreempt,
+        contReentering,
+        contReenter,
         invokeCont,
         runCont,
         rerunCont,
@@ -73,8 +80,18 @@ data ContCancellation = CancelTogether
 data ContId =
   ContId { contCancellationInitiatedRef :: IORef Bool,
            contCancellationActivatedRef :: IORef Bool,
-           contCancellationInitiatingSource :: SignalSource ()
+           contPreemptedRef :: IORef Bool,
+           contChangeSource :: SignalSource ContEvent
          }
+
+-- | The event that occurs within the 'Cont' computation.
+data ContEvent = CancelCont
+                 -- ^ Cancel the computation.
+               | PreemptCont
+                 -- ^ Preempt the computation.
+               | ReenterCont
+                 -- ^ Reenter the computation after if was preempted.
+               deriving (Eq, Ord, Show)
 
 -- | Create a computation identifier.
 newContId :: Simulation ContId
@@ -82,16 +99,21 @@ newContId =
   Simulation $ \r ->
   do r1 <- newIORef False
      r2 <- newIORef False
+     r3 <- newIORef False
      s  <- invokeSimulation r newSignalSource
      return ContId { contCancellationInitiatedRef = r1,
                      contCancellationActivatedRef = r2,
-                     contCancellationInitiatingSource = s
+                     contPreemptedRef = r3,
+                     contChangeSource = s
                    }
+
+-- | Signal when the computation state changes.
+contChanged :: ContId -> Signal ContEvent
+contChanged = publishSignal . contChangeSource
 
 -- | Signal when the cancellation is intiating.
 contCancellationInitiating :: ContId -> Signal ()
-contCancellationInitiating =
-  publishSignal . contCancellationInitiatingSource
+contCancellationInitiating = filterSignal_ (CancelCont ==) . contChanged
 
 -- | Whether the cancellation was initiated.
 contCancellationInitiated :: ContId -> Event Bool
@@ -161,7 +183,42 @@ contCancellationInitiate x =
      unless f $
        do writeIORef (contCancellationInitiatedRef x) True
           writeIORef (contCancellationActivatedRef x) True
-          invokeEvent p $ triggerSignal (contCancellationInitiatingSource x) ()
+          invokeEvent p $ triggerSignal (contChangeSource x) CancelCont
+
+-- | Preempt the computation.
+contPreempt :: ContId -> Event ()
+contPreempt x =
+  Event $ \p ->
+  do f <- readIORef (contCancellationInitiatedRef x)
+     unless f $
+       do g <- readIORef (contPreemptedRef x)
+          unless g $
+            do writeIORef (contPreemptedRef x) True
+               invokeEvent p $ triggerSignal (contChangeSource x) PreemptCont
+
+-- | Reenter the computation after it was preempted.
+contReenter :: ContId -> Event ()
+contReenter x =
+  Event $ \p ->
+  do f <- readIORef (contCancellationInitiatedRef x)
+     unless f $
+       do g <- readIORef (contPreemptedRef x)
+          when g $
+            do writeIORef (contPreemptedRef x) False
+               invokeEvent p $ triggerSignal (contChangeSource x) ReenterCont
+
+-- | Signal when the computation is preempted.
+contPreempting :: ContId -> Signal ()
+contPreempting = filterSignal_ (PreemptCont ==) . contChanged
+
+-- | Signal when the computation is reentered after it was preempted before.
+contReentering :: ContId -> Signal ()
+contReentering = filterSignal_ (ReenterCont ==) . contChanged
+
+-- | Whether the computation was preemtped.
+contPreempted :: ContId -> Event Bool
+contPreempted x =
+  Event $ \p -> readIORef (contPreemptedRef x)
 
 -- | The 'Cont' type is similar to the standard @Cont@ monad 
 -- and F# async workflow but only the result of applying
