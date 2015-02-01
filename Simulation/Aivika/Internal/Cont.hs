@@ -15,10 +15,10 @@
 --
 module Simulation.Aivika.Internal.Cont
        (ContCancellation(..),
-        ContCancellationSource,
+        ContId,
         Cont(..),
         ContParams,
-        newContCancellationSource,
+        newContId,
         contCancellationInitiated,
         contCancellationInitiate,
         contCancellationInitiating,
@@ -69,47 +69,47 @@ data ContCancellation = CancelTogether
                       | CancelInIsolation
                         -- ^ Cancel the computations in isolation.
 
--- | It manages the cancellation process.
-data ContCancellationSource =
-  ContCancellationSource { contCancellationInitiatedRef :: IORef Bool,
-                           contCancellationActivatedRef :: IORef Bool,
-                           contCancellationInitiatingSource :: SignalSource ()
-                         }
+-- | It identifies the 'Cont' computation.
+data ContId =
+  ContId { contCancellationInitiatedRef :: IORef Bool,
+           contCancellationActivatedRef :: IORef Bool,
+           contCancellationInitiatingSource :: SignalSource ()
+         }
 
--- | Create the cancellation source.
-newContCancellationSource :: Simulation ContCancellationSource
-newContCancellationSource =
+-- | Create a computation identifier.
+newContId :: Simulation ContId
+newContId =
   Simulation $ \r ->
   do r1 <- newIORef False
      r2 <- newIORef False
      s  <- invokeSimulation r newSignalSource
-     return ContCancellationSource { contCancellationInitiatedRef = r1,
-                                     contCancellationActivatedRef = r2,
-                                     contCancellationInitiatingSource = s
-                                   }
+     return ContId { contCancellationInitiatedRef = r1,
+                     contCancellationActivatedRef = r2,
+                     contCancellationInitiatingSource = s
+                   }
 
 -- | Signal when the cancellation is intiating.
-contCancellationInitiating :: ContCancellationSource -> Signal ()
+contCancellationInitiating :: ContId -> Signal ()
 contCancellationInitiating =
   publishSignal . contCancellationInitiatingSource
 
 -- | Whether the cancellation was initiated.
-contCancellationInitiated :: ContCancellationSource -> Event Bool
+contCancellationInitiated :: ContId -> Event Bool
 contCancellationInitiated x =
   Event $ \p -> readIORef (contCancellationInitiatedRef x)
 
 -- | Whether the cancellation was activated.
-contCancellationActivated :: ContCancellationSource -> IO Bool
+contCancellationActivated :: ContId -> IO Bool
 contCancellationActivated =
   readIORef . contCancellationActivatedRef
 
 -- | Deactivate the cancellation.
-contCancellationDeactivate :: ContCancellationSource -> IO ()
+contCancellationDeactivate :: ContId -> IO ()
 contCancellationDeactivate x =
   writeIORef (contCancellationActivatedRef x) False
 
 -- | If the main computation is cancelled then all the nested ones will be cancelled too.
-contCancellationBind :: ContCancellationSource -> [ContCancellationSource] -> Event DisposableEvent
+contCancellationBind :: ContId -> [ContId] -> Event DisposableEvent
 contCancellationBind x ys =
   Event $ \p ->
   do hs1 <- forM ys $ \y ->
@@ -123,11 +123,11 @@ contCancellationBind x ys =
      return $ mconcat hs1 <> mconcat hs2
 
 -- | Connect the parent computation to the child one.
-contCancellationConnect :: ContCancellationSource
+contCancellationConnect :: ContId
                            -- ^ the parent
                            -> ContCancellation
                            -- ^ how to connect
-                           -> ContCancellationSource
+                           -> ContId
                            -- ^ the child
                            -> Event DisposableEvent
                            -- ^ computation of the disposable handler
@@ -154,7 +154,7 @@ contCancellationConnect parent cancellation child =
      return $ h1 <> h2
 
 -- | Initiate the cancellation.
-contCancellationInitiate :: ContCancellationSource -> Event ()
+contCancellationInitiate :: ContId -> Event ()
 contCancellationInitiate x =
   Event $ \p ->
   do f <- readIORef (contCancellationInitiatedRef x)
@@ -177,7 +177,7 @@ data ContParams a =
 data ContParamsAux =
   ContParamsAux { contECont :: SomeException -> Event (),
                   contCCont :: () -> Event (),
-                  contCancelSource :: ContCancellationSource,
+                  contId :: ContId,
                   contCancelFlag :: IO Bool,
                   contCatchFlag  :: Bool }
 
@@ -216,7 +216,7 @@ invokeCont p (Cont m) = m p
 cancelCont :: Point -> ContParams a -> IO ()
 {-# NOINLINE cancelCont #-}
 cancelCont p c =
-  do contCancellationDeactivate (contCancelSource $ contAux c)
+  do contCancellationDeactivate (contId $ contAux c)
      invokeEvent p $ (contCCont $ contAux c) ()
 
 returnC :: a -> Cont a
@@ -317,18 +317,18 @@ runCont :: Cont a
            -- ^ the branch for handing exceptions
            -> (() -> Event ())
            -- ^ the branch for cancellation
-           -> ContCancellationSource
-           -- ^ the cancellation source
+           -> ContId
+           -- ^ the computation identifier
            -> Bool
            -- ^ whether to support the exception handling from the beginning
            -> Event ()
-runCont (Cont m) cont econt ccont cancelSource catchFlag = 
+runCont (Cont m) cont econt ccont cid catchFlag = 
   m ContParams { contCont = cont,
                  contAux  = 
                    ContParamsAux { contECont = econt,
                                    contCCont = ccont,
-                                   contCancelSource = cancelSource,
-                                   contCancelFlag = contCancellationActivated cancelSource, 
+                                   contId = cid,
+                                   contCancelFlag = contCancellationActivated cid, 
                                    contCatchFlag  = catchFlag } }
 
 -- | Lift the 'Parameter' computation.
@@ -440,10 +440,10 @@ contCanceled c = contCancelFlag $ contAux c
 -- Here word @parallel@ literally means that the computations are
 -- actually executed on a single operating system thread but
 -- they are processed simultaneously by the event queue.
-contParallel :: [(Cont a, ContCancellationSource)]
+contParallel :: [(Cont a, ContId)]
                 -- ^ the list of:
                 -- the nested computation,
-                -- the cancellation source
+                -- the computation identifier
                 -> Cont [a]
 contParallel xs =
   Cont $ \c ->
@@ -454,7 +454,7 @@ contParallel xs =
               counter   <- newIORef 0
               catchRef  <- newIORef Nothing
               hs <- invokeEvent p $
-                    contCancellationBind (contCancelSource $ contAux c) $
+                    contCancellationBind (contId $ contAux c) $
                     map snd xs
               let propagate =
                     Event $ \p ->
@@ -489,9 +489,9 @@ contParallel xs =
                     do modifyIORef counter (+ 1)
                        -- the main computation was automatically canceled
                        invokeEvent p propagate
-              forM_ (zip [1..n] xs) $ \(i, (x, cancelSource)) ->
+              forM_ (zip [1..n] xs) $ \(i, (x, cid)) ->
                 invokeEvent p $
-                runCont x (cont i) econt ccont cancelSource (contCatchFlag $ contAux c)
+                runCont x (cont i) econt ccont cid (contCatchFlag $ contAux c)
      z <- contCanceled c
      if z
        then cancelCont p c
@@ -502,10 +502,10 @@ contParallel xs =
 -- | A partial case of 'contParallel' when we are not interested in
 -- the results but we are interested in the actions to be peformed by
 -- the nested computations.
-contParallel_ :: [(Cont a, ContCancellationSource)]
+contParallel_ :: [(Cont a, ContId)]
                  -- ^ the list of:
                  -- the nested computation,
-                 -- the cancellation source
+                 -- the computation identifier
                  -> Cont ()
 contParallel_ xs =
   Cont $ \c ->
@@ -515,7 +515,7 @@ contParallel_ xs =
            do counter   <- newIORef 0
               catchRef  <- newIORef Nothing
               hs <- invokeEvent p $
-                    contCancellationBind (contCancelSource $ contAux c) $
+                    contCancellationBind (contId $ contAux c) $
                     map snd xs
               let propagate =
                     Event $ \p ->
@@ -549,9 +549,9 @@ contParallel_ xs =
                     do modifyIORef counter (+ 1)
                        -- the main computation was automatically canceled
                        invokeEvent p propagate
-              forM_ (zip [1..n] xs) $ \(i, (x, cancelSource)) ->
+              forM_ (zip [1..n] xs) $ \(i, (x, cid)) ->
                 invokeEvent p $
-                runCont x (cont i) econt ccont cancelSource (contCatchFlag $ contAux c)
+                runCont x (cont i) econt ccont cid (contCatchFlag $ contAux c)
      z <- contCanceled c
      if z
        then cancelCont p c
@@ -559,14 +559,14 @@ contParallel_ xs =
             then invokeEvent p $ contCont c ()
             else worker
 
--- | Rerun the 'Cont' computation with the specified cancellation source.
-rerunCont :: Cont a -> ContCancellationSource -> Cont a
-rerunCont x cancelSource =
+-- | Rerun the 'Cont' computation with the specified identifier.
+rerunCont :: Cont a -> ContId -> Cont a
+rerunCont x cid =
   Cont $ \c ->
   Event $ \p ->
   do let worker =
            do hs <- invokeEvent p $
-                    contCancellationBind (contCancelSource $ contAux c) [cancelSource]
+                    contCancellationBind (contId $ contAux c) [cid]
               let cont a  =
                     Event $ \p ->
                     do invokeEvent p $ disposeEvent hs  -- unbind the cancellation source
@@ -580,21 +580,21 @@ rerunCont x cancelSource =
                     do invokeEvent p $ disposeEvent hs  -- unbind the cancellation source
                        cancelCont p c
               invokeEvent p $
-                runCont x cont econt ccont cancelSource (contCatchFlag $ contAux c)
+                runCont x cont econt ccont cid (contCatchFlag $ contAux c)
      z <- contCanceled c
      if z
        then cancelCont p c
        else worker
 
--- | Run the 'Cont' computation in parallel but connect the cancellation sources.
-spawnCont :: ContCancellation -> Cont () -> ContCancellationSource -> Cont ()
-spawnCont cancellation x cancelSource =
+-- | Run the 'Cont' computation in parallel but connect the computations.
+spawnCont :: ContCancellation -> Cont () -> ContId -> Cont ()
+spawnCont cancellation x cid =
   Cont $ \c ->
   Event $ \p ->
   do let worker =
            do hs <- invokeEvent p $
                     contCancellationConnect
-                    (contCancelSource $ contAux c) cancellation cancelSource
+                    (contId $ contAux c) cancellation cid
               let cont a  =
                     Event $ \p ->
                     do invokeEvent p $ disposeEvent hs  -- unbind the cancellation source
@@ -609,7 +609,7 @@ spawnCont cancellation x cancelSource =
                        -- do nothing and it will finish the computation
               invokeEvent p $
                 enqueueEvent (pointTime p) $
-                runCont x cont econt ccont cancelSource False
+                runCont x cont econt ccont cid False
               invokeEvent p $
                 resumeCont c ()
      z <- contCanceled c
@@ -625,7 +625,7 @@ contFreeze c =
      rc <- newIORef $ Just c
      h <- invokeEvent p $
           handleSignal (contCancellationInitiating $
-                        contCancelSource $
+                        contId $
                         contAux c) $ \a ->
           Event $ \p ->
           do h <- readIORef rh

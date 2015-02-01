@@ -106,7 +106,7 @@ import Simulation.Aivika.Signal
 data ProcessId = 
   ProcessId { processStarted :: IORef Bool,
               processReactCont     :: IORef (Maybe (ContParams ())), 
-              processCancelSource  :: ContCancellationSource,
+              processContId  :: ContId,
               processInterruptRef  :: IORef Bool, 
               processInterruptCont :: IORef (Maybe (ContParams ())), 
               processInterruptVersion :: IORef Int }
@@ -238,7 +238,7 @@ runProcess p =
 runProcessUsingId :: ProcessId -> Process () -> Event ()
 runProcessUsingId pid p =
   do processIdPrepare pid
-     runCont m cont econt ccont (processCancelSource pid) False
+     runCont m cont econt ccont (processContId pid) False
        where cont  = return
              econt = throwEvent
              ccont = return
@@ -288,20 +288,20 @@ newProcessId :: Simulation ProcessId
 newProcessId =
   do x <- liftIO $ newIORef Nothing
      y <- liftIO $ newIORef False
-     c <- newContCancellationSource
+     c <- newContId
      i <- liftIO $ newIORef False
      z <- liftIO $ newIORef Nothing
      v <- liftIO $ newIORef 0
      return ProcessId { processStarted = y,
                         processReactCont     = x, 
-                        processCancelSource  = c, 
+                        processContId  = c, 
                         processInterruptRef  = i,
                         processInterruptCont = z, 
                         processInterruptVersion = v }
 
 -- | Cancel a process with the specified identifier, interrupting it if needed.
 cancelProcessWithId :: ProcessId -> Event ()
-cancelProcessWithId pid = contCancellationInitiate (processCancelSource pid)
+cancelProcessWithId pid = contCancellationInitiate (processContId pid)
 
 -- | The process cancels itself.
 cancelProcess :: Process a
@@ -313,12 +313,12 @@ cancelProcess =
 
 -- | Test whether the process with the specified identifier was cancelled.
 processCancelled :: ProcessId -> Event Bool
-processCancelled pid = contCancellationInitiated (processCancelSource pid)
+processCancelled pid = contCancellationInitiated (processContId pid)
 
 -- | Return a signal that notifies about cancelling the process with 
 -- the specified identifier.
 processCancelling :: ProcessId -> Signal ()
-processCancelling pid = contCancellationInitiating (processCancelSource pid)
+processCancelling pid = contCancellationInitiating (processContId pid)
 
 -- | Register a handler that will be invoked in case of cancelling the current process.
 whenCancellingProcess :: Event () -> Process ()
@@ -435,7 +435,7 @@ processParallelUsingIds xs =
   do liftEvent $ processParallelPrepare xs
      contParallel $
        flip map xs $ \(pid, m) ->
-       (invokeProcess pid m, processCancelSource pid)
+       (invokeProcess pid m, processContId pid)
 
 -- | Like 'processParallel' but ignores the result.
 processParallel_ :: [Process a] -> Process ()
@@ -449,7 +449,7 @@ processParallelUsingIds_ xs =
   do liftEvent $ processParallelPrepare xs
      contParallel_ $
        flip map xs $ \(pid, m) ->
-       (invokeProcess pid m, processCancelSource pid)
+       (invokeProcess pid m, processContId pid)
 
 -- | Create the new process identifiers.
 processParallelCreateIds :: [Process a] -> Simulation [(ProcessId, Process a)]
@@ -475,7 +475,7 @@ processUsingId :: ProcessId -> Process a -> Process a
 processUsingId pid x =
   Process $ \pid' ->
   do liftEvent $ processIdPrepare pid
-     rerunCont (invokeProcess pid x) (processCancelSource pid)
+     rerunCont (invokeProcess pid x) (processContId pid)
 
 -- | Spawn the child process. In case of cancelling one of the processes,
 -- other process will be cancelled too.
@@ -501,7 +501,7 @@ spawnProcessUsingIdWith :: ContCancellation -> ProcessId -> Process () -> Proces
 spawnProcessUsingIdWith cancellation pid x =
   Process $ \pid' ->
   do liftEvent $ processIdPrepare pid
-     spawnCont cancellation (invokeProcess pid x) (processCancelSource pid)
+     spawnCont cancellation (invokeProcess pid x) (processContId pid)
 
 -- | Await the signal.
 processAwait :: Signal a -> Process a
