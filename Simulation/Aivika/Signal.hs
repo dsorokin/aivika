@@ -25,7 +25,9 @@ module Simulation.Aivika.Signal
         mapSignalM,
         apSignal,
         filterSignal,
+        filterSignal_,
         filterSignalM,
+        filterSignalM_,
         emptySignal,
         merge2Signals,
         merge3Signals,
@@ -174,15 +176,23 @@ mapSignal f m =
   Signal { handleSignal = \h -> 
             handleSignal m $ h . f }
 
--- | Filter only those signal values that satisfy to 
+-- | Filter only those signal values that satisfy 
 -- the specified predicate.
 filterSignal :: (a -> Bool) -> Signal a -> Signal a
 filterSignal p m =
   Signal { handleSignal = \h ->
             handleSignal m $ \a ->
             when (p a) $ h a }
+
+-- | Filter only those signal values that satisfy
+-- the specified predicate, but then ignoring the values.
+filterSignal_ :: (a -> Bool) -> Signal a -> Signal ()
+filterSignal_ p m =
+  Signal { handleSignal = \h ->
+            handleSignal m $ \a ->
+            when (p a) $ h () }
   
--- | Filter only those signal values that satisfy to 
+-- | Filter only those signal values that satisfy
 -- the specified predicate.
 filterSignalM :: (a -> Event Bool) -> Signal a -> Signal a
 filterSignalM p m =
@@ -190,6 +200,15 @@ filterSignalM p m =
             handleSignal m $ \a ->
             do x <- p a
                when x $ h a }
+  
+-- | Filter only those signal values that satisfy
+-- the specified predicate, but then ignoring the values.
+filterSignalM_ :: (a -> Event Bool) -> Signal a -> Signal ()
+filterSignalM_ p m =
+  Signal { handleSignal = \h ->
+            handleSignal m $ \a ->
+            do x <- p a
+               when x $ h () }
   
 -- | Merge two signals.
 merge2Signals :: Signal a -> Signal a -> Signal a
