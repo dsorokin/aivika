@@ -216,8 +216,11 @@ processIdPrepare pid =
      let signal = processCancelling pid
      invokeEvent p $
        handleSignal_ signal $ \_ ->
-       do interruptProcess pid
-          reactivateProcess pid
+       Event $ \p ->
+       do z <- contCancellationActivated $ processContId pid
+          when z $
+            do invokeEvent p $ interruptProcess pid
+               invokeEvent p $ reactivateProcess pid
 
 -- | Run immediately the process. A new 'ProcessId' identifier will be
 -- assigned to the process.

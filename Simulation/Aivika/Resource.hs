@@ -80,7 +80,7 @@ data Resource s =
              -- ^ Return the maximum count of the resource, where 'Nothing'
              -- means that the resource has no upper bound.
              resourceCountRef :: IORef Int, 
-             resourceWaitList :: StrategyQueue s (Event (Maybe (ContParams ()))) }
+             resourceWaitList :: StrategyQueue s (FrozenCont ()) }
 
 instance Eq (Resource s) where
   x == y = resourceCountRef x == resourceCountRef y  -- unique references
@@ -218,7 +218,11 @@ requestResource r =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
      if a == 0 
-       then do c <- invokeEvent p $ contFreeze c
+       then do c <- invokeEvent p $
+                    freezeContReentering c () $
+                    invokeCont c $
+                    invokeProcess pid $
+                    requestResource r
                invokeEvent p $
                  strategyEnqueue (resourceWaitList r) c
        else do let a' = a - 1
@@ -240,7 +244,11 @@ requestResourceWithPriority r priority =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
      if a == 0 
-       then do c <- invokeEvent p $ contFreeze c
+       then do c <- invokeEvent p $
+                    freezeContReentering c () $
+                    invokeCont c $
+                    invokeProcess pid $
+                    requestResourceWithPriority r priority
                invokeEvent p $
                  strategyEnqueueWithPriority (resourceWaitList r) priority c
        else do let a' = a - 1
@@ -283,7 +291,7 @@ releaseResourceWithinEvent r =
        then a' `seq` writeIORef (resourceCountRef r) a'
        else do c <- invokeEvent p $
                     strategyDequeue (resourceWaitList r)
-               c <- invokeEvent p c
+               c <- invokeEvent p $ unfreezeCont c
                case c of
                  Nothing ->
                    invokeEvent p $ releaseResourceWithinEvent r

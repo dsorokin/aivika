@@ -19,11 +19,13 @@ module Simulation.Aivika.Internal.Cont
         ContEvent(..),
         Cont(..),
         ContParams,
+        FrozenCont,
         newContId,
-        contChanged,
+        contSignal,
         contCancellationInitiated,
         contCancellationInitiate,
         contCancellationInitiating,
+        contCancellationActivated,
         contCancellationBind,
         contCancellationConnect,
         contPreemptionActuated,
@@ -42,8 +44,11 @@ module Simulation.Aivika.Internal.Cont
         throwCont,
         resumeCont,
         resumeECont,
+        reenterCont,
+        freezeCont,
+        freezeContReentering,
+        unfreezeCont,
         contCanceled,
-        contFreeze,
         contAwait,
         traceCont) where
 
@@ -81,7 +86,7 @@ data ContId =
   ContId { contCancellationInitiatedRef :: IORef Bool,
            contCancellationActivatedRef :: IORef Bool,
            contPreemptionActuatedRef :: IORef Bool,
-           contChangeSource :: SignalSource ContEvent
+           contSignalSource :: SignalSource ContEvent
          }
 
 -- | The event that occurs within the 'Cont' computation.
@@ -104,17 +109,17 @@ newContId =
      return ContId { contCancellationInitiatedRef = r1,
                      contCancellationActivatedRef = r2,
                      contPreemptionActuatedRef = r3,
-                     contChangeSource = s
+                     contSignalSource = s
                    }
 
 -- | Signal when the computation state changes.
-contChanged :: ContId -> Signal ContEvent
-contChanged = publishSignal . contChangeSource
+contSignal :: ContId -> Signal ContEvent
+contSignal = publishSignal . contSignalSource
 
 -- | Signal when the cancellation is intiating.
 contCancellationInitiating :: ContId -> Signal ()
 contCancellationInitiating =
-  filterSignal_ (ContCancellationInitiating ==) . contChanged
+  filterSignal_ (ContCancellationInitiating ==) . contSignal
 
 -- | Whether the cancellation was initiated.
 contCancellationInitiated :: ContId -> Event Bool
@@ -185,7 +190,7 @@ contCancellationInitiate x =
        do writeIORef (contCancellationInitiatedRef x) True
           writeIORef (contCancellationActivatedRef x) True
           invokeEvent p $
-            triggerSignal (contChangeSource x) ContCancellationInitiating
+            triggerSignal (contSignalSource x) ContCancellationInitiating
 
 -- | Preempt the computation.
 contPreemptionActuate :: ContId -> Event ()
@@ -197,7 +202,7 @@ contPreemptionActuate x =
           unless g $
             do writeIORef (contPreemptionActuatedRef x) True
                invokeEvent p $
-                 triggerSignal (contChangeSource x) ContPreemptionActuating
+                 triggerSignal (contSignalSource x) ContPreemptionActuating
 
 -- | Reenter the computation after it was preempted.
 contPreemptionReenter :: ContId -> Event ()
@@ -209,17 +214,17 @@ contPreemptionReenter x =
           when g $
             do writeIORef (contPreemptionActuatedRef x) False
                invokeEvent p $
-                 triggerSignal (contChangeSource x) ContPreemptionReentering
+                 triggerSignal (contSignalSource x) ContPreemptionReentering
 
 -- | Signal when the computation is preempted.
 contPreemptionActuating :: ContId -> Signal ()
 contPreemptionActuating =
-  filterSignal_ (ContPreemptionActuating ==) . contChanged
+  filterSignal_ (ContPreemptionActuating ==) . contSignal
 
 -- | Signal when the computation is reentered after it was preempted before.
 contPreemptionReentering :: ContId -> Signal ()
 contPreemptionReentering =
-  filterSignal_ (ContPreemptionReentering ==) . contChanged
+  filterSignal_ (ContPreemptionReentering ==) . contSignal
 
 -- | Whether the computation was preemtped.
 contPreemptionActuated :: ContId -> Event Bool
@@ -680,21 +685,24 @@ spawnCont cancellation x cid =
        then cancelCont p c
        else worker
 
+-- | Represents a temporarily frozen computation.
+newtype FrozenCont a =
+  FrozenCont { unfreezeCont :: Event (Maybe (ContParams a)) }
+
 -- | Freeze the computation parameters temporarily.
-contFreeze :: ContParams a -> Event (Event (Maybe (ContParams a)))
-contFreeze c =
+freezeCont :: ContParams a -> Event (FrozenCont a)
+freezeCont c =
   Event $ \p ->
   do rh <- newIORef Nothing
      rc <- newIORef $ Just c
      h <- invokeEvent p $
           handleSignal (contCancellationInitiating $
-                        contId $
-                        contAux c) $ \a ->
+                        contId $ contAux c) $ \e ->
           Event $ \p ->
           do h <- readIORef rh
              case h of
                Nothing ->
-                 error "The handler was lost: contFreeze."
+                 error "The handler was lost: freezeCont."
                Just h ->
                  do invokeEvent p $ disposeEvent h
                     c <- readIORef rc
@@ -709,18 +717,110 @@ contFreeze c =
                                 when z $ cancelCont p c
      writeIORef rh (Just h)
      return $
+       FrozenCont $
        Event $ \p ->
        do invokeEvent p $ disposeEvent h
           c <- readIORef rc
           writeIORef rc Nothing
           return c
-     
+
+-- | Freeze the computation parameters specifying what should be done when reentering the computation.
+freezeContReentering :: ContParams a -> a -> Event () -> Event (FrozenCont a)
+freezeContReentering c a m =
+  Event $ \p ->
+  do rh <- newIORef Nothing
+     rc <- newIORef $ Just c
+     h <- invokeEvent p $
+          handleSignal (contCancellationInitiating $
+                        contId $ contAux c) $ \e ->
+          Event $ \p ->
+          do h <- readIORef rh
+             case h of
+               Nothing ->
+                 error "The handler was lost: freezeContReentering."
+               Just h ->
+                 do invokeEvent p $ disposeEvent h
+                    c <- readIORef rc
+                    case c of
+                      Nothing -> return ()
+                      Just c  ->
+                        do writeIORef rc Nothing
+                           invokeEvent p $
+                             enqueueEvent (pointTime p) $
+                             Event $ \p ->
+                             do z <- contCanceled c
+                                when z $ cancelCont p c
+     writeIORef rh (Just h)
+     return $
+       FrozenCont $
+       Event $ \p ->
+       do invokeEvent p $ disposeEvent h
+          c <- readIORef rc
+          writeIORef rc Nothing
+          case c of
+            Nothing -> return Nothing
+            z @ (Just c) ->
+              do f <- invokeEvent p $
+                      contPreemptionActuated $
+                      contId $ contAux c
+                 if not f
+                   then return z
+                   else do let c = c { contCont = \a -> m }
+                           invokeEvent p $ sleepCont c a
+                           return Nothing
+
+-- | Reenter the computation parameters when needed.
+reenterCont :: ContParams a -> a -> Event ()
+{-# INLINE reenterCont #-}
+reenterCont c a =
+  Event $ \p ->
+  do f <- invokeEvent p $
+          contPreemptionActuated $
+          contId $ contAux c
+     if not f
+       then invokeEvent p $
+            enqueueEvent (pointTime p) $
+            resumeCont c a
+       else invokeEvent p $
+            sleepCont c a
+
+-- | Sleep until the preempted computation will be reentered.
+sleepCont :: ContParams a -> a -> Event ()
+{-# NOINLINE sleepCont #-}
+sleepCont c a =
+  Event $ \p ->
+  do rh <- newIORef Nothing
+     h  <- invokeEvent p $
+           handleSignal (contSignal $
+                         contId $ contAux c) $ \e ->
+           Event $ \p ->
+           do h <- readIORef rh
+              case h of
+                Nothing ->
+                  error "The handler was lost: sleepCont."
+                Just h ->
+                  do invokeEvent p $ disposeEvent h
+                     case e of
+                       ContCancellationInitiating ->
+                         invokeEvent p $
+                         enqueueEvent (pointTime p) $
+                         Event $ \p ->
+                         do z <- contCanceled c
+                            when z $ cancelCont p c
+                       ContPreemptionReentering ->
+                         invokeEvent p $
+                         enqueueEvent (pointTime p) $
+                         resumeCont c a
+                       ContPreemptionActuating ->
+                         error "The computation was already preempted: sleepCont."
+     writeIORef rh (Just h)
+
 -- | Await the signal.
 contAwait :: Signal a -> Cont a
 contAwait signal =
   Cont $ \c ->
   Event $ \p ->
-  do c <- invokeEvent p $ contFreeze c
+  do c <- invokeEvent p $ freezeCont c
      r <- newIORef Nothing
      h <- invokeEvent p $
           handleSignal signal $ 
@@ -731,11 +831,11 @@ contAwait signal =
                              error "The signal was lost: contAwait."
                            Just x ->
                              do invokeEvent p $ disposeEvent x
-                                c <- invokeEvent p c
+                                c <- invokeEvent p $ unfreezeCont c
                                 case c of
                                   Nothing -> return ()
                                   Just c  ->
-                                    invokeEvent p $ resumeCont c a
+                                    invokeEvent p $ reenterCont c a
      writeIORef r $ Just h          
 
 -- | Show the debug message with the current simulation time.
