@@ -61,6 +61,11 @@ module Simulation.Aivika.Internal.Process
         whenCancellingProcess,
         -- * Awaiting Signal
         processAwait,
+        -- * Preemption
+        preemptProcess,
+        reenterProcess,
+        processPreempting,
+        processReentering,
         -- * Yield of Process
         processYield,
         -- * Process Timeout
@@ -371,6 +376,22 @@ whenCancellingProcess h =
   Process $ \pid ->
   liftEvent $
   handleSignal_ (processCancelling pid) $ \() -> h
+
+-- | Preempt a process with the specified identifier. It must be then reentered with help of 'reeenterProcess'.
+preemptProcess :: ProcessId -> Event ()
+preemptProcess pid = contPreemptionActuate (processContId pid)
+
+-- | Reenter the process with the specified identifier after it was preempted with help of 'preemptProcess'.
+reenterProcess :: ProcessId -> Event ()
+reenterProcess pid = contPreemptionReenter (processContId pid)
+
+-- | Return a signal when the process is preempted.
+processPreempting :: ProcessId -> Signal ()
+processPreempting pid = contPreemptionActuating (processContId pid)
+
+-- | Return a signal when the process is reentered after it was preempted earlier.
+processReentering :: ProcessId -> Signal ()
+processReentering pid = contPreemptionReentering (processContId pid)
 
 instance Eq ProcessId where
   x == y = processReactCont x == processReactCont y    -- for the references are unique
