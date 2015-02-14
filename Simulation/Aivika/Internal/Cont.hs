@@ -48,6 +48,7 @@ module Simulation.Aivika.Internal.Cont
         freezeCont,
         freezeContReentering,
         unfreezeCont,
+        substituteCont,
         contCanceled,
         contAwait,
         traceCont) where
@@ -814,6 +815,11 @@ sleepCont c a =
                        ContPreemptionActuating ->
                          error "The computation was already preempted: sleepCont."
      writeIORef rh (Just h)
+
+-- | Substitute the continuation.
+substituteCont :: ContParams a -> (a -> Event ()) -> ContParams a
+{-# INLINE substituteCont #-}
+substituteCont c m = c { contCont = m }
 
 -- | Await the signal.
 contAwait :: Signal a -> Cont a

@@ -108,7 +108,8 @@ data ProcessId =
               processReactCont     :: IORef (Maybe (ContParams ())), 
               processContId  :: ContId,
               processInterruptRef  :: IORef Bool, 
-              processInterruptCont :: IORef (Maybe (ContParams ())), 
+              processInterruptCont :: IORef (Maybe (ContParams ())),
+              processInterruptTime :: IORef Double,
               processInterruptVersion :: IORef Int }
 
 -- | Specifies a discontinuous process that can suspend at any time
@@ -138,11 +139,13 @@ holdProcess dt =
   do when (dt < 0) $
        error "Time period dt < 0: holdProcess"
      let x = processInterruptCont pid
+         t = pointTime p + dt
      writeIORef x $ Just c
      writeIORef (processInterruptRef pid) False
+     writeIORef (processInterruptTime pid) t
      v <- readIORef (processInterruptVersion pid)
      invokeEvent p $
-       enqueueEvent (pointTime p + dt) $
+       enqueueEvent t $
        Event $ \p ->
        do v' <- readIORef (processInterruptVersion pid)
           when (v == v') $ 
@@ -169,6 +172,37 @@ processInterrupted :: ProcessId -> Event Bool
 processInterrupted pid =
   Event $ \p ->
   readIORef (processInterruptRef pid)
+
+-- | Define a reaction when the process with the specified identifier is preempted.
+processPreempted :: ProcessId -> Event ()
+processPreempted pid =
+  Event $ \p ->
+  do let x = processInterruptCont pid
+     a <- readIORef x
+     case a of
+       Just c ->
+         do writeIORef x Nothing
+            writeIORef (processInterruptRef pid) True
+            modifyIORef (processInterruptVersion pid) $ (+) 1
+            t <- readIORef (processInterruptTime pid)
+            let dt = t - pointTime p
+                c' = substituteCont c $ \a ->
+                  Event $ \p ->
+                  invokeEvent p $
+                  invokeCont c $
+                  invokeProcess pid $
+                  holdProcess dt
+            invokeEvent p $
+              reenterCont c' ()
+       Nothing ->
+         do let x = processReactCont pid
+            a <- readIORef x
+            case a of
+              Nothing ->
+                return ()
+              Just c ->
+                do let c' = substituteCont c $ reenterCont c
+                   writeIORef x $ Just c'
 
 -- | Passivate the process.
 passivateProcess :: Process ()
@@ -213,14 +247,20 @@ processIdPrepare pid =
             "Another process with the specified identifier " ++
             "has been started already: processIdPrepare"
        else writeIORef (processStarted pid) True
-     let signal = processCancelling pid
+     let signal = contSignal $ processContId pid
      invokeEvent p $
-       handleSignal_ signal $ \_ ->
+       handleSignal_ signal $ \e ->
        Event $ \p ->
-       do z <- contCancellationActivated $ processContId pid
-          when z $
-            do invokeEvent p $ interruptProcess pid
-               invokeEvent p $ reactivateProcess pid
+       case e of
+         ContCancellationInitiating ->
+           do z <- contCancellationActivated $ processContId pid
+              when z $
+                do invokeEvent p $ interruptProcess pid
+                   invokeEvent p $ reactivateProcess pid
+         ContPreemptionActuating ->
+           invokeEvent p $ processPreempted pid
+         ContPreemptionReentering ->
+           return ()
 
 -- | Run immediately the process. A new 'ProcessId' identifier will be
 -- assigned to the process.
@@ -294,12 +334,14 @@ newProcessId =
      c <- newContId
      i <- liftIO $ newIORef False
      z <- liftIO $ newIORef Nothing
+     t <- liftIO $ newIORef 0
      v <- liftIO $ newIORef 0
      return ProcessId { processStarted = y,
                         processReactCont     = x, 
                         processContId  = c, 
                         processInterruptRef  = i,
-                        processInterruptCont = z, 
+                        processInterruptCont = z,
+                        processInterruptTime = t,
                         processInterruptVersion = v }
 
 -- | Cancel a process with the specified identifier, interrupting it if needed.
