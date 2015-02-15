@@ -82,8 +82,6 @@ Regarding the simulation library, I have an experimental version of similar capa
 
 Please let me know too if you have an interest in .NET version of the Aivika library.
 
-# Links
-
 [1]: http://hackage.haskell.org/package/aivika  "Aivika"
 [2]: http://hackage.haskell.org/package/aivika-experiment  "Aivika Experiment"
 [3]: http://hackage.haskell.org/package/aivika-experiment-chart  "Aivika Experiment Chart"
