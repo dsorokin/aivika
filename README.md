@@ -4,7 +4,7 @@ Discrete Event Simulation (DES) and System Dynamics (SD).
 
 It is licensed under BSD3.
 
-# Simulation Library
+### Simulation Library
 
 [Aivika] [1] is a multi-paradigm simulation library which has 
 the following features:
@@ -72,11 +72,11 @@ All three libraries were tested on Linux, Windows and OS X.
 
 The PDF documentation is available on the [Aivika Wiki] [4] website.
 
-# Consulting
+### Consulting
 
 I am ready to consider your offer related to developing new modules or customizing Aivika, or related to developing simulation models. Please contact me at <david.sorokin@gmail.com>.
 
-# Version for .NET Framework and Mono
+### Version for .NET Framework and Mono
 
 Regarding the simulation library, I have an experimental version of similar capabilities but written in F#. It literally means that you can create simulation models in F# and integrate them with the code written in C#. Also it means that you can edit your models in Visual Studio on Microsoft Windows, in Xamarin Studio on OS X and in MonoDevelop on Linux. 
 
