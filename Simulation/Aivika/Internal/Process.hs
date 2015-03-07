@@ -377,7 +377,7 @@ whenCancellingProcess h =
   liftEvent $
   handleSignal_ (processCancelling pid) $ \() -> h
 
--- | Preempt a process with the specified identifier. It must be then reentered with help of 'reeenterProcess'.
+-- | Preempt a process with the specified identifier. It must then be reentered with help of 'reeenterProcess'.
 preemptProcess :: ProcessId -> Event ()
 preemptProcess pid = contPreemptionActuate (processContId pid)
 
