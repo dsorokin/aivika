@@ -59,8 +59,6 @@ module Simulation.Aivika.Process
         -- * Awaiting Signal
         processAwait,
         -- * Preemption
-        preemptProcess,
-        reenterProcess,
         processPreempting,
         processReentering,
         -- * Yield of Process
