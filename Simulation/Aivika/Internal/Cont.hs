@@ -86,7 +86,7 @@ data ContCancellation = CancelTogether
 data ContId =
   ContId { contCancellationInitiatedRef :: IORef Bool,
            contCancellationActivatedRef :: IORef Bool,
-           contPreemptionActuatedRef :: IORef Bool,
+           contPreemptionCountRef :: IORef Int,
            contSignalSource :: SignalSource ContEvent
          }
 
@@ -105,11 +105,11 @@ newContId =
   Simulation $ \r ->
   do r1 <- newIORef False
      r2 <- newIORef False
-     r3 <- newIORef False
+     r3 <- newIORef 0
      s  <- invokeSimulation r newSignalSource
      return ContId { contCancellationInitiatedRef = r1,
                      contCancellationActivatedRef = r2,
-                     contPreemptionActuatedRef = r3,
+                     contPreemptionCountRef = r3,
                      contSignalSource = s
                    }
 
@@ -199,11 +199,12 @@ contPreemptionActuate x =
   Event $ \p ->
   do f <- readIORef (contCancellationInitiatedRef x)
      unless f $
-       do g <- readIORef (contPreemptionActuatedRef x)
-          unless g $
-            do writeIORef (contPreemptionActuatedRef x) True
-               invokeEvent p $
-                 triggerSignal (contSignalSource x) ContPreemptionActuating
+       do n <- readIORef (contPreemptionCountRef x)
+          let n' = n + 1
+          n' `seq` writeIORef (contPreemptionCountRef x) n'
+          when (n == 0) $
+            invokeEvent p $
+            triggerSignal (contSignalSource x) ContPreemptionActuating
 
 -- | Reenter the computation after it was preempted.
 contPreemptionReenter :: ContId -> Event ()
@@ -211,11 +212,12 @@ contPreemptionReenter x =
   Event $ \p ->
   do f <- readIORef (contCancellationInitiatedRef x)
      unless f $
-       do g <- readIORef (contPreemptionActuatedRef x)
-          when g $
-            do writeIORef (contPreemptionActuatedRef x) False
-               invokeEvent p $
-                 triggerSignal (contSignalSource x) ContPreemptionReentering
+       do n <- readIORef (contPreemptionCountRef x)
+          let n' = n - 1
+          n' `seq` writeIORef (contPreemptionCountRef x) n'
+          when (n' == 0) $
+            invokeEvent p $
+            triggerSignal (contSignalSource x) ContPreemptionReentering
 
 -- | Signal when the computation is preempted.
 contPreemptionActuating :: ContId -> Signal ()
@@ -230,7 +232,9 @@ contPreemptionReentering =
 -- | Whether the computation was preemtped.
 contPreemptionActuated :: ContId -> Event Bool
 contPreemptionActuated x =
-  Event $ \p -> readIORef (contPreemptionActuatedRef x)
+  Event $ \p ->
+  do n <- readIORef (contPreemptionCountRef x)
+     return (n > 0)
 
 -- | The 'Cont' type is similar to the standard @Cont@ monad 
 -- and F# async workflow but only the result of applying
