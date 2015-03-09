@@ -11,11 +11,10 @@
 module Simulation.Aivika.Server
        (-- * Server
         Server,
-        ServerInterruption(..),
         newServer,
         newStateServer,
-        newInterruptibleServer,
-        newInterruptibleStateServer,
+        newPreemptibleServer,
+        newPreemptibleStateServer,
         -- * Processing
         serverProcessor,
         -- * Server Properties and Activities
@@ -55,7 +54,8 @@ module Simulation.Aivika.Server
         serverOutputWaitFactorChanged_,
         -- * Basic Signals
         serverInputReceived,
-        serverTaskInterrupted,
+        serverTaskPreempting,
+        serverTaskReentering,
         serverTaskProcessed,
         serverOutputProvided,
         -- * Overall Signal
@@ -87,8 +87,8 @@ data Server s a b =
            -- ^ The current state of the server.
            serverProcess :: s -> a -> Process (s, b),
            -- ^ Provide @b@ by specified @a@.
-           serverProcessInterruptible :: Bool,
-           -- ^ Whether the process is interruptible.
+           serverProcessPreemptible :: Bool,
+           -- ^ Whether the process can be preempted.
            serverTotalInputWaitTimeRef :: IORef Double,
            -- ^ The counted total time spent in awating the input.
            serverTotalProcessingTimeRef :: IORef Double,
@@ -103,8 +103,10 @@ data Server s a b =
            -- ^ The statistics for the time spent for delivering the output.
            serverInputReceivedSource :: SignalSource a,
            -- ^ A signal raised when the server recieves a new input to process.
-           serverTaskInterruptedSource :: SignalSource (ServerInterruption a),
-           -- ^ A signal raised when the task was interrupted.
+           serverTaskPreemptingSource :: SignalSource a,
+           -- ^ A signal raised when the task was preempted.
+           serverTaskReenteringSource :: SignalSource a,
+           -- ^ A signal raised when the task was proceeded after it had been preempted earlier.
            serverTaskProcessedSource :: SignalSource (a, b),
            -- ^ A signal raised when the input is processed and
            -- the output is prepared for deliverying.
@@ -112,31 +114,21 @@ data Server s a b =
            -- ^ A signal raised when the server has supplied the output.
          }
 
--- | Contains data about the interrupted task.
-data ServerInterruption a =
-  ServerInterruption { serverInterruptedInput :: a,
-                       -- ^ The input task that was interrupted.
-                       serverStartProcessingTime :: Double,
-                       -- ^ The start time of processing the task.
-                       serverInterruptionTime :: Double
-                       -- ^ The time of interrupting the task.
-                     }
-
 -- | Create a new server that can provide output @b@ by input @a@.
 --
--- By default, it is assumed that the server cannot be interrupted,
--- because the handling of possible task interruption is rather costly
+-- By default, it is assumed that the server process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
 -- operation.
 newServer :: (a -> Process b)
              -- ^ provide an output by the specified input
              -> Simulation (Server () a b)
-newServer = newInterruptibleServer False
+newServer = newPreemptibleServer False
 
 -- | Create a new server that can provide output @b@ by input @a@
 -- starting from state @s@.
 --
--- By default, it is assumed that the server cannot be interrupted,
--- because the handling of possible task interruption is rather costly
+-- By default, it is assumed that the server process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
 -- operation.
 newStateServer :: (s -> a -> Process (s, b))
                   -- ^ provide a new state and output by the specified 
@@ -144,30 +136,30 @@ newStateServer :: (s -> a -> Process (s, b))
                   -> s
                   -- ^ the initial state
                   -> Simulation (Server s a b)
-newStateServer = newInterruptibleStateServer False
+newStateServer = newPreemptibleStateServer False
 
--- | Create a new interruptible server that can provide output @b@ by input @a@.
-newInterruptibleServer :: Bool
-                          -- ^ whether the server can be interrupted
-                          -> (a -> Process b)
-                          -- ^ provide an output by the specified input
-                          -> Simulation (Server () a b)
-newInterruptibleServer interruptible provide =
-  flip (newInterruptibleStateServer interruptible) () $ \s a ->
+-- | Create a new preemptible server that can provide output @b@ by input @a@.
+newPreemptibleServer :: Bool
+                        -- ^ whether the server process can be preempted
+                        -> (a -> Process b)
+                        -- ^ provide an output by the specified input
+                        -> Simulation (Server () a b)
+newPreemptibleServer preemptible provide =
+  flip (newPreemptibleStateServer preemptible) () $ \s a ->
   do b <- provide a
      return (s, b)
 
--- | Create a new interruptible server that can provide output @b@ by input @a@
+-- | Create a new preemptible server that can provide output @b@ by input @a@
 -- starting from state @s@.
-newInterruptibleStateServer :: Bool
-                               -- ^ whether the server can be interrupted
-                               -> (s -> a -> Process (s, b))
-                               -- ^ provide a new state and output by the specified 
-                               -- old state and input
-                               -> s
-                               -- ^ the initial state
-                               -> Simulation (Server s a b)
-newInterruptibleStateServer interruptible provide state =
+newPreemptibleStateServer :: Bool
+                             -- ^ whether the server process can be preempted
+                             -> (s -> a -> Process (s, b))
+                             -- ^ provide a new state and output by the specified 
+                             -- old state and input
+                             -> s
+                             -- ^ the initial state
+                             -> Simulation (Server s a b)
+newPreemptibleStateServer preemptible provide state =
   do r0 <- liftIO $ newIORef state
      r1 <- liftIO $ newIORef 0
      r2 <- liftIO $ newIORef 0
@@ -179,10 +171,11 @@ newInterruptibleStateServer interruptible provide state =
      s2 <- newSignalSource
      s3 <- newSignalSource
      s4 <- newSignalSource
+     s5 <- newSignalSource
      let server = Server { serverInitState = state,
                            serverStateRef = r0,
                            serverProcess = provide,
-                           serverProcessInterruptible = interruptible,
+                           serverProcessPreemptible = preemptible,
                            serverTotalInputWaitTimeRef = r1,
                            serverTotalProcessingTimeRef = r2,
                            serverTotalOutputWaitTimeRef = r3,
@@ -190,9 +183,10 @@ newInterruptibleStateServer interruptible provide state =
                            serverProcessingTimeRef = r5,
                            serverOutputWaitTimeRef = r6,
                            serverInputReceivedSource = s1,
-                           serverTaskInterruptedSource = s2,
-                           serverTaskProcessedSource = s3,
-                           serverOutputProvidedSource = s4 }
+                           serverTaskPreemptingSource = s2,
+                           serverTaskReenteringSource = s3,
+                           serverTaskProcessedSource = s4,
+                           serverOutputProvidedSource = s5 }
      return server
 
 -- | Return a processor for the specified server.
@@ -242,37 +236,49 @@ serverProcessor server =
                      addSamplingStats (t1 - t0)
               triggerSignal (serverInputReceivedSource server) a
          -- provide the service
-         (s', b) <-
-           if serverProcessInterruptible server
-           then serverProcessInterrupting server s a
-           else serverProcess server s a
+         (s', b, dt) <-
+           if serverProcessPreemptible server
+           then serverProcessPreempting server s a
+           else do (s', b) <- serverProcess server s a
+                   return (s', b, 0)
          t2 <- liftDynamics time
          liftEvent $
            do liftIO $
                 do writeIORef (serverStateRef server) $! s'
-                   modifyIORef' (serverTotalProcessingTimeRef server) (+ (t2 - t1))
+                   modifyIORef' (serverTotalProcessingTimeRef server) (+ (t2 - t1 - dt))
                    modifyIORef' (serverProcessingTimeRef server) $
-                     addSamplingStats (t2 - t1)
+                     addSamplingStats (t2 - t1 - dt)
               triggerSignal (serverTaskProcessedSource server) (a, b)
          return (b, loop s' (Just (t2, a, b)) xs')
 
--- | Process the input with ability to handle a possible interruption.
-serverProcessInterrupting :: Server s a b -> s -> a -> Process (s, b)
-serverProcessInterrupting server s a =
+-- | Process the input with ability to handle a possible preemption.
+serverProcessPreempting :: Server s a b -> s -> a -> Process (s, b, Double)
+serverProcessPreempting server s a =
   do pid <- processId
      t1  <- liftDynamics time
-     finallyProcess
-       (serverProcess server s a)
-       (liftEvent $
-        do cancelled <- processCancelled pid
-           when cancelled $
-             do t2 <- liftDynamics time
-                liftIO $
-                  do modifyIORef' (serverTotalProcessingTimeRef server) (+ (t2 - t1))
-                     modifyIORef' (serverProcessingTimeRef server) $
-                       addSamplingStats (t2 - t1)
-                let x = ServerInterruption a t1 t2
-                triggerSignal (serverTaskInterruptedSource server) x)
+     r0  <- liftIO $ newIORef 0
+     r1  <- liftIO $ newIORef t1
+     h1  <- liftEvent $
+            handleSignal (processPreempting pid) $ \() ->
+            do t1 <- liftDynamics time
+               liftIO $ writeIORef r1 t1
+               triggerSignal (serverTaskPreemptingSource server) a
+     h2  <- liftEvent $
+            handleSignal (processReentering pid) $ \() ->
+            do t1 <- liftIO $ readIORef r1
+               t2 <- liftDynamics time
+               let dt = t2 - t1
+               liftIO $ modifyIORef r0 (+ dt)
+               triggerSignal (serverTaskReenteringSource server) a 
+     let m1 =
+           do (s', b) <- serverProcess server s a
+              dt <- liftIO $ readIORef r0
+              return (s', b, dt)
+         m2 =
+           liftEvent $
+           do disposeEvent h1
+              disposeEvent h2
+     finallyProcess m1 m2
 
 -- | Return the current state of the server.
 --
@@ -516,9 +522,13 @@ serverOutputWaitFactorChanged_ server =
 serverInputReceived :: Server s a b -> Signal a
 serverInputReceived = publishSignal . serverInputReceivedSource
 
--- | Raised when the task processing by the server was interrupted.
-serverTaskInterrupted :: Server s a b -> Signal (ServerInterruption a)
-serverTaskInterrupted = publishSignal . serverTaskInterruptedSource
+-- | Raised when the task processing by the server was preempted.
+serverTaskPreempting :: Server s a b -> Signal a
+serverTaskPreempting = publishSignal . serverTaskPreemptingSource
+
+-- | Raised when the task processing by the server was proceeded after it has been preempeted earlier.
+serverTaskReentering :: Server s a b -> Signal a
+serverTaskReentering = publishSignal . serverTaskReenteringSource
 
 -- | Raised when the server has just processed the task.
 serverTaskProcessed :: Server s a b -> Signal (a, b)
@@ -532,7 +542,6 @@ serverOutputProvided = publishSignal . serverOutputProvidedSource
 serverChanged_ :: Server s a b -> Signal ()
 serverChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
-  mapSignal (const ()) (serverTaskInterrupted server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
   mapSignal (const ()) (serverOutputProvided server)
 
