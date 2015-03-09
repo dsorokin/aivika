@@ -256,7 +256,7 @@ serverProcessPreempting :: Server s a b -> s -> a -> Process (s, b, Double)
 serverProcessPreempting server s a =
   do pid <- processId
      t1  <- liftDynamics time
-     r0  <- liftIO $ newIORef 0
+     rs  <- liftIO $ newIORef 0
      r1  <- liftIO $ newIORef t1
      h1  <- liftEvent $
             handleSignal (processPreempting pid) $ \() ->
@@ -268,11 +268,11 @@ serverProcessPreempting server s a =
             do t1 <- liftIO $ readIORef r1
                t2 <- liftDynamics time
                let dt = t2 - t1
-               liftIO $ modifyIORef r0 (+ dt)
+               liftIO $ modifyIORef rs (+ dt)
                triggerSignal (serverTaskReenteringSource server) a 
      let m1 =
            do (s', b) <- serverProcess server s a
-              dt <- liftIO $ readIORef r0
+              dt <- liftIO $ readIORef rs
               return (s', b, dt)
          m2 =
            liftEvent $
