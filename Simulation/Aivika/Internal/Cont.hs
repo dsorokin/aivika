@@ -90,6 +90,9 @@ data ContId =
            contSignalSource :: SignalSource ContEvent
          }
 
+instance Eq ContId where
+  x == y = contCancellationInitiatedRef x == contCancellationInitiatedRef y  -- unique references
+
 -- | The event that occurs within the 'Cont' computation.
 data ContEvent = ContCancellationInitiating
                  -- ^ Cancel the computation.
