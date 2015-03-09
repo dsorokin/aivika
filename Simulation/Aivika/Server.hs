@@ -23,12 +23,15 @@ module Simulation.Aivika.Server
         serverTotalInputWaitTime,
         serverTotalProcessingTime,
         serverTotalOutputWaitTime,
+        serverTotalPreemptionTime,
         serverInputWaitTime,
         serverProcessingTime,
         serverOutputWaitTime,
+        serverPreemptionTime,
         serverInputWaitFactor,
         serverProcessingFactor,
         serverOutputWaitFactor,
+        serverPreemptionFactor,
         -- * Summary
         serverSummary,
         -- * Derived Signals for Properties
@@ -40,18 +43,24 @@ module Simulation.Aivika.Server
         serverTotalProcessingTimeChanged_,
         serverTotalOutputWaitTimeChanged,
         serverTotalOutputWaitTimeChanged_,
+        serverTotalPreemptionTimeChanged,
+        serverTotalPreemptionTimeChanged_,
         serverInputWaitTimeChanged,
         serverInputWaitTimeChanged_,
         serverProcessingTimeChanged,
         serverProcessingTimeChanged_,
         serverOutputWaitTimeChanged,
         serverOutputWaitTimeChanged_,
+        serverPreemptionTimeChanged,
+        serverPreemptionTimeChanged_,
         serverInputWaitFactorChanged,
         serverInputWaitFactorChanged_,
         serverProcessingFactorChanged,
         serverProcessingFactorChanged_,
         serverOutputWaitFactorChanged,
         serverOutputWaitFactorChanged_,
+        serverPreemptionFactorChanged,
+        serverPreemptionFactorChanged_,
         -- * Basic Signals
         serverInputReceived,
         serverTaskPreempting,
@@ -95,12 +104,16 @@ data Server s a b =
            -- ^ The counted total time spent to process the input and prepare the output.
            serverTotalOutputWaitTimeRef :: IORef Double,
            -- ^ The counted total time spent for delivering the output.
+           serverTotalPreemptionTimeRef :: IORef Double,
+           -- ^ The counted total time spent being preempted and waiting for the proceeding. 
            serverInputWaitTimeRef :: IORef (SamplingStats Double),
            -- ^ The statistics for the time spent in awaiting the input.
            serverProcessingTimeRef :: IORef (SamplingStats Double),
            -- ^ The statistics for the time spent to process the input and prepare the output.
            serverOutputWaitTimeRef :: IORef (SamplingStats Double),
            -- ^ The statistics for the time spent for delivering the output.
+           serverPreemptionTimeRef :: IORef (SamplingStats Double),
+           -- ^ The statistics for the time spent being preempted.
            serverInputReceivedSource :: SignalSource a,
            -- ^ A signal raised when the server recieves a new input to process.
            serverTaskPreemptingSource :: SignalSource a,
@@ -164,9 +177,11 @@ newPreemptibleStateServer preemptible provide state =
      r1 <- liftIO $ newIORef 0
      r2 <- liftIO $ newIORef 0
      r3 <- liftIO $ newIORef 0
-     r4 <- liftIO $ newIORef emptySamplingStats
+     r4 <- liftIO $ newIORef 0
      r5 <- liftIO $ newIORef emptySamplingStats
      r6 <- liftIO $ newIORef emptySamplingStats
+     r7 <- liftIO $ newIORef emptySamplingStats
+     r8 <- liftIO $ newIORef emptySamplingStats
      s1 <- newSignalSource
      s2 <- newSignalSource
      s3 <- newSignalSource
@@ -179,9 +194,11 @@ newPreemptibleStateServer preemptible provide state =
                            serverTotalInputWaitTimeRef = r1,
                            serverTotalProcessingTimeRef = r2,
                            serverTotalOutputWaitTimeRef = r3,
-                           serverInputWaitTimeRef = r4,
-                           serverProcessingTimeRef = r5,
-                           serverOutputWaitTimeRef = r6,
+                           serverTotalPreemptionTimeRef = r4,
+                           serverInputWaitTimeRef = r5,
+                           serverProcessingTimeRef = r6,
+                           serverOutputWaitTimeRef = r7,
+                           serverPreemptionTimeRef = r8,
                            serverInputReceivedSource = s1,
                            serverTaskPreemptingSource = s2,
                            serverTaskReenteringSource = s3,
@@ -268,7 +285,11 @@ serverProcessPreempting server s a =
             do t1 <- liftIO $ readIORef r1
                t2 <- liftDynamics time
                let dt = t2 - t1
-               liftIO $ modifyIORef rs (+ dt)
+               liftIO $
+                 do modifyIORef' rs (+ dt)
+                    modifyIORef' (serverTotalPreemptionTimeRef server) (+ dt)
+                    modifyIORef' (serverPreemptionTimeRef server) $
+                      addSamplingStats dt
                triggerSignal (serverTaskReenteringSource server) a 
      let m1 =
            do (s', b) <- serverProcess server s a
@@ -358,6 +379,27 @@ serverTotalOutputWaitTimeChanged_ :: Server s a b -> Signal ()
 serverTotalOutputWaitTimeChanged_ server =
   mapSignal (const ()) (serverOutputProvided server)
 
+-- | Return the counted total time spent by the server while it was preempted
+-- waiting for the further proceeding.
+--
+-- The value returned changes discretely and it is usually delayed relative
+-- to the current simulation time.
+--
+-- See also 'serverTotalPreemptionTimeChanged' and 'serverTotalPreemptionTimeChanged_'.
+serverTotalPreemptionTime :: Server s a b -> Event Double
+serverTotalPreemptionTime server =
+  Event $ \p -> readIORef (serverTotalPreemptionTimeRef server)
+  
+-- | Signal when the 'serverTotalPreemptionTime' property value has changed.
+serverTotalPreemptionTimeChanged :: Server s a b -> Signal Double
+serverTotalPreemptionTimeChanged server =
+  mapSignalM (const $ serverTotalPreemptionTime server) (serverTotalPreemptionTimeChanged_ server)
+  
+-- | Signal when the 'serverTotalPreemptionTime' property value has changed.
+serverTotalPreemptionTimeChanged_ :: Server s a b -> Signal ()
+serverTotalPreemptionTimeChanged_ server =
+  mapSignal (const ()) (serverTaskReentering server)
+
 -- | Return the statistics of the time when the server was locked while awaiting the input.
 --
 -- The value returned changes discretely and it is usually delayed relative
@@ -419,13 +461,34 @@ serverOutputWaitTimeChanged_ :: Server s a b -> Signal ()
 serverOutputWaitTimeChanged_ server =
   mapSignal (const ()) (serverOutputProvided server)
 
+-- | Return the statistics of the time spent by the server while it was preempted
+-- waiting for the further proceeding.
+--
+-- The value returned changes discretely and it is usually delayed relative
+-- to the current simulation time.
+--
+-- See also 'serverPreemptionTimeChanged' and 'serverPreemptionTimeChanged_'.
+serverPreemptionTime :: Server s a b -> Event (SamplingStats Double)
+serverPreemptionTime server =
+  Event $ \p -> readIORef (serverPreemptionTimeRef server)
+  
+-- | Signal when the 'serverPreemptionTime' property value has changed.
+serverPreemptionTimeChanged :: Server s a b -> Signal (SamplingStats Double)
+serverPreemptionTimeChanged server =
+  mapSignalM (const $ serverPreemptionTime server) (serverPreemptionTimeChanged_ server)
+  
+-- | Signal when the 'serverPreemptionTime' property value has changed.
+serverPreemptionTimeChanged_ :: Server s a b -> Signal ()
+serverPreemptionTimeChanged_ server =
+  mapSignal (const ()) (serverTaskReentering server)
+
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the server was awaiting for the next input task.
 --
 -- This factor is calculated as
 --
 -- @
---   totalInputWaitTime \/ (totalInputWaitTime + totalProcessingTime + totalOutputWaitTime)
+--   totalInputWaitTime \/ (totalInputWaitTime + totalProcessingTime + totalOutputWaitTime + totalPreemptionTime)
 -- @
 --
 -- As before in this module, the value returned changes discretely and
@@ -438,7 +501,8 @@ serverInputWaitFactor server =
   do x1 <- readIORef (serverTotalInputWaitTimeRef server)
      x2 <- readIORef (serverTotalProcessingTimeRef server)
      x3 <- readIORef (serverTotalOutputWaitTimeRef server)
-     return (x1 / (x1 + x2 + x3))
+     x4 <- readIORef (serverTotalPreemptionTimeRef server)
+     return (x1 / (x1 + x2 + x3 + x4))
   
 -- | Signal when the 'serverInputWaitFactor' property value has changed.
 serverInputWaitFactorChanged :: Server s a b -> Signal Double
@@ -450,7 +514,8 @@ serverInputWaitFactorChanged_ :: Server s a b -> Signal ()
 serverInputWaitFactorChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
-  mapSignal (const ()) (serverOutputProvided server)
+  mapSignal (const ()) (serverOutputProvided server) <>
+  mapSignal (const ()) (serverTaskReentering server)
 
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the server was busy with direct processing its tasks.
@@ -458,7 +523,7 @@ serverInputWaitFactorChanged_ server =
 -- This factor is calculated as
 --
 -- @
---   totalProcessingTime \/ (totalInputWaitTime + totalProcessingTime + totalOutputWaitTime)
+--   totalProcessingTime \/ (totalInputWaitTime + totalProcessingTime + totalOutputWaitTime + totalPreemptionTime)
 -- @
 --
 -- As before in this module, the value returned changes discretely and
@@ -471,7 +536,8 @@ serverProcessingFactor server =
   do x1 <- readIORef (serverTotalInputWaitTimeRef server)
      x2 <- readIORef (serverTotalProcessingTimeRef server)
      x3 <- readIORef (serverTotalOutputWaitTimeRef server)
-     return (x2 / (x1 + x2 + x3))
+     x4 <- readIORef (serverTotalPreemptionTimeRef server)
+     return (x2 / (x1 + x2 + x3 + x4))
   
 -- | Signal when the 'serverProcessingFactor' property value has changed.
 serverProcessingFactorChanged :: Server s a b -> Signal Double
@@ -483,7 +549,8 @@ serverProcessingFactorChanged_ :: Server s a b -> Signal ()
 serverProcessingFactorChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
-  mapSignal (const ()) (serverOutputProvided server)
+  mapSignal (const ()) (serverOutputProvided server) <>
+  mapSignal (const ()) (serverTaskReentering server)
 
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the server was locked trying to deliver the output after the task is finished.
@@ -491,7 +558,7 @@ serverProcessingFactorChanged_ server =
 -- This factor is calculated as
 --
 -- @
---   totalOutputWaitTime \/ (totalInputWaitTime + totalProcessingTime + totalOutputWaitTime)
+--   totalOutputWaitTime \/ (totalInputWaitTime + totalProcessingTime + totalOutputWaitTime + totalPreemptionTime)
 -- @
 --
 -- As before in this module, the value returned changes discretely and
@@ -504,7 +571,8 @@ serverOutputWaitFactor server =
   do x1 <- readIORef (serverTotalInputWaitTimeRef server)
      x2 <- readIORef (serverTotalProcessingTimeRef server)
      x3 <- readIORef (serverTotalOutputWaitTimeRef server)
-     return (x3 / (x1 + x2 + x3))
+     x4 <- readIORef (serverTotalPreemptionTimeRef server)
+     return (x3 / (x1 + x2 + x3 + x4))
   
 -- | Signal when the 'serverOutputWaitFactor' property value has changed.
 serverOutputWaitFactorChanged :: Server s a b -> Signal Double
@@ -516,7 +584,43 @@ serverOutputWaitFactorChanged_ :: Server s a b -> Signal ()
 serverOutputWaitFactorChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
-  mapSignal (const ()) (serverOutputProvided server)
+  mapSignal (const ()) (serverOutputProvided server) <>
+  mapSignal (const ()) (serverTaskReentering server)
+
+-- | It returns the factor changing from 0 to 1, which estimates how often
+-- the server was preempted waiting for the further proceeding.
+--
+-- This factor is calculated as
+--
+-- @
+--   totalPreemptionTime \/ (totalInputWaitTime + totalProcessingTime + totalOutputWaitTime + totalPreemptionTime)
+-- @
+--
+-- As before in this module, the value returned changes discretely and
+-- it is usually delayed relative to the current simulation time.
+--
+-- See also 'serverPreemptionFactorChanged' and 'serverPreemptionFactorChanged_'.
+serverPreemptionFactor :: Server s a b -> Event Double
+serverPreemptionFactor server =
+  Event $ \p ->
+  do x1 <- readIORef (serverTotalInputWaitTimeRef server)
+     x2 <- readIORef (serverTotalProcessingTimeRef server)
+     x3 <- readIORef (serverTotalOutputWaitTimeRef server)
+     x4 <- readIORef (serverTotalPreemptionTimeRef server)
+     return (x4 / (x1 + x2 + x3 + x4))
+  
+-- | Signal when the 'serverPreemptionFactor' property value has changed.
+serverPreemptionFactorChanged :: Server s a b -> Signal Double
+serverPreemptionFactorChanged server =
+  mapSignalM (const $ serverPreemptionFactor server) (serverPreemptionFactorChanged_ server)
+  
+-- | Signal when the 'serverPreemptionFactor' property value has changed.
+serverPreemptionFactorChanged_ :: Server s a b -> Signal ()
+serverPreemptionFactorChanged_ server =
+  mapSignal (const ()) (serverInputReceived server) <>
+  mapSignal (const ()) (serverTaskProcessed server) <>
+  mapSignal (const ()) (serverOutputProvided server) <>
+  mapSignal (const ()) (serverTaskReentering server)
 
 -- | Raised when the server receives a new input task.
 serverInputReceived :: Server s a b -> Signal a
@@ -543,7 +647,8 @@ serverChanged_ :: Server s a b -> Signal ()
 serverChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
-  mapSignal (const ()) (serverOutputProvided server)
+  mapSignal (const ()) (serverOutputProvided server) <>
+  mapSignal (const ()) (serverTaskReentering server)
 
 -- | Return the summary for the server with desciption of its
 -- properties and activities using the specified indent.
@@ -553,12 +658,15 @@ serverSummary server indent =
   do tx1 <- readIORef (serverTotalInputWaitTimeRef server)
      tx2 <- readIORef (serverTotalProcessingTimeRef server)
      tx3 <- readIORef (serverTotalOutputWaitTimeRef server)
-     let xf1 = tx1 / (tx1 + tx2 + tx3)
-         xf2 = tx2 / (tx1 + tx2 + tx3)
-         xf3 = tx3 / (tx1 + tx2 + tx3)
+     tx4 <- readIORef (serverTotalPreemptionTimeRef server)
+     let xf1 = tx1 / (tx1 + tx2 + tx3 + tx4)
+         xf2 = tx2 / (tx1 + tx2 + tx3 + tx4)
+         xf3 = tx3 / (tx1 + tx2 + tx3 + tx4)
+         xf4 = tx4 / (tx1 + tx3 + tx3 + tx4)
      xs1 <- readIORef (serverInputWaitTimeRef server)
      xs2 <- readIORef (serverProcessingTimeRef server)
      xs3 <- readIORef (serverOutputWaitTimeRef server)
+     xs4 <- readIORef (serverPreemptionTimeRef server)
      let tab = replicate indent ' '
      return $
        showString tab .
@@ -571,6 +679,9 @@ serverSummary server indent =
        showString "total output wait time (locked while delivering the output) = " . shows tx3 .
        showString "\n\n" .
        showString tab .
+       showString "total preemption time = " . shows tx4 .
+       showString "\n" .
+       showString tab .
        showString "input wait factor (from 0 to 1) = " . shows xf1 .
        showString "\n" .
        showString tab .
@@ -578,6 +689,9 @@ serverSummary server indent =
        showString "\n" .
        showString tab .
        showString "output wait factor (from 0 to 1) = " . shows xf3 .
+       showString "\n\n" .
+       showString tab .
+       showString "output preemption factor (from 0 to 1) = " . shows xf4 .
        showString "\n\n" .
        showString tab .
        showString "input wait time (locked while awaiting the input):\n\n" .
@@ -589,4 +703,8 @@ serverSummary server indent =
        showString "\n\n" .
        showString tab .
        showString "output wait time (locked while delivering the output):\n\n" .
-       samplingStatsSummary xs3 (2 + indent)
+       samplingStatsSummary xs3 (2 + indent) .
+       showString "\n\n" .
+       showString tab .
+       showString "preemption time (waiting for the proceeding after preemption):\n\n" .
+       samplingStatsSummary xs4 (2 + indent)
