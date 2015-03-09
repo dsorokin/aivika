@@ -1651,12 +1651,15 @@ serverResultSource c =
       resultContainerProperty c "totalInputWaitTime" ServerTotalInputWaitTimeId serverTotalInputWaitTime serverTotalInputWaitTimeChanged_,
       resultContainerProperty c "totalProcessingTime" ServerTotalProcessingTimeId serverTotalProcessingTime serverTotalProcessingTimeChanged_,
       resultContainerProperty c "totalOutputWaitTime" ServerTotalOutputWaitTimeId serverTotalOutputWaitTime serverTotalOutputWaitTimeChanged_,
+      resultContainerProperty c "totalPreemptionTime" ServerTotalPreemptionTimeId serverTotalPreemptionTime serverTotalPreemptionTimeChanged_,
       resultContainerProperty c "inputWaitTime" ServerInputWaitTimeId serverInputWaitTime serverInputWaitTimeChanged_,
       resultContainerProperty c "processingTime" ServerProcessingTimeId serverProcessingTime serverProcessingTimeChanged_,
       resultContainerProperty c "outputWaitTime" ServerOutputWaitTimeId serverOutputWaitTime serverOutputWaitTimeChanged_,
+      resultContainerProperty c "preemptionTime" ServerPreemptionTimeId serverPreemptionTime serverPreemptionTimeChanged_,
       resultContainerProperty c "inputWaitFactor" ServerInputWaitFactorId serverInputWaitFactor serverInputWaitFactorChanged_,
       resultContainerProperty c "processingFactor" ServerProcessingFactorId serverProcessingFactor serverProcessingFactorChanged_,
-      resultContainerProperty c "outputWaitFactor" ServerOutputWaitFactorId serverOutputWaitFactor serverOutputWaitFactorChanged_ ] }
+      resultContainerProperty c "outputWaitFactor" ServerOutputWaitFactorId serverOutputWaitFactor serverOutputWaitFactorChanged_,
+      resultContainerProperty c "preemptionFactor" ServerPreemptionFactorId serverPreemptionFactor serverPreemptionFactorChanged_ ] }
 
 -- | Return the summary by the specified server.
 serverResultSummary :: ResultContainer (Server s a b)
@@ -1674,9 +1677,11 @@ serverResultSummary c =
       resultContainerProperty c "inputWaitTime" ServerInputWaitTimeId serverInputWaitTime serverInputWaitTimeChanged_,
       resultContainerProperty c "processingTime" ServerProcessingTimeId serverProcessingTime serverProcessingTimeChanged_,
       resultContainerProperty c "outputWaitTime" ServerOutputWaitTimeId serverOutputWaitTime serverOutputWaitTimeChanged_,
+      resultContainerProperty c "preemptionTime" ServerPreemptionTimeId serverPreemptionTime serverPreemptionTimeChanged_,
       resultContainerProperty c "inputWaitFactor" ServerInputWaitFactorId serverInputWaitFactor serverInputWaitFactorChanged_,
       resultContainerProperty c "processingFactor" ServerProcessingFactorId serverProcessingFactor serverProcessingFactorChanged_,
-      resultContainerProperty c "outputWaitFactor" ServerOutputWaitFactorId serverOutputWaitFactor serverOutputWaitFactorChanged_ ] }
+      resultContainerProperty c "outputWaitFactor" ServerOutputWaitFactorId serverOutputWaitFactor serverOutputWaitFactorChanged_,
+      resultContainerProperty c "preemptionFactor" ServerPreemptionFactorId serverPreemptionFactor serverPreemptionFactorChanged_ ] }
 
 -- | Return a source by the specified activity.
 activityResultSource :: (Show s, ResultItemable (ResultValue s))
@@ -1696,10 +1701,13 @@ activityResultSource c =
       resultContainerProperty c "state" ActivityStateId activityState activityStateChanged_,
       resultContainerProperty c "totalUtilisationTime" ActivityTotalUtilisationTimeId activityTotalUtilisationTime activityTotalUtilisationTimeChanged_,
       resultContainerProperty c "totalIdleTime" ActivityTotalIdleTimeId activityTotalIdleTime activityTotalIdleTimeChanged_,
+      resultContainerProperty c "totalPreemptionTime" ActivityTotalPreemptionTimeId activityTotalPreemptionTime activityTotalPreemptionTimeChanged_,
       resultContainerProperty c "utilisationTime" ActivityUtilisationTimeId activityUtilisationTime activityUtilisationTimeChanged_,
       resultContainerProperty c "idleTime" ActivityIdleTimeId activityIdleTime activityIdleTimeChanged_,
+      resultContainerProperty c "preemptionTime" ActivityPreemptionTimeId activityPreemptionTime activityPreemptionTimeChanged_,
       resultContainerProperty c "utilisationFactor" ActivityUtilisationFactorId activityUtilisationFactor activityUtilisationFactorChanged_,
-      resultContainerProperty c "idleFactor" ActivityIdleFactorId activityIdleFactor activityIdleFactorChanged_ ] }
+      resultContainerProperty c "idleFactor" ActivityIdleFactorId activityIdleFactor activityIdleFactorChanged_,
+      resultContainerProperty c "preemptionFactor" ActivityPreemptionFactorId activityPreemptionFactor activityPreemptionFactorChanged_ ] }
 
 -- | Return a summary by the specified activity.
 activityResultSummary :: ResultContainer (Activity s a b)
@@ -1716,8 +1724,10 @@ activityResultSummary c =
     resultObjectProperties = [
       resultContainerProperty c "utilisationTime" ActivityUtilisationTimeId activityUtilisationTime activityUtilisationTimeChanged_,
       resultContainerProperty c "idleTime" ActivityIdleTimeId activityIdleTime activityIdleTimeChanged_,
+      resultContainerProperty c "preemptionTime" ActivityPreemptionTimeId activityPreemptionTime activityPreemptionTimeChanged_,
       resultContainerProperty c "utilisationFactor" ActivityUtilisationFactorId activityUtilisationFactor activityUtilisationFactorChanged_,
-      resultContainerProperty c "idleFactor" ActivityIdleFactorId activityIdleFactor activityIdleFactorChanged_ ] }
+      resultContainerProperty c "idleFactor" ActivityIdleFactorId activityIdleFactor activityIdleFactorChanged_,
+      resultContainerProperty c "preemptionFactor" ActivityPreemptionFactorId activityPreemptionFactor activityPreemptionFactorChanged_ ] }
 
 -- | Return an arbitrary text as a separator source.
 textResultSource :: String -> ResultSource
