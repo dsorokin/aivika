@@ -23,10 +23,13 @@ module Simulation.Aivika.Activity
         activityState,
         activityTotalUtilisationTime,
         activityTotalIdleTime,
+        activityTotalPreemptionTime,
         activityUtilisationTime,
         activityIdleTime,
+        activityPreemptionTime,
         activityUtilisationFactor,
         activityIdleFactor,
+        activityPreemptionFactor,
         -- * Summary
         activitySummary,
         -- * Derived Signals for Properties
@@ -36,14 +39,20 @@ module Simulation.Aivika.Activity
         activityTotalUtilisationTimeChanged_,
         activityTotalIdleTimeChanged,
         activityTotalIdleTimeChanged_,
+        activityTotalPreemptionTimeChanged,
+        activityTotalPreemptionTimeChanged_,
         activityUtilisationTimeChanged,
         activityUtilisationTimeChanged_,
         activityIdleTimeChanged,
         activityIdleTimeChanged_,
+        activityPreemptionTimeChanged,
+        activityPreemptionTimeChanged_,
         activityUtilisationFactorChanged,
         activityUtilisationFactorChanged_,
         activityIdleFactorChanged,
         activityIdleFactorChanged_,
+        activityPreemptionFactorChanged,
+        activityPreemptionFactorChanged_,
         -- * Basic Signals
         activityUtilising,
         activityUtilised,
@@ -84,11 +93,15 @@ data Activity s a b =
              activityTotalUtilisationTimeRef :: IORef Double,
              -- ^ The counted total time of utilising the activity.
              activityTotalIdleTimeRef :: IORef Double,
-             -- ^ The counted total time, when the activity was idle.
+             -- ^ The counted total time when the activity was idle.
+             activityTotalPreemptionTimeRef :: IORef Double,
+             -- ^ The counted total time when the activity was preempted. 
              activityUtilisationTimeRef :: IORef (SamplingStats Double),
              -- ^ The statistics for the utilisation time.
              activityIdleTimeRef :: IORef (SamplingStats Double),
-             -- ^ The statistics for the time, when the activity was idle.
+             -- ^ The statistics for the time when the activity was idle.
+             activityPreemptionTimeRef :: IORef (SamplingStats Double),
+             -- ^ The statistics for the time when the activity was preempted.
              activityUtilisingSource :: SignalSource a,
              -- ^ A signal raised when starting to utilise the activity.
              activityUtilisedSource :: SignalSource (a, b),
@@ -148,8 +161,10 @@ newPreemptibleStateActivity preemptible provide state =
   do r0 <- liftIO $ newIORef state
      r1 <- liftIO $ newIORef 0
      r2 <- liftIO $ newIORef 0
-     r3 <- liftIO $ newIORef emptySamplingStats
+     r3 <- liftIO $ newIORef 0
      r4 <- liftIO $ newIORef emptySamplingStats
+     r5 <- liftIO $ newIORef emptySamplingStats
+     r6 <- liftIO $ newIORef emptySamplingStats
      s1 <- newSignalSource
      s2 <- newSignalSource
      s3 <- newSignalSource
@@ -160,8 +175,10 @@ newPreemptibleStateActivity preemptible provide state =
                        activityProcessPreemptible = preemptible,
                        activityTotalUtilisationTimeRef = r1,
                        activityTotalIdleTimeRef = r2,
-                       activityUtilisationTimeRef = r3,
-                       activityIdleTimeRef = r4,
+                       activityTotalPreemptionTimeRef = r3,
+                       activityUtilisationTimeRef = r4,
+                       activityIdleTimeRef = r5,
+                       activityPreemptionTimeRef = r6,
                        activityUtilisingSource = s1,
                        activityUtilisedSource = s2,
                        activityPreemptingSource = s3,
@@ -226,7 +243,11 @@ activityProcessPreempting act s a =
             do t0 <- liftIO $ readIORef r0
                t1 <- liftDynamics time
                let dt = t1 - t0
-               liftIO $ modifyIORef rs (+ dt)
+               liftIO $
+                 do modifyIORef' rs (+ dt)
+                    modifyIORef' (activityTotalPreemptionTimeRef act) (+ dt)
+                    modifyIORef' (activityPreemptionTimeRef act) $
+                      addSamplingStats dt
                triggerSignal (activityReenteringSource act) a 
      let m1 =
            do (s', b) <- activityProcess act s a
@@ -295,6 +316,27 @@ activityTotalIdleTimeChanged_ :: Activity s a b -> Signal ()
 activityTotalIdleTimeChanged_ act =
   mapSignal (const ()) (activityUtilising act)
 
+-- | Return the counted total time when the activity was preemted waiting for
+-- the further proceeding.
+--
+-- The value returned changes discretely and it is usually delayed relative
+-- to the current simulation time.
+--
+-- See also 'activityTotalPreemptionTimeChanged' and 'activityTotalPreemptionTimeChanged_'.
+activityTotalPreemptionTime :: Activity s a b -> Event Double
+activityTotalPreemptionTime act =
+  Event $ \p -> readIORef (activityTotalPreemptionTimeRef act)
+  
+-- | Signal when the 'activityTotalPreemptionTime' property value has changed.
+activityTotalPreemptionTimeChanged :: Activity s a b -> Signal Double
+activityTotalPreemptionTimeChanged act =
+  mapSignalM (const $ activityTotalPreemptionTime act) (activityTotalPreemptionTimeChanged_ act)
+  
+-- | Signal when the 'activityTotalPreemptionTime' property value has changed.
+activityTotalPreemptionTimeChanged_ :: Activity s a b -> Signal ()
+activityTotalPreemptionTimeChanged_ act =
+  mapSignal (const ()) (activityReentering act)
+
 -- | Return the statistics for the time when the activity was utilised.
 --
 -- The value returned changes discretely and it is usually delayed relative
@@ -334,6 +376,27 @@ activityIdleTimeChanged act =
 activityIdleTimeChanged_ :: Activity s a b -> Signal ()
 activityIdleTimeChanged_ act =
   mapSignal (const ()) (activityUtilising act)
+
+-- | Return the statistics for the time when the activity was preempted
+-- waiting for the further proceeding.
+--
+-- The value returned changes discretely and it is usually delayed relative
+-- to the current simulation time.
+--
+-- See also 'activityPreemptionTimeChanged' and 'activityPreemptionTimeChanged_'.
+activityPreemptionTime :: Activity s a b -> Event (SamplingStats Double)
+activityPreemptionTime act =
+  Event $ \p -> readIORef (activityPreemptionTimeRef act)
+  
+-- | Signal when the 'activityPreemptionTime' property value has changed.
+activityPreemptionTimeChanged :: Activity s a b -> Signal (SamplingStats Double)
+activityPreemptionTimeChanged act =
+  mapSignalM (const $ activityPreemptionTime act) (activityPreemptionTimeChanged_ act)
+  
+-- | Signal when the 'activityPreemptionTime' property value has changed.
+activityPreemptionTimeChanged_ :: Activity s a b -> Signal ()
+activityPreemptionTimeChanged_ act =
+  mapSignal (const ()) (activityReentering act)
   
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the activity was utilised.
@@ -341,7 +404,7 @@ activityIdleTimeChanged_ act =
 -- This factor is calculated as
 --
 -- @
---   totalUtilisationTime \/ (totalUtilisationTime + totalIdleTime)
+--   totalUtilisationTime \/ (totalUtilisationTime + totalIdleTime + totalPreemptionTime)
 -- @
 --
 -- As before in this module, the value returned changes discretely and
@@ -353,7 +416,8 @@ activityUtilisationFactor act =
   Event $ \p ->
   do x1 <- readIORef (activityTotalUtilisationTimeRef act)
      x2 <- readIORef (activityTotalIdleTimeRef act)
-     return (x1 / (x1 + x2))
+     x3 <- readIORef (activityTotalPreemptionTimeRef act)
+     return (x1 / (x1 + x2 + x3))
   
 -- | Signal when the 'activityUtilisationFactor' property value has changed.
 activityUtilisationFactorChanged :: Activity s a b -> Signal Double
@@ -364,7 +428,8 @@ activityUtilisationFactorChanged act =
 activityUtilisationFactorChanged_ :: Activity s a b -> Signal ()
 activityUtilisationFactorChanged_ act =
   mapSignal (const ()) (activityUtilising act) <>
-  mapSignal (const ()) (activityUtilised act)
+  mapSignal (const ()) (activityUtilised act) <>
+  mapSignal (const ()) (activityReentering act)
   
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the activity was idle.
@@ -372,7 +437,7 @@ activityUtilisationFactorChanged_ act =
 -- This factor is calculated as
 --
 -- @
---   totalIdleTime \/ (totalUtilisationTime + totalIdleTime)
+--   totalIdleTime \/ (totalUtilisationTime + totalIdleTime + totalPreemptionTime)
 -- @
 --
 -- As before in this module, the value returned changes discretely and
@@ -384,7 +449,8 @@ activityIdleFactor act =
   Event $ \p ->
   do x1 <- readIORef (activityTotalUtilisationTimeRef act)
      x2 <- readIORef (activityTotalIdleTimeRef act)
-     return (x2 / (x1 + x2))
+     x3 <- readIORef (activityTotalPreemptionTimeRef act)
+     return (x2 / (x1 + x2 + x3))
   
 -- | Signal when the 'activityIdleFactor' property value has changed.
 activityIdleFactorChanged :: Activity s a b -> Signal Double
@@ -395,8 +461,42 @@ activityIdleFactorChanged act =
 activityIdleFactorChanged_ :: Activity s a b -> Signal ()
 activityIdleFactorChanged_ act =
   mapSignal (const ()) (activityUtilising act) <>
-  mapSignal (const ()) (activityUtilised act)
+  mapSignal (const ()) (activityUtilised act) <>
+  mapSignal (const ()) (activityReentering act)
 
+-- | It returns the factor changing from 0 to 1, which estimates how often
+-- the activity was preempted waiting for the further proceeding.
+--
+-- This factor is calculated as
+--
+-- @
+--   totalUtilisationTime \/ (totalUtilisationTime + totalIdleTime + totalPreemptionTime)
+-- @
+--
+-- As before in this module, the value returned changes discretely and
+-- it is usually delayed relative to the current simulation time.
+--
+-- See also 'activityPreemptionFactorChanged' and 'activityPreemptionFactorChanged_'.
+activityPreemptionFactor :: Activity s a b -> Event Double
+activityPreemptionFactor act =
+  Event $ \p ->
+  do x1 <- readIORef (activityTotalUtilisationTimeRef act)
+     x2 <- readIORef (activityTotalIdleTimeRef act)
+     x3 <- readIORef (activityTotalPreemptionTimeRef act)
+     return (x3 / (x1 + x2 + x3))
+  
+-- | Signal when the 'activityPreemptionFactor' property value has changed.
+activityPreemptionFactorChanged :: Activity s a b -> Signal Double
+activityPreemptionFactorChanged act =
+  mapSignalM (const $ activityPreemptionFactor act) (activityPreemptionFactorChanged_ act)
+  
+-- | Signal when the 'activityPreemptionFactor' property value has changed.
+activityPreemptionFactorChanged_ :: Activity s a b -> Signal ()
+activityPreemptionFactorChanged_ act =
+  mapSignal (const ()) (activityUtilising act) <>
+  mapSignal (const ()) (activityUtilised act) <>
+  mapSignal (const ()) (activityReentering act)
+  
 -- | Raised when starting to utilise the activity after a new input task is received.
 activityUtilising :: Activity s a b -> Signal a
 activityUtilising = publishSignal . activityUtilisingSource
@@ -417,7 +517,8 @@ activityReentering = publishSignal . activityReenteringSource
 activityChanged_ :: Activity s a b -> Signal ()
 activityChanged_ act =
   mapSignal (const ()) (activityUtilising act) <>
-  mapSignal (const ()) (activityUtilised act)
+  mapSignal (const ()) (activityUtilised act) <>
+  mapSignal (const ()) (activityReentering act)
 
 -- | Return the summary for the activity with desciption of its
 -- properties using the specified indent.
@@ -426,10 +527,13 @@ activitySummary act indent =
   Event $ \p ->
   do tx1 <- readIORef (activityTotalUtilisationTimeRef act)
      tx2 <- readIORef (activityTotalIdleTimeRef act)
-     let xf1 = tx1 / (tx1 + tx2)
-         xf2 = tx2 / (tx1 + tx2)
+     tx3 <- readIORef (activityTotalPreemptionTimeRef act)
+     let xf1 = tx1 / (tx1 + tx2 + tx3)
+         xf2 = tx2 / (tx1 + tx2 + tx3)
+         xf3 = tx3 / (tx1 + tx2 + tx3)
      xs1 <- readIORef (activityUtilisationTimeRef act)
      xs2 <- readIORef (activityIdleTimeRef act)
+     xs3 <- readIORef (activityPreemptionTimeRef act)
      let tab = replicate indent ' '
      return $
        showString tab .
@@ -439,10 +543,16 @@ activitySummary act indent =
        showString "total idle time = " . shows tx2 .
        showString "\n" .
        showString tab .
+       showString "total preemption time = " . shows tx3 .
+       showString "\n" .
+       showString tab .
        showString "utilisation factor (from 0 to 1) = " . shows xf1 .
        showString "\n" .
        showString tab .
        showString "idle factor (from 0 to 1) = " . shows xf2 .
+       showString "\n" .
+       showString tab .
+       showString "preemption factor (from 0 to 1) = " . shows xf3 .
        showString "\n" .
        showString tab .
        showString "utilisation time (locked while awaiting the input):\n\n" .
@@ -450,4 +560,7 @@ activitySummary act indent =
        showString "\n\n" .
        showString tab .
        showString "idle time:\n\n" .
-       samplingStatsSummary xs2 (2 + indent)
+       samplingStatsSummary xs2 (2 + indent) .
+       showString tab .
+       showString "preemption time:\n\n" .
+       samplingStatsSummary xs3 (2 + indent)
