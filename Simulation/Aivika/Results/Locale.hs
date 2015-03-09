@@ -173,18 +173,24 @@ data ResultId = TimeId
                 -- ^ Property 'serverTotalProcessingTime'.
               | ServerTotalOutputWaitTimeId
                 -- ^ Property 'serverTotalOutputWaitTime'.
+              | ServerTotalPreemptionTimeId
+                -- ^ Property 'serverTotalPreemptionTime'.
               | ServerInputWaitTimeId
                 -- ^ Property 'serverInputWaitTime'.
               | ServerProcessingTimeId
                 -- ^ Property 'serverProcessingTime'.
               | ServerOutputWaitTimeId
                 -- ^ Property 'serverOutputWaitTime'.
+              | ServerPreemptionTimeId
+                -- ^ Property 'serverPreemptionTime'.
               | ServerInputWaitFactorId
                 -- ^ Property 'serverInputWaitFactor'.
               | ServerProcessingFactorId
                 -- ^ Property 'serverProcessingFactor'.
               | ServerOutputWaitFactorId
                 -- ^ Property 'serverOutputWaitFactor'.
+              | ServerPreemptionFactorId
+                -- ^ Property 'serverPreemptionFactor'.
               | ActivityId
                 -- ^ Represents an 'Activity'.
               | ActivityInitStateId
@@ -195,14 +201,20 @@ data ResultId = TimeId
                 -- ^ Property 'activityTotalUtilisationTime'.
               | ActivityTotalIdleTimeId
                 -- ^ Property 'activityTotalIdleTime'.
+              | ActivityTotalPreemptionTimeId
+                -- ^ Property 'activityTotalPreemptionTime'.
               | ActivityUtilisationTimeId
                 -- ^ Property 'activityUtilisationTime'.
               | ActivityIdleTimeId
                 -- ^ Property 'activityIdleTime'.
+              | ActivityPreemptionTimeId
+                -- ^ Property 'activityPreemptionTime'.
               | ActivityUtilisationFactorId
                 -- ^ Property 'activityUtilisationFactor'.
               | ActivityIdleFactorId
                 -- ^ Property 'activityIdleFactor'.
+              | ActivityPreemptionFactorId
+                -- ^ Property 'activityPreemptionFactor'.
               | UserDefinedResultId ResultDescription
                 -- ^ An user defined description.
               | LocalisedResultId (M.Map ResultLocale ResultDescription)
@@ -282,21 +294,27 @@ russianResultLocalisation ServerStateId = "текущее состояние"
 russianResultLocalisation ServerTotalInputWaitTimeId = "общее время блокировки в ожидании ввода"
 russianResultLocalisation ServerTotalProcessingTimeId = "общее время, потраченное на саму обработку заданий"
 russianResultLocalisation ServerTotalOutputWaitTimeId = "общее время блокировки при попытке доставить вывод"
+russianResultLocalisation ServerTotalPreemptionTimeId = "общее время вытеснения"
 russianResultLocalisation ServerInputWaitTimeId = "время блокировки в ожидании ввода"
 russianResultLocalisation ServerProcessingTimeId = "время, потраченное на саму обработку заданий"
 russianResultLocalisation ServerOutputWaitTimeId = "время блокировки при попытке доставить вывод"
+russianResultLocalisation ServerPreemptionTimeId = "время вытеснения"
 russianResultLocalisation ServerInputWaitFactorId = "относительное время блокировки в ожидании ввода (от 0 до 1)"
 russianResultLocalisation ServerProcessingFactorId = "относительное время, потраченное на саму обработку заданий (от 0 до 1)"
 russianResultLocalisation ServerOutputWaitFactorId = "относительное время блокировки при попытке доставить вывод (от 0 до 1)"
+russianResultLocalisation ServerPreemptionFactorId = "относительное время вытеснения (от 0 до 1)"
 russianResultLocalisation ActivityId = "активность"
 russianResultLocalisation ActivityInitStateId = "начальное состояние"
 russianResultLocalisation ActivityStateId = "текущее состояние"
 russianResultLocalisation ActivityTotalUtilisationTimeId = "общее время использования"
 russianResultLocalisation ActivityTotalIdleTimeId = "общее время простоя"
+russianResultLocalisation ActivityTotalPreemptionTimeId = "общее время вытеснения"
 russianResultLocalisation ActivityUtilisationTimeId = "статистика времени использования"
 russianResultLocalisation ActivityIdleTimeId = "статистика времени простоя"
+russianResultLocalisation ActivityPreemptionTimeId = "статистика времени вытеснения"
 russianResultLocalisation ActivityUtilisationFactorId = "относительное время использования (от 0 до 1)"
 russianResultLocalisation ActivityIdleFactorId = "относительное время простоя (от 0 до 1)"
+russianResultLocalisation ActivityPreemptionFactorId = "относительное время вытеснения (от 0 до 1)"
 russianResultLocalisation (UserDefinedResultId m) = m
 russianResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation russianResultLocale x
@@ -366,21 +384,27 @@ englishResultLocalisation ServerStateId = "the current state"
 englishResultLocalisation ServerTotalInputWaitTimeId = "the total time spent while waiting for input"
 englishResultLocalisation ServerTotalProcessingTimeId = "the total time spent on actual processing the tasks"
 englishResultLocalisation ServerTotalOutputWaitTimeId = "the total time spent on delivering the output"
+englishResultLocalisation ServerTotalPreemptionTimeId = "the total time spent being preempted"
 englishResultLocalisation ServerInputWaitTimeId = "the time spent while waiting for input"
 englishResultLocalisation ServerProcessingTimeId = "the time spent on processing the tasks"
 englishResultLocalisation ServerOutputWaitTimeId = "the time spent on delivering the output"
+englishResultLocalisation ServerPreemptionTimeId = "the time spent being preempted"
 englishResultLocalisation ServerInputWaitFactorId = "the relative time spent while waiting for input (from 0 to 1)"
 englishResultLocalisation ServerProcessingFactorId = "the relative time spent on processing the tasks (from 0 to 1)"
 englishResultLocalisation ServerOutputWaitFactorId = "the relative time spent on delivering the output (from 0 to 1)"
+englishResultLocalisation ServerPreemptionFactorId = "the relative time spent being preempted (from 0 to 1)"
 englishResultLocalisation ActivityId = "the activity"
 englishResultLocalisation ActivityInitStateId = "the initial state"
 englishResultLocalisation ActivityStateId = "the current state"
 englishResultLocalisation ActivityTotalUtilisationTimeId = "the total time of utilisation"
 englishResultLocalisation ActivityTotalIdleTimeId = "the total idle time"
+englishResultLocalisation ActivityTotalPreemptionTimeId = "the total time of preemption"
 englishResultLocalisation ActivityUtilisationTimeId = "the utilisation time"
 englishResultLocalisation ActivityIdleTimeId = "the idle time"
+englishResultLocalisation ActivityPreemptionTimeId = "the preemption time"
 englishResultLocalisation ActivityUtilisationFactorId = "the relative utilisation time (от 0 до 1)"
 englishResultLocalisation ActivityIdleFactorId = "the relative idle time (от 0 до 1)"
+englishResultLocalisation ActivityPreemptionFactorId = "the relative preemption time (от 0 до 1)"
 englishResultLocalisation (UserDefinedResultId m) = m
 englishResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation englishResultLocale x
