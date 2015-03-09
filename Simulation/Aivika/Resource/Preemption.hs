@@ -7,7 +7,7 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.8.3
 --
--- This module defines the preemption resource.
+-- This module defines the preemptible resource.
 --
 module Simulation.Aivika.Resource.Preemption
        (-- * Resource Type
@@ -38,7 +38,7 @@ import Simulation.Aivika.QueueStrategy
 
 import qualified Simulation.Aivika.PriorityQueue as PQ
 
--- | Represents the resource with strategy @s@ applied for queuing the requests.
+-- | Represents a preemptible resource.
 data Resource = 
   Resource { resourceMaxCount :: Maybe Int,
              -- ^ Return the maximum count of the resource, where 'Nothing'

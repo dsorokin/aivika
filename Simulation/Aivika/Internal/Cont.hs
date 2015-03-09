@@ -695,7 +695,9 @@ spawnCont cancellation x cid =
 
 -- | Represents a temporarily frozen computation.
 newtype FrozenCont a =
-  FrozenCont { unfreezeCont :: Event (Maybe (ContParams a)) }
+  FrozenCont { unfreezeCont :: Event (Maybe (ContParams a))
+               -- ^ Unfreeze the computation.
+             }
 
 -- | Freeze the computation parameters temporarily.
 freezeCont :: ContParams a -> Event (FrozenCont a)
