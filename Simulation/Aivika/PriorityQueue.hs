@@ -151,7 +151,8 @@ dequeue pq =
      -- v0 <- readArray vals size
      writeArray keys i k0
      writeArray vals i v0
-     siftDown keys vals i 0 k v
+     when (i > 0) $
+       siftDown keys vals i 0 k v
 
 -- | Return the element with the minimal priority.
 queueFront :: PriorityQueue a -> IO (Double, a)
@@ -167,13 +168,46 @@ queueFront pq =
 -- | Remove the specified element from the queue and return a computation of the flag
 -- indicating whether the element was actually removed.
 --
--- Unlike other functions it has complexity O(n).
+-- Note that unlike other functions it has complexity O(n).
 remove :: Eq a => PriorityQueue a -> a -> IO Bool
 remove pq a = removeBy pq (== a)
 
--- | Remove the element satisfying the specified predicate and return a computation of the flag
+-- | Remove an element satisfying the predicate and return a computation of the flag
 -- indicating whether the element was actually removed.
 --
--- Unlike other functions it has complexity O(n).
+-- Note that unlike other functions it has complexity O(n).
 removeBy :: PriorityQueue a -> (a -> Bool) -> IO Bool
-removeBy = undefined
+removeBy pq pred =
+  do index <- indexBy pq pred
+     if index < 0
+       then return False
+       else do size <- readIORef (pqSize pq)
+               when (size == 0) $
+                 error "Internal error in the priority queue implementation: removeBy"
+               let i = size - 1
+               writeIORef (pqSize pq) i
+               keys <- readIORef (pqKeys pq)
+               vals <- readIORef (pqVals pq)
+               k <- readArray keys i
+               v <- readArray vals i
+               let k0 = 0.0
+                   v0 = undefined
+               writeArray keys i k0
+               writeArray vals i v0
+               when (i > 0) $
+                 siftDown keys vals i index k v
+               return True
+     
+-- | Return the index of the item satisfying the predicate or -1.     
+indexBy :: PriorityQueue a -> (a -> Bool) -> IO Int
+indexBy pq pred =
+  do size <- readIORef (pqSize pq)
+     vals <- readIORef (pqVals pq)
+     let loop index =
+           if index >= size
+           then return (-1)
+           else do x <- readArray vals index
+                   if pred x
+                     then return index
+                     else loop $ index + 1
+     loop 0
