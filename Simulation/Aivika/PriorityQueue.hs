@@ -16,7 +16,9 @@ module Simulation.Aivika.PriorityQueue
         newQueue, 
         enqueue, 
         dequeue, 
-        queueFront) where 
+        queueFront,
+        remove,
+        removeBy) where 
 
 import Data.Array
 import Data.Array.MArray.Safe
@@ -161,3 +163,17 @@ queueFront pq =
      k <- readArray keys 0
      v <- readArray vals 0
      return (k, v)
+
+-- | Remove the specified element from the queue and return a computation of the flag
+-- indicating whether the element was actually removed.
+--
+-- Unlike other functions it has complexity O(n).
+remove :: Eq a => PriorityQueue a -> a -> IO Bool
+remove pq a = removeBy pq (== a)
+
+-- | Remove the element satisfying the specified predicate and return a computation of the flag
+-- indicating whether the element was actually removed.
+--
+-- Unlike other functions it has complexity O(n).
+removeBy :: PriorityQueue a -> (a -> Bool) -> IO Bool
+removeBy = undefined
