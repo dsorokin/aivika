@@ -12,11 +12,10 @@
 module Simulation.Aivika.Activity
        (-- * Activity
         Activity,
-        ActivityInterruption(..),
         newActivity,
         newStateActivity,
-        newInterruptibleActivity,
-        newInterruptibleStateActivity,
+        newPreemptibleActivity,
+        newPreemptibleStateActivity,
         -- * Processing
         activityNet,
         -- * Activity Properties
@@ -48,7 +47,8 @@ module Simulation.Aivika.Activity
         -- * Basic Signals
         activityUtilising,
         activityUtilised,
-        activityInterrupted,
+        activityPreempting,
+        activityReentering,
         -- * Overall Signal
         activityChanged_) where
 
@@ -79,8 +79,8 @@ data Activity s a b =
              -- ^ The current state of the activity.
              activityProcess :: s -> a -> Process (s, b),
              -- ^ Provide @b@ by specified @a@.
-             activityProcessInterruptible :: Bool,
-             -- ^ Whether the process is interruptible.
+             activityProcessPreemptible :: Bool,
+             -- ^ Whether the process is preemptible.
              activityTotalUtilisationTimeRef :: IORef Double,
              -- ^ The counted total time of utilising the activity.
              activityTotalIdleTimeRef :: IORef Double,
@@ -93,35 +93,27 @@ data Activity s a b =
              -- ^ A signal raised when starting to utilise the activity.
              activityUtilisedSource :: SignalSource (a, b),
              -- ^ A signal raised when the activity has been utilised.
-             activityInterruptedSource :: SignalSource (ActivityInterruption a)
-             -- ^ A signal raised when the utilisation was interrupted.
+             activityPreemptingSource :: SignalSource a,
+             -- ^ A signal raised when the utilisation was preempted.
+             activityReenteringSource :: SignalSource a
+             -- ^ A signal raised when the utilisation was proceeded after it had been preempted earlier.
            }
-
--- | Contains data about the interrupted task.
-data ActivityInterruption a =
-  ActivityInterruption { activityInterruptedInput :: a,
-                         -- ^ The input task that was interrupted.
-                         activityStartProcessingTime :: Double,
-                         -- ^ The start time of processing the task.
-                         activityInterruptionTime :: Double
-                         -- ^ The time of interrupting the task.
-                       }
 
 -- | Create a new activity that can provide output @b@ by input @a@.
 --
--- By default, it is assumed that the activity utilisation cannot be interrupted,
--- because the handling of possible task interruption is rather costly
+-- By default, it is assumed that the activity utilisation cannot be preempted,
+-- because the handling of possible task preemption is rather costly
 -- operation.
 newActivity :: (a -> Process b)
                -- ^ provide an output by the specified input
                -> Simulation (Activity () a b)
-newActivity = newInterruptibleActivity False
+newActivity = newPreemptibleActivity False
 
 -- | Create a new activity that can provide output @b@ by input @a@
 -- starting from state @s@.
 --
--- By default, it is assumed that the activity utilisation cannot be interrupted,
--- because the handling of possible task interruption is rather costly
+-- By default, it is assumed that the activity utilisation cannot be preempted,
+-- because the handling of possible task preemption is rather costly
 -- operation.
 newStateActivity :: (s -> a -> Process (s, b))
                     -- ^ provide a new state and output by the specified 
@@ -129,30 +121,30 @@ newStateActivity :: (s -> a -> Process (s, b))
                     -> s
                     -- ^ the initial state
                     -> Simulation (Activity s a b)
-newStateActivity = newInterruptibleStateActivity False
+newStateActivity = newPreemptibleStateActivity False
 
--- | Create a new interruptible activity that can provide output @b@ by input @a@.
-newInterruptibleActivity :: Bool
-                            -- ^ whether the activity can be interrupted
-                            -> (a -> Process b)
-                            -- ^ provide an output by the specified input
-                            -> Simulation (Activity () a b)
-newInterruptibleActivity interruptible provide =
-  flip (newInterruptibleStateActivity interruptible) () $ \s a ->
+-- | Create a new preemptible activity that can provide output @b@ by input @a@.
+newPreemptibleActivity :: Bool
+                          -- ^ whether the activity can be preempted
+                          -> (a -> Process b)
+                          -- ^ provide an output by the specified input
+                          -> Simulation (Activity () a b)
+newPreemptibleActivity preemptible provide =
+  flip (newPreemptibleStateActivity preemptible) () $ \s a ->
   do b <- provide a
      return (s, b)
 
 -- | Create a new activity that can provide output @b@ by input @a@
 -- starting from state @s@.
-newInterruptibleStateActivity :: Bool
-                                 -- ^ whether the activity can be interrupted
-                                 -> (s -> a -> Process (s, b))
-                                 -- ^ provide a new state and output by the specified 
-                                 -- old state and input
-                                 -> s
-                                 -- ^ the initial state
+newPreemptibleStateActivity :: Bool
+                               -- ^ whether the activity can be preempted
+                               -> (s -> a -> Process (s, b))
+                               -- ^ provide a new state and output by the specified 
+                               -- old state and input
+                               -> s
+                               -- ^ the initial state
                               -> Simulation (Activity s a b)
-newInterruptibleStateActivity interruptible provide state =
+newPreemptibleStateActivity preemptible provide state =
   do r0 <- liftIO $ newIORef state
      r1 <- liftIO $ newIORef 0
      r2 <- liftIO $ newIORef 0
@@ -161,17 +153,19 @@ newInterruptibleStateActivity interruptible provide state =
      s1 <- newSignalSource
      s2 <- newSignalSource
      s3 <- newSignalSource
+     s4 <- newSignalSource
      return Activity { activityInitState = state,
                        activityStateRef = r0,
                        activityProcess = provide,
-                       activityProcessInterruptible = interruptible,
+                       activityProcessPreemptible = preemptible,
                        activityTotalUtilisationTimeRef = r1,
                        activityTotalIdleTimeRef = r2,
                        activityUtilisationTimeRef = r3,
                        activityIdleTimeRef = r4,
                        activityUtilisingSource = s1,
                        activityUtilisedSource = s2,
-                       activityInterruptedSource = s3 }
+                       activityPreemptingSource = s3,
+                       activityReenteringSource = s4 }
 
 -- | Return a network computation for the specified activity.
 --
@@ -201,37 +195,48 @@ activityNet act = Net $ loop (activityInitState act) Nothing
                        addSamplingStats (t0 - t')
               triggerSignal (activityUtilisingSource act) a
          -- utilise the activity
-         (s', b) <- activityProcess act s a
-         (s', b) <- if activityProcessInterruptible act
-                    then activityProcessInterrupting act s a
-                    else activityProcess act s a
+         (s', b, dt) <- if activityProcessPreemptible act
+                        then activityProcessPreempting act s a
+                        else do (s', b) <- activityProcess act s a
+                                return (s', b, 0)
          t1 <- liftDynamics time
          liftEvent $
            do liftIO $
                 do writeIORef (activityStateRef act) $! s'
-                   modifyIORef' (activityTotalUtilisationTimeRef act) (+ (t1 - t0))
+                   modifyIORef' (activityTotalUtilisationTimeRef act) (+ (t1 - t0 - dt))
                    modifyIORef' (activityUtilisationTimeRef act) $
-                     addSamplingStats (t1 - t0)
+                     addSamplingStats (t1 - t0 - dt)
               triggerSignal (activityUtilisedSource act) (a, b)
          return (b, Net $ loop s' (Just t1))
 
--- | Process the input with ability to handle a possible interruption.
-activityProcessInterrupting :: Activity s a b -> s -> a -> Process (s, b)
-activityProcessInterrupting act s a =
+-- | Process the input with ability to handle a possible preemption.
+activityProcessPreempting :: Activity s a b -> s -> a -> Process (s, b, Double)
+activityProcessPreempting act s a =
   do pid <- processId
      t0  <- liftDynamics time
-     finallyProcess
-       (activityProcess act s a)
-       (liftEvent $
-        do cancelled <- processCancelled pid
-           when cancelled $
-             do t1 <- liftDynamics time
-                liftIO $
-                  do modifyIORef' (activityTotalUtilisationTimeRef act) (+ (t1 - t0))
-                     modifyIORef' (activityUtilisationTimeRef act) $
-                       addSamplingStats (t1 - t0)
-                let x = ActivityInterruption a t0 t1
-                triggerSignal (activityInterruptedSource act) x)
+     rs  <- liftIO $ newIORef 0
+     r0  <- liftIO $ newIORef t0
+     h1  <- liftEvent $
+            handleSignal (processPreempting pid) $ \() ->
+            do t0 <- liftDynamics time
+               liftIO $ writeIORef r0 t0
+               triggerSignal (activityPreemptingSource act) a
+     h2  <- liftEvent $
+            handleSignal (processReentering pid) $ \() ->
+            do t0 <- liftIO $ readIORef r0
+               t1 <- liftDynamics time
+               let dt = t1 - t0
+               liftIO $ modifyIORef rs (+ dt)
+               triggerSignal (activityReenteringSource act) a 
+     let m1 =
+           do (s', b) <- activityProcess act s a
+              dt <- liftIO $ readIORef rs
+              return (s', b, dt)
+         m2 =
+           liftEvent $
+           do disposeEvent h1
+              disposeEvent h2
+     finallyProcess m1 m2
 
 -- | Return the current state of the activity.
 --
@@ -400,16 +405,19 @@ activityUtilising = publishSignal . activityUtilisingSource
 activityUtilised :: Activity s a b -> Signal (a, b)
 activityUtilised = publishSignal . activityUtilisedSource
 
--- | Raised when the task utilisation by the activity was interrupted.
-activityInterrupted :: Activity s a b -> Signal (ActivityInterruption a)
-activityInterrupted = publishSignal . activityInterruptedSource
+-- | Raised when the task utilisation by the activity was preempted.
+activityPreempting :: Activity s a b -> Signal a
+activityPreempting = publishSignal . activityPreemptingSource
+
+-- | Raised when the task utilisation by the activity was proceeded after it had been preempted earlier.
+activityReentering :: Activity s a b -> Signal a
+activityReentering = publishSignal . activityReenteringSource
 
 -- | Signal whenever any property of the activity changes.
 activityChanged_ :: Activity s a b -> Signal ()
 activityChanged_ act =
   mapSignal (const ()) (activityUtilising act) <>
-  mapSignal (const ()) (activityUtilised act) <>
-  mapSignal (const ()) (activityInterrupted act)
+  mapSignal (const ()) (activityUtilised act)
 
 -- | Return the summary for the activity with desciption of its
 -- properties using the specified indent.
