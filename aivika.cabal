@@ -136,6 +136,7 @@ library
                      Simulation.Aivika.Parameter.Random
                      Simulation.Aivika.PriorityQueue
                      Simulation.Aivika.Process
+                     Simulation.Aivika.Process.Random
                      Simulation.Aivika.Processor
                      Simulation.Aivika.Processor.RoundRobbin
                      Simulation.Aivika.Queue
