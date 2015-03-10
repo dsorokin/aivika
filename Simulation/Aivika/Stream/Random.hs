@@ -22,8 +22,6 @@ module Simulation.Aivika.Stream.Random
         randomPoissonStream,
         randomBinomialStream) where
 
-import System.Random
-
 import Control.Monad
 import Control.Monad.Trans
 
