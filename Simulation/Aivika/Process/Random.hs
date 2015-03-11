@@ -91,7 +91,8 @@ randomNormalProcess :: Double
                        -- for which the process was actually held
 randomNormalProcess mu nu =
   do t <- liftParameter $ randomNormal mu nu
-     holdProcess t
+     when (t > 0) $
+       holdProcess t
      return t
          
 -- | Hold the process for a random time interval distributed normally.
@@ -102,7 +103,8 @@ randomNormalProcess_ :: Double
                         -> Process ()
 randomNormalProcess_ mu nu =
   do t <- liftParameter $ randomNormal mu nu
-     holdProcess t
+     when (t > 0) $
+       holdProcess t
          
 -- | Hold the process for a random time interval distributed exponentially
 -- with the specified mean (the reciprocal of the rate).
