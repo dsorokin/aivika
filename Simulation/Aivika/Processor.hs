@@ -16,6 +16,7 @@ module Simulation.Aivika.Processor
         emptyProcessor,
         arrProcessor,
         accumProcessor,
+        withinProcessor,
         -- * Specifying Identifier
         processorUsingId,
         -- * Prefetch and Delay Processors
@@ -146,6 +147,13 @@ accumProcessor f acc =
       do (a, xs') <- runStream xs
          (acc', b) <- f acc a
          return (b, Cons $ loop xs' acc') 
+
+-- | Involve the computation with side effect when processing a stream of data.
+withinProcessor :: Process () -> Processor a a
+withinProcessor m =
+  Processor $
+  mapStreamM $ \a ->
+  do { m; return a }
 
 -- | Create a processor that will use the specified process identifier.
 -- It can be useful to refer to the underlying 'Process' computation which
