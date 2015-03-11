@@ -34,6 +34,7 @@ module Simulation.Aivika.Net
         emptyNet,
         arrNet,
         accumNet,
+        withinNet,
         -- * Specifying Identifier
         netUsingId,
         -- * Arrival Net
@@ -168,7 +169,13 @@ accumNet :: (acc -> a -> Process (acc, b)) -> acc -> Net a b
 accumNet f acc =
   Net $ \a ->
   do (acc', b) <- f acc a
-     return (b, accumNet f acc') 
+     return (b, accumNet f acc')
+
+-- | Involve the computation with side effect when processing the input.
+withinNet :: Process () -> Net a a
+withinNet m =
+  Net $ \a ->
+  do { m; return (a, withinNet m) }
 
 -- | Create a net that will use the specified process identifier.
 -- It can be useful to refer to the underlying 'Process' computation which
