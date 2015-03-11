@@ -8,7 +8,7 @@
 -- Tested with: GHC 7.8.3
 --
 -- This module defines some useful random processors that
--- hold the current process for the corresponding time interval
+-- hold the current process for the corresponding time interval,
 -- when processing every input element.
 --
 

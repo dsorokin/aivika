@@ -8,7 +8,7 @@
 -- Tested with: GHC 7.8.3
 --
 -- This module defines some useful random network computations that
--- hold the current process for the corresponding time interval
+-- hold the current process for the corresponding time interval,
 -- when processing every input element.
 --
 
