@@ -39,6 +39,7 @@ module Simulation.Aivika
         module Simulation.Aivika.Results.Locale,
         module Simulation.Aivika.Results.IO,
         module Simulation.Aivika.Server,
+        module Simulation.Aivika.Server.Random,
         module Simulation.Aivika.Signal,
         module Simulation.Aivika.Simulation,
         module Simulation.Aivika.Specs,
@@ -79,6 +80,7 @@ import Simulation.Aivika.Results
 import Simulation.Aivika.Results.Locale
 import Simulation.Aivika.Results.IO
 import Simulation.Aivika.Server
+import Simulation.Aivika.Server.Random
 import Simulation.Aivika.Signal
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Specs
