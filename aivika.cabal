@@ -138,6 +138,7 @@ library
                      Simulation.Aivika.Process
                      Simulation.Aivika.Process.Random
                      Simulation.Aivika.Processor
+                     Simulation.Aivika.Processor.Random
                      Simulation.Aivika.Processor.RoundRobbin
                      Simulation.Aivika.Queue
                      Simulation.Aivika.Queue.Infinite

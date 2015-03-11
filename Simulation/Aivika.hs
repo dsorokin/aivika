@@ -29,6 +29,7 @@ module Simulation.Aivika
         module Simulation.Aivika.Process,
         module Simulation.Aivika.Process.Random,
         module Simulation.Aivika.Processor,
+        module Simulation.Aivika.Processor.Random,
         module Simulation.Aivika.Processor.RoundRobbin,
         module Simulation.Aivika.QueueStrategy,
         module Simulation.Aivika.Ref,
@@ -67,6 +68,7 @@ import Simulation.Aivika.Parameter.Random
 import Simulation.Aivika.Process
 import Simulation.Aivika.Process.Random
 import Simulation.Aivika.Processor
+import Simulation.Aivika.Processor.Random
 import Simulation.Aivika.Processor.RoundRobbin
 import Simulation.Aivika.QueueStrategy
 import Simulation.Aivika.Ref
