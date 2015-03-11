@@ -149,9 +149,11 @@ releaseResource r =
   Cont $ \c ->
   Event $ \p ->
   do f <- PQ.removeBy (resourceActingQueue r) (\item -> actingItemId item == pid)
-     when f $
-       invokeEvent p $ releaseResource' r
-     invokeEvent p $ resumeCont c ()
+     if f
+       then do invokeEvent p $ releaseResource' r
+               invokeEvent p $ resumeCont c ()
+       else error $
+            "The resource was not acquired by this process: releaseResource"
 
 -- | Release the resource increasing its count and resuming one of the
 -- previously suspended or preempted processes as possible.
