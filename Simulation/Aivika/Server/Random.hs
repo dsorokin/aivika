@@ -19,7 +19,14 @@ module Simulation.Aivika.Server.Random
         newRandomExponentialServer,
         newRandomErlangServer,
         newRandomPoissonServer,
-        newRandomBinomialServer) where
+        newRandomBinomialServer,
+        newPreemptibleRandomUniformServer,
+        newPreemptibleRandomUniformIntServer,
+        newPreemptibleRandomNormalServer,
+        newPreemptibleRandomExponentialServer,
+        newPreemptibleRandomErlangServer,
+        newPreemptibleRandomPoissonServer,
+        newPreemptibleRandomBinomialServer) where
 
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Process
@@ -37,10 +44,8 @@ newRandomUniformServer :: Double
                           -> Double
                           -- ^ the maximum time interval
                           -> Simulation (Server () a a)
-newRandomUniformServer min max =
-  newServer $ \a ->
-  do randomUniformProcess_ min max
-     return a
+newRandomUniformServer =
+  newPreemptibleRandomUniformServer False
 
 -- | Create a new server that holds the process for a random time interval
 -- distributed uniformly, when processing every input element.
@@ -53,10 +58,8 @@ newRandomUniformIntServer :: Int
                              -> Int
                              -- ^ the maximum time interval
                              -> Simulation (Server () a a)
-newRandomUniformIntServer min max =
-  newServer $ \a ->
-  do randomUniformIntProcess_ min max
-     return a
+newRandomUniformIntServer =
+  newPreemptibleRandomUniformIntServer False
 
 -- | Create a new server that holds the process for a random time interval
 -- distributed normally, when processing every input element.
@@ -69,10 +72,8 @@ newRandomNormalServer :: Double
                          -> Double
                          -- ^ the time interval deviation
                          -> Simulation (Server () a a)
-newRandomNormalServer mu nu =
-  newServer $ \a ->
-  do randomNormalProcess_ mu nu
-     return a
+newRandomNormalServer =
+  newPreemptibleRandomNormalServer False
          
 -- | Create a new server that holds the process for a random time interval
 -- distributed exponentially with the specified mean (the reciprocal of the rate),
@@ -84,10 +85,8 @@ newRandomNormalServer mu nu =
 newRandomExponentialServer :: Double
                               -- ^ the mean time interval (the reciprocal of the rate)
                               -> Simulation (Server () a a)
-newRandomExponentialServer mu =
-  newServer $ \a ->
-  do randomExponentialProcess_ mu
-     return a
+newRandomExponentialServer =
+  newPreemptibleRandomExponentialServer False
          
 -- | Create a new server that holds the process for a random time interval
 -- having the Erlang distribution with the specified scale (the reciprocal of the rate)
@@ -101,10 +100,8 @@ newRandomErlangServer :: Double
                          -> Int
                          -- ^ the shape
                          -> Simulation (Server () a a)
-newRandomErlangServer beta m =
-  newServer $ \a ->
-  do randomErlangProcess_ beta m
-     return a
+newRandomErlangServer =
+  newPreemptibleRandomErlangServer False
 
 -- | Create a new server that holds the process for a random time interval
 -- having the Poisson distribution with the specified mean, when processing
@@ -116,10 +113,8 @@ newRandomErlangServer beta m =
 newRandomPoissonServer :: Double
                           -- ^ the mean time interval
                           -> Simulation (Server () a a)
-newRandomPoissonServer mu =
-  newServer $ \a ->
-  do randomPoissonProcess_ mu
-     return a
+newRandomPoissonServer =
+  newPreemptibleRandomPoissonServer False
 
 -- | Create a new server that holds the process for a random time interval
 -- having the binomial distribution with the specified probability and trials,
@@ -133,7 +128,107 @@ newRandomBinomialServer :: Double
                            -> Int
                            -- ^ the number of trials
                            -> Simulation (Server () a a)
-newRandomBinomialServer prob trials =
-  newServer $ \a ->
+newRandomBinomialServer =
+  newPreemptibleRandomBinomialServer False
+
+-- | Create a new server that holds the process for a random time interval
+-- distributed uniformly, when processing every input element.
+newPreemptibleRandomUniformServer :: Bool
+                                     -- ^ whether the server process can be preempted
+                                     -> Double
+                                     -- ^ the minimum time interval
+                                     -> Double
+                                     -- ^ the maximum time interval
+                                     -> Simulation (Server () a a)
+newPreemptibleRandomUniformServer preemptible min max =
+  newPreemptibleServer preemptible $ \a ->
+  do randomUniformProcess_ min max
+     return a
+
+-- | Create a new server that holds the process for a random time interval
+-- distributed uniformly, when processing every input element.
+newPreemptibleRandomUniformIntServer :: Bool
+                                        -- ^ whether the server process can be preempted
+                                        -> Int
+                                        -- ^ the minimum time interval
+                                        -> Int
+                                        -- ^ the maximum time interval
+                                        -> Simulation (Server () a a)
+newPreemptibleRandomUniformIntServer preemptible min max =
+  newPreemptibleServer preemptible $ \a ->
+  do randomUniformIntProcess_ min max
+     return a
+
+-- | Create a new server that holds the process for a random time interval
+-- distributed normally, when processing every input element.
+newPreemptibleRandomNormalServer :: Bool
+                                    -- ^ whether the server process can be preempted
+                                    -> Double
+                                    -- ^ the mean time interval
+                                    -> Double
+                                    -- ^ the time interval deviation
+                                    -> Simulation (Server () a a)
+newPreemptibleRandomNormalServer preemptible mu nu =
+  newPreemptibleServer preemptible $ \a ->
+  do randomNormalProcess_ mu nu
+     return a
+         
+-- | Create a new server that holds the process for a random time interval
+-- distributed exponentially with the specified mean (the reciprocal of the rate),
+-- when processing every input element.
+newPreemptibleRandomExponentialServer :: Bool
+                                         -- ^ whether the server process can be preempted
+                                         -> Double
+                                         -- ^ the mean time interval (the reciprocal of the rate)
+                                         -> Simulation (Server () a a)
+newPreemptibleRandomExponentialServer preemptible mu =
+  newPreemptibleServer preemptible $ \a ->
+  do randomExponentialProcess_ mu
+     return a
+         
+-- | Create a new server that holds the process for a random time interval
+-- having the Erlang distribution with the specified scale (the reciprocal of the rate)
+-- and shape parameters, when processing every input element.
+newPreemptibleRandomErlangServer :: Bool
+                                    -- ^ whether the server process can be preempted
+                                    -> Double
+                                    -- ^ the scale (the reciprocal of the rate)
+                                    -> Int
+                                    -- ^ the shape
+                                    -> Simulation (Server () a a)
+newPreemptibleRandomErlangServer preemptible beta m =
+  newPreemptibleServer preemptible $ \a ->
+  do randomErlangProcess_ beta m
+     return a
+
+-- | Create a new server that holds the process for a random time interval
+-- having the Poisson distribution with the specified mean, when processing
+-- every input element.
+newPreemptibleRandomPoissonServer :: Bool
+                                     -- ^ whether the server process can be preempted
+                                     -> Double
+                                     -- ^ the mean time interval
+                                  -> Simulation (Server () a a)
+newPreemptibleRandomPoissonServer preemptible mu =
+  newPreemptibleServer preemptible $ \a ->
+  do randomPoissonProcess_ mu
+     return a
+
+-- | Create a new server that holds the process for a random time interval
+-- having the binomial distribution with the specified probability and trials,
+-- when processing every input element.
+--
+-- By default, it is assumed that the server process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newPreemptibleRandomBinomialServer :: Bool
+                                     -- ^ whether the server process can be preempted
+                                     -> Double
+                                     -- ^ the probability
+                                     -> Int
+                                     -- ^ the number of trials
+                                     -> Simulation (Server () a a)
+newPreemptibleRandomBinomialServer preemptible prob trials =
+  newPreemptibleServer preemptible $ \a ->
   do randomBinomialProcess_ prob trials
      return a
