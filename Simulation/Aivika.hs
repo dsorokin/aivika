@@ -13,6 +13,7 @@
 module Simulation.Aivika
        (-- * Modules
         module Simulation.Aivika.Activity,
+        module Simulation.Aivika.Activity.Random,
         module Simulation.Aivika.Agent,
         module Simulation.Aivika.Arrival,
         module Simulation.Aivika.Circuit,
@@ -54,6 +55,7 @@ module Simulation.Aivika
         module Simulation.Aivika.Var.Unboxed) where
 
 import Simulation.Aivika.Activity
+import Simulation.Aivika.Activity.Random
 import Simulation.Aivika.Agent
 import Simulation.Aivika.Arrival
 import Simulation.Aivika.Circuit

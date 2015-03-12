@@ -119,6 +119,7 @@ library
 
     exposed-modules: Simulation.Aivika
                      Simulation.Aivika.Activity
+                     Simulation.Aivika.Activity.Random
                      Simulation.Aivika.Agent
                      Simulation.Aivika.Arrival
                      Simulation.Aivika.Circuit
