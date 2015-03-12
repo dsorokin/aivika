@@ -217,10 +217,6 @@ newPreemptibleRandomPoissonServer preemptible mu =
 -- | Create a new server that holds the process for a random time interval
 -- having the binomial distribution with the specified probability and trials,
 -- when processing every input element.
---
--- By default, it is assumed that the server process cannot be preempted,
--- because the handling of possible task preemption is rather costly
--- operation.
 newPreemptibleRandomBinomialServer :: Bool
                                      -- ^ whether the server process can be preempted
                                      -> Double
