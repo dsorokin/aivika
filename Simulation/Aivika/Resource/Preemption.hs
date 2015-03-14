@@ -23,7 +23,9 @@ module Simulation.Aivika.Resource.Preemption
         releaseResource,
         usingResourceWithPriority,
         -- * Altering Resource 
-        incResourceCount) where
+        incResourceCount,
+        decResourceCount,
+        alterResourceCount) where
 
 import Data.IORef
 
@@ -242,6 +244,28 @@ usingResourceWithPriority r priority m =
   do requestResourceWithPriority r priority
      finallyProcess m $ releaseResource r
 
+-- | Preempt a process with the lowest priority that acquires yet the resource
+-- and decrease the count of available resource by 1. 
+decResourceCount' :: Resource -> Event ()
+decResourceCount' r =
+  Event $ \p ->
+  do a <- readIORef (resourceCountRef r)
+     when (a == 0) $
+       error $
+       "The resource exceeded and its count is zero: decResourceCount'"
+     f <- PQ.queueNull (resourceActingQueue r)
+     when f $
+       error $
+       "The resource acting queue is null: decResourceCount'"
+     (p0', item0) <- PQ.queueFront (resourceActingQueue r)
+     let p0 = - p0'
+         pid0 = actingItemId item0
+     PQ.dequeue (resourceActingQueue r)
+     PQ.enqueue (resourceWaitQueue r) p0 (Right $ ResourcePreemptedItem p0 pid0)
+     invokeEvent p $ preemptProcess pid0
+     let a' = a - 1
+     a' `seq` writeIORef (resourceCountRef r) a'
+
 -- | Increase the count of available resource by the specified number.
 incResourceCount :: Resource
                     -- ^ the resource
@@ -255,3 +279,26 @@ incResourceCount r n
     do releaseResource' r
        incResourceCount r (n - 1)
 
+-- | Decrease the count of available resource by the specified number.
+decResourceCount :: Resource
+                    -- ^ the resource
+                    -> Int
+                    -- ^ the decrement for the resource count
+                    -> Event ()
+decResourceCount r n
+  | n < 0     = error "The decrement cannot be negative: decResourceCount"
+  | n == 0    = return ()
+  | otherwise =
+    do decResourceCount' r
+       decResourceCount r (n - 1)
+
+-- | Alter the resource count either increasing or decreasing it.
+alterResourceCount :: Resource
+                      -- ^ the resource
+                      -> Int
+                      -- ^ a change of the resource count
+                      -> Event ()
+alterResourceCount r n
+  | n < 0  = decResourceCount r (- n)
+  | n > 0  = incResourceCount r n
+  | n == 0 = return ()
