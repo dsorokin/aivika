@@ -14,13 +14,16 @@ module Simulation.Aivika.Resource.Preemption
         Resource,
         -- * Creating Resource
         newResource,
+        newResourceWithMaxCount,
         -- * Resource Properties
         resourceMaxCount,
         resourceCount,
         -- * Requesting for and Releasing Resource
         requestResourceWithPriority,
         releaseResource,
-        usingResourceWithPriority) where
+        usingResourceWithPriority,
+        -- * Altering Resource 
+        incResourceCount) where
 
 import Data.IORef
 
@@ -39,8 +42,9 @@ import qualified Simulation.Aivika.PriorityQueue as PQ
 
 -- | Represents a preemptible resource.
 data Resource = 
-  Resource { resourceMaxCount :: Int,
-             -- ^ Return the maximum count of the resource.
+  Resource { resourceMaxCount :: Maybe Int,
+             -- ^ Return the maximum count of the resource, where 'Nothing'
+             -- means that the resource has no upper bound.
              resourceCountRef :: IORef Int,
              resourceActingQueue :: PQ.PriorityQueue ResourceActingItem,
              resourceWaitQueue :: PQ.PriorityQueue ResourceAwaitingItem }
@@ -83,7 +87,35 @@ newResource count =
      countRef <- newIORef count
      actingQueue <- PQ.newQueue
      waitQueue <- PQ.newQueue
-     return Resource { resourceMaxCount = count,
+     return Resource { resourceMaxCount = Just count,
+                       resourceCountRef = countRef,
+                       resourceActingQueue = actingQueue,
+                       resourceWaitQueue = waitQueue }
+
+-- | Create a new resource with the specified initial and maximum counts,
+-- where 'Nothing' means that the resource has no upper bound.
+newResourceWithMaxCount :: Int
+                           -- ^ the initial count of the resource
+                           -> Maybe Int
+                           -- ^ the maximum count of the resource, which can be indefinite
+                           -> Simulation Resource
+newResourceWithMaxCount count maxCount =
+  Simulation $ \r ->
+  do when (count < 0) $
+       error $
+       "The resource count cannot be negative: " ++
+       "newResourceWithMaxCount."
+     case maxCount of
+       Just maxCount | count > maxCount ->
+         error $
+         "The resource count cannot be greater than " ++
+         "its maximum value: newResourceWithMaxCount."
+       _ ->
+         return ()
+     countRef <- newIORef count
+     actingQueue <- PQ.newQueue
+     waitQueue <- PQ.newQueue
+     return Resource { resourceMaxCount = maxCount,
                        resourceCountRef = countRef,
                        resourceActingQueue = actingQueue,
                        resourceWaitQueue = waitQueue }
@@ -164,10 +196,13 @@ releaseResource' r =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
      let a' = a + 1
-     when (a' > resourceMaxCount r) $
-       error $
-       "The resource count cannot be greater than " ++
-       "its maximum value: releaseResource'."
+     case resourceMaxCount r of
+       Just maxCount | a' > maxCount ->
+         error $
+         "The resource count cannot be greater than " ++
+         "its maximum value: releaseResourceWithinEvent."
+       _ ->
+         return ()
      f <- PQ.queueNull (resourceWaitQueue r)
      if f 
        then a' `seq` writeIORef (resourceCountRef r) a'
@@ -206,3 +241,17 @@ usingResourceWithPriority :: Resource
 usingResourceWithPriority r priority m =
   do requestResourceWithPriority r priority
      finallyProcess m $ releaseResource r
+
+-- | Increase the count of available resource by the specified number.
+incResourceCount :: Resource
+                    -- ^ the resource
+                    -> Int
+                    -- ^ the increment for the resource count
+                    -> Event ()
+incResourceCount r n
+  | n < 0     = error "The increment cannot be negative: incResourceCount"
+  | n == 0    = return ()
+  | otherwise =
+    do releaseResource' r
+       incResourceCount r (n - 1)
+
