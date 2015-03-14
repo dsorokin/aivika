@@ -266,7 +266,9 @@ decResourceCount' r =
      let a' = a - 1
      a' `seq` writeIORef (resourceCountRef r) a'
 
--- | Increase the count of available resource by the specified number.
+-- | Increase the count of available resource by the specified number,
+-- invoking the awaiting and preempted processes according to their priorities
+-- as needed.
 incResourceCount :: Resource
                     -- ^ the resource
                     -> Int
@@ -279,7 +281,8 @@ incResourceCount r n
     do releaseResource' r
        incResourceCount r (n - 1)
 
--- | Decrease the count of available resource by the specified number.
+-- | Decrease the count of available resource by the specified number,
+-- preempting the processes according to their priorities as needed.
 decResourceCount :: Resource
                     -- ^ the resource
                     -> Int
@@ -292,7 +295,8 @@ decResourceCount r n
     do decResourceCount' r
        decResourceCount r (n - 1)
 
--- | Alter the resource count either increasing or decreasing it.
+-- | Alter the resource count either increasing or decreasing it by calling
+-- 'incResourceCount' or 'decResourceCount' respectively. 
 alterResourceCount :: Resource
                       -- ^ the resource
                       -> Int

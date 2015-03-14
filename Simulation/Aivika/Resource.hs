@@ -344,7 +344,8 @@ usingResourceWithPriority r priority m =
   do requestResourceWithPriority r priority
      finallyProcess m $ releaseResource r
 
--- | Increase the count of available resource by the specified number.
+-- | Increase the count of available resource by the specified number,
+-- invoking the awaiting processes as needed.
 incResourceCount :: DequeueStrategy s
                     => Resource s
                     -- ^ the resource
