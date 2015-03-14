@@ -66,45 +66,21 @@ model = do
   jobsInterrupted <- newRef (0 :: Int)
   -- create an input stream
   let inputStream =
-        traceStream Nothing (Just "a new job") $
         randomExponentialStream jobArrivingMu
   -- create a preemptible resource
   tool <- PR.newResource 1
   -- the machine setting up
   machineSettingUp <-
-    newPreemptibleServer True $ \a ->
-    PR.usingResourceWithPriority tool jobPriority $
-    do setUpTime <-
-         liftParameter $
-         randomUniform minSetUpTime maxSetUpTime
-       traceProcess "setting up the machine" $
-         holdProcess setUpTime
-       return a
+    newPreemptibleRandomUniformServer True minSetUpTime maxSetUpTime
   -- the machine processing
   machineProcessing <-
-    newPreemptibleServer True $ \a ->
-    PR.usingResourceWithPriority tool jobPriority $
-    do jobProcessingTime <-
-         liftParameter $
-         randomNormal jobProcessingMu jobProcessingSigma
-       traceProcess "proceeeding to the job" $
-         when (jobProcessingTime > 0) $
-         holdProcess jobProcessingTime
-       return a
+    newPreemptibleRandomNormalServer True jobProcessingMu jobProcessingSigma
   -- the machine breakdown
   let machineBreakdown =
-        do upTime <-
-             liftParameter $
-             randomNormal breakdownMu breakdownSigma
-           when (upTime > 0) $
-             holdProcess upTime
-           traceProcess "breakdown" $
-             PR.usingResourceWithPriority tool breakdownPriority $
-             do repairTime <- liftParameter $
-                              randomErlang repairMu 3
-                holdProcess repairTime
-           traceProcess "repaired" $
-             machineBreakdown
+        do randomNormalProcess_ breakdownMu breakdownSigma
+           PR.usingResourceWithPriority tool breakdownPriority $
+             randomErlangProcess_ repairMu 3
+           machineBreakdown
   -- start the process of breakdowns
   runProcessInStartTime machineBreakdown
   -- update a counter of job interruptions
@@ -113,12 +89,13 @@ model = do
     modifyRef jobsInterrupted (+ 1)
   -- define the queue network
   let network = 
-        traceProcessor Nothing (Just "the job completed") $
         queueProcessor
         (\a -> liftEvent $ IQ.enqueue inputQueue a)
         (IQ.dequeue inputQueue) >>>
+        (withinProcessor $ PR.requestResourceWithPriority tool jobPriority) >>>
         serverProcessor machineSettingUp >>>
         serverProcessor machineProcessing >>>
+        (withinProcessor $ PR.releaseResource tool) >>>
         arrivalTimerProcessor jobsCompleted
   -- start the machine tool
   runProcessInStartTime $
