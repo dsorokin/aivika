@@ -42,7 +42,9 @@ module Simulation.Aivika.Resource
         releaseResource,
         releaseResourceWithinEvent,
         usingResource,
-        usingResourceWithPriority) where
+        usingResourceWithPriority,
+        -- * Altering Resource
+        incResourceCount) where
 
 import Data.IORef
 import Control.Monad
@@ -341,3 +343,18 @@ usingResourceWithPriority :: PriorityQueueStrategy s p
 usingResourceWithPriority r priority m =
   do requestResourceWithPriority r priority
      finallyProcess m $ releaseResource r
+
+-- | Increase the count of available resource by the specified number.
+incResourceCount :: DequeueStrategy s
+                    => Resource s
+                    -- ^ the resource
+                    -> Int
+                    -- ^ the increment for the resource count
+                    -> Event ()
+incResourceCount r n
+  | n < 0     = error "The increment cannot be negative: incResourceCount"
+  | n == 0    = return ()
+  | otherwise =
+    do releaseResourceWithinEvent r
+       incResourceCount r (n - 1)
+
