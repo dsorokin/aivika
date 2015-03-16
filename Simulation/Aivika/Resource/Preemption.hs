@@ -63,7 +63,7 @@ type ResourceAwaitingItem = Either ResourceRequestingItem ResourcePreemptedItem
 data ResourceRequestingItem =
   ResourceRequestingItem { requestingItemPriority :: Double,
                            requestingItemId :: ProcessId,
-                           requestedItemCont :: FrozenCont () }
+                           requestingItemCont :: FrozenCont () }
 
 -- | Idenitifies an item that was preempted.
 data ResourcePreemptedItem =
