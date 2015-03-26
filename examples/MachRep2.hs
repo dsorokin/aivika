@@ -48,9 +48,7 @@ model =
      let machine :: Process ()
          machine =
            do upTime <-
-                liftParameter $
-                randomExponential meanUpTime
-              holdProcess upTime
+                randomExponentialProcess meanUpTime
               liftEvent $
                 modifyRef totalUpTime (+ upTime) 
               
@@ -63,9 +61,7 @@ model =
                 
               requestResource repairPerson
               repairTime <-
-                liftParameter $
-                randomExponential meanRepairTime
-              holdProcess repairTime
+                randomExponentialProcess meanRepairTime
               releaseResource repairPerson
               
               machine
