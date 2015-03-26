@@ -58,9 +58,8 @@ adjustmentStationCount = 1
 -- create an inspection station (server)
 newInspectionStation =
   newServer $ \a ->
-  do holdProcess =<<
-       (liftParameter $
-        randomUniform minInspectionTime maxInspectionTime)
+  do randomUniformProcess_
+       minInspectionTime maxInspectionTime
      passed <- 
        liftParameter $
        randomTrue inspectionPassingProb
@@ -70,11 +69,7 @@ newInspectionStation =
 
 -- create an adjustment station (server)
 newAdjustmentStation =
-  newServer $ \a ->
-  do holdProcess =<<
-       (liftParameter $
-        randomUniform minAdjustmentTime maxAdjustmentTime)
-     return a
+  newRandomUniformServer minAdjustmentTime maxAdjustmentTime
   
 model :: Simulation Results
 model = mdo
