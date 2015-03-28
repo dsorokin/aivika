@@ -62,10 +62,10 @@ module Simulation.Aivika.Internal.Process
         -- * Awaiting Signal
         processAwait,
         -- * Preemption
-        preemptProcess,
-        reenterProcess,
-        processPreempting,
-        processReentering,
+        processPreemptionBegin,
+        processPreemptionEnd,
+        processPreemptionBeginning,
+        processPreemptionEnding,
         -- * Yield of Process
         processYield,
         -- * Process Timeout
@@ -262,9 +262,9 @@ processIdPrepare pid =
               when z $
                 do invokeEvent p $ interruptProcess pid
                    invokeEvent p $ reactivateProcess pid
-         ContPreemptionActuating ->
+         ContPreemptionBeginning ->
            invokeEvent p $ processPreempted pid
-         ContPreemptionReentering ->
+         ContPreemptionEnding ->
            return ()
 
 -- | Run immediately the process. A new 'ProcessId' identifier will be
@@ -377,21 +377,21 @@ whenCancellingProcess h =
   liftEvent $
   handleSignal_ (processCancelling pid) $ \() -> h
 
--- | Preempt a process with the specified identifier. It must then be reentered with help of 'reeenterProcess'.
-preemptProcess :: ProcessId -> Event ()
-preemptProcess pid = contPreemptionActuate (processContId pid)
+-- | Preempt a process with the specified identifier.
+processPreemptionBegin :: ProcessId -> Event ()
+processPreemptionBegin pid = contPreemptionBegin (processContId pid)
 
--- | Reenter the process with the specified identifier after it was preempted with help of 'preemptProcess'.
-reenterProcess :: ProcessId -> Event ()
-reenterProcess pid = contPreemptionReenter (processContId pid)
+-- | Proceed with the process with the specified identifier after it was preempted with help of 'preemptProcessBegin'.
+processPreemptionEnd :: ProcessId -> Event ()
+processPreemptionEnd pid = contPreemptionEnd (processContId pid)
 
 -- | Return a signal when the process is preempted.
-processPreempting :: ProcessId -> Signal ()
-processPreempting pid = contPreemptionActuating (processContId pid)
+processPreemptionBeginning :: ProcessId -> Signal ()
+processPreemptionBeginning pid = contPreemptionBeginning (processContId pid)
 
--- | Return a signal when the process is reentered after it was preempted earlier.
-processReentering :: ProcessId -> Signal ()
-processReentering pid = contPreemptionReentering (processContId pid)
+-- | Return a signal when the process is proceeded after it was preempted earlier.
+processPreemptionEnding :: ProcessId -> Signal ()
+processPreemptionEnding pid = contPreemptionEnding (processContId pid)
 
 instance Eq ProcessId where
   x == y = processReactCont x == processReactCont y    -- for the references are unique

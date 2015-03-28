@@ -276,12 +276,12 @@ serverProcessPreempting server s a =
      rs  <- liftIO $ newIORef 0
      r1  <- liftIO $ newIORef t1
      h1  <- liftEvent $
-            handleSignal (processPreempting pid) $ \() ->
+            handleSignal (processPreemptionBeginning pid) $ \() ->
             do t1 <- liftDynamics time
                liftIO $ writeIORef r1 t1
                triggerSignal (serverTaskPreemptingSource server) a
      h2  <- liftEvent $
-            handleSignal (processReentering pid) $ \() ->
+            handleSignal (processPreemptionEnding pid) $ \() ->
             do t1 <- liftIO $ readIORef r1
                t2 <- liftDynamics time
                let dt = t2 - t1

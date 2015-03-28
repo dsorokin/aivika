@@ -28,11 +28,11 @@ module Simulation.Aivika.Internal.Cont
         contCancellationActivated,
         contCancellationBind,
         contCancellationConnect,
-        contPreemptionActuated,
-        contPreemptionActuate,
-        contPreemptionActuating,
-        contPreemptionReentering,
-        contPreemptionReenter,
+        contPreemptionBegun,
+        contPreemptionBegin,
+        contPreemptionBeginning,
+        contPreemptionEnd,
+        contPreemptionEnding,
         invokeCont,
         runCont,
         rerunCont,
@@ -96,10 +96,10 @@ instance Eq ContId where
 -- | The event that occurs within the 'Cont' computation.
 data ContEvent = ContCancellationInitiating
                  -- ^ Cancel the computation.
-               | ContPreemptionActuating
+               | ContPreemptionBeginning
                  -- ^ Preempt the computation.
-               | ContPreemptionReentering
-                 -- ^ Reenter the computation after if was preempted.
+               | ContPreemptionEnding
+                 -- ^ Proceed with the computation after if was preempted.
                deriving (Eq, Ord, Show)
 
 -- | Create a computation identifier.
@@ -197,8 +197,8 @@ contCancellationInitiate x =
             triggerSignal (contSignalSource x) ContCancellationInitiating
 
 -- | Preempt the computation.
-contPreemptionActuate :: ContId -> Event ()
-contPreemptionActuate x =
+contPreemptionBegin :: ContId -> Event ()
+contPreemptionBegin x =
   Event $ \p ->
   do f <- readIORef (contCancellationInitiatedRef x)
      unless f $
@@ -207,11 +207,11 @@ contPreemptionActuate x =
           n' `seq` writeIORef (contPreemptionCountRef x) n'
           when (n == 0) $
             invokeEvent p $
-            triggerSignal (contSignalSource x) ContPreemptionActuating
+            triggerSignal (contSignalSource x) ContPreemptionBeginning
 
--- | Reenter the computation after it was preempted.
-contPreemptionReenter :: ContId -> Event ()
-contPreemptionReenter x =
+-- | Proceed with the computation after it was preempted earlier.
+contPreemptionEnd :: ContId -> Event ()
+contPreemptionEnd x =
   Event $ \p ->
   do f <- readIORef (contCancellationInitiatedRef x)
      unless f $
@@ -220,21 +220,21 @@ contPreemptionReenter x =
           n' `seq` writeIORef (contPreemptionCountRef x) n'
           when (n' == 0) $
             invokeEvent p $
-            triggerSignal (contSignalSource x) ContPreemptionReentering
+            triggerSignal (contSignalSource x) ContPreemptionEnding
 
 -- | Signal when the computation is preempted.
-contPreemptionActuating :: ContId -> Signal ()
-contPreemptionActuating =
-  filterSignal_ (ContPreemptionActuating ==) . contSignal
+contPreemptionBeginning :: ContId -> Signal ()
+contPreemptionBeginning =
+  filterSignal_ (ContPreemptionBeginning ==) . contSignal
 
--- | Signal when the computation is reentered after it was preempted before.
-contPreemptionReentering :: ContId -> Signal ()
-contPreemptionReentering =
-  filterSignal_ (ContPreemptionReentering ==) . contSignal
+-- | Signal when the computation is proceeded after it was preempted before.
+contPreemptionEnding :: ContId -> Signal ()
+contPreemptionEnding =
+  filterSignal_ (ContPreemptionEnding ==) . contSignal
 
 -- | Whether the computation was preemtped.
-contPreemptionActuated :: ContId -> Event Bool
-contPreemptionActuated x =
+contPreemptionBegun :: ContId -> Event Bool
+contPreemptionBegun x =
   Event $ \p ->
   do n <- readIORef (contPreemptionCountRef x)
      return (n > 0)
@@ -771,7 +771,7 @@ freezeContReentering c a m =
             Nothing -> return Nothing
             z @ (Just c) ->
               do f <- invokeEvent p $
-                      contPreemptionActuated $
+                      contPreemptionBegun $
                       contId $ contAux c
                  if not f
                    then return z
@@ -785,7 +785,7 @@ reenterCont :: ContParams a -> a -> Event ()
 reenterCont c a =
   Event $ \p ->
   do f <- invokeEvent p $
-          contPreemptionActuated $
+          contPreemptionBegun $
           contId $ contAux c
      if not f
        then invokeEvent p $
@@ -817,11 +817,11 @@ sleepCont c a =
                          Event $ \p ->
                          do z <- contCanceled c
                             when z $ cancelCont p c
-                       ContPreemptionReentering ->
+                       ContPreemptionEnding ->
                          invokeEvent p $
                          enqueueEvent (pointTime p) $
                          resumeCont c a
-                       ContPreemptionActuating ->
+                       ContPreemptionBeginning ->
                          error "The computation was already preempted: sleepCont."
      writeIORef rh (Just h)
 

@@ -234,12 +234,12 @@ activityProcessPreempting act s a =
      rs  <- liftIO $ newIORef 0
      r0  <- liftIO $ newIORef t0
      h1  <- liftEvent $
-            handleSignal (processPreempting pid) $ \() ->
+            handleSignal (processPreemptionBeginning pid) $ \() ->
             do t0 <- liftDynamics time
                liftIO $ writeIORef r0 t0
                triggerSignal (activityPreemptingSource act) a
      h2  <- liftEvent $
-            handleSignal (processReentering pid) $ \() ->
+            handleSignal (processPreemptionEnding pid) $ \() ->
             do t0 <- liftIO $ readIORef r0
                t1 <- liftDynamics time
                let dt = t1 - t0

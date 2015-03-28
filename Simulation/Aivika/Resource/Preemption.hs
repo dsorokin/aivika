@@ -160,7 +160,7 @@ requestResourceWithPriority r priority =
                            then do PQ.dequeue (resourceActingQueue r)
                                    PQ.enqueue (resourceActingQueue r) (- priority) $ ResourceActingItem priority pid
                                    PQ.enqueue (resourceWaitQueue r) p0 (Right $ ResourcePreemptedItem p0 pid0)
-                                   invokeEvent p $ preemptProcess pid0
+                                   invokeEvent p $ processPreemptionBegin pid0
                                    invokeEvent p $ resumeCont c ()
                            else do c <- invokeEvent p $
                                         freezeContReentering c () $
@@ -226,7 +226,7 @@ releaseResource' r =
                           invokeEvent p $ releaseResource' r
                         False ->
                           do PQ.enqueue (resourceActingQueue r) (- priority) $ ResourceActingItem priority pid
-                             invokeEvent p $ reenterProcess pid
+                             invokeEvent p $ processPreemptionEnd pid
                
 -- | Acquire the resource with the specified priority, perform some action and
 -- safely release the resource in the end, even if the 'IOException' was raised
@@ -262,7 +262,7 @@ decResourceCount' r =
          pid0 = actingItemId item0
      PQ.dequeue (resourceActingQueue r)
      PQ.enqueue (resourceWaitQueue r) p0 (Right $ ResourcePreemptedItem p0 pid0)
-     invokeEvent p $ preemptProcess pid0
+     invokeEvent p $ processPreemptionEnd pid0
      let a' = a - 1
      a' `seq` writeIORef (resourceCountRef r) a'
 
