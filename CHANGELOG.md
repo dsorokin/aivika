@@ -1,3 +1,8 @@
+Version 4.0.1
+-----
+
+* Fixed build issues on GHC 7.10.1.
+
 Version 4.0
 -----
 
