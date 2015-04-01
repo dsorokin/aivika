@@ -1,3 +1,10 @@
+Version 4.0
+-----
+
+* Added resource preemption.
+
+* Fixed misprint in the activityProcessor function.
+
 Version 3.1
 -----
 
