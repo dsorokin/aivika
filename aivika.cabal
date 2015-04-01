@@ -110,11 +110,6 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/TimeOutWait.hs
                      CHANGELOG.md
 
-flag haste-inst
-    
-    description: The package is built using haste-inst
-    default:     False
-
 library
 
     exposed-modules: Simulation.Aivika
@@ -187,10 +182,8 @@ library
                      mtl >= 2.1.1,
                      array >= 0.3.0.0,
                      containers >= 0.4.0.0,
-                     random >= 1.0.0.3
-
-    if !flag(haste-inst)
-       build-depends:   vector >= 0.10.0.1
+                     random >= 1.0.0.3,
+                     vector >= 0.10.0.1
 
     other-extensions:   FlexibleContexts,
                         FlexibleInstances,
