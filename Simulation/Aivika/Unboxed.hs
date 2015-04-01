@@ -17,8 +17,8 @@ module Simulation.Aivika.Unboxed
 
 import Data.Array
 import Data.Array.IO.Safe
-import Data.Int	 
-import Data.Word	 
+import Data.Int
+import Data.Word 
 
 -- | The type which values can be contained in an unboxed array.
 class MArray IOUArray e IO => Unboxed e where
@@ -27,18 +27,18 @@ class MArray IOUArray e IO => Unboxed e where
   newUnboxedArray_ :: Ix i => (i, i) -> IO (IOUArray i e)
   newUnboxedArray_ = newArray_
 
-instance Unboxed Bool	 
-instance Unboxed Char	 
-instance Unboxed Double	 
-instance Unboxed Float	 
-instance Unboxed Int	 
-instance Unboxed Int8	 
-instance Unboxed Int16	 
-instance Unboxed Int32	 
-instance Unboxed Word	 
-instance Unboxed Word8	 
-instance Unboxed Word16	 
-instance Unboxed Word32	 
+instance Unboxed Bool
+instance Unboxed Char
+instance Unboxed Double
+instance Unboxed Float
+instance Unboxed Int
+instance Unboxed Int8
+instance Unboxed Int16
+instance Unboxed Int32
+instance Unboxed Word
+instance Unboxed Word8
+instance Unboxed Word16
+instance Unboxed Word32
 
 #ifndef __HASTE__
 
