@@ -1,4 +1,6 @@
 
+{-# LANGUAGE FlexibleContexts #-}
+
 -- |
 -- Module     : Simulation.Aivika.Vector.Unboxed
 -- Copyright  : Copyright (c) 2009-2015, David Sorokin <david.sorokin@gmail.com>
