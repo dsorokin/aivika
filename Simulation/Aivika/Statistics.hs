@@ -28,6 +28,7 @@ module Simulation.Aivika.Statistics
         timingStatsSummary,
         returnTimingStats,
         fromIntTimingStats,
+        normTimingStats,
         -- * Simple Counter
         SamplingCounter(..),
         emptySamplingCounter,
@@ -272,6 +273,9 @@ class Num a => TimingData a where
   -- | Return the average value.
   timingStatsMean :: TimingStats a -> Double
   
+  -- | Return the average square value.
+  timingStatsMean2 :: TimingStats a -> Double
+  
   -- | Return the variance.
   timingStatsVariance :: TimingStats a -> Double
   
@@ -291,6 +295,7 @@ instance TimingData Double where
     
   addTimingStats      = addTimingStatsGeneric
   timingStatsMean     = timingStatsMeanGeneric
+  timingStatsMean2    = timingStatsMean2Generic
   timingStatsVariance = timingStatsVarianceGeneric
 
 instance TimingData Int where
@@ -309,6 +314,7 @@ instance TimingData Int where
     
   addTimingStats      = addTimingStatsGeneric
   timingStatsMean     = timingStatsMeanGeneric
+  timingStatsMean2    = timingStatsMean2Generic
   timingStatsVariance = timingStatsVarianceGeneric
 
 addTimingStatsGeneric :: ConvertableToDouble a => Double -> a -> TimingStats a -> TimingStats a
@@ -395,6 +401,16 @@ fromIntTimingStats stats =
   stats { timingStatsMin  = fromIntegral $ timingStatsMin stats,
           timingStatsMax  = fromIntegral $ timingStatsMax stats,
           timingStatsLast = fromIntegral $ timingStatsLast stats }
+
+-- | Convert the statistics to its normalised sampling-based representation,
+-- where the first argument specifies the number of pseudo-samples.
+normTimingStats :: TimingData a => Int -> TimingStats a -> SamplingStats a
+normTimingStats n stats =
+  SamplingStats { samplingStatsCount = n,
+                  samplingStatsMin   = timingStatsMin stats,
+                  samplingStatsMax   = timingStatsMax stats,
+                  samplingStatsMean  = timingStatsMean stats,
+                  samplingStatsMean2 = timingStatsMean2 stats }
 
 -- | Show the summary of the statistics.       
 showTimingStats :: (Show a, TimingData a) => TimingStats a -> ShowS
