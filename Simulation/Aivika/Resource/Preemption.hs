@@ -202,7 +202,7 @@ releaseResource' r =
        Just maxCount | a' > maxCount ->
          error $
          "The resource count cannot be greater than " ++
-         "its maximum value: releaseResourceWithinEvent."
+         "its maximum value: releaseResource'."
        _ ->
          return ()
      f <- PQ.queueNull (resourceWaitQueue r)
