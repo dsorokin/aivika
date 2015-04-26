@@ -432,6 +432,10 @@ data ResultValue e =
 instance Functor ResultValue where
   fmap f x = x { resultValueData = fmap f (resultValueData x) }
 
+-- | Transform the result value.
+apResultValue :: ResultData (a -> b) -> ResultValue a -> ResultValue b
+apResultValue f x = x { resultValueData = ap f (resultValueData x) }
+
 -- | A container of the simulation results such as queue, server or array.
 data ResultContainer e =
   ResultContainer { resultContainerName :: ResultName,
@@ -563,6 +567,12 @@ resultContainerToValue x =
 
 -- | Represents the very simulation results.
 type ResultData e = Event e
+
+-- | Convert the timing statistics data to its normalised sampling-based representation.
+normTimingStatsData :: TimingData a => ResultData (TimingStats a -> SamplingStats a)
+normTimingStatsData =
+  do n <- liftDynamics integIteration
+     return $ normTimingStats (fromIntegral n)
 
 -- | Whether an object containing the results emits a signal notifying about change of data.
 data ResultSignal = EmptyResultSignal
@@ -734,12 +744,12 @@ instance ResultItemable (ResultValue (TimingStats Int)) where
   
   resultItemAsIntValue = const Nothing
   resultItemAsIntListValue = const Nothing
-  resultItemAsIntStatsValue = const Nothing
+  resultItemAsIntStatsValue = Just . apResultValue normTimingStatsData
   resultItemAsIntTimingStatsValue = Just
 
   resultItemAsDoubleValue = const Nothing
   resultItemAsDoubleListValue = const Nothing
-  resultItemAsDoubleStatsValue = const Nothing
+  resultItemAsDoubleStatsValue = Just . fmap fromIntSamplingStats . apResultValue normTimingStatsData
   resultItemAsDoubleTimingStatsValue = Just . fmap fromIntTimingStats
 
   resultItemAsStringValue = Just . fmap show
@@ -760,7 +770,7 @@ instance ResultItemable (ResultValue (TimingStats Double)) where
 
   resultItemAsDoubleValue = const Nothing
   resultItemAsDoubleListValue = const Nothing
-  resultItemAsDoubleStatsValue = const Nothing
+  resultItemAsDoubleStatsValue = Just . apResultValue normTimingStatsData
   resultItemAsDoubleTimingStatsValue = Just
 
   resultItemAsStringValue = Just . fmap show
