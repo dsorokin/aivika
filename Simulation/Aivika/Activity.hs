@@ -56,8 +56,8 @@ module Simulation.Aivika.Activity
         -- * Basic Signals
         activityUtilising,
         activityUtilised,
-        activityPreempting,
-        activityReentering,
+        activityPreemptionBeginning,
+        activityPreemptionEnding,
         -- * Overall Signal
         activityChanged_) where
 
@@ -106,9 +106,9 @@ data Activity s a b =
              -- ^ A signal raised when starting to utilise the activity.
              activityUtilisedSource :: SignalSource (a, b),
              -- ^ A signal raised when the activity has been utilised.
-             activityPreemptingSource :: SignalSource a,
+             activityPreemptionBeginningSource :: SignalSource a,
              -- ^ A signal raised when the utilisation was preempted.
-             activityReenteringSource :: SignalSource a
+             activityPreemptionEndingSource :: SignalSource a
              -- ^ A signal raised when the utilisation was proceeded after it had been preempted earlier.
            }
 
@@ -181,8 +181,8 @@ newPreemptibleStateActivity preemptible provide state =
                        activityPreemptionTimeRef = r6,
                        activityUtilisingSource = s1,
                        activityUtilisedSource = s2,
-                       activityPreemptingSource = s3,
-                       activityReenteringSource = s4 }
+                       activityPreemptionBeginningSource = s3,
+                       activityPreemptionEndingSource = s4 }
 
 -- | Return a network computation for the specified activity.
 --
@@ -237,7 +237,7 @@ activityProcessPreempting act s a =
             handleSignal (processPreemptionBeginning pid) $ \() ->
             do t0 <- liftDynamics time
                liftIO $ writeIORef r0 t0
-               triggerSignal (activityPreemptingSource act) a
+               triggerSignal (activityPreemptionBeginningSource act) a
      h2  <- liftEvent $
             handleSignal (processPreemptionEnding pid) $ \() ->
             do t0 <- liftIO $ readIORef r0
@@ -248,7 +248,7 @@ activityProcessPreempting act s a =
                     modifyIORef' (activityTotalPreemptionTimeRef act) (+ dt)
                     modifyIORef' (activityPreemptionTimeRef act) $
                       addSamplingStats dt
-               triggerSignal (activityReenteringSource act) a 
+               triggerSignal (activityPreemptionEndingSource act) a 
      let m1 =
            do (s', b) <- activityProcess act s a
               dt <- liftIO $ readIORef rs
@@ -335,7 +335,7 @@ activityTotalPreemptionTimeChanged act =
 -- | Signal when the 'activityTotalPreemptionTime' property value has changed.
 activityTotalPreemptionTimeChanged_ :: Activity s a b -> Signal ()
 activityTotalPreemptionTimeChanged_ act =
-  mapSignal (const ()) (activityReentering act)
+  mapSignal (const ()) (activityPreemptionEnding act)
 
 -- | Return the statistics for the time when the activity was utilised.
 --
@@ -396,7 +396,7 @@ activityPreemptionTimeChanged act =
 -- | Signal when the 'activityPreemptionTime' property value has changed.
 activityPreemptionTimeChanged_ :: Activity s a b -> Signal ()
 activityPreemptionTimeChanged_ act =
-  mapSignal (const ()) (activityReentering act)
+  mapSignal (const ()) (activityPreemptionEnding act)
   
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the activity was utilised.
@@ -429,7 +429,7 @@ activityUtilisationFactorChanged_ :: Activity s a b -> Signal ()
 activityUtilisationFactorChanged_ act =
   mapSignal (const ()) (activityUtilising act) <>
   mapSignal (const ()) (activityUtilised act) <>
-  mapSignal (const ()) (activityReentering act)
+  mapSignal (const ()) (activityPreemptionEnding act)
   
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the activity was idle.
@@ -462,7 +462,7 @@ activityIdleFactorChanged_ :: Activity s a b -> Signal ()
 activityIdleFactorChanged_ act =
   mapSignal (const ()) (activityUtilising act) <>
   mapSignal (const ()) (activityUtilised act) <>
-  mapSignal (const ()) (activityReentering act)
+  mapSignal (const ()) (activityPreemptionEnding act)
 
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the activity was preempted waiting for the further proceeding.
@@ -495,7 +495,7 @@ activityPreemptionFactorChanged_ :: Activity s a b -> Signal ()
 activityPreemptionFactorChanged_ act =
   mapSignal (const ()) (activityUtilising act) <>
   mapSignal (const ()) (activityUtilised act) <>
-  mapSignal (const ()) (activityReentering act)
+  mapSignal (const ()) (activityPreemptionEnding act)
   
 -- | Raised when starting to utilise the activity after a new input task is received.
 activityUtilising :: Activity s a b -> Signal a
@@ -506,19 +506,19 @@ activityUtilised :: Activity s a b -> Signal (a, b)
 activityUtilised = publishSignal . activityUtilisedSource
 
 -- | Raised when the task utilisation by the activity was preempted.
-activityPreempting :: Activity s a b -> Signal a
-activityPreempting = publishSignal . activityPreemptingSource
+activityPreemptionBeginning :: Activity s a b -> Signal a
+activityPreemptionBeginning = publishSignal . activityPreemptionBeginningSource
 
 -- | Raised when the task utilisation by the activity was proceeded after it had been preempted earlier.
-activityReentering :: Activity s a b -> Signal a
-activityReentering = publishSignal . activityReenteringSource
+activityPreemptionEnding :: Activity s a b -> Signal a
+activityPreemptionEnding = publishSignal . activityPreemptionEndingSource
 
 -- | Signal whenever any property of the activity changes.
 activityChanged_ :: Activity s a b -> Signal ()
 activityChanged_ act =
   mapSignal (const ()) (activityUtilising act) <>
   mapSignal (const ()) (activityUtilised act) <>
-  mapSignal (const ()) (activityReentering act)
+  mapSignal (const ()) (activityPreemptionEnding act)
 
 -- | Return the summary for the activity with desciption of its
 -- properties using the specified indent.
