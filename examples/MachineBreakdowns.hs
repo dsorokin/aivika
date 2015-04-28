@@ -85,7 +85,7 @@ model = do
   runProcessInStartTime machineBreakdown
   -- update a counter of job interruptions
   runEventInStartTime $
-    handleSignal_ (serverTaskPreempting machineProcessing) $ \a ->
+    handleSignal_ (serverTaskPreemptionBeginning machineProcessing) $ \a ->
     modifyRef jobsInterrupted (+ 1)
   -- define the queue network
   let network = 
