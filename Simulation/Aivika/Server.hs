@@ -63,8 +63,8 @@ module Simulation.Aivika.Server
         serverPreemptionFactorChanged_,
         -- * Basic Signals
         serverInputReceived,
-        serverTaskPreempting,
-        serverTaskReentering,
+        serverTaskPreemptionBeginning,
+        serverTaskPreemptionEnding,
         serverTaskProcessed,
         serverOutputProvided,
         -- * Overall Signal
@@ -116,9 +116,9 @@ data Server s a b =
            -- ^ The statistics for the time spent being preempted.
            serverInputReceivedSource :: SignalSource a,
            -- ^ A signal raised when the server recieves a new input to process.
-           serverTaskPreemptingSource :: SignalSource a,
+           serverTaskPreemptionBeginningSource :: SignalSource a,
            -- ^ A signal raised when the task was preempted.
-           serverTaskReenteringSource :: SignalSource a,
+           serverTaskPreemptionEndingSource :: SignalSource a,
            -- ^ A signal raised when the task was proceeded after it had been preempted earlier.
            serverTaskProcessedSource :: SignalSource (a, b),
            -- ^ A signal raised when the input is processed and
@@ -200,8 +200,8 @@ newPreemptibleStateServer preemptible provide state =
                            serverOutputWaitTimeRef = r7,
                            serverPreemptionTimeRef = r8,
                            serverInputReceivedSource = s1,
-                           serverTaskPreemptingSource = s2,
-                           serverTaskReenteringSource = s3,
+                           serverTaskPreemptionBeginningSource = s2,
+                           serverTaskPreemptionEndingSource = s3,
                            serverTaskProcessedSource = s4,
                            serverOutputProvidedSource = s5 }
      return server
@@ -279,7 +279,7 @@ serverProcessPreempting server s a =
             handleSignal (processPreemptionBeginning pid) $ \() ->
             do t1 <- liftDynamics time
                liftIO $ writeIORef r1 t1
-               triggerSignal (serverTaskPreemptingSource server) a
+               triggerSignal (serverTaskPreemptionBeginningSource server) a
      h2  <- liftEvent $
             handleSignal (processPreemptionEnding pid) $ \() ->
             do t1 <- liftIO $ readIORef r1
@@ -290,7 +290,7 @@ serverProcessPreempting server s a =
                     modifyIORef' (serverTotalPreemptionTimeRef server) (+ dt)
                     modifyIORef' (serverPreemptionTimeRef server) $
                       addSamplingStats dt
-               triggerSignal (serverTaskReenteringSource server) a 
+               triggerSignal (serverTaskPreemptionEndingSource server) a 
      let m1 =
            do (s', b) <- serverProcess server s a
               dt <- liftIO $ readIORef rs
@@ -398,7 +398,7 @@ serverTotalPreemptionTimeChanged server =
 -- | Signal when the 'serverTotalPreemptionTime' property value has changed.
 serverTotalPreemptionTimeChanged_ :: Server s a b -> Signal ()
 serverTotalPreemptionTimeChanged_ server =
-  mapSignal (const ()) (serverTaskReentering server)
+  mapSignal (const ()) (serverTaskPreemptionEnding server)
 
 -- | Return the statistics of the time when the server was locked while awaiting the input.
 --
@@ -480,7 +480,7 @@ serverPreemptionTimeChanged server =
 -- | Signal when the 'serverPreemptionTime' property value has changed.
 serverPreemptionTimeChanged_ :: Server s a b -> Signal ()
 serverPreemptionTimeChanged_ server =
-  mapSignal (const ()) (serverTaskReentering server)
+  mapSignal (const ()) (serverTaskPreemptionEnding server)
 
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the server was awaiting for the next input task.
@@ -515,7 +515,7 @@ serverInputWaitFactorChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
   mapSignal (const ()) (serverOutputProvided server) <>
-  mapSignal (const ()) (serverTaskReentering server)
+  mapSignal (const ()) (serverTaskPreemptionEnding server)
 
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the server was busy with direct processing its tasks.
@@ -550,7 +550,7 @@ serverProcessingFactorChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
   mapSignal (const ()) (serverOutputProvided server) <>
-  mapSignal (const ()) (serverTaskReentering server)
+  mapSignal (const ()) (serverTaskPreemptionEnding server)
 
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the server was locked trying to deliver the output after the task is finished.
@@ -585,7 +585,7 @@ serverOutputWaitFactorChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
   mapSignal (const ()) (serverOutputProvided server) <>
-  mapSignal (const ()) (serverTaskReentering server)
+  mapSignal (const ()) (serverTaskPreemptionEnding server)
 
 -- | It returns the factor changing from 0 to 1, which estimates how often
 -- the server was preempted waiting for the further proceeding.
@@ -620,19 +620,19 @@ serverPreemptionFactorChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
   mapSignal (const ()) (serverOutputProvided server) <>
-  mapSignal (const ()) (serverTaskReentering server)
+  mapSignal (const ()) (serverTaskPreemptionEnding server)
 
 -- | Raised when the server receives a new input task.
 serverInputReceived :: Server s a b -> Signal a
 serverInputReceived = publishSignal . serverInputReceivedSource
 
 -- | Raised when the task processing by the server was preempted.
-serverTaskPreempting :: Server s a b -> Signal a
-serverTaskPreempting = publishSignal . serverTaskPreemptingSource
+serverTaskPreemptionBeginning :: Server s a b -> Signal a
+serverTaskPreemptionBeginning = publishSignal . serverTaskPreemptionBeginningSource
 
 -- | Raised when the task processing by the server was proceeded after it has been preempeted earlier.
-serverTaskReentering :: Server s a b -> Signal a
-serverTaskReentering = publishSignal . serverTaskReenteringSource
+serverTaskPreemptionEnding :: Server s a b -> Signal a
+serverTaskPreemptionEnding = publishSignal . serverTaskPreemptionEndingSource
 
 -- | Raised when the server has just processed the task.
 serverTaskProcessed :: Server s a b -> Signal (a, b)
@@ -648,7 +648,7 @@ serverChanged_ server =
   mapSignal (const ()) (serverInputReceived server) <>
   mapSignal (const ()) (serverTaskProcessed server) <>
   mapSignal (const ()) (serverOutputProvided server) <>
-  mapSignal (const ()) (serverTaskReentering server)
+  mapSignal (const ()) (serverTaskPreemptionEnding server)
 
 -- | Return the summary for the server with desciption of its
 -- properties and activities using the specified indent.
