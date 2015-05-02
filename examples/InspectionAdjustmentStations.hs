@@ -10,6 +10,26 @@
 -- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
 --
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
+-- 
+-- Assembled television sets move through a series of testing stations in the final 
+-- stage of their production. At the last of these stations, the vertical control 
+-- setting on the TV sets is tested. If the setting is found to be functioning improperly, 
+-- the offending set is routed to an adjustment station where the setting is adjusted. 
+-- After adjustment, the television set is sent back to the last inspection station where 
+-- the setting is again inspected. Television sets passing the final inspection phase, 
+-- whether for the first time of after one or more routings through the adjustment station, 
+-- are routed to a packing area.
+-- 
+-- The time between arrivals of television sets to the final inspection station is uniformly 
+-- distributed between 3.5 and 7.5 minutes. Two inspectors work side-by-side at the final 
+-- inspection station. The time required to inspect a set is uniformly distributed between 
+-- 6 and 12 minutes. On the average, 85 percent of the sets are routed to the adjustment 
+-- station which is manned by a single worker. Adjustment of the vertical control setting 
+-- requires between 20 and 40 minutes, uniformly distributed.
+-- 
+-- The inspection station and adjustor are to be simulated for 480 minutes to estimate 
+-- the time to process television sets through the final production stage and to determine 
+-- the utilization of the inspectors and the adjustors.
 
 import Prelude hiding (id, (.)) 
 

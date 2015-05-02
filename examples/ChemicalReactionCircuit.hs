@@ -1,7 +1,10 @@
 
+-- This is model Chemical Reaction from the 5-minute tutorial of 
+-- Berkeley-Madonna.
+--
 -- Note that the integCircut function uses Euler's method regardless of
 -- the simulation specs specified. Therefore, to receieve almost the same
--- results in the old example based on using the integ function, you should
+-- results as in the old example based on using the integ function, you should
 -- specify Euler's method in their specs in that file, although the Runge-Kutta
 -- method gives similar results too, which is expected.
 --

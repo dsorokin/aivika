@@ -1,6 +1,9 @@
 
 {-# LANGUAGE RecursiveDo #-}
 
+-- This is model Chemical Reaction from the 5-minute tutorial of 
+-- Berkeley-Madonna.
+
 import Simulation.Aivika
 import Simulation.Aivika.SystemDynamics
 

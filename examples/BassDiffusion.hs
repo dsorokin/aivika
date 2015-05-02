@@ -2,6 +2,17 @@
 -- This is the Bass Diffusion model solved with help of 
 -- the Agent-based Modeling as described in the AnyLogic 
 -- documentation.
+--
+-- The model describes a product diffusion process. Potential 
+-- adopters of a product are influenced into buying the product 
+-- by advertising and by word of mouth from adopters, those 
+-- who have already purchased the new product. Adoption of 
+-- a new product driven by word of mouth is likewise an epidemic. 
+-- Potential adopters come into contact with adopters through 
+-- social interactions. A fraction of these contacts results 
+-- in the purchase of the new product. The advertising causes 
+-- a constant fraction of the potential adopter population 
+-- to adopt each time period.
 
 import Data.Array
 

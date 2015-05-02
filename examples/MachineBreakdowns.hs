@@ -6,6 +6,30 @@
 -- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
 --
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
+--
+-- Jobs arrive to a machine tool on the average of one per hour. The distribution of 
+-- these interarrival times is exponential. During normal operation, the jobs are 
+-- processed on a first-in, first-out basis. The time to process a job in hours is 
+-- normally distributed with a mean of 0.5 and a standard deviation of 0.1. In addition 
+-- to the processing time, there is a set up time that is uniformly distributed between 
+-- 0.2 and 0.5 of an hour. Jobs that have been processed by the machine tool are routed 
+-- to a different section of the shop and are considered to have left the machine tool 
+-- area.
+-- 
+-- The machine tool experiences breakdowns during which time it can no longer process 
+-- jobs. The time between breakdowns is normally distributed with a mean of 20 hours 
+-- and a standard deviation of 2 hours. When a breakdown occurs, the job being processed 
+-- is removed from the machine tool and is placed at the head of the queue of jobs 
+-- waiting to be processed. Jobs preempted restart from the point at which they were 
+-- interrupted.
+-- 
+-- When the machine tool breaks down, a repair process is initiated which is 
+-- accomplished in three phases. Each phase is exponentially distributed with a mean of 
+-- 3/4 of an hour. Since the repair time is the sum of independent and identically 
+-- distributed exponential random variables, the repair time is Erlang distributed. 
+-- The machine tool is to be analyzed for 500 hours to obtain information on 
+-- the utilization of the machine tool and the time required to process a job. 
+-- Statistics are to be collected for thousand simulation runs.
 
 import Control.Monad
 import Control.Monad.Trans

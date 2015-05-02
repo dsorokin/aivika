@@ -8,6 +8,23 @@
 -- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
 --
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
+--
+-- The maintenance facility of a large manufacturer performs two operations. 
+-- These operations must be performed in series; operation 2 always follows operation 1. 
+-- The units that are maintained are bulky, and space is available for only eight units 
+-- including the units being worked on. A proposed design leaves space for two units 
+-- between the work stations, and space for four units before work station 1. [..] 
+-- Current company policy is to subcontract the maintenance of a unit if it cannot 
+-- gain access to the in-house facility.
+-- 
+-- Historical data indicates that the time interval between requests for maintenance 
+-- is exponentially distributed with a mean of 0.4 time units. Service times are also 
+-- exponentially distributed with the first station requiring on the average 0.25 time 
+-- units and the second station, 0.5 time units. Units are transported automatically 
+-- from work station 1 to work station 2 in a negligible amount of time. If the queue of 
+-- work station 2 is full, that is, if there are two units awaiting for work station 2, 
+-- the first station is blocked and a unit cannot leave the station. A blocked work 
+-- station cannot server other units.
 
 import Prelude hiding (id, (.)) 
 
