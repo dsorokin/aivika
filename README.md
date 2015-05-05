@@ -76,9 +76,9 @@ The PDF documentation is available on the [Aivika Wiki] [4] website.
 
 I am ready to consider your offer related to developing new modules or customizing Aivika, or related to developing simulation models. Please contact me at <david.sorokin@gmail.com>.
 
-### Version for .NET Framework and Mono
+### Aivika for .NET
 
-Regarding the simulation library, I have an experimental version of similar capabilities but written in F#. It literally means that you can create simulation models in F# and integrate them with the code written in C#. Also it means that you can edit your models in Visual Studio on Microsoft Windows, in Xamarin Studio on OS X and in MonoDevelop on Linux. 
+Regarding the simulation library, I also released [Aivika for .NET] [5] of similar capabilities but written in F#. It literally means that you can create simulation models in F# and integrate them with the code written in C#. Also it means that you can edit your models in Visual Studio on Microsoft Windows, in Xamarin Studio on OS X and in MonoDevelop on Linux. 
 
 Please let me know too if you have an interest in .NET version of the Aivika library.
 
@@ -86,6 +86,7 @@ Please let me know too if you have an interest in .NET version of the Aivika lib
 [2]: http://hackage.haskell.org/package/aivika-experiment  "Aivika Experiment"
 [3]: http://hackage.haskell.org/package/aivika-experiment-chart  "Aivika Experiment Chart"
 [4]: https://github.com/dsorokin/aivika/wiki  "Aivika Wiki"
+[5]: https://github.com/dsorokin/aivika-fsharp-ce "Aivika for .NET"
 
 P.S. Aivika is actually a genuine female Mari name which is pronounced 
 with stress on the last syllable.
