@@ -34,14 +34,14 @@ module Simulation.Aivika.Statistics
         emptySamplingCounter,
         incSamplingCounter,
         decSamplingCounter,
-        resetSamplingCounter,
+        setSamplingCounter,
         returnSamplingCounter,
         -- * Timing Counter
         TimingCounter(..),
         emptyTimingCounter,
         incTimingCounter,
         decTimingCounter,
-        resetTimingCounter,
+        setTimingCounter,
         returnTimingCounter) where
 
 import Data.Monoid
@@ -483,11 +483,11 @@ decSamplingCounter a counter =
                     samplingCounterStats = addSamplingStats a' (samplingCounterStats counter) }
   where a' = samplingCounterValue counter - a
 
--- | Reset the counter.
-resetSamplingCounter :: SamplingData a => SamplingCounter a -> SamplingCounter a
-resetSamplingCounter counter =
-  SamplingCounter { samplingCounterValue = 0,
-                    samplingCounterStats = addSamplingStats 0 (samplingCounterStats counter) }
+-- | Set a new value for the counter.
+setSamplingCounter :: SamplingData a => a -> SamplingCounter a -> SamplingCounter a
+setSamplingCounter a counter =
+  SamplingCounter { samplingCounterValue = a,
+                    samplingCounterStats = addSamplingStats a (samplingCounterStats counter) }
 
 -- | Create a counter with the specified initial value.
 returnSamplingCounter :: SamplingData  a => a -> SamplingCounter a
@@ -523,11 +523,11 @@ decTimingCounter t a counter =
                   timingCounterStats = addTimingStats t a' (timingCounterStats counter) }
   where a' = timingCounterValue counter - a
 
--- | Reset the counter at the specified time.
-resetTimingCounter :: TimingData a => Double -> TimingCounter a -> TimingCounter a
-resetTimingCounter t counter =
-  TimingCounter { timingCounterValue = 0,
-                  timingCounterStats = addTimingStats t 0 (timingCounterStats counter) }
+-- | Set a new value for the counter at the specified time.
+setTimingCounter :: TimingData a => Double -> a -> TimingCounter a -> TimingCounter a
+setTimingCounter t a counter =
+  TimingCounter { timingCounterValue = a,
+                  timingCounterStats = addTimingStats t a (timingCounterStats counter) }
 
 -- | Create a timing counter with the specified initial value at the given time.
 returnTimingCounter :: TimingData a => Double -> a -> TimingCounter a
