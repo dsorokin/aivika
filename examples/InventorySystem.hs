@@ -9,12 +9,8 @@
 
 import Control.Monad
 import Control.Monad.Trans
-import Control.Category
-
-import Data.Monoid
 
 import Simulation.Aivika
-import qualified Simulation.Aivika.Queue.Infinite as IQ
 
 -- | The simulation specs.
 specs = Specs { spcStartTime = 0.0,
@@ -33,16 +29,16 @@ backorderPercent = 0.2
 stockControlLevel = 72
 
 -- | The inventory position for reordering radio.
-inventoryPositionThreshold = 18
+reorderPositionThreshold = 18
 
--- | The initial stock of radios.
-radioStock0 = 72 :: Int
+-- | The initial radios in stock.
+radio0 = 72 :: Int
 
 -- | The time from the placement of an order to its receipt
-procurementLeadTime = 3
+leadTime = 3
 
 -- | How often to order the radios?
-procurementPeriod = 4
+reviewPeriod = 4
 
 -- | Clear the statistics at the end of the first year
 clearingTime = 52
@@ -51,116 +47,98 @@ model :: Simulation Results
 model = do
   -- the start time
   t0 <- liftParameter starttime
-  -- the radios in stock
-  radioStock <- newRef $ returnTimingCounter t0 radioStock0
-  -- the number of orders
-  orderCount <- newRef emptyTimingCounter
-  -- the queue of backorders
-  backorderQueue <- runEventInStartTime $ IQ.newFCFSQueue
-  -- the total number of customers
-  totalCustomerCount <- newRef (0 :: Int)
-  -- the total order count
-  totalOrderCount <- newRef (0 :: Int)
-  -- the total number of backorders
-  totalBackorderCount <- newRef (0 :: Int)
-  -- the number of immediate sales
-  immedSalesCount <- newRef (0 :: Int)
-  -- the lost sales count
-  lostSalesCount <- newRef (0 :: Int)
-  -- whether the procurement initiated?
-  procuring <- newRef False
   -- the inventory position
-  let inventoryPosition = do
-        x1 <- readRef radioStock
-        x2 <- readRef orderCount
-        x3 <- IQ.queueCount backorderQueue
-        return (timingCounterValue x1 +
-                timingCounterValue x2 -
-                x3)
-  -- implement the ordering policy of the company
+  invPos <- newRef $ returnTimingCounter t0 radio0
+  -- the radios in stock
+  radio <- newFCFSResource radio0
+  -- the time between lost sales
+  tbLostSales <- newRef emptySamplingStats
+  -- the last arrive time for the lost sale
+  lostSaleArrive <- newRef Nothing
+  -- a customer order
+  let customerOrder :: Event ()
+      customerOrder = do
+        do t <- liftDynamics time
+           modifyRef invPos $
+             decTimingCounter t 1
+           runProcess $
+             requestResource radio
+  -- a customer has been lost
+  let customerLost :: Event ()
+      customerLost = do
+        t0 <- readRef lostSaleArrive
+        t  <- liftDynamics time
+        case t0 of
+          Nothing -> return ()
+          Just t0 ->
+            modifyRef tbLostSales $
+            addSamplingStats (t - t0)
+        writeRef lostSaleArrive (Just t)
+  -- a customer arrival process
+  let customerArrival :: Process ()
+      customerArrival = do
+        randomExponentialProcess_ avgRadioDemand
+        liftEvent $ do
+          r <- resourceCount radio
+          if r > 0
+            then customerOrder
+            else do b <- liftParameter $
+                         randomTrue backorderPercent
+                    if b
+                      then customerOrder
+                      else customerLost
+        customerArrival
+  -- start the customer arrival process
+  runProcessInStartTime customerArrival
+  -- the safety stock
+  safetyStock <- newRef emptySamplingStats
+  -- an inventory review process
+  let invReview :: Process ()
+      invReview = do
+        x <- liftEvent $ readRef invPos
+        let n = timingCounterValue x
+        when (n <= reorderPositionThreshold) $
+          do let orderQty = stockControlLevel - n
+             liftEvent $
+               do t <- liftDynamics time
+                  modifyRef invPos $
+                    setTimingCounter t stockControlLevel
+             holdProcess leadTime
+             liftEvent $
+               do r <- resourceCount radio
+                  modifyRef safetyStock $
+                    addSamplingStats r
+                  incResourceCount radio orderQty
+  -- start the inventory review process
   runEventInStartTime $
-    enqueueEventWithTimes [t0, t0 + procurementPeriod..] $
-    do c <- readRef orderCount
-       when (timingCounterValue c == 0) $
-         do x <- inventoryPosition
-            when (x < inventoryPositionThreshold) $
-              do let order = stockControlLevel - x
-                 t0 <- liftDynamics time
-                 modifyRef orderCount $ incTimingCounter t0 order
-                 modifyRef totalOrderCount (+ order)
-                 enqueueEvent (t0 + procurementLeadTime) $
-                   do t <- liftDynamics time
-                      modifyRef radioStock $ incTimingCounter t order
-                      modifyRef orderCount $ resetTimingCounter t
-                      y1 <- readRef radioStock
-                      y2 <- IQ.queueCount backorderQueue
-                      let dy = min (timingCounterValue y1) y2
-                      modifyRef radioStock $ decTimingCounter t dy
-                      forM_ [1..dy] $ \i ->
-                        do IQ.tryDequeue backorderQueue
-                           return ()
-  -- a stream of customers
-  let customers = randomExponentialStream avgRadioDemand
-  -- model their behavior
-  runProcessInStartTime $
-    flip consumeStream customers $ \a ->
-    liftEvent $
-    do modifyRef totalCustomerCount (+ 1)
-       t <- liftDynamics time
-       x <- readRef radioStock
-       if timingCounterValue x > 0
-         then do modifyRef radioStock $ decTimingCounter t 1
-                 modifyRef immedSalesCount (+ 1)
-         else do b <- liftParameter $
-                      randomTrue backorderPercent
-                 if b
-                   then do modifyRef totalBackorderCount (+ 1)
-                           IQ.enqueue backorderQueue a
-                   else modifyRef lostSalesCount (+ 1)
-  -- clear the statistics at the end of the first year (??)
+    enqueueEventWithTimes [t0, t0 + reviewPeriod ..] $
+    runProcess invReview
+  -- clear the statistics at the end of the first year
   runEventInStartTime $
     enqueueEvent clearingTime $
-    do modifyRef radioStock $ \x -> x { timingCounterStats = emptyTimingStats }
-       modifyRef orderCount $ \x -> x { timingCounterStats = emptyTimingStats }
-       -- N.B. there is not yet clearing of the backorderQueue statistics
-  -- return the simulation results in start time
+    do t <- liftDynamics time
+       modifyRef invPos $ \x ->
+         returnTimingCounter t (timingCounterValue x)
+       writeRef tbLostSales emptySamplingStats
+       writeRef safetyStock emptySamplingStats
+  -- return the simulation results
   return $
     results
     [resultSource
-     "radioStock" "the radios in stock"
-     radioStock,
+     "radio" "the number of radios in stock"
+     (resourceCount radio),
      --
      resultSource
-     "inventoryPosition" "inventory position"
-     inventoryPosition,
+     "invPos" "the inventory position"
+     invPos,
      --
      resultSource
-     "orderCount" "the number of orders"
-     orderCount,
+     "tbLostSales" "the time between lost sales"
+     tbLostSales,
      --
      resultSource
-     "backorderQueue" "the queue of backorders"
-     backorderQueue,
-     --
-     resultSource
-     "totalCustomerCount" "the total number of customers"
-     totalCustomerCount,
-     --
-     resultSource
-     "totalOrderCount" "the total order count"
-     totalOrderCount,
-     --
-     resultSource
-     "totalBackorderCount" "the total number of backorders"
-     totalBackorderCount,
-     --
-     resultSource
-     "lostSalesCount" "the lost sales count"
-     lostSalesCount,
-     --
-     resultSource
-     "immedSalesCount" "the number of immediate sales"
-     immedSalesCount]
+     "safetyStock" "the safety stock"
+     safetyStock]
 
 main =
   printSimulationResultsInStopTime
