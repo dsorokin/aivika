@@ -24,6 +24,8 @@ the following features:
 
 * allows customizing the infinite and finite queues based on strategies too;
 
+* supports the resource preemption;
+
 * allows defining a queue network based on infinite streams of data
   and their processors, where we can define a complex enough
   behaviour just in a few lines of code;
@@ -49,13 +51,13 @@ the following features:
 * allows gathering statistics in time points;
 
 * hides technical details in high-level simulation computations
-  (monads and arrows).
+  (monads, streams and arrows).
 
 Aivika itself is a light-weight engine with minimal dependencies. 
 However, it has additional packages [Aivika Experiment] [2] and 
 [Aivika Experiment Chart] [3] that offer the following features:
 
-* automating the simulation experiments;
+* automating simulation experiments;
 
 * saving the results in CSV files;
 
@@ -66,11 +68,14 @@ However, it has additional packages [Aivika Experiment] [2] and
 
 * parallel execution of the Monte-Carlo simulation;
 
-* have an extensible architecture.
+* has an extensible architecture.
 
-All three libraries were tested on Linux, Windows and OS X.
+The charting library has two interchangeable back-ends:
+[Aivika Experiment Cairo] [4] and [Aivika Experiment Diagrams] [5].
 
-The PDF documentation is available on the [Aivika Wiki] [4] website.
+All libraries were tested on Linux, Windows and OS X.
+
+The PDF documentation is available on the [Aivika Wiki] [6] website.
 
 ### Consulting
 
@@ -78,15 +83,17 @@ I am ready to consider your offer related to developing new modules or customizi
 
 ### Aivika for .NET
 
-Regarding the simulation library, I also released [Aivika for .NET] [5] of similar capabilities but written in F#. It literally means that you can create simulation models in F# and integrate them with the code written in C#. Also it means that you can edit your models in Visual Studio on Microsoft Windows, in Xamarin Studio on OS X and in MonoDevelop on Linux. 
+Regarding the simulation library, I also released [Aivika for .NET] [7] of similar capabilities but written in F#. It literally means that you can create simulation models in F# and integrate them with the code written in C#. Also it means that you can edit your models in Visual Studio on Microsoft Windows, in Xamarin Studio on OS X and in MonoDevelop on Linux. 
 
 Please let me know too if you have an interest in .NET version of the Aivika library.
 
 [1]: http://hackage.haskell.org/package/aivika  "Aivika"
 [2]: http://hackage.haskell.org/package/aivika-experiment  "Aivika Experiment"
 [3]: http://hackage.haskell.org/package/aivika-experiment-chart  "Aivika Experiment Chart"
-[4]: https://github.com/dsorokin/aivika/wiki  "Aivika Wiki"
-[5]: https://github.com/dsorokin/aivika-fsharp-ce "Aivika for .NET"
+[4]: http://hackage.haskell.org/package/aivika-experiment-cairo  "Aivika Experiment Cairo"
+[5]: http://hackage.haskell.org/package/aivika-experiment-diagrams  "Aivika Experiment Diagrams"
+[6]: https://github.com/dsorokin/aivika/wiki  "Aivika Wiki"
+[7]: https://github.com/dsorokin/aivika-fsharp-ce "Aivika for .NET"
 
 P.S. Aivika is actually a genuine female Mari name which is pronounced 
 with stress on the last syllable.

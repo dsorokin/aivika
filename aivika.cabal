@@ -22,6 +22,8 @@ description:
     .
     * allows customizing the infinite and finite queues based on strategies too;
     .
+    * supports the resource preemption;
+    .
     * allows defining a queue network based on infinite streams of data
       and their processors, where we can define a complex enough
       behaviour just in a few lines of code;
@@ -47,13 +49,13 @@ description:
     * allows gathering statistics in time points;
     .
     * hides technical details in high-level simulation computations
-      (monads and arrows).
+      (monads, streams and arrows).
     .
     Aivika itself is a light-weight engine with minimal dependencies. 
     However, it has additional packages Aivika Experiment [1] and 
     Aivika Experiment Chart [2] that offer the following features:
     .
-    * automating the simulation experiments;
+    * automating simulation experiments;
     .
     * saving the results in CSV files;
     .
@@ -64,17 +66,24 @@ description:
     .
     * parallel execution of the Monte-Carlo simulation;
     .
-    * have an extensible architecture.
+    * has an extensible architecture.
     .
-    All three libraries were tested on Linux, Windows and OS X.
+    The charting package has two interchangeable back-ends:
+    Aivika Experiment Cairo [3] and Aivika Experiment Diagrams [4].
+
+    All libraries were tested on Linux, Windows and OS X.
     .
-    The PDF documentation is available on the Aivika Wiki [3] website.
+    The PDF documentation is available on the Aivika Wiki [5] website.
     .
     \[1] <http://hackage.haskell.org/package/aivika-experiment>
     .
     \[2] <http://hackage.haskell.org/package/aivika-experiment-chart>
     .
-    \[3] <https://github.com/dsorokin/aivika/wiki>
+    \[3] <http://hackage.haskell.org/package/aivika-experiment-cairo>
+    .
+    \[4] <http://hackage.haskell.org/package/aivika-experiment-diagrams>
+    .
+    \[5] <https://github.com/dsorokin/aivika/wiki>
     .
     P.S. Aivika is actually a genuine female Mari name which is pronounced 
     with stress on the last syllable.
