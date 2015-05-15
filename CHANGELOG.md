@@ -1,3 +1,16 @@
+Version 4.0.2
+-----
+
+* Minor changes in the Statistics module: replacing functions 
+  resetSamplingCounter and resetTimingCounter with their general analogs.
+
+* Unifying process preemption signals in modules Server and Activity: 
+  renaming four signals like that how they are named in the Process module.
+  
+* The timing statistics (time persistent one) can be normalized to 
+  a sampling-based statistics (based upon observation), which allows, 
+  for example, building a deviation chart for the queue size.
+
 Version 4.0.1
 -----
 
