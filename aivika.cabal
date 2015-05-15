@@ -96,7 +96,7 @@ maintainer:      David Sorokin <david.sorokin@gmail.com>
 homepage:        http://github.com/dsorokin/aivika
 cabal-version:   >= 1.10
 build-type:      Simple
-tested-with:     GHC == 7.8.3
+tested-with:     GHC == 7.10.1
 
 extra-source-files:  examples/BassDiffusion.hs
                      examples/BouncingBall.hs
