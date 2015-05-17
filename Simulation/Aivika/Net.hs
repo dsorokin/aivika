@@ -5,7 +5,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.8.3
+-- Tested with: GHC 7.10.1
 --
 -- The module defines a 'Net' arrow that can be applied to modeling the queue networks
 -- like the 'Processor' arrow from another module. Only the former has a more efficient

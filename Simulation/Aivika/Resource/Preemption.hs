@@ -5,7 +5,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.8.3
+-- Tested with: GHC 7.10.1
 --
 -- This module defines the preemptible resource.
 --
