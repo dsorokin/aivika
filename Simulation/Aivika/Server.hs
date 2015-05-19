@@ -626,11 +626,11 @@ serverPreemptionFactorChanged_ server =
 serverInputReceived :: Server s a b -> Signal a
 serverInputReceived = publishSignal . serverInputReceivedSource
 
--- | Raised when the task processing by the server was preempted.
+-- | Raised when the task processing was preempted.
 serverTaskPreemptionBeginning :: Server s a b -> Signal a
 serverTaskPreemptionBeginning = publishSignal . serverTaskPreemptionBeginningSource
 
--- | Raised when the task processing by the server was proceeded after it has been preempeted earlier.
+-- | Raised when the task processing was proceeded after it had been preempeted earlier.
 serverTaskPreemptionEnding :: Server s a b -> Signal a
 serverTaskPreemptionEnding = publishSignal . serverTaskPreemptionEndingSource
 

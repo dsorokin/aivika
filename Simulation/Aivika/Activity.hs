@@ -505,11 +505,11 @@ activityUtilising = publishSignal . activityUtilisingSource
 activityUtilised :: Activity s a b -> Signal (a, b)
 activityUtilised = publishSignal . activityUtilisedSource
 
--- | Raised when the task utilisation by the activity was preempted.
+-- | Raised when the activity utilisation was preempted.
 activityPreemptionBeginning :: Activity s a b -> Signal a
 activityPreemptionBeginning = publishSignal . activityPreemptionBeginningSource
 
--- | Raised when the task utilisation by the activity was proceeded after it had been preempted earlier.
+-- | Raised when the activity utilisation was proceeded after it had been preempted earlier.
 activityPreemptionEnding :: Activity s a b -> Signal a
 activityPreemptionEnding = publishSignal . activityPreemptionEndingSource
 
