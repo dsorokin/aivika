@@ -7,8 +7,6 @@
 import Simulation.Aivika
 import Simulation.Aivika.SystemDynamics
 
-import qualified Data.Vector as V
-
 specs = Specs { spcStartTime = 0, 
                 spcStopTime = 13, 
                 spcDT = 0.01,
