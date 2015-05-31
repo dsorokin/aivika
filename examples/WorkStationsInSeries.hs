@@ -5,10 +5,6 @@
 --
 -- It is described in different sources [1, 2]. So, this is chapter 7 of [2] and section 5.14 of [1].
 --
--- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
---
--- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
---
 -- The maintenance facility of a large manufacturer performs two operations. 
 -- These operations must be performed in series; operation 2 always follows operation 1. 
 -- The units that are maintained are bulky, and space is available for only eight units 
@@ -25,6 +21,9 @@
 -- work station 2 is full, that is, if there are two units awaiting for work station 2, 
 -- the first station is blocked and a unit cannot leave the station. A blocked work 
 -- station cannot server other units.
+--
+-- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
+-- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 
 import Prelude hiding (id, (.)) 
 

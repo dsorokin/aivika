@@ -6,10 +6,6 @@
 -- This is a model of the workflow with a loop. Also there are two infinite queues.
 --
 -- It is described in different sources [1, 2]. So, this is chapter 8 of [2] and section 5.15 of [1].
---
--- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
---
--- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 -- 
 -- Assembled television sets move through a series of testing stations in the final 
 -- stage of their production. At the last of these stations, the vertical control 
@@ -30,6 +26,9 @@
 -- The inspection station and adjustor are to be simulated for 480 minutes to estimate 
 -- the time to process television sets through the final production stage and to determine 
 -- the utilization of the inspectors and the adjustors.
+--
+-- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
+-- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 
 import Prelude hiding (id, (.)) 
 

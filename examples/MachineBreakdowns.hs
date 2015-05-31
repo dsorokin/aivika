@@ -3,10 +3,6 @@
 --
 -- It is described in different sources [1, 2]. So, this is chapter 13 of [2] and section 6.12 of [1].
 --
--- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
---
--- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
---
 -- Jobs arrive to a machine tool on the average of one per hour. The distribution of 
 -- these interarrival times is exponential. During normal operation, the jobs are 
 -- processed on a first-in, first-out basis. The time to process a job in hours is 
@@ -30,6 +26,9 @@
 -- The machine tool is to be analyzed for 500 hours to obtain information on 
 -- the utilization of the machine tool and the time required to process a job. 
 -- Statistics are to be collected for thousand simulation runs.
+--
+-- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
+-- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 
 import Control.Monad
 import Control.Monad.Trans

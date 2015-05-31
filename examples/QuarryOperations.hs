@@ -6,7 +6,6 @@
 -- It is described in different sources [1, 2]. So, this is chapter 10 of [2] and section 5.16 of [1].
 --
 -- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
---
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 
 import Control.Monad

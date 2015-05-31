@@ -3,10 +3,6 @@
 --
 -- It is described in different sources [1, 2]. So, this is chapter 11 of [2] and section 6.7 of [1].
 --
--- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
---
--- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
---
 -- A large discount house is planning to install a system to control the inventory of
 -- a particular radio. The time between demands for a radio is exponentially distributed
 -- with a mean time of 0.2 weeks. In the case where customers demand the radio when it
@@ -32,6 +28,9 @@
 -- initial backorders. In order to reduce the bias in the statistics due to the initial
 -- starting conditions, all the statistics are to be cleared at the end of the first year
 -- of the six year simulation period.
+--
+-- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
+-- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 
 import Control.Monad
 import Control.Monad.Trans
