@@ -7,6 +7,24 @@
 --
 -- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
+-- 
+-- In this example, the operations of a quarry are modeled. In the quarry,
+-- trucks deliver ore from three shovels to a crusher. A truck always
+-- returns to its assigned shovel after dumping a load at the crusher.
+-- There are two different truck sizes in use, twenty-ton and fifty-ton.
+-- The size of the truck affects its loading time at the shovel, travel
+-- time to the crusher, dumping time at the crusher and return trip time
+-- from the crusher back to the appropriate shovel. For the twenty-ton
+-- trucks, there loading, travel, dumping and return trip times are:
+-- exponentially distributed with a mean 5; a constant 2.5; exponentially
+-- distributed with mean 2; and a constant 1.5. The corresponding times
+-- for the fifty-ton trucks are: exponentially distributed with mean 10;
+-- a constant 3; exponentially distributed with mean 4; and a constant 2.
+-- To each shovel is assigned two twenty-ton trucks are one fifty-ton truck.
+-- The shovel queues are all ranked on a first-in, first-out basis.
+-- The crusher queue is ranked on truck size, largest trucks first.
+-- It is desired to analyze this system over 480 time units to determine
+-- the utilization and queue lengths associated with the shovels and crusher.
 
 import Control.Monad
 import Control.Monad.Trans
@@ -137,19 +155,13 @@ model = do
              IQ.enqueue q t
   -- utilise the crusher's activity
   let utiliseCrusher q t =
-        do dumpingTime <-
-             liftParameter $
-             randomExponential $
+        do randomExponentialProcess_ $
              truckAvgDumpingTime t
-           holdProcess dumpingTime
            return t
   -- utilise the shovel's activity
   let utiliseShovel q t =
-        do loadingTime <-
-             liftParameter $
-             randomExponential $
+        do randomExponentialProcess_ $
              truckAvgLoadingTime t
-           holdProcess loadingTime
            return t
   -- create shovel activities
   shovelAct1 <-
