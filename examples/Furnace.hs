@@ -1,5 +1,5 @@
 
--- This is a model of the Furnace. It is described in different sources [1, 2].
+-- This is a model of the soaking pit furnace. It is described in different sources [1, 2].
 --
 -- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
 --
