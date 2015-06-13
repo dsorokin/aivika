@@ -4,6 +4,48 @@
 -- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
 --
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
+--
+-- Steel ingots arrive at a soaking pit furnace in a steel plant with
+-- an interarrival time that is exponentially distributed with mean
+-- of 2.25 hours. The soaking pit furnace heats an ingot so that it
+-- can be economically rolled in the next stage of the process.
+-- The temperature change of an ingot in the soaking pit furnace is
+-- described by the following differential equation.
+-- 
+--   d(h_i)/dt = (H - h_i) * C_i,
+-- 
+-- where  h_i is the temperature of the i-th ingot in the soaking pit;
+-- C_i is the heating time coefficient of an ingot and is equal to X + 0.1
+-- where X is normally distributed with mean of 0.05 and standard deviation
+-- of 0.01; and H is the furnace temperature which is heated toward 2600 F
+-- with a heating rate constant if 0.2, that is,
+-- 
+--   dH/dt = (2600 - H) * 0.2.
+-- 
+-- The ingots interact with one another in that adding a "cold" ingot
+-- to the furnace reduces the temperature of the furnace and thus changes
+-- the heating time for all ingots in the furnace. The temperature reduction
+-- is equal to the difference between furnace and ingot temperatures, divided
+-- by the number of ingots in the furnace. There are 10 soaking pits in
+-- the furnace. When a new ingot arrives and the furnace is full, it is
+-- stored in an ingot storage bank. It is assumed that the initial temperature
+-- of an arriving ingot is uniformly distributed in the interval from 400 to 500 F.
+-- All ingots put in the ingot storage bank are assumed to have a temperature of
+-- 400 F upon insertion into the soaking pit. The operating policy of the company
+-- is to continue heating the ingots in the furnace until one or more ingots
+-- reach 2200 F. At such a time all ingots with a temperature greater than 2000 F
+-- are removed. The initial conditions are that there are six ingots in the furnace
+-- with initial temperatures of 550, 600, 650, 700, 750 and 800 F. Initially,
+-- the temperature of the furnace is 1650 F, and the next ingot is due to arrive
+-- at time 0.
+-- 
+-- The objective is to simulate the above system for 500 hours to obtain
+-- estimates of the following quantities:
+-- 
+-- 1) heating time of the ingots;
+-- 2) final temperature distribution of the ingots;
+-- 3) waiting time of the ingots in the ingot storage bank; and
+-- 4) utilization of the soaking pit furnace.
 
 import Data.Maybe
 import System.Random
