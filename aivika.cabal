@@ -118,6 +118,7 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/TimeOutInt.hs
                      examples/TimeOutWait.hs
                      examples/PingPong.hs
+                     examples/PortOperations.hs
                      CHANGELOG.md
 
 library
