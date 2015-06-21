@@ -15,6 +15,8 @@ import Control.Monad.Trans
 import Control.Arrow
 import Control.Category (id, (.))
 
+import Data.Array
+
 import Simulation.Aivika
 import Simulation.Aivika.Queue
 
@@ -31,8 +33,10 @@ data Tunker =
 
 model :: Simulation Results
 model = mdo
-  portTime <- forM [1..4] $ \i ->
+  portTime' <- forM [1..4] $ \i ->
     newRef emptySamplingStats
+  let portTime =
+        array (1, 4) $ zip [1..] portTime'
   berth <- newFCFSResource 3
   tug   <- newFCFSResource 1
   let tunkers13 = randomUniformStream 4 18
@@ -91,7 +95,7 @@ model = mdo
         t1 <- liftDynamics time
         let tp = tunkerType t 
         liftEvent $
-          modifyRef (portTime !! (tp - 1)) $
+          modifyRef (portTime ! tp) $
           addSamplingStats (t1 - t0)
         when (tp == 4) $
           liftEvent $
