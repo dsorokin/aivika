@@ -124,7 +124,7 @@ import Simulation.Aivika.Signal
 import Simulation.Aivika.Statistics
 import Simulation.Aivika.Statistics.Accumulator
 import Simulation.Aivika.Ref
-import qualified Simulation.Aivika.Ref.Plain as LR
+import qualified Simulation.Aivika.Ref.Base as BR
 import Simulation.Aivika.Var
 import Simulation.Aivika.QueueStrategy
 import qualified Simulation.Aivika.Queue as Q
@@ -1329,9 +1329,9 @@ instance ResultComputing Ref where
   computeResultData = readRef
   computeResultSignal = ResultSignal . refChanged_
 
-instance ResultComputing LR.Ref where
+instance ResultComputing BR.Ref where
 
-  computeResultData = LR.readRef
+  computeResultData = BR.readRef
   computeResultSignal = const UnknownResultSignal
 
 instance ResultComputing Var where

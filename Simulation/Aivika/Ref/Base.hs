@@ -1,6 +1,6 @@
 
 -- |
--- Module     : Simulation.Aivika.Ref.Plain
+-- Module     : Simulation.Aivika.Ref.Base
 -- Copyright  : Copyright (c) 2009-2015, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -10,7 +10,7 @@
 -- This module defines a light-weight and more fast version of an updatable reference
 -- that depends on the event queue but that doesn't supply with the signal notification.
 --
-module Simulation.Aivika.Ref.Plain
+module Simulation.Aivika.Ref.Base
        (Ref,
         newRef,
         readRef,
