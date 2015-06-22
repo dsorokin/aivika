@@ -86,7 +86,7 @@ import Simulation.Aivika.Event
 import Simulation.Aivika.Cont
 import Simulation.Aivika.Process
 import Simulation.Aivika.Signal
-import Simulation.Aivika.Resource
+import Simulation.Aivika.Resource.Base
 import Simulation.Aivika.QueueStrategy
 import Simulation.Aivika.Queue.Infinite
 import Simulation.Aivika.Internal.Arrival

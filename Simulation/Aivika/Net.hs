@@ -60,7 +60,7 @@ import Simulation.Aivika.Cont
 import Simulation.Aivika.Process
 import Simulation.Aivika.Stream
 import Simulation.Aivika.QueueStrategy
-import Simulation.Aivika.Resource
+import Simulation.Aivika.Resource.Base
 import Simulation.Aivika.Processor
 import Simulation.Aivika.Ref
 import Simulation.Aivika.Circuit

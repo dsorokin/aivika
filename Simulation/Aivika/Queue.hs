@@ -117,7 +117,7 @@ import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Process
 import Simulation.Aivika.Signal
-import Simulation.Aivika.Resource
+import Simulation.Aivika.Resource.Base
 import Simulation.Aivika.QueueStrategy
 import Simulation.Aivika.Statistics
 

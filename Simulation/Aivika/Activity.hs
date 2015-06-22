@@ -72,7 +72,6 @@ import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Signal
-import Simulation.Aivika.Resource
 import Simulation.Aivika.Cont
 import Simulation.Aivika.Process
 import Simulation.Aivika.Net
