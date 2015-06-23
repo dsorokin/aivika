@@ -35,7 +35,7 @@ module Simulation.Aivika
         module Simulation.Aivika.Processor.RoundRobbin,
         module Simulation.Aivika.QueueStrategy,
         module Simulation.Aivika.Ref,
-        module Simulation.Aivika.Resource,
+        module Simulation.Aivika.Resource.Base,
         module Simulation.Aivika.Results,
         module Simulation.Aivika.Results.Locale,
         module Simulation.Aivika.Results.IO,
@@ -77,7 +77,7 @@ import Simulation.Aivika.Processor.Random
 import Simulation.Aivika.Processor.RoundRobbin
 import Simulation.Aivika.QueueStrategy
 import Simulation.Aivika.Ref
-import Simulation.Aivika.Resource
+import Simulation.Aivika.Resource.Base
 import Simulation.Aivika.Results
 import Simulation.Aivika.Results.Locale
 import Simulation.Aivika.Results.IO
