@@ -19,6 +19,7 @@ import Data.Array
 
 import Simulation.Aivika
 import Simulation.Aivika.Queue
+import qualified Simulation.Aivika.Resource as R
 
 -- | The simulation specs.
 specs = Specs { spcStartTime = 0.0,
@@ -37,8 +38,12 @@ model = mdo
     newRef emptySamplingStats
   let portTime =
         array (1, 4) $ zip [1..] portTime'
-  berth <- newFCFSResource 3
-  tug   <- newFCFSResource 1
+  berth <-
+    runEventInStartTime $
+    R.newFCFSResource 3
+  tug   <-
+    runEventInStartTime $
+    R.newFCFSResource 1
   let tunkers13 = randomUniformStream 4 18
       tunkers4  = takeStream 5 $
                   randomUniformStream 48 48
@@ -83,15 +88,15 @@ model = mdo
   let port :: Tunker -> Process ()
       port t = do
         t0 <- liftDynamics time
-        requestResource berth
-        requestResource tug
+        R.requestResource berth
+        R.requestResource tug
         holdProcess 1
-        releaseResource tug
+        R.releaseResource tug
         holdProcess (tunkerLoadingTime t)
-        requestResource tug
+        R.requestResource tug
         holdProcess 1
-        releaseResource tug
-        releaseResource berth
+        R.releaseResource tug
+        R.releaseResource berth
         t1 <- liftDynamics time
         let tp = tunkerType t 
         liftEvent $
@@ -105,17 +110,25 @@ model = mdo
       storm :: Process ()
       storm = do
         randomExponentialProcess_ 48
-        decResourceCount tug 1
+        R.decResourceCount tug 1
         randomUniformProcess_ 2 6
         liftEvent $
-          incResourceCount tug 1
+          R.incResourceCount tug 1
         storm
   runProcessInStartTime storm
   return $
     results
     [resultSource
      "portTime" "Port Time"
-     portTime]
+     portTime,
+     --
+     resultSource
+     "berth" "Berth"
+     berth,
+     --
+     resultSource
+     "tug" "Tug"
+     tug ]
 
 modelSummary :: Simulation Results
 modelSummary =
