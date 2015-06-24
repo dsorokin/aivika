@@ -295,6 +295,7 @@ releaseResource' r =
                           invokeEvent p $ releaseResource' r
                         Just c ->
                           do PQ.enqueue (resourceActingQueue r) (- priority) $ ResourceActingItem priority pid
+                             invokeEvent p $ updateResourceUtilisationCount r 1
                              invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
                  Right (ResourcePreemptedItem priority pid) ->
                    do f <- invokeEvent p $ processCancelled pid
@@ -303,6 +304,7 @@ releaseResource' r =
                           invokeEvent p $ releaseResource' r
                         False ->
                           do PQ.enqueue (resourceActingQueue r) (- priority) $ ResourceActingItem priority pid
+                             invokeEvent p $ updateResourceUtilisationCount r 1
                              invokeEvent p $ processPreemptionEnd pid
                
 -- | Acquire the resource with the specified priority, perform some action and
@@ -331,20 +333,19 @@ decResourceCount' r =
        error $
        "The resource exceeded and its count is zero: decResourceCount'"
      f <- PQ.queueNull (resourceActingQueue r)
-     when f $
-       error $
-       "The resource acting queue is null: decResourceCount'"
-     (p0', item0) <- PQ.queueFront (resourceActingQueue r)
-     let p0 = - p0'
-         pid0 = actingItemId item0
-     PQ.dequeue (resourceActingQueue r)
-     PQ.enqueue (resourceWaitQueue r) p0 (Right $ ResourcePreemptedItem p0 pid0)
-     invokeEvent p $ processPreemptionEnd pid0
+     unless f $
+       do (p0', item0) <- PQ.queueFront (resourceActingQueue r)
+          let p0 = - p0'
+              pid0 = actingItemId item0
+          PQ.dequeue (resourceActingQueue r)
+          PQ.enqueue (resourceWaitQueue r) p0 (Right $ ResourcePreemptedItem p0 pid0)
+          invokeEvent p $ processPreemptionBegin pid0
+          invokeEvent p $ updateResourceUtilisationCount r (-1)
      invokeEvent p $ updateResourceCount r (-1)
 
 -- | Increase the count of available resource by the specified number,
 -- invoking the awaiting and preempted processes according to their priorities
--- as needed. Note that the utilisation count is not affected here.
+-- as needed.
 incResourceCount :: Resource
                     -- ^ the resource
                     -> Int
@@ -359,7 +360,6 @@ incResourceCount r n
 
 -- | Decrease the count of available resource by the specified number,
 -- preempting the processes according to their priorities as needed.
--- Note that the utilisation count is not affected here.
 decResourceCount :: Resource
                     -- ^ the resource
                     -> Int
@@ -373,8 +373,7 @@ decResourceCount r n
        decResourceCount r (n - 1)
 
 -- | Alter the resource count either increasing or decreasing it by calling
--- 'incResourceCount' or 'decResourceCount' respectively. Note that
--- the utilisation count is not affected here.
+-- 'incResourceCount' or 'decResourceCount' respectively.
 alterResourceCount :: Resource
                       -- ^ the resource
                       -> Int
