@@ -255,12 +255,12 @@ resourceCountStats :: Resource s -> Event (TimingStats Int)
 resourceCountStats r =
   Event $ \p -> readIORef (resourceCountStatsRef r)
 
--- | Signal triggered when the 'resoureceCount' property changes.
+-- | Signal triggered when the 'resourceCount' property changes.
 resourceCountChanged :: Resource s -> Signal Int
 resourceCountChanged r =
   publishSignal $ resourceCountSource r
 
--- | Signal triggered when the 'resoureceCount' property changes.
+-- | Signal triggered when the 'resourceCount' property changes.
 resourceCountChanged_ :: Resource s -> Signal ()
 resourceCountChanged_ r =
   mapSignal (const ()) $ resourceCountChanged r
@@ -275,12 +275,12 @@ resourceUtilisationCountStats :: Resource s -> Event (TimingStats Int)
 resourceUtilisationCountStats r =
   Event $ \p -> readIORef (resourceUtilisationCountStatsRef r)
 
--- | Signal triggered when the 'resoureceUtilisationCount' property changes.
+-- | Signal triggered when the 'resourceUtilisationCount' property changes.
 resourceUtilisationCountChanged :: Resource s -> Signal Int
 resourceUtilisationCountChanged r =
   publishSignal $ resourceUtilisationCountSource r
 
--- | Signal triggered when the 'resoureceUtilisationCount' property changes.
+-- | Signal triggered when the 'resourceUtilisationCount' property changes.
 resourceUtilisationCountChanged_ :: Resource s -> Signal ()
 resourceUtilisationCountChanged_ r =
   mapSignal (const ()) $ resourceUtilisationCountChanged r
