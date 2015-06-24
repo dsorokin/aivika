@@ -132,6 +132,7 @@ import qualified Simulation.Aivika.Queue.Infinite as IQ
 import Simulation.Aivika.Arrival
 import Simulation.Aivika.Server
 import Simulation.Aivika.Activity
+import Simulation.Aivika.Resource
 import Simulation.Aivika.Results.Locale
 
 -- | A name used for indentifying the results when generating output.
@@ -1739,6 +1740,41 @@ activityResultSummary c =
       resultContainerProperty c "idleFactor" ActivityIdleFactorId activityIdleFactor activityIdleFactorChanged_,
       resultContainerProperty c "preemptionFactor" ActivityPreemptionFactorId activityPreemptionFactor activityPreemptionFactorChanged_ ] }
 
+-- | Return a source by the specified resource.
+resourceResultSource :: (Show s, ResultItemable (ResultValue s))
+                        => ResultContainer (Resource s)
+                        -- ^ the resource container
+                        -> ResultSource
+resourceResultSource c =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
+    resultObjectTypeId = ResourceId,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = resourceResultSummary c,
+    resultObjectProperties = [
+      resultContainerProperty c "count" ResourceCountId resourceCount resourceCountChanged_,
+      resultContainerProperty c "countStats" ResourceCountStatsId resourceCountStats resourceCountChanged_,
+      resultContainerProperty c "utilisationCount" ResourceUtilisationCountId resourceUtilisationCount resourceUtilisationCountChanged_,
+      resultContainerProperty c "utilisationCountStats" ResourceUtilisationCountStatsId resourceUtilisationCountStats resourceUtilisationCountChanged_ ] }
+
+-- | Return a summary by the specified resource.
+resourceResultSummary :: ResultContainer (Resource s)
+                         -- ^ the resource container
+                         -> ResultSource
+resourceResultSummary c =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
+    resultObjectTypeId = ResourceId,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = resourceResultSummary c,
+    resultObjectProperties = [
+      resultContainerProperty c "countStats" ResourceCountStatsId resourceCountStats resourceCountChanged_,
+      resultContainerProperty c "utilisationCountStats" ResourceUtilisationCountStatsId resourceUtilisationCountStats resourceUtilisationCountChanged_ ] }
+
 -- | Return an arbitrary text as a separator source.
 textResultSource :: String -> ResultSource
 textResultSource text =
@@ -1969,3 +2005,8 @@ instance (Show s, ResultItemable (ResultValue s)) => ResultProvider (Activity s 
 
   resultSource' name i m =
     activityResultSource $ ResultContainer name i m (ResultSignal $ activityChanged_ m)
+
+instance (Show s, ResultItemable (ResultValue s)) => ResultProvider (Resource s) where
+
+  resultSource' name i m =
+    resourceResultSource $ ResultContainer name i m (ResultSignal $ resourceChanged_ m)

@@ -34,6 +34,7 @@ import qualified Simulation.Aivika.Queue.Infinite as IQ
 import Simulation.Aivika.Arrival
 import Simulation.Aivika.Server
 import Simulation.Aivika.Activity
+import Simulation.Aivika.Resource
 
 -- | A locale to output the simulation results.
 --
@@ -215,6 +216,16 @@ data ResultId = TimeId
                 -- ^ Property 'activityIdleFactor'.
               | ActivityPreemptionFactorId
                 -- ^ Property 'activityPreemptionFactor'.
+              | ResourceId
+                -- ^ Represents a 'Resource'.
+              | ResourceCountId
+                -- ^ Property 'resourceCount'.
+              | ResourceCountStatsId
+                -- ^ Property 'resourceCountStats'.
+              | ResourceUtilisationCountId
+                -- ^ Property 'resourceUtilisationCount'.
+              | ResourceUtilisationCountStatsId
+                -- ^ Property 'resourceUtilisationCountStats'.
               | UserDefinedResultId ResultDescription
                 -- ^ An user defined description.
               | LocalisedResultId (M.Map ResultLocale ResultDescription)
@@ -315,6 +326,11 @@ russianResultLocalisation ActivityPreemptionTimeId = "статистика вр�
 russianResultLocalisation ActivityUtilisationFactorId = "относительное время использования (от 0 до 1)"
 russianResultLocalisation ActivityIdleFactorId = "относительное время простоя (от 0 до 1)"
 russianResultLocalisation ActivityPreemptionFactorId = "относительное время вытеснения (от 0 до 1)"
+russianResultLocalisation ResourceId = "ресурс"
+russianResultLocalisation ResourceCountId = "текущее доступное количество ресурса"
+russianResultLocalisation ResourceCountStatsId = "статистика по доступному количеству ресурса"
+russianResultLocalisation ResourceUtilisationCountId = "текущее используемое количество ресурса"
+russianResultLocalisation ResourceUtilisationCountStatsId = "статистика по используемому количеству ресурса"
 russianResultLocalisation (UserDefinedResultId m) = m
 russianResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation russianResultLocale x
@@ -405,6 +421,11 @@ englishResultLocalisation ActivityPreemptionTimeId = "the preemption time"
 englishResultLocalisation ActivityUtilisationFactorId = "the relative utilisation time (от 0 до 1)"
 englishResultLocalisation ActivityIdleFactorId = "the relative idle time (от 0 до 1)"
 englishResultLocalisation ActivityPreemptionFactorId = "the relative preemption time (от 0 до 1)"
+englishResultLocalisation ResourceId = "the resource"
+englishResultLocalisation ResourceCountId = "the current available count"
+englishResultLocalisation ResourceCountStatsId = "the available count statistics"
+englishResultLocalisation ResourceUtilisationCountId = "the current utilisation count"
+englishResultLocalisation ResourceUtilisationCountStatsId = "the utilisation count statistics"
 englishResultLocalisation (UserDefinedResultId m) = m
 englishResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation englishResultLocale x
