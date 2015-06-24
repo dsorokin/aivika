@@ -54,7 +54,7 @@ module Simulation.Aivika.Resource
         resourceCountChanged_,
         resourceUtilisationCountChanged,
         resourceUtilisationCountChanged_,
-        resourceChanged) where
+        resourceChanged_) where
 
 import Data.IORef
 import Data.Monoid
@@ -491,8 +491,8 @@ decResourceCount r n
        decResourceCount r (n - 1)
 
 -- | Signal triggered when one of the resource counters changes.
-resourceChanged :: Resource s -> Signal ()
-resourceChanged r =
+resourceChanged_ :: Resource s -> Signal ()
+resourceChanged_ r =
   resourceCountChanged_ r <>
   resourceUtilisationCountChanged_ r
 
