@@ -35,6 +35,9 @@ module Simulation.Aivika.Resource
         resourceStrategy,
         resourceMaxCount,
         resourceCount,
+        resourceCountStats,
+        resourceUtilisationCount,
+        resourceUtilisationCountStats,
         -- * Requesting for and Releasing Resource
         requestResource,
         requestResourceWithPriority,
@@ -45,9 +48,17 @@ module Simulation.Aivika.Resource
         usingResourceWithPriority,
         -- * Altering Resource
         incResourceCount,
-        decResourceCount) where
+        decResourceCount,
+        -- * Signals
+        resourceCountChanged,
+        resourceCountChanged_,
+        resourceUtilisationCountChanged,
+        resourceUtilisationCountChanged_,
+        resourceChanged) where
 
 import Data.IORef
+import Data.Monoid
+
 import Control.Monad
 import Control.Monad.Trans
 import Control.Exception
@@ -58,6 +69,8 @@ import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Cont
 import Simulation.Aivika.Internal.Process
 import Simulation.Aivika.QueueStrategy
+import Simulation.Aivika.Statistics
+import Simulation.Aivika.Signal
 
 import qualified Simulation.Aivika.DoubleLinkedList as DLL 
 import qualified Simulation.Aivika.Vector as V
@@ -82,7 +95,12 @@ data Resource s =
              resourceMaxCount :: Maybe Int,
              -- ^ Return the maximum count of the resource, where 'Nothing'
              -- means that the resource has no upper bound.
-             resourceCountRef :: IORef Int, 
+             resourceCountRef :: IORef Int,
+             resourceCountStatsRef :: IORef (TimingStats Int),
+             resourceCountSource :: SignalSource Int,
+             resourceUtilisationCountRef :: IORef Int,
+             resourceUtilisationCountStatsRef :: IORef (TimingStats Int),
+             resourceUtilisationCountSource :: SignalSource Int,
              resourceWaitList :: StrategyQueue s (FrozenCont ()) }
 
 instance Eq (Resource s) where
@@ -92,7 +110,7 @@ instance Eq (Resource s) where
 -- the upper bound as well.
 newFCFSResource :: Int
                    -- ^ the initial count (and maximal count too) of the resource
-                   -> Simulation FCFSResource
+                   -> Event FCFSResource
 newFCFSResource = newResource FCFS
 
 -- | Create a new FCFS resource with the specified initial and maximum counts,
@@ -101,14 +119,14 @@ newFCFSResourceWithMaxCount :: Int
                                -- ^ the initial count of the resource
                                -> Maybe Int
                                -- ^ the maximum count of the resource, which can be indefinite
-                               -> Simulation FCFSResource
+                               -> Event FCFSResource
 newFCFSResourceWithMaxCount = newResourceWithMaxCount FCFS
 
 -- | Create a new LCFS resource with the specified initial count which value becomes
 -- the upper bound as well.
 newLCFSResource :: Int
                    -- ^ the initial count (and maximal count too) of the resource
-                   -> Simulation LCFSResource
+                   -> Event LCFSResource
 newLCFSResource = newResource LCFS
 
 -- | Create a new LCFS resource with the specified initial and maximum counts,
@@ -117,14 +135,14 @@ newLCFSResourceWithMaxCount :: Int
                                -- ^ the initial count of the resource
                                -> Maybe Int
                                -- ^ the maximum count of the resource, which can be indefinite
-                               -> Simulation LCFSResource
+                               -> Event LCFSResource
 newLCFSResourceWithMaxCount = newResourceWithMaxCount LCFS
 
 -- | Create a new SIRO resource with the specified initial count which value becomes
 -- the upper bound as well.
 newSIROResource :: Int
                    -- ^ the initial count (and maximal count too) of the resource
-                   -> Simulation SIROResource
+                   -> Event SIROResource
 newSIROResource = newResource SIRO
 
 -- | Create a new SIRO resource with the specified initial and maximum counts,
@@ -133,14 +151,14 @@ newSIROResourceWithMaxCount :: Int
                                -- ^ the initial count of the resource
                                -> Maybe Int
                                -- ^ the maximum count of the resource, which can be indefinite
-                               -> Simulation SIROResource
+                               -> Event SIROResource
 newSIROResourceWithMaxCount = newResourceWithMaxCount SIRO
 
 -- | Create a new priority resource with the specified initial count which value becomes
 -- the upper bound as well.
 newPriorityResource :: Int
                        -- ^ the initial count (and maximal count too) of the resource
-                       -> Simulation PriorityResource
+                       -> Event PriorityResource
 newPriorityResource = newResource StaticPriorities
 
 -- | Create a new priority resource with the specified initial and maximum counts,
@@ -149,7 +167,7 @@ newPriorityResourceWithMaxCount :: Int
                                    -- ^ the initial count of the resource
                                    -> Maybe Int
                                    -- ^ the maximum count of the resource, which can be indefinite
-                                   -> Simulation PriorityResource
+                                   -> Event PriorityResource
 newPriorityResourceWithMaxCount = newResourceWithMaxCount StaticPriorities
 
 -- | Create a new resource with the specified queue strategy and initial count.
@@ -159,18 +177,30 @@ newResource :: QueueStrategy s
                -- ^ the strategy for managing the queuing requests
                -> Int
                -- ^ the initial count (and maximal count too) of the resource
-               -> Simulation (Resource s)
+               -> Event (Resource s)
 newResource s count =
-  Simulation $ \r ->
-  do when (count < 0) $
+  Event $ \p ->
+  do let r = pointRun p
+         t = pointTime p
+     when (count < 0) $
        error $
        "The resource count cannot be negative: " ++
        "newResource."
      countRef <- newIORef count
+     countStatsRef <- newIORef $ returnTimingStats t count
+     countSource <- invokeSimulation r newSignalSource 
+     utilCountRef <- newIORef 0
+     utilCountStatsRef <- newIORef $ returnTimingStats t 0
+     utilCountSource <- invokeSimulation r newSignalSource 
      waitList <- invokeSimulation r $ newStrategyQueue s
      return Resource { resourceStrategy = s,
                        resourceMaxCount = Just count,
                        resourceCountRef = countRef,
+                       resourceCountStatsRef = countStatsRef,
+                       resourceCountSource = countSource,
+                       resourceUtilisationCountRef = utilCountRef,
+                       resourceUtilisationCountStatsRef = utilCountStatsRef,
+                       resourceUtilisationCountSource = utilCountSource,
                        resourceWaitList = waitList }
 
 -- | Create a new resource with the specified queue strategy, initial and maximum counts,
@@ -182,10 +212,12 @@ newResourceWithMaxCount :: QueueStrategy s
                            -- ^ the initial count of the resource
                            -> Maybe Int
                            -- ^ the maximum count of the resource, which can be indefinite
-                           -> Simulation (Resource s)
+                           -> Event (Resource s)
 newResourceWithMaxCount s count maxCount =
-  Simulation $ \r ->
-  do when (count < 0) $
+  Event $ \p ->
+  do let r = pointRun p
+         t = pointTime p
+     when (count < 0) $
        error $
        "The resource count cannot be negative: " ++
        "newResourceWithMaxCount."
@@ -197,16 +229,61 @@ newResourceWithMaxCount s count maxCount =
        _ ->
          return ()
      countRef <- newIORef count
+     countStatsRef <- newIORef $ returnTimingStats t count
+     countSource <- invokeSimulation r newSignalSource
+     utilCountRef <- newIORef 0
+     utilCountStatsRef <- newIORef $ returnTimingStats t 0
+     utilCountSource <- invokeSimulation r newSignalSource
      waitList <- invokeSimulation r $ newStrategyQueue s
      return Resource { resourceStrategy = s,
                        resourceMaxCount = maxCount,
                        resourceCountRef = countRef,
+                       resourceCountStatsRef = countStatsRef,
+                       resourceCountSource = countSource,
+                       resourceUtilisationCountRef = utilCountRef,
+                       resourceUtilisationCountStatsRef = utilCountStatsRef,
+                       resourceUtilisationCountSource = utilCountSource,
                        resourceWaitList = waitList }
 
--- | Return the current count of the resource.
+-- | Return the current available count of the resource.
 resourceCount :: Resource s -> Event Int
 resourceCount r =
   Event $ \p -> readIORef (resourceCountRef r)
+
+-- | Return the statistics for the available count of the resource.
+resourceCountStats :: Resource s -> Event (TimingStats Int)
+resourceCountStats r =
+  Event $ \p -> readIORef (resourceCountStatsRef r)
+
+-- | Signal triggered when the 'resoureceCount' property changes.
+resourceCountChanged :: Resource s -> Signal Int
+resourceCountChanged r =
+  publishSignal $ resourceCountSource r
+
+-- | Signal triggered when the 'resoureceCount' property changes.
+resourceCountChanged_ :: Resource s -> Signal ()
+resourceCountChanged_ r =
+  mapSignal (const ()) $ resourceCountChanged r
+
+-- | Return the current utilisation count of the resource.
+resourceUtilisationCount :: Resource s -> Event Int
+resourceUtilisationCount r =
+  Event $ \p -> readIORef (resourceUtilisationCountRef r)
+
+-- | Return the statistics for the utilisation count of the resource.
+resourceUtilisationCountStats :: Resource s -> Event (TimingStats Int)
+resourceUtilisationCountStats r =
+  Event $ \p -> readIORef (resourceUtilisationCountStatsRef r)
+
+-- | Signal triggered when the 'resoureceUtilisationCount' property changes.
+resourceUtilisationCountChanged :: Resource s -> Signal Int
+resourceUtilisationCountChanged r =
+  publishSignal $ resourceUtilisationCountSource r
+
+-- | Signal triggered when the 'resoureceUtilisationCount' property changes.
+resourceUtilisationCountChanged_ :: Resource s -> Signal ()
+resourceUtilisationCountChanged_ r =
+  mapSignal (const ()) $ resourceUtilisationCountChanged r
 
 -- | Request for the resource decreasing its count in case of success,
 -- otherwise suspending the discontinuous process until some other 
@@ -216,6 +293,16 @@ requestResource :: EnqueueStrategy s
                    -- ^ the requested resource
                    -> Process ()
 requestResource r =
+  requestResource' r True
+
+-- | Request for the resource utilising the latter if needed.
+requestResource' :: EnqueueStrategy s
+                    => Resource s
+                    -- ^ the requested resource
+                    -> Bool
+                    -- ^ whether the resource is utilised
+                    -> Process ()
+requestResource' r utilising =
   Process $ \pid ->
   Cont $ \c ->
   Event $ \p ->
@@ -225,11 +312,12 @@ requestResource r =
                     freezeContReentering c () $
                     invokeCont c $
                     invokeProcess pid $
-                    requestResource r
+                    requestResource' r utilising
                invokeEvent p $
                  strategyEnqueue (resourceWaitList r) c
-       else do let a' = a - 1
-               a' `seq` writeIORef (resourceCountRef r) a'
+       else do invokeEvent p $ updateResourceCount r (-1)
+               when utilising $
+                 invokeEvent p $ updateResourceUtilisationCount r 1
                invokeEvent p $ resumeCont c ()
 
 -- | Request with the priority for the resource decreasing its count
@@ -242,6 +330,18 @@ requestResourceWithPriority :: PriorityQueueStrategy s p
                                -- ^ the priority
                                -> Process ()
 requestResourceWithPriority r priority =
+  requestResourceWithPriority' r priority True
+
+-- | Request with the priority for the resource utilising the latter if needed.
+requestResourceWithPriority' :: PriorityQueueStrategy s p
+                                => Resource s
+                                -- ^ the requested resource
+                                -> p
+                                -- ^ the priority
+                                -> Bool
+                                -- ^ whether the resource is utilised
+                                -> Process ()
+requestResourceWithPriority' r priority utilising =
   Process $ \pid ->
   Cont $ \c ->
   Event $ \p ->
@@ -251,11 +351,12 @@ requestResourceWithPriority r priority =
                     freezeContReentering c () $
                     invokeCont c $
                     invokeProcess pid $
-                    requestResourceWithPriority r priority
+                    requestResourceWithPriority' r priority utilising
                invokeEvent p $
                  strategyEnqueueWithPriority (resourceWaitList r) priority c
-       else do let a' = a - 1
-               a' `seq` writeIORef (resourceCountRef r) a'
+       else do invokeEvent p $ updateResourceCount r (-1)
+               when utilising $
+                 invokeEvent p $ updateResourceUtilisationCount r 1
                invokeEvent p $ resumeCont c ()
 
 -- | Release the resource increasing its count and resuming one of the
@@ -278,6 +379,16 @@ releaseResourceWithinEvent :: DequeueStrategy s
                               -- ^ the resource to release
                               -> Event ()
 releaseResourceWithinEvent r =
+  releaseResource' r True
+  
+-- | Release the resource decreasing its utilisation counter if needed.
+releaseResource' :: DequeueStrategy s
+                    => Resource s
+                    -- ^ the resource to release
+                    -> Bool
+                    -- ^ whether the resource was utilised
+                    -> Event ()
+releaseResource' r utilising =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
      let a' = a + 1
@@ -285,13 +396,15 @@ releaseResourceWithinEvent r =
        Just maxCount | a' > maxCount ->
          error $
          "The resource count cannot be greater than " ++
-         "its maximum value: releaseResourceWithinEvent."
+         "its maximum value: releaseResource'."
        _ ->
          return ()
      f <- invokeEvent p $
           strategyQueueNull (resourceWaitList r)
      if f 
-       then a' `seq` writeIORef (resourceCountRef r) a'
+       then do invokeEvent p $ updateResourceCount r 1
+               when utilising $
+                 invokeEvent p $ updateResourceUtilisationCount r (-1)
        else do c <- invokeEvent p $
                     strategyDequeue (resourceWaitList r)
                c <- invokeEvent p $ unfreezeCont c
@@ -311,8 +424,8 @@ tryRequestResourceWithinEvent r =
   do a <- readIORef (resourceCountRef r)
      if a == 0 
        then return False
-       else do let a' = a - 1
-               a' `seq` writeIORef (resourceCountRef r) a'
+       else do invokeEvent p $ updateResourceCount r (-1)
+               invokeEvent p $ updateResourceUtilisationCount r 1
                return True
                
 -- | Acquire the resource, perform some action and safely release the resource               
@@ -346,7 +459,8 @@ usingResourceWithPriority r priority m =
      finallyProcess m $ releaseResource r
 
 -- | Increase the count of available resource by the specified number,
--- invoking the awaiting processes as needed.
+-- invoking the awaiting processes as needed. The utilisation count
+-- is not affected here.
 incResourceCount :: DequeueStrategy s
                     => Resource s
                     -- ^ the resource
@@ -357,11 +471,12 @@ incResourceCount r n
   | n < 0     = error "The increment cannot be negative: incResourceCount"
   | n == 0    = return ()
   | otherwise =
-    do releaseResourceWithinEvent r
+    do releaseResource' r False
        incResourceCount r (n - 1)
 
 -- | Decrease the count of available resource by the specified number,
 -- waiting for the processes capturing the resource as needed.
+-- The utilisation count is not affected here.
 decResourceCount :: EnqueueStrategy s
                     => Resource s
                     -- ^ the resource
@@ -372,6 +487,35 @@ decResourceCount r n
   | n < 0     = error "The decrement cannot be negative: decResourceCount"
   | n == 0    = return ()
   | otherwise =
-    do requestResource r
+    do requestResource' r False
        decResourceCount r (n - 1)
 
+-- | Signal triggered when one of the resource counters changes.
+resourceChanged :: Resource r -> Signal ()
+resourceChanged r =
+  resourceCountChanged_ r <>
+  resourceUtilisationCountChanged_ r
+
+-- | Update the resource count and its statistics.
+updateResourceCount :: Resource r -> Int -> Event ()
+updateResourceCount r delta =
+  Event $ \p ->
+  do a <- readIORef (resourceCountRef r)
+     let a' = a + delta
+     a' `seq` writeIORef (resourceCountRef r) a'
+     modifyIORef' (resourceCountStatsRef r) $
+       addTimingStats (pointTime p) a'
+     invokeEvent p $
+       triggerSignal (resourceCountSource r) a'
+
+-- | Update the resource utilisation count and its statistics.
+updateResourceUtilisationCount :: Resource r -> Int -> Event ()
+updateResourceUtilisationCount r delta =
+  Event $ \p ->
+  do a <- readIORef (resourceUtilisationCountRef r)
+     let a' = a + delta
+     a' `seq` writeIORef (resourceUtilisationCountRef r) a'
+     modifyIORef' (resourceUtilisationCountStatsRef r) $
+       addTimingStats (pointTime p) a'
+     invokeEvent p $
+       triggerSignal (resourceUtilisationCountSource r) a'
