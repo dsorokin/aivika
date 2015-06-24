@@ -491,13 +491,13 @@ decResourceCount r n
        decResourceCount r (n - 1)
 
 -- | Signal triggered when one of the resource counters changes.
-resourceChanged :: Resource r -> Signal ()
+resourceChanged :: Resource s -> Signal ()
 resourceChanged r =
   resourceCountChanged_ r <>
   resourceUtilisationCountChanged_ r
 
 -- | Update the resource count and its statistics.
-updateResourceCount :: Resource r -> Int -> Event ()
+updateResourceCount :: Resource s -> Int -> Event ()
 updateResourceCount r delta =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
@@ -509,7 +509,7 @@ updateResourceCount r delta =
        triggerSignal (resourceCountSource r) a'
 
 -- | Update the resource utilisation count and its statistics.
-updateResourceUtilisationCount :: Resource r -> Int -> Event ()
+updateResourceUtilisationCount :: Resource s -> Int -> Event ()
 updateResourceUtilisationCount r delta =
   Event $ \p ->
   do a <- readIORef (resourceUtilisationCountRef r)
