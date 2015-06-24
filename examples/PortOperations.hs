@@ -7,6 +7,42 @@
 --
 -- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
+-- 
+-- A port in Africa is used to load tankers with crude oil for overwater shipment.
+-- The port has facilities for loading as many as three tankers simultaneously.
+-- The  tankers, which arrive at the port every 11 +/- 7 hours, are of three different
+-- types. The relative frequency of the various types, and their loading time
+-- requirements, are as follows:
+-- 
+-- Type      Relative Frequency      Loading Time, Hours
+--   1              0.25                   18 +/- 2
+--   2              0.55                   24 +/- 3
+--   3              0.20                   36 +/- 4
+-- 
+-- There is one tug at the port. Tankers of all types require the services of this tug
+-- to move into a berth, and later to move out of a berth. When the tug is available,
+-- any berthing or de-berthing activity takes about one hour. Top priority is given to
+-- the berthing activity.
+-- 
+-- A shipper is considering bidding on a contract to transport oil from the port to
+-- the United Kingdom. He has determined that 5 tankers of a particular type would
+-- have to be committed to this task to meet contract specifications. These tankers
+-- would require 21 +/- 3 hours to load oil at the port. After loading and de-berthing,
+-- they would travel to the United Kingdom, offload the oil, and return to the port for
+-- reloading. Their round-trip travel time, including offloading, is estimated to be
+-- 240 +/- hours.
+-- 
+-- A complicated factor is that the port experiences storms. The time between
+-- the onset of storms is exponentially distributed with a mean of 48 hours and a 
+-- storm lasts 4 +/- 2 hours. No tug can start an operation until a storm is over.
+-- 
+-- Before the port authorities can commit themselves to accommodating the
+-- proposed 5 tankers, the effect of the additional port traffic on the in-port residence
+-- time of the current port users must be determined. It is desired to simulate the
+-- operation of the port for a one-year period (= 8640 hours) under the proposed new
+-- commitment to measure in-port residence time of the proposed additional tankers,
+-- as well as the three types of tankers which already use the port. All durations
+-- given as ranges are uniformly distributed.        
 
 import Prelude hiding (id, (.)) 
 
