@@ -156,6 +156,7 @@ library
                      Simulation.Aivika.Resource
                      Simulation.Aivika.Resource.Base
                      Simulation.Aivika.Resource.Preemption
+                     Simulation.Aivika.Resource.Preemption.Base
                      Simulation.Aivika.Results.Locale
                      Simulation.Aivika.Results
                      Simulation.Aivika.Results.IO
