@@ -133,6 +133,7 @@ import Simulation.Aivika.Arrival
 import Simulation.Aivika.Server
 import Simulation.Aivika.Activity
 import Simulation.Aivika.Resource
+import qualified Simulation.Aivika.Resource.Preemption as PR
 import Simulation.Aivika.Results.Locale
 
 -- | A name used for indentifying the results when generating output.
@@ -1775,6 +1776,40 @@ resourceResultSummary c =
       resultContainerProperty c "countStats" ResourceCountStatsId resourceCountStats resourceCountChanged_,
       resultContainerProperty c "utilisationCountStats" ResourceUtilisationCountStatsId resourceUtilisationCountStats resourceUtilisationCountChanged_ ] }
 
+-- | Return a source by the specified resource.
+preemptibleResourceResultSource :: ResultContainer PR.Resource
+                                   -- ^ the resource container
+                                   -> ResultSource
+preemptibleResourceResultSource c =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
+    resultObjectTypeId = ResourceId,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = preemptibleResourceResultSummary c,
+    resultObjectProperties = [
+      resultContainerProperty c "count" ResourceCountId PR.resourceCount PR.resourceCountChanged_,
+      resultContainerProperty c "countStats" ResourceCountStatsId PR.resourceCountStats PR.resourceCountChanged_,
+      resultContainerProperty c "utilisationCount" ResourceUtilisationCountId PR.resourceUtilisationCount PR.resourceUtilisationCountChanged_,
+      resultContainerProperty c "utilisationCountStats" ResourceUtilisationCountStatsId PR.resourceUtilisationCountStats PR.resourceUtilisationCountChanged_ ] }
+
+-- | Return a summary by the specified resource.
+preemptibleResourceResultSummary :: ResultContainer PR.Resource
+                                    -- ^ the resource container
+                                    -> ResultSource
+preemptibleResourceResultSummary c =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
+    resultObjectTypeId = ResourceId,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = preemptibleResourceResultSummary c,
+    resultObjectProperties = [
+      resultContainerProperty c "countStats" ResourceCountStatsId PR.resourceCountStats PR.resourceCountChanged_,
+      resultContainerProperty c "utilisationCountStats" ResourceUtilisationCountStatsId PR.resourceUtilisationCountStats PR.resourceUtilisationCountChanged_ ] }
+
 -- | Return an arbitrary text as a separator source.
 textResultSource :: String -> ResultSource
 textResultSource text =
@@ -2010,3 +2045,8 @@ instance (Show s, ResultItemable (ResultValue s)) => ResultProvider (Resource s)
 
   resultSource' name i m =
     resourceResultSource $ ResultContainer name i m (ResultSignal $ resourceChanged_ m)
+
+instance ResultProvider PR.Resource where
+
+  resultSource' name i m =
+    preemptibleResourceResultSource $ ResultContainer name i m (ResultSignal $ PR.resourceChanged_ m)
