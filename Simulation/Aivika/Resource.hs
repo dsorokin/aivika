@@ -293,16 +293,6 @@ requestResource :: EnqueueStrategy s
                    -- ^ the requested resource
                    -> Process ()
 requestResource r =
-  do requestResource' r
-     liftEvent $
-       updateResourceUtilisationCount r 1
-
--- | Request for the resource without affecting its utilisation.
-requestResource' :: EnqueueStrategy s
-                    => Resource s
-                    -- ^ the requested resource
-                    -> Process ()
-requestResource' r =
   Process $ \pid ->
   Cont $ \c ->
   Event $ \p ->
@@ -312,10 +302,11 @@ requestResource' r =
                     freezeContReentering c () $
                     invokeCont c $
                     invokeProcess pid $
-                    requestResource' r
+                    requestResource r
                invokeEvent p $
                  strategyEnqueue (resourceWaitList r) c
        else do invokeEvent p $ updateResourceCount r (-1)
+               invokeEvent p $ updateResourceUtilisationCount r 1
                invokeEvent p $ resumeCont c ()
 
 -- | Request with the priority for the resource decreasing its count
@@ -328,18 +319,6 @@ requestResourceWithPriority :: PriorityQueueStrategy s p
                                -- ^ the priority
                                -> Process ()
 requestResourceWithPriority r priority =
-  do requestResourceWithPriority' r priority
-     liftEvent $
-       updateResourceUtilisationCount r 1
-
--- | Request with the priority for the resource without affectings its utilisation.
-requestResourceWithPriority' :: PriorityQueueStrategy s p
-                                => Resource s
-                                -- ^ the requested resource
-                                -> p
-                                -- ^ the priority
-                                -> Process ()
-requestResourceWithPriority' r priority =
   Process $ \pid ->
   Cont $ \c ->
   Event $ \p ->
@@ -349,10 +328,11 @@ requestResourceWithPriority' r priority =
                     freezeContReentering c () $
                     invokeCont c $
                     invokeProcess pid $
-                    requestResourceWithPriority' r priority
+                    requestResourceWithPriority r priority
                invokeEvent p $
                  strategyEnqueueWithPriority (resourceWaitList r) priority c
        else do invokeEvent p $ updateResourceCount r (-1)
+               invokeEvent p $ updateResourceUtilisationCount r 1
                invokeEvent p $ resumeCont c ()
 
 -- | Release the resource increasing its count and resuming one of the
@@ -376,8 +356,8 @@ releaseResourceWithinEvent :: DequeueStrategy s
                               -> Event ()
 releaseResourceWithinEvent r =
   Event $ \p ->
-  do invokeEvent p $ releaseResource' r
-     invokeEvent p $ updateResourceUtilisationCount r (-1)
+  do invokeEvent p $ updateResourceUtilisationCount r (-1)
+     invokeEvent p $ releaseResource' r
   
 -- | Release the resource without affecting its utilisation.
 releaseResource' :: DequeueStrategy s
@@ -404,9 +384,10 @@ releaseResource' r =
                c <- invokeEvent p $ unfreezeCont c
                case c of
                  Nothing ->
-                   invokeEvent p $ releaseResourceWithinEvent r
+                   invokeEvent p $ releaseResource' r
                  Just c  ->
-                   invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
+                   do invokeEvent p $ updateResourceUtilisationCount r 1
+                      invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
 
 -- | Try to request for the resource decreasing its count in case of success
 -- and returning 'True' in the 'Event' monad; otherwise, returning 'False'.
@@ -452,9 +433,18 @@ usingResourceWithPriority r priority m =
   do requestResourceWithPriority r priority
      finallyProcess m $ releaseResource r
 
+-- | Decrease the count of available resource.
+decResourceCount' :: EnqueueStrategy s
+                     => Resource s
+                     -- ^ the resource for which to decrease the count
+                     -> Process ()
+decResourceCount' r =
+  do liftEvent $
+       updateResourceUtilisationCount r (-1)
+     requestResource r
+                   
 -- | Increase the count of available resource by the specified number,
--- invoking the awaiting processes as needed. Note that the utilisation
--- count is not affected here.
+-- invoking the awaiting processes as needed.
 incResourceCount :: DequeueStrategy s
                     => Resource s
                     -- ^ the resource
@@ -470,7 +460,6 @@ incResourceCount r n
 
 -- | Decrease the count of available resource by the specified number,
 -- waiting for the processes capturing the resource as needed.
--- Note that the utilisation count is not affected here.
 decResourceCount :: EnqueueStrategy s
                     => Resource s
                     -- ^ the resource
@@ -481,7 +470,7 @@ decResourceCount r n
   | n < 0     = error "The decrement cannot be negative: decResourceCount"
   | n == 0    = return ()
   | otherwise =
-    do requestResource' r
+    do decResourceCount' r
        decResourceCount r (n - 1)
 
 -- | Signal triggered when one of the resource counters changes.
