@@ -260,8 +260,8 @@ releaseResource r =
   Event $ \p ->
   do f <- PQ.removeBy (resourceActingQueue r) (\item -> actingItemId item == pid)
      if f
-       then do invokeEvent p $ releaseResource' r
-               invokeEvent p $ updateResourceUtilisationCount r (-1)
+       then do invokeEvent p $ updateResourceUtilisationCount r (-1)
+               invokeEvent p $ releaseResource' r
                invokeEvent p $ resumeCont c ()
        else error $
             "The resource was not acquired by this process: releaseResource"
