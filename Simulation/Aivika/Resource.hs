@@ -38,6 +38,8 @@ module Simulation.Aivika.Resource
         resourceCountStats,
         resourceUtilisationCount,
         resourceUtilisationCountStats,
+        resourceQueueCount,
+        resourceQueueCountStats,
         -- * Requesting for and Releasing Resource
         requestResource,
         requestResourceWithPriority,
@@ -54,6 +56,8 @@ module Simulation.Aivika.Resource
         resourceCountChanged_,
         resourceUtilisationCountChanged,
         resourceUtilisationCountChanged_,
+        resourceQueueCountChanged,
+        resourceQueueCountChanged_,
         resourceChanged_) where
 
 import Data.IORef
@@ -101,6 +105,9 @@ data Resource s =
              resourceUtilisationCountRef :: IORef Int,
              resourceUtilisationCountStatsRef :: IORef (TimingStats Int),
              resourceUtilisationCountSource :: SignalSource Int,
+             resourceQueueCountRef :: IORef Int,
+             resourceQueueCountStatsRef :: IORef (TimingStats Int),
+             resourceQueueCountSource :: SignalSource Int,
              resourceWaitList :: StrategyQueue s (FrozenCont ()) }
 
 instance Eq (Resource s) where
@@ -179,29 +186,7 @@ newResource :: QueueStrategy s
                -- ^ the initial count (and maximal count too) of the resource
                -> Event (Resource s)
 newResource s count =
-  Event $ \p ->
-  do let r = pointRun p
-         t = pointTime p
-     when (count < 0) $
-       error $
-       "The resource count cannot be negative: " ++
-       "newResource."
-     countRef <- newIORef count
-     countStatsRef <- newIORef $ returnTimingStats t count
-     countSource <- invokeSimulation r newSignalSource 
-     utilCountRef <- newIORef 0
-     utilCountStatsRef <- newIORef $ returnTimingStats t 0
-     utilCountSource <- invokeSimulation r newSignalSource 
-     waitList <- invokeSimulation r $ newStrategyQueue s
-     return Resource { resourceStrategy = s,
-                       resourceMaxCount = Just count,
-                       resourceCountRef = countRef,
-                       resourceCountStatsRef = countStatsRef,
-                       resourceCountSource = countSource,
-                       resourceUtilisationCountRef = utilCountRef,
-                       resourceUtilisationCountStatsRef = utilCountStatsRef,
-                       resourceUtilisationCountSource = utilCountSource,
-                       resourceWaitList = waitList }
+  newResourceWithMaxCount s count (Just count)
 
 -- | Create a new resource with the specified queue strategy, initial and maximum counts,
 -- where 'Nothing' means that the resource has no upper bound.
@@ -234,6 +219,9 @@ newResourceWithMaxCount s count maxCount =
      utilCountRef <- newIORef 0
      utilCountStatsRef <- newIORef $ returnTimingStats t 0
      utilCountSource <- invokeSimulation r newSignalSource
+     queueCountRef <- newIORef 0
+     queueCountStatsRef <- newIORef $ returnTimingStats t 0
+     queueCountSource <- invokeSimulation r newSignalSource
      waitList <- invokeSimulation r $ newStrategyQueue s
      return Resource { resourceStrategy = s,
                        resourceMaxCount = maxCount,
@@ -243,6 +231,9 @@ newResourceWithMaxCount s count maxCount =
                        resourceUtilisationCountRef = utilCountRef,
                        resourceUtilisationCountStatsRef = utilCountStatsRef,
                        resourceUtilisationCountSource = utilCountSource,
+                       resourceQueueCountRef = queueCountRef,
+                       resourceQueueCountStatsRef = queueCountStatsRef,
+                       resourceQueueCountSource = queueCountSource,
                        resourceWaitList = waitList }
 
 -- | Return the current available count of the resource.
@@ -285,6 +276,26 @@ resourceUtilisationCountChanged_ :: Resource s -> Signal ()
 resourceUtilisationCountChanged_ r =
   mapSignal (const ()) $ resourceUtilisationCountChanged r
 
+-- | Return the current queue length of the resource.
+resourceQueueCount :: Resource s -> Event Int
+resourceQueueCount r =
+  Event $ \p -> readIORef (resourceQueueCountRef r)
+
+-- | Return the statistics for the queue length of the resource.
+resourceQueueCountStats :: Resource s -> Event (TimingStats Int)
+resourceQueueCountStats r =
+  Event $ \p -> readIORef (resourceQueueCountStatsRef r)
+
+-- | Signal triggered when the 'resourceQueueCount' property changes.
+resourceQueueCountChanged :: Resource s -> Signal Int
+resourceQueueCountChanged r =
+  publishSignal $ resourceQueueCountSource r
+
+-- | Signal triggered when the 'resourceQueueCount' property changes.
+resourceQueueCountChanged_ :: Resource s -> Signal ()
+resourceQueueCountChanged_ r =
+  mapSignal (const ()) $ resourceQueueCountChanged r
+
 -- | Request for the resource decreasing its count in case of success,
 -- otherwise suspending the discontinuous process until some other 
 -- process releases the resource.
@@ -305,6 +316,7 @@ requestResource r =
                     requestResource r
                invokeEvent p $
                  strategyEnqueue (resourceWaitList r) c
+               invokeEvent p $ updateResourceQueueCount r 1
        else do invokeEvent p $ updateResourceCount r (-1)
                invokeEvent p $ updateResourceUtilisationCount r 1
                invokeEvent p $ resumeCont c ()
@@ -331,6 +343,7 @@ requestResourceWithPriority r priority =
                     requestResourceWithPriority r priority
                invokeEvent p $
                  strategyEnqueueWithPriority (resourceWaitList r) priority c
+               invokeEvent p $ updateResourceQueueCount r 1
        else do invokeEvent p $ updateResourceCount r (-1)
                invokeEvent p $ updateResourceUtilisationCount r 1
                invokeEvent p $ resumeCont c ()
@@ -381,6 +394,7 @@ releaseResource' r =
        then invokeEvent p $ updateResourceCount r 1
        else do c <- invokeEvent p $
                     strategyDequeue (resourceWaitList r)
+               invokeEvent p $ updateResourceQueueCount r (-1)
                c <- invokeEvent p $ unfreezeCont c
                case c of
                  Nothing ->
@@ -477,7 +491,8 @@ decResourceCount r n
 resourceChanged_ :: Resource s -> Signal ()
 resourceChanged_ r =
   resourceCountChanged_ r <>
-  resourceUtilisationCountChanged_ r
+  resourceUtilisationCountChanged_ r <>
+  resourceQueueCountChanged_ r
 
 -- | Update the resource count and its statistics.
 updateResourceCount :: Resource s -> Int -> Event ()
@@ -502,3 +517,15 @@ updateResourceUtilisationCount r delta =
        addTimingStats (pointTime p) a'
      invokeEvent p $
        triggerSignal (resourceUtilisationCountSource r) a'
+
+-- | Update the resource queue length and its statistics.
+updateResourceQueueCount :: Resource s -> Int -> Event ()
+updateResourceQueueCount r delta =
+  Event $ \p ->
+  do a <- readIORef (resourceQueueCountRef r)
+     let a' = a + delta
+     a' `seq` writeIORef (resourceQueueCountRef r) a'
+     modifyIORef' (resourceQueueCountStatsRef r) $
+       addTimingStats (pointTime p) a'
+     invokeEvent p $
+       triggerSignal (resourceQueueCountSource r) a'

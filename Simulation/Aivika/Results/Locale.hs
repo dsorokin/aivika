@@ -226,6 +226,10 @@ data ResultId = TimeId
                 -- ^ Property 'resourceUtilisationCount'.
               | ResourceUtilisationCountStatsId
                 -- ^ Property 'resourceUtilisationCountStats'.
+              | ResourceQueueCountId
+                -- ^ Property 'resourceQueueCount'.
+              | ResourceQueueCountStatsId
+                -- ^ Property 'resourceQueueCountStats'.
               | UserDefinedResultId ResultDescription
                 -- ^ An user defined description.
               | LocalisedResultId (M.Map ResultLocale ResultDescription)
@@ -331,6 +335,8 @@ russianResultLocalisation ResourceCountId = "текущее доступное �
 russianResultLocalisation ResourceCountStatsId = "статистика по доступному количеству ресурса"
 russianResultLocalisation ResourceUtilisationCountId = "текущее используемое количество ресурса"
 russianResultLocalisation ResourceUtilisationCountStatsId = "статистика по используемому количеству ресурса"
+russianResultLocalisation ResourceQueueCountId = "текущая длина очереди к ресурсу"
+russianResultLocalisation ResourceQueueCountStatsId = "статистика длины очереди к ресурсу"
 russianResultLocalisation (UserDefinedResultId m) = m
 russianResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation russianResultLocale x
@@ -426,6 +432,8 @@ englishResultLocalisation ResourceCountId = "the current available count"
 englishResultLocalisation ResourceCountStatsId = "the available count statistics"
 englishResultLocalisation ResourceUtilisationCountId = "the current utilisation count"
 englishResultLocalisation ResourceUtilisationCountStatsId = "the utilisation count statistics"
+englishResultLocalisation ResourceQueueCountId = "the current queue length"
+englishResultLocalisation ResourceQueueCountStatsId = "the queue length statistics"
 englishResultLocalisation (UserDefinedResultId m) = m
 englishResultLocalisation x@(LocalisedResultId m) =
   lookupResultLocalisation englishResultLocale x
