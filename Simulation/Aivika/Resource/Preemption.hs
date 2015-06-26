@@ -23,6 +23,8 @@ module Simulation.Aivika.Resource.Preemption
         resourceUtilisationCountStats,
         resourceQueueCount,
         resourceQueueCountStats,
+        resourceTotalWaitTime,
+        resourceWaitTime,
         -- * Requesting for and Releasing Resource
         requestResourceWithPriority,
         releaseResource,
@@ -38,6 +40,8 @@ module Simulation.Aivika.Resource.Preemption
         resourceUtilisationCountChanged_,
         resourceQueueCountChanged,
         resourceQueueCountChanged_,
+        resourceWaitTimeChanged,
+        resourceWaitTimeChanged_,
         resourceChanged_) where
 
 import Data.IORef
@@ -72,6 +76,9 @@ data Resource =
              resourceQueueCountRef :: IORef Int,
              resourceQueueCountStatsRef :: IORef (TimingStats Int),
              resourceQueueCountSource :: SignalSource Int,
+             resourceTotalWaitTimeRef :: IORef Double,
+             resourceWaitTimeRef :: IORef (SamplingStats Double),
+             resourceWaitTimeSource :: SignalSource (),
              resourceActingQueue :: PQ.PriorityQueue ResourceActingItem,
              resourceWaitQueue :: PQ.PriorityQueue ResourceAwaitingItem }
 
@@ -86,12 +93,14 @@ type ResourceAwaitingItem = Either ResourceRequestingItem ResourcePreemptedItem
 -- | Idenitifies an item that requests for the resource.
 data ResourceRequestingItem =
   ResourceRequestingItem { requestingItemPriority :: Double,
+                           requestingItemTime :: Double,
                            requestingItemId :: ProcessId,
                            requestingItemCont :: FrozenCont () }
 
 -- | Idenitifies an item that was preempted.
 data ResourcePreemptedItem =
   ResourcePreemptedItem { preemptedItemPriority :: Double,
+                          preemptedItemTime :: Double,
                           preemptedItemId :: ProcessId }
 
 instance Eq Resource where
@@ -138,6 +147,9 @@ newResourceWithMaxCount count maxCount =
      queueCountRef <- newIORef 0
      queueCountStatsRef <- newIORef $ returnTimingStats t 0
      queueCountSource <- invokeSimulation r newSignalSource
+     totalWaitTimeRef <- newIORef 0
+     waitTimeRef <- newIORef emptySamplingStats
+     waitTimeSource <- invokeSimulation r newSignalSource
      actingQueue <- PQ.newQueue
      waitQueue <- PQ.newQueue
      return Resource { resourceMaxCount = maxCount,
@@ -150,6 +162,9 @@ newResourceWithMaxCount count maxCount =
                        resourceQueueCountRef = queueCountRef,
                        resourceQueueCountStatsRef = queueCountStatsRef,
                        resourceQueueCountSource = queueCountSource,
+                       resourceTotalWaitTimeRef = totalWaitTimeRef,
+                       resourceWaitTimeRef = waitTimeRef,
+                       resourceWaitTimeSource = waitTimeSource,
                        resourceActingQueue = actingQueue,
                        resourceWaitQueue = waitQueue }
 
@@ -213,6 +228,26 @@ resourceQueueCountChanged_ :: Resource -> Signal ()
 resourceQueueCountChanged_ r =
   mapSignal (const ()) $ resourceQueueCountChanged r
 
+-- | Return the total wait time of the resource.
+resourceTotalWaitTime :: Resource -> Event Double
+resourceTotalWaitTime r =
+  Event $ \p -> readIORef (resourceTotalWaitTimeRef r)
+
+-- | Return the statistics for the wait time of the resource.
+resourceWaitTime :: Resource -> Event (SamplingStats Double)
+resourceWaitTime r =
+  Event $ \p -> readIORef (resourceWaitTimeRef r)
+
+-- | Signal triggered when the 'resourceTotalWaitTime' and 'resourceWaitTime' properties change.
+resourceWaitTimeChanged :: Resource -> Signal (SamplingStats Double)
+resourceWaitTimeChanged r =
+  mapSignalM (\() -> resourceWaitTime r) $ resourceWaitTimeChanged_ r
+
+-- | Signal triggered when the 'resourceTotalWaitTime' and 'resourceWaitTime' properties change.
+resourceWaitTimeChanged_ :: Resource -> Signal ()
+resourceWaitTimeChanged_ r =
+  publishSignal $ resourceWaitTimeSource r
+
 -- | Request with the priority for the resource decreasing its count
 -- in case of success, otherwise suspending the discontinuous process
 -- until some other process releases the resource.
@@ -229,7 +264,8 @@ requestResourceWithPriority r priority =
   Process $ \pid ->
   Cont $ \c ->
   Event $ \p ->
-  do a <- readIORef (resourceCountRef r)
+  do let t = pointTime p
+     a <- readIORef (resourceCountRef r)
      if a == 0
        then do f <- PQ.queueNull (resourceActingQueue r)
                if f
@@ -238,7 +274,7 @@ requestResourceWithPriority r priority =
                               invokeCont c $
                               invokeProcess pid $
                               requestResourceWithPriority r priority
-                         PQ.enqueue (resourceWaitQueue r) priority (Left $ ResourceRequestingItem priority pid c)
+                         PQ.enqueue (resourceWaitQueue r) priority (Left $ ResourceRequestingItem priority t pid c)
                          invokeEvent p $ updateResourceQueueCount r 1
                  else do (p0', item0) <- PQ.queueFront (resourceActingQueue r)
                          let p0 = - p0'
@@ -246,7 +282,7 @@ requestResourceWithPriority r priority =
                          if priority < p0
                            then do PQ.dequeue (resourceActingQueue r)
                                    PQ.enqueue (resourceActingQueue r) (- priority) $ ResourceActingItem priority pid
-                                   PQ.enqueue (resourceWaitQueue r) p0 (Right $ ResourcePreemptedItem p0 pid0)
+                                   PQ.enqueue (resourceWaitQueue r) p0 (Right $ ResourcePreemptedItem p0 t pid0)
                                    invokeEvent p $ updateResourceQueueCount r 1
                                    invokeEvent p $ processPreemptionBegin pid0
                                    invokeEvent p $ resumeCont c ()
@@ -255,9 +291,10 @@ requestResourceWithPriority r priority =
                                         invokeCont c $
                                         invokeProcess pid $
                                         requestResourceWithPriority r priority
-                                   PQ.enqueue (resourceWaitQueue r) priority (Left $ ResourceRequestingItem priority pid c)
+                                   PQ.enqueue (resourceWaitQueue r) priority (Left $ ResourceRequestingItem priority t pid c)
                                    invokeEvent p $ updateResourceQueueCount r 1
        else do PQ.enqueue (resourceActingQueue r) (- priority) $ ResourceActingItem priority pid
+               invokeEvent p $ updateResourceWaitTime r 0
                invokeEvent p $ updateResourceCount r (-1)
                invokeEvent p $ updateResourceUtilisationCount r 1
                invokeEvent p $ resumeCont c ()
@@ -302,22 +339,24 @@ releaseResource' r =
                PQ.dequeue (resourceWaitQueue r)
                invokeEvent p $ updateResourceQueueCount r (-1)
                case item of
-                 Left (ResourceRequestingItem priority pid c) ->
+                 Left (ResourceRequestingItem priority t pid c) ->
                    do c <- invokeEvent p $ unfreezeCont c
                       case c of
                         Nothing ->
                           invokeEvent p $ releaseResource' r
                         Just c ->
                           do PQ.enqueue (resourceActingQueue r) (- priority) $ ResourceActingItem priority pid
+                             invokeEvent p $ updateResourceWaitTime r (pointTime p - t)
                              invokeEvent p $ updateResourceUtilisationCount r 1
                              invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
-                 Right (ResourcePreemptedItem priority pid) ->
+                 Right (ResourcePreemptedItem priority t pid) ->
                    do f <- invokeEvent p $ processCancelled pid
                       case f of
                         True ->
                           invokeEvent p $ releaseResource' r
                         False ->
                           do PQ.enqueue (resourceActingQueue r) (- priority) $ ResourceActingItem priority pid
+                             invokeEvent p $ updateResourceWaitTime r (pointTime p - t)
                              invokeEvent p $ updateResourceUtilisationCount r 1
                              invokeEvent p $ processPreemptionEnd pid
                
@@ -342,7 +381,8 @@ usingResourceWithPriority r priority m =
 decResourceCount' :: Resource -> Event ()
 decResourceCount' r =
   Event $ \p ->
-  do a <- readIORef (resourceCountRef r)
+  do let t = pointTime p
+     a <- readIORef (resourceCountRef r)
      when (a == 0) $
        error $
        "The resource exceeded and its count is zero: decResourceCount'"
@@ -352,7 +392,7 @@ decResourceCount' r =
           let p0 = - p0'
               pid0 = actingItemId item0
           PQ.dequeue (resourceActingQueue r)
-          PQ.enqueue (resourceWaitQueue r) p0 (Right $ ResourcePreemptedItem p0 pid0)
+          PQ.enqueue (resourceWaitQueue r) p0 (Right $ ResourcePreemptedItem p0 t pid0)
           invokeEvent p $ processPreemptionBegin pid0
           invokeEvent p $ updateResourceUtilisationCount r (-1)
           invokeEvent p $ updateResourceQueueCount r 1
@@ -403,7 +443,8 @@ alterResourceCount r n
 resourceChanged_ :: Resource -> Signal ()
 resourceChanged_ r =
   resourceCountChanged_ r <>
-  resourceUtilisationCountChanged_ r
+  resourceUtilisationCountChanged_ r <>
+  resourceQueueCountChanged_ r
 
 -- | Update the resource count and its statistics.
 updateResourceCount :: Resource -> Int -> Event ()
@@ -440,3 +481,15 @@ updateResourceUtilisationCount r delta =
        addTimingStats (pointTime p) a'
      invokeEvent p $
        triggerSignal (resourceUtilisationCountSource r) a'
+
+-- | Update the resource wait time and its statistics.
+updateResourceWaitTime :: Resource -> Double -> Event ()
+updateResourceWaitTime r delta =
+  Event $ \p ->
+  do a <- readIORef (resourceTotalWaitTimeRef r)
+     let a' = a + delta
+     a' `seq` writeIORef (resourceTotalWaitTimeRef r) a'
+     modifyIORef' (resourceWaitTimeRef r) $
+       addSamplingStats delta
+     invokeEvent p $
+       triggerSignal (resourceWaitTimeSource r) ()
