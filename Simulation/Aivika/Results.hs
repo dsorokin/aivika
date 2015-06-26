@@ -1795,6 +1795,8 @@ preemptibleResourceResultSource c =
     resultObjectSignal = resultContainerSignal c,
     resultObjectSummary = preemptibleResourceResultSummary c,
     resultObjectProperties = [
+      resultContainerProperty c "queueCount" ResourceQueueCountId PR.resourceQueueCount PR.resourceQueueCountChanged_,
+      resultContainerProperty c "queueCountStats" ResourceQueueCountStatsId PR.resourceQueueCountStats PR.resourceQueueCountChanged_,
       resultContainerProperty c "count" ResourceCountId PR.resourceCount PR.resourceCountChanged_,
       resultContainerProperty c "countStats" ResourceCountStatsId PR.resourceCountStats PR.resourceCountChanged_,
       resultContainerProperty c "utilisationCount" ResourceUtilisationCountId PR.resourceUtilisationCount PR.resourceUtilisationCountChanged_,
@@ -1813,6 +1815,7 @@ preemptibleResourceResultSummary c =
     resultObjectSignal = resultContainerSignal c,
     resultObjectSummary = preemptibleResourceResultSummary c,
     resultObjectProperties = [
+      resultContainerProperty c "queueCountStats" ResourceQueueCountStatsId PR.resourceQueueCountStats PR.resourceQueueCountChanged_,
       resultContainerProperty c "countStats" ResourceCountStatsId PR.resourceCountStats PR.resourceCountChanged_,
       resultContainerProperty c "utilisationCountStats" ResourceUtilisationCountStatsId PR.resourceUtilisationCountStats PR.resourceUtilisationCountChanged_ ] }
 
