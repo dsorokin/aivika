@@ -1757,6 +1757,8 @@ resourceResultSource c =
     resultObjectProperties = [
       resultContainerProperty c "queueCount" ResourceQueueCountId resourceQueueCount resourceQueueCountChanged_,
       resultContainerProperty c "queueCountStats" ResourceQueueCountStatsId resourceQueueCountStats resourceQueueCountChanged_,
+      resultContainerProperty c "totalWaitTime" ResourceTotalWaitTimeId resourceTotalWaitTime resourceWaitTimeChanged_,
+      resultContainerProperty c "waitTime" ResourceWaitTimeId resourceWaitTime resourceWaitTimeChanged_,
       resultContainerProperty c "count" ResourceCountId resourceCount resourceCountChanged_,
       resultContainerProperty c "countStats" ResourceCountStatsId resourceCountStats resourceCountChanged_,
       resultContainerProperty c "utilisationCount" ResourceUtilisationCountId resourceUtilisationCount resourceUtilisationCountChanged_,
@@ -1776,6 +1778,7 @@ resourceResultSummary c =
     resultObjectSummary = resourceResultSummary c,
     resultObjectProperties = [
       resultContainerProperty c "queueCountStats" ResourceQueueCountStatsId resourceQueueCountStats resourceQueueCountChanged_,
+      resultContainerProperty c "waitTime" ResourceWaitTimeId resourceWaitTime resourceWaitTimeChanged_,
       resultContainerProperty c "countStats" ResourceCountStatsId resourceCountStats resourceCountChanged_,
       resultContainerProperty c "utilisationCountStats" ResourceUtilisationCountStatsId resourceUtilisationCountStats resourceUtilisationCountChanged_ ] }
 

@@ -40,6 +40,8 @@ module Simulation.Aivika.Resource
         resourceUtilisationCountStats,
         resourceQueueCount,
         resourceQueueCountStats,
+        resourceTotalWaitTime,
+        resourceWaitTime,
         -- * Requesting for and Releasing Resource
         requestResource,
         requestResourceWithPriority,
@@ -58,6 +60,8 @@ module Simulation.Aivika.Resource
         resourceUtilisationCountChanged_,
         resourceQueueCountChanged,
         resourceQueueCountChanged_,
+        resourceWaitTimeChanged,
+        resourceWaitTimeChanged_,
         resourceChanged_) where
 
 import Data.IORef
@@ -108,7 +112,14 @@ data Resource s =
              resourceQueueCountRef :: IORef Int,
              resourceQueueCountStatsRef :: IORef (TimingStats Int),
              resourceQueueCountSource :: SignalSource Int,
-             resourceWaitList :: StrategyQueue s (FrozenCont ()) }
+             resourceTotalWaitTimeRef :: IORef Double,
+             resourceWaitTimeRef :: IORef (SamplingStats Double),
+             resourceWaitTimeSource :: SignalSource (),
+             resourceWaitList :: StrategyQueue s ResourceItem }
+
+data ResourceItem =
+  ResourceItem { resourceItemTime :: Double,
+                 resourceItemCont :: FrozenCont () }
 
 instance Eq (Resource s) where
   x == y = resourceCountRef x == resourceCountRef y  -- unique references
@@ -222,6 +233,9 @@ newResourceWithMaxCount s count maxCount =
      queueCountRef <- newIORef 0
      queueCountStatsRef <- newIORef $ returnTimingStats t 0
      queueCountSource <- invokeSimulation r newSignalSource
+     totalWaitTimeRef <- newIORef 0
+     waitTimeRef <- newIORef emptySamplingStats
+     waitTimeSource <- invokeSimulation r newSignalSource
      waitList <- invokeSimulation r $ newStrategyQueue s
      return Resource { resourceStrategy = s,
                        resourceMaxCount = maxCount,
@@ -234,6 +248,9 @@ newResourceWithMaxCount s count maxCount =
                        resourceQueueCountRef = queueCountRef,
                        resourceQueueCountStatsRef = queueCountStatsRef,
                        resourceQueueCountSource = queueCountSource,
+                       resourceTotalWaitTimeRef = totalWaitTimeRef,
+                       resourceWaitTimeRef = waitTimeRef,
+                       resourceWaitTimeSource = waitTimeSource,
                        resourceWaitList = waitList }
 
 -- | Return the current available count of the resource.
@@ -296,6 +313,26 @@ resourceQueueCountChanged_ :: Resource s -> Signal ()
 resourceQueueCountChanged_ r =
   mapSignal (const ()) $ resourceQueueCountChanged r
 
+-- | Return the total wait time of the resource.
+resourceTotalWaitTime :: Resource s -> Event Double
+resourceTotalWaitTime r =
+  Event $ \p -> readIORef (resourceTotalWaitTimeRef r)
+
+-- | Return the statistics for the wait time of the resource.
+resourceWaitTime :: Resource s -> Event (SamplingStats Double)
+resourceWaitTime r =
+  Event $ \p -> readIORef (resourceWaitTimeRef r)
+
+-- | Signal triggered when the 'resourceTotalWaitTime' and 'resourceWaitTime' properties change.
+resourceWaitTimeChanged :: Resource s -> Signal (SamplingStats Double)
+resourceWaitTimeChanged r =
+  mapSignalM (\() -> resourceWaitTime r) $ resourceWaitTimeChanged_ r
+
+-- | Signal triggered when the 'resourceTotalWaitTime' and 'resourceWaitTime' properties change.
+resourceWaitTimeChanged_ :: Resource s -> Signal ()
+resourceWaitTimeChanged_ r =
+  publishSignal $ resourceWaitTimeSource r
+
 -- | Request for the resource decreasing its count in case of success,
 -- otherwise suspending the discontinuous process until some other 
 -- process releases the resource.
@@ -315,9 +352,11 @@ requestResource r =
                     invokeProcess pid $
                     requestResource r
                invokeEvent p $
-                 strategyEnqueue (resourceWaitList r) c
+                 strategyEnqueue (resourceWaitList r) $
+                 ResourceItem (pointTime p) c
                invokeEvent p $ updateResourceQueueCount r 1
-       else do invokeEvent p $ updateResourceCount r (-1)
+       else do invokeEvent p $ updateResourceWaitTime r 0
+               invokeEvent p $ updateResourceCount r (-1)
                invokeEvent p $ updateResourceUtilisationCount r 1
                invokeEvent p $ resumeCont c ()
 
@@ -342,9 +381,11 @@ requestResourceWithPriority r priority =
                     invokeProcess pid $
                     requestResourceWithPriority r priority
                invokeEvent p $
-                 strategyEnqueueWithPriority (resourceWaitList r) priority c
+                 strategyEnqueueWithPriority (resourceWaitList r) priority $
+                 ResourceItem (pointTime p) c
                invokeEvent p $ updateResourceQueueCount r 1
-       else do invokeEvent p $ updateResourceCount r (-1)
+       else do invokeEvent p $ updateResourceWaitTime r 0
+               invokeEvent p $ updateResourceCount r (-1)
                invokeEvent p $ updateResourceUtilisationCount r 1
                invokeEvent p $ resumeCont c ()
 
@@ -392,15 +433,16 @@ releaseResource' r =
           strategyQueueNull (resourceWaitList r)
      if f 
        then invokeEvent p $ updateResourceCount r 1
-       else do c <- invokeEvent p $
+       else do x <- invokeEvent p $
                     strategyDequeue (resourceWaitList r)
                invokeEvent p $ updateResourceQueueCount r (-1)
-               c <- invokeEvent p $ unfreezeCont c
+               c <- invokeEvent p $ unfreezeCont (resourceItemCont x)
                case c of
                  Nothing ->
                    invokeEvent p $ releaseResource' r
                  Just c  ->
-                   do invokeEvent p $ updateResourceUtilisationCount r 1
+                   do invokeEvent p $ updateResourceWaitTime r (pointTime p - resourceItemTime x)
+                      invokeEvent p $ updateResourceUtilisationCount r 1
                       invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
 
 -- | Try to request for the resource decreasing its count in case of success
@@ -413,7 +455,8 @@ tryRequestResourceWithinEvent r =
   do a <- readIORef (resourceCountRef r)
      if a == 0 
        then return False
-       else do invokeEvent p $ updateResourceCount r (-1)
+       else do invokeEvent p $ updateResourceWaitTime r 0
+               invokeEvent p $ updateResourceCount r (-1)
                invokeEvent p $ updateResourceUtilisationCount r 1
                return True
                
@@ -529,3 +572,15 @@ updateResourceQueueCount r delta =
        addTimingStats (pointTime p) a'
      invokeEvent p $
        triggerSignal (resourceQueueCountSource r) a'
+
+-- | Update the resource wait time and its statistics.
+updateResourceWaitTime :: Resource s -> Double -> Event ()
+updateResourceWaitTime r delta =
+  Event $ \p ->
+  do a <- readIORef (resourceTotalWaitTimeRef r)
+     let a' = a + delta
+     a' `seq` writeIORef (resourceTotalWaitTimeRef r) a'
+     modifyIORef' (resourceWaitTimeRef r) $
+       addSamplingStats delta
+     invokeEvent p $
+       triggerSignal (resourceWaitTimeSource r) ()
