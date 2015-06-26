@@ -1,4 +1,9 @@
 
+Version 4.1.1
+-----
+
+* More counters and statistics for the new resources.
+
 Version 4.1
 -----
 
