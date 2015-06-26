@@ -1,3 +1,9 @@
+
+Version 4.1
+-----
+
+* Added new resource types with counters and statistics.
+
 Version 4.0.2
 -----
 
