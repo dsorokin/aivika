@@ -487,7 +487,7 @@ queueWaitTimeChanged_ q =
 -- | Return the total wait time from the time at which the enqueueing operation
 -- was initiated to the time at which the item was dequeued.
 --
--- In some sense, @queueTotalWaitTime == queueInputWaitTime + queueWaitTime@.
+-- In some sense, @queueTotalWaitTime == enqueueWaitTime + queueWaitTime@.
 --
 -- See also 'queueTotalWaitTimeChanged' and 'queueTotalWaitTimeChanged_'.
 queueTotalWaitTime :: Queue si sm so a -> Event (SamplingStats Double)
