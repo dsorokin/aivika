@@ -158,6 +158,7 @@ library
                      Simulation.Aivika.Resource.Preemption
                      Simulation.Aivika.Resource.Preemption.Base
                      Simulation.Aivika.Results.Locale
+                     Simulation.Aivika.Results.Transform
                      Simulation.Aivika.Results
                      Simulation.Aivika.Results.IO
                      Simulation.Aivika.Server
@@ -209,6 +210,7 @@ library
                         ExistentialQuantification,
                         TypeFamilies,
                         DeriveDataTypeable,
+                        TypeSynonymInstances,
                         CPP
                      
     ghc-options:     -O2
