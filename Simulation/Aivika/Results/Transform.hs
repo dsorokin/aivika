@@ -137,37 +137,37 @@ instance ResultTransformer SamplingStats where
 -- | The total number of samples.
 samplingStatsCount :: SamplingStats -> ResultTransform
 samplingStatsCount (SamplingStats a) =
-  a >>> resultById SamplingStatsCountId
+  a >>> expandResults >>> resultById SamplingStatsCountId
 
 -- | The minimum value among the samples.
 samplingStatsMin :: SamplingStats -> ResultTransform
 samplingStatsMin (SamplingStats a) =
-  a >>> resultById SamplingStatsMinId
+  a >>> expandResults >>> resultById SamplingStatsMinId
 
 -- | The maximum value among the samples.
 samplingStatsMax :: SamplingStats -> ResultTransform
 samplingStatsMax (SamplingStats a) =
-  a >>> resultById SamplingStatsMaxId
+  a >>> expandResults >>> resultById SamplingStatsMaxId
   
 -- | The average value.
 samplingStatsMean :: SamplingStats -> ResultTransform
 samplingStatsMean (SamplingStats a) =
-  a >>> resultById SamplingStatsMeanId
+  a >>> expandResults >>> resultById SamplingStatsMeanId
 
 -- | The average square value.
 samplingStatsMean2 :: SamplingStats -> ResultTransform
 samplingStatsMean2 (SamplingStats a) =
-  a >>> resultById SamplingStatsMean2Id
+  a >>> expandResults >>> resultById SamplingStatsMean2Id
 
 -- | Return tha variance.
 samplingStatsVariance :: SamplingStats -> ResultTransform
 samplingStatsVariance (SamplingStats a) =
-  a >>> resultById SamplingStatsVarianceId
+  a >>> expandResults >>> resultById SamplingStatsVarianceId
 
 -- | Return the deviation.
 samplingStatsDeviation :: SamplingStats -> ResultTransform
 samplingStatsDeviation (SamplingStats a) =
-  a >>> resultById SamplingStatsDeviationId
+  a >>> expandResults >>> resultById SamplingStatsDeviationId
 
 -- | A counter for which the statistics is collected too.
 newtype SamplingCounter = SamplingCounter ResultTransform
@@ -194,62 +194,62 @@ instance ResultTransformer TimingStats where
 -- | Return the number of samples.
 timingStatsCount :: TimingStats -> ResultTransform
 timingStatsCount (TimingStats a) =
-  a >>> resultById TimingStatsCountId
+  a >>> expandResults >>> resultById TimingStatsCountId
 
 -- | Return the minimum value.
 timingStatsMin :: TimingStats -> ResultTransform
 timingStatsMin (TimingStats a) =
-  a >>> resultById TimingStatsMinId
+  a >>> expandResults >>> resultById TimingStatsMinId
 
 -- | Return the maximum value.
 timingStatsMax :: TimingStats -> ResultTransform
 timingStatsMax (TimingStats a) =
-  a >>> resultById TimingStatsMaxId
+  a >>> expandResults >>> resultById TimingStatsMaxId
 
 -- | Return the average value.
 timingStatsMean :: TimingStats -> ResultTransform
 timingStatsMean (TimingStats a) =
-  a >>> resultById TimingStatsMeanId
+  a >>> expandResults >>> resultById TimingStatsMeanId
 
 -- | Return the variance.
 timingStatsVariance :: TimingStats -> ResultTransform
 timingStatsVariance (TimingStats a) =
-  a >>> resultById TimingStatsVarianceId
+  a >>> expandResults >>> resultById TimingStatsVarianceId
 
 -- | Return the deviation.
 timingStatsDeviation :: TimingStats -> ResultTransform
 timingStatsDeviation (TimingStats a) =
-  a >>> resultById TimingStatsDeviationId
+  a >>> expandResults >>> resultById TimingStatsDeviationId
 
 -- | Return the time at which the minimum is attained.
 timingStatsMinTime :: TimingStats -> ResultTransform
 timingStatsMinTime (TimingStats a) =
-  a >>> resultById TimingStatsMinTimeId
+  a >>> expandResults >>> resultById TimingStatsMinTimeId
 
 -- | Return the time at which the maximum is attained.
 timingStatsMaxTime :: TimingStats -> ResultTransform
 timingStatsMaxTime (TimingStats a) =
-  a >>> resultById TimingStatsMaxTimeId
+  a >>> expandResults >>> resultById TimingStatsMaxTimeId
 
 -- | Return the start time of sampling.
 timingStatsStartTime :: TimingStats -> ResultTransform
 timingStatsStartTime (TimingStats a) =
-  a >>> resultById TimingStatsStartTimeId
+  a >>> expandResults >>> resultById TimingStatsStartTimeId
 
 -- | Return the last time of sampling.
 timingStatsLastTime :: TimingStats -> ResultTransform
 timingStatsLastTime (TimingStats a) =
-  a >>> resultById TimingStatsLastTimeId
+  a >>> expandResults >>> resultById TimingStatsLastTimeId
 
 -- | Return the sum of values.
 timingStatsSum :: TimingStats -> ResultTransform
 timingStatsSum (TimingStats a) =
-  a >>> resultById TimingStatsSumId
+  a >>> expandResults >>> resultById TimingStatsSumId
 
 -- | Return the sum of square values.
 timingStatsSum2 :: TimingStats -> ResultTransform
 timingStatsSum2 (TimingStats a) =
-  a >>> resultById TimingStatsSum2Id
+  a >>> expandResults >>> resultById TimingStatsSum2Id
 
 -- | A time-dependent counter that collects the statistics too.
 newtype TimingCounter = TimingCounter ResultTransform
