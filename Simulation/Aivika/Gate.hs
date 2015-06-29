@@ -11,9 +11,9 @@
 --
 module Simulation.Aivika.Gate
        (Gate,
-        createGate,
-        createGateOpened,
-        createGateClosed,
+        newGate,
+        newGateOpened,
+        newGateClosed,
         openGate,
         closeGate,
         gateOpened,
@@ -34,18 +34,18 @@ import Simulation.Aivika.Ref
 data Gate = Gate { gateRef :: Ref Bool }
 
 -- | Create a new gate, specifying whether the gate is initially open.
-createGate :: Bool -> Simulation Gate
-createGate opened =
+newGate :: Bool -> Simulation Gate
+newGate opened =
   do r <- newRef opened
      return Gate { gateRef = r }
 
 -- | Create a new initially open gate.
-createGateOpened :: Simulation Gate
-createGateOpened = createGate True
+newGateOpened :: Simulation Gate
+newGateOpened = newGate True
 
 -- | Create a new initially close gate.
-createGateClosed :: Simulation Gate
-createGateClosed = createGate False
+newGateClosed :: Simulation Gate
+newGateClosed = newGate False
 
 -- | Open the gate if it was closed.
 openGate :: Gate -> Event ()
