@@ -19,13 +19,15 @@ module Simulation.Aivika.Gate
         gateOpened,
         gateClosed,
         awaitGateOpened,
-        awaitGateClosed) where
+        awaitGateClosed,
+        gateChanged_) where
 
 import Control.Monad
 
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Event
 import Simulation.Aivika.Process
+import Simulation.Aivika.Signal
 import Simulation.Aivika.Ref
 
 -- | Represents a gate, which can be either opened or closed.
@@ -83,3 +85,7 @@ awaitGateClosed gate =
        do processAwait $ refChanged_ (gateRef gate)
           awaitGateClosed gate
 
+-- | Signal triggered when the state of the gate changes.
+gateChanged_ :: Gate -> Signal ()
+gateChanged_ gate =
+  refChanged_ (gateRef gate)
