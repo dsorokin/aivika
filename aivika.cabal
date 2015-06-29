@@ -119,6 +119,7 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/TimeOutWait.hs
                      examples/PingPong.hs
                      examples/PortOperations.hs
+                     examples/SingleLaneTraffic.hs
                      CHANGELOG.md
 
 library
