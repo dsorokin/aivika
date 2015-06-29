@@ -137,6 +137,7 @@ library
                      Simulation.Aivika.Dynamics.Memo.Unboxed
                      Simulation.Aivika.Dynamics.Random
                      Simulation.Aivika.Event
+                     Simulation.Aivika.Gate
                      Simulation.Aivika.Generator
                      Simulation.Aivika.Net
                      Simulation.Aivika.Net.Random
