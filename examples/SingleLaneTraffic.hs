@@ -3,6 +3,25 @@
 --
 -- It is described in different sources [1, 2]. So, this is chapter 15 of [2] and section 6.18 of [1].
 --
+-- The system to be modeled in this example consists of the traffic flow from
+-- two directions along a two-lane road, one lane of which has been closed for
+-- 500 meters for repairs. Traffic lights have been placed at each end of
+-- the closed lane to control the flow of traffic through the repair section.
+-- The lights allow traffic to flow for a specified time interval from only
+-- one direction. When a light turns green, the waiting cars start and pass
+-- the light every two seconds. If a car arrives at a green light when there
+-- are no waiting cars, the car passes through the light without delay. The car
+-- arrival pattern is exponentially distributed, with an average of 9 seconds
+-- between cars from direction 1 and 12 seconds between cars from direction 2.
+-- A light cycle consists of green in direction 1, both red, green in direction 2,
+-- both red, and then the cycle is repeated. Both lights remain red for 55 seconds
+-- to allow the cars in transit to leave the repair section before traffic from
+-- the other direction can be initiated.
+-- 
+-- The objective is to simulate the above system to determine values for
+-- the green time for direction 1 and the green time for direction 2 which
+-- yield a low average waiting time for all cars.
+-- 
 -- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 
