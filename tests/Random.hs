@@ -82,4 +82,4 @@ model =
         resultSource "poisson" "poisson" poissonX,
         resultSource "binomial" "binomial" binomialX]
     
-main = runExperiment experiment generators (CairoRenderer PNG) model
+main = runExperiment experiment generators (WebPageRenderer $ CairoRenderer PNG) model
