@@ -26,9 +26,15 @@ data Generator =
               generateUniformInt :: Int -> Int -> IO Int,
               -- ^ Generate an uniform integer random number
               -- with the specified minimum and maximum.
+              generateTriangular :: Double -> Double -> Double -> IO Double,
+              -- ^ Generate a triangular random number
+              -- by the specified minimum, median and maximum.
               generateNormal :: Double -> Double -> IO Double,
               -- ^ Generate the normal random number
               -- with the specified mean and deviation.
+              generateLogNormal :: Double -> Double -> IO Double,
+              -- ^ Generate a random number with the lognormal distribution derived
+              -- from a normal distribution with the specified mean and deviation.
               generateExponential :: Double -> IO Double,
               -- ^ Generate the random number distributed exponentially
               -- with the specified mean (the reciprocal of the rate).
@@ -68,6 +74,22 @@ generateUniformInt01 g min max =
      let min' = fromIntegral min
          max' = fromIntegral max
      return $ round (min' + x * (max' - min'))
+
+-- | Generate the triangular random number by the specified minimum, median and maximum.
+generateTriangular01 :: IO Double
+                        -- ^ the generator
+                        -> Double
+                        -- ^ minimum
+                        -> Double
+                        -- ^ median
+                        -> Double
+                        -- ^ maximum
+                        -> IO Double
+generateTriangular01 g min median max =
+  do x <- g
+     if x <= (median - min) / (max - min)
+       then return $ min + sqrt ((median - min) * (max - min) * x)
+       else return $ max - sqrt ((max - median) * (max - min) * (1 - x))
 
 -- | Create a normal random number generator with mean 0 and variance 1
 -- by the specified generator of uniform random numbers from 0 to 1.
@@ -208,12 +230,13 @@ newRandomGenerator01 :: IO Double -> IO Generator
 newRandomGenerator01 g =
   do let g1 = g
      g2 <- newNormalGenerator01 g1
-     let g3 mu nu =
-           do x <- g2
-              return $ mu + nu * x
+     let g3 mu nu = do { x <- g2; return $ mu + nu * x }
+         g4 mu nu = do { x <- g2; return $ exp (mu + nu * x) }
      return Generator { generateUniform = generateUniform01 g1,
                         generateUniformInt = generateUniformInt01 g1,
+                        generateTriangular = generateTriangular01 g1,
                         generateNormal = g3,
+                        generateLogNormal = g4,
                         generateExponential = generateExponential01 g1,
                         generateErlang = generateErlang01 g1,
                         generatePoisson = generatePoisson01 g1,

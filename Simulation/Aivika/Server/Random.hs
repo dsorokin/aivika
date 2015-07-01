@@ -15,14 +15,18 @@
 module Simulation.Aivika.Server.Random
        (newRandomUniformServer,
         newRandomUniformIntServer,
+        newRandomTriangularServer,
         newRandomNormalServer,
+        newRandomLogNormalServer,
         newRandomExponentialServer,
         newRandomErlangServer,
         newRandomPoissonServer,
         newRandomBinomialServer,
         newPreemptibleRandomUniformServer,
         newPreemptibleRandomUniformIntServer,
+        newPreemptibleRandomTriangularServer,
         newPreemptibleRandomNormalServer,
+        newPreemptibleRandomLogNormalServer,
         newPreemptibleRandomExponentialServer,
         newPreemptibleRandomErlangServer,
         newPreemptibleRandomPoissonServer,
@@ -62,6 +66,22 @@ newRandomUniformIntServer =
   newPreemptibleRandomUniformIntServer False
 
 -- | Create a new server that holds the process for a random time interval
+-- with the triangular distribution, when processing every input element.
+--
+-- By default, it is assumed that the server process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newRandomTriangularServer :: Double
+                             -- ^ the minimum time interval
+                             -> Double
+                             -- ^ the median of the time interval
+                             -> Double
+                             -- ^ the maximum time interval
+                             -> Simulation (Server () a a)
+newRandomTriangularServer =
+  newPreemptibleRandomTriangularServer False
+
+-- | Create a new server that holds the process for a random time interval
 -- distributed normally, when processing every input element.
 --
 -- By default, it is assumed that the server process cannot be preempted,
@@ -75,6 +95,22 @@ newRandomNormalServer :: Double
 newRandomNormalServer =
   newPreemptibleRandomNormalServer False
          
+-- | Create a new server that holds the process for a random time interval
+-- with the lognormal distribution, when processing every input element.
+--
+-- By default, it is assumed that the server process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newRandomLogNormalServer :: Double
+                            -- ^ the mean of a normal distribution which
+                            -- this distribution is derived from
+                            -> Double
+                            -- ^ the deviation of a normal distribution which
+                            -- this distribution is derived from
+                            -> Simulation (Server () a a)
+newRandomLogNormalServer =
+  newPreemptibleRandomLogNormalServer False
+
 -- | Create a new server that holds the process for a random time interval
 -- distributed exponentially with the specified mean (the reciprocal of the rate),
 -- when processing every input element.
@@ -160,6 +196,22 @@ newPreemptibleRandomUniformIntServer preemptible min max =
      return a
 
 -- | Create a new server that holds the process for a random time interval
+-- with the triangular distribution, when processing every input element.
+newPreemptibleRandomTriangularServer :: Bool
+                                        -- ^ whether the server process can be preempted
+                                        -> Double
+                                        -- ^ the minimum time interval
+                                        -> Double
+                                        -- ^ the median of the time interval
+                                        -> Double
+                                        -- ^ the maximum time interval
+                                        -> Simulation (Server () a a)
+newPreemptibleRandomTriangularServer preemptible min median max =
+  newPreemptibleServer preemptible $ \a ->
+  do randomTriangularProcess_ min median max
+     return a
+
+-- | Create a new server that holds the process for a random time interval
 -- distributed normally, when processing every input element.
 newPreemptibleRandomNormalServer :: Bool
                                     -- ^ whether the server process can be preempted
@@ -172,7 +224,23 @@ newPreemptibleRandomNormalServer preemptible mu nu =
   newPreemptibleServer preemptible $ \a ->
   do randomNormalProcess_ mu nu
      return a
-         
+
+-- | Create a new server that holds the process for a random time interval
+-- with the lognormal distribution, when processing every input element.
+newPreemptibleRandomLogNormalServer :: Bool
+                                       -- ^ whether the server process can be preempted
+                                       -> Double
+                                       -- ^ the mean of a normal distribution which
+                                       -- this distribution is derived from
+                                       -> Double
+                                       -- ^ the deviation of a normal distribution which
+                                       -- this distribution is derived from
+                                       -> Simulation (Server () a a)
+newPreemptibleRandomLogNormalServer preemptible mu nu =
+  newPreemptibleServer preemptible $ \a ->
+  do randomLogNormalProcess_ mu nu
+     return a
+
 -- | Create a new server that holds the process for a random time interval
 -- distributed exponentially with the specified mean (the reciprocal of the rate),
 -- when processing every input element.

@@ -15,14 +15,18 @@
 module Simulation.Aivika.Activity.Random
        (newRandomUniformActivity,
         newRandomUniformIntActivity,
+        newRandomTriangularActivity,
         newRandomNormalActivity,
+        newRandomLogNormalActivity,
         newRandomExponentialActivity,
         newRandomErlangActivity,
         newRandomPoissonActivity,
         newRandomBinomialActivity,
         newPreemptibleRandomUniformActivity,
         newPreemptibleRandomUniformIntActivity,
+        newPreemptibleRandomTriangularActivity,
         newPreemptibleRandomNormalActivity,
+        newPreemptibleRandomLogNormalActivity,
         newPreemptibleRandomExponentialActivity,
         newPreemptibleRandomErlangActivity,
         newPreemptibleRandomPoissonActivity,
@@ -62,6 +66,22 @@ newRandomUniformIntActivity =
   newPreemptibleRandomUniformIntActivity False
 
 -- | Create a new activity that holds the process for a random time interval
+-- with the triangular distribution, when processing every input element.
+--
+-- By default, it is assumed that the activity process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newRandomTriangularActivity :: Double
+                               -- ^ the minimum time interval
+                               -> Double
+                               -- ^ the median of the time interval
+                               -> Double
+                               -- ^ the maximum time interval
+                               -> Simulation (Activity () a a)
+newRandomTriangularActivity =
+  newPreemptibleRandomTriangularActivity False
+
+-- | Create a new activity that holds the process for a random time interval
 -- distributed normally, when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
@@ -75,6 +95,22 @@ newRandomNormalActivity :: Double
 newRandomNormalActivity =
   newPreemptibleRandomNormalActivity False
          
+-- | Create a new activity that holds the process for a random time interval
+-- with the lognormal distribution, when processing every input element.
+--
+-- By default, it is assumed that the activity process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newRandomLogNormalActivity :: Double
+                              -- ^ the mean of a normal distribution which
+                              -- this distribution is derived from
+                              -> Double
+                              -- ^ the deviation of a normal distribution which
+                              -- this distribution is derived from
+                              -> Simulation (Activity () a a)
+newRandomLogNormalActivity =
+  newPreemptibleRandomLogNormalActivity False
+
 -- | Create a new activity that holds the process for a random time interval
 -- distributed exponentially with the specified mean (the reciprocal of the rate),
 -- when processing every input element.
@@ -160,6 +196,22 @@ newPreemptibleRandomUniformIntActivity preemptible min max =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
+-- with the triangular distribution, when processing every input element.
+newPreemptibleRandomTriangularActivity :: Bool
+                                          -- ^ whether the activity process can be preempted
+                                          -> Double
+                                          -- ^ the minimum time interval
+                                          -> Double
+                                          -- ^ the median of the time interval
+                                          -> Double
+                                          -- ^ the maximum time interval
+                                          -> Simulation (Activity () a a)
+newPreemptibleRandomTriangularActivity preemptible min median max =
+  newPreemptibleActivity preemptible $ \a ->
+  do randomTriangularProcess_ min median max
+     return a
+
+-- | Create a new activity that holds the process for a random time interval
 -- distributed normally, when processing every input element.
 newPreemptibleRandomNormalActivity :: Bool
                                       -- ^ whether the activity process can be preempted
@@ -172,7 +224,23 @@ newPreemptibleRandomNormalActivity preemptible mu nu =
   newPreemptibleActivity preemptible $ \a ->
   do randomNormalProcess_ mu nu
      return a
-         
+
+-- | Create a new activity that holds the process for a random time interval
+-- with the lognormal distribution, when processing every input element.
+newPreemptibleRandomLogNormalActivity :: Bool
+                                         -- ^ whether the activity process can be preempted
+                                         -> Double
+                                         -- ^ the mean of a normal distribution which
+                                         -- this distribution is derived from
+                                         -> Double
+                                         -- ^ the deviation of a normal distribution which
+                                         -- this distribution is derived from
+                                         -> Simulation (Activity () a a)
+newPreemptibleRandomLogNormalActivity preemptible mu nu =
+  newPreemptibleActivity preemptible $ \a ->
+  do randomLogNormalProcess_ mu nu
+     return a
+
 -- | Create a new activity that holds the process for a random time interval
 -- distributed exponentially with the specified mean (the reciprocal of the rate),
 -- when processing every input element.

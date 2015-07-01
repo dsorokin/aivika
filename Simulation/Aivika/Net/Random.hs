@@ -15,7 +15,9 @@
 module Simulation.Aivika.Net.Random
        (randomUniformNet,
         randomUniformIntNet,
+        randomTriangularNet,
         randomNormalNet,
+        randomLogNormalNet,
         randomExponentialNet,
         randomErlangNet,
         randomPoissonNet,
@@ -48,6 +50,19 @@ randomUniformIntNet min max =
   randomUniformIntProcess_ min max
 
 -- | When processing every input element, hold the process
+-- for a random time interval with the triangular distribution.
+randomTriangularNet :: Double
+                       -- ^ the minimum time interval
+                       -> Double
+                       -- ^ the median of the time interval
+                       -> Double
+                       -- ^ the maximum time interval
+                       -> Net a a
+randomTriangularNet min median max =
+  withinNet $
+  randomTriangularProcess_ min median max
+
+-- | When processing every input element, hold the process
 -- for a random time interval distributed normally.
 randomNormalNet :: Double
                    -- ^ the mean time interval
@@ -58,6 +73,19 @@ randomNormalNet mu nu =
   withinNet $
   randomNormalProcess_ mu nu
          
+-- | When processing every input element, hold the process
+-- for a random time interval with the lognormal distribution.
+randomLogNormalNet :: Double
+                      -- ^ the mean of a normal distribution which
+                      -- this distribution is derived from
+                      -> Double
+                      -- ^ the deviation of a normal distribution which
+                      -- this distribution is derived from
+                      -> Net a a
+randomLogNormalNet mu nu =
+  withinNet $
+  randomLogNormalProcess_ mu nu
+
 -- | When processing every input element, hold the process
 -- for a random time interval distributed exponentially
 -- with the specified mean (the reciprocal of the rate).

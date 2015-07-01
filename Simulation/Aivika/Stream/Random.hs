@@ -16,7 +16,9 @@ module Simulation.Aivika.Stream.Random
         randomStream,
         randomUniformStream,
         randomUniformIntStream,
+        randomTriangularStream,
         randomNormalStream,
+        randomLogNormalStream,
         randomExponentialStream,
         randomErlangStream,
         randomPoissonStream,
@@ -90,6 +92,20 @@ randomUniformIntStream min max =
   randomUniformInt min max >>= \x ->
   return (fromIntegral x, x)
 
+-- | Create a new stream with delays that have the triangular distribution.
+randomTriangularStream :: Double
+                          -- ^ the minimum delay
+                          -> Double
+                          -- ^ the median of the delay
+                          -> Double
+                          -- ^ the maximum delay
+                          -> Stream (Arrival Double)
+                          -- ^ the stream of random events with the delays generated
+randomTriangularStream min median max =
+  randomStream $
+  randomTriangular min median max >>= \x ->
+  return (x, x)
+
 -- | Create a new stream with delays distributed normally.
 randomNormalStream :: Double
                       -- ^ the mean delay
@@ -101,7 +117,21 @@ randomNormalStream mu nu =
   randomStream $
   randomNormal mu nu >>= \x ->
   return (x, x)
-         
+
+-- | Create a new stream with delays that have the lognormal distribution.
+randomLogNormalStream :: Double
+                         -- ^ the mean of a normal distribution which
+                         -- this distribution is derived from
+                         -> Double
+                         -- ^ the deviation of a normal distribution which
+                         -- this distribution is derived from
+                         -> Stream (Arrival Double)
+                         -- ^ the stream of random events with the delays generated
+randomLogNormalStream mu nu =
+  randomStream $
+  randomLogNormal mu nu >>= \x ->
+  return (x, x)
+
 -- | Return a new stream with delays distibuted exponentially with the specified mean
 -- (the reciprocal of the rate).
 randomExponentialStream :: Double

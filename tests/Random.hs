@@ -26,6 +26,18 @@ generators =
      timingStatsDescription = "Random " ++ show (m1, m2),
      timingStatsSeries = resultByName "rnd" },
    outputView $ defaultTimeSeriesView {
+     timeSeriesTitle = "Random Time Series",
+     timeSeriesDescription = "Triag " ++ show (m1, m3, m2) ++
+                             ", mu = " ++ show (triangularMean m1 m3 m2) ++
+                             ", nu = " ++ show (triangularDeviation m1 m3 m2),
+     timeSeriesLeftYSeries = resultByName "triag" },
+   outputView $ defaultTimingStatsView {
+     timingStatsTitle = "Random Statistics",
+     timingStatsDescription = "Triag " ++ show (m1, m3, m2) ++
+                              ", mu = " ++ show (triangularMean m1 m3 m2) ++
+                              ", nu = " ++ show (triangularDeviation m1 m3 m2),
+     timingStatsSeries = resultByName "triag" },
+   outputView $ defaultTimeSeriesView {
      timeSeriesTitle = "Normal Time Series",
      timeSeriesDescription = "Normal " ++ show (mu, nu),
      timeSeriesLeftYSeries = resultByName "normal" },
@@ -33,6 +45,18 @@ generators =
      timingStatsTitle = "Normal Statistics",
      timingStatsDescription = "Normal " ++ show (mu, nu),
      timingStatsSeries = resultByName "normal" },
+   outputView $ defaultTimeSeriesView {
+     timeSeriesTitle = "LogNormal Time Series",
+     timeSeriesDescription = "Log Normal " ++ show (mu, nu) ++
+                             ", mu = " ++ show (logNormalMean mu nu) ++
+                             ", nu = " ++ show (logNormalDeviation mu nu),
+     timeSeriesLeftYSeries = resultByName "lognormal" },
+   outputView $ defaultTimingStatsView {
+     timingStatsTitle = "LogNormal Statistics",
+     timingStatsDescription = "Log Normal " ++ show (mu, nu) ++
+                              ", mu = " ++ show (logNormalMean mu nu) ++
+                              ", nu = " ++ show (logNormalDeviation mu nu),
+     timingStatsSeries = resultByName "lognormal" },
    outputView $ defaultTimeSeriesView {
      timeSeriesTitle = "Exponential Time Series",
      timeSeriesDescription = "Exponential " ++ show mu,
@@ -58,11 +82,18 @@ generators =
      timingStatsDescription = "Binomial " ++ show (p, n),
      timingStatsSeries = resultByName "binomial" } ]
 
+triangularMean a m b = (a + m + b) / 3
+triangularDeviation a m b = sqrt $ (a*(a-m) + b*(b-a) + m*(m-b)) / 18
+
+logNormalMean mu nu = exp (mu + nu * nu / 2)
+logNormalDeviation mu nu = sqrt $ exp (nu * nu + 2 * mu) * (exp (nu * nu) - 1)
+
 m1 = 2 :: Double
 m2 = 8 :: Double
+m3 = 6 :: Double
 
-mu = 5 :: Double
-nu = 3 :: Double
+mu = 1 :: Double
+nu = 2 :: Double
 
 p = 0.1 :: Double
 n = 5 :: Int
@@ -70,14 +101,18 @@ n = 5 :: Int
 model :: Simulation Results
 model =
   do rndX <- memoRandomUniformDynamics (return m1) (return m2)
+     triagX <- memoRandomTriangularDynamics (return m1) (return m3) (return m2)
      normalX <- memoRandomNormalDynamics (return mu) (return nu)
+     logNormalX <- memoRandomLogNormalDynamics (return mu) (return nu)
      expX <- memoRandomExponentialDynamics (return mu)
      poissonX <- memoRandomPoissonDynamics (return mu)
      binomialX <- memoRandomBinomialDynamics (return p) (return n)
      return $
        results
        [resultSource "rnd" "rnd" rndX,
+        resultSource "triag" "triag" triagX,
         resultSource "normal" "normal" normalX,
+        resultSource "lognormal" "lognormal" logNormalX,
         resultSource "exp" "exp" expX,
         resultSource "poisson" "poisson" poissonX,
         resultSource "binomial" "binomial" binomialX]

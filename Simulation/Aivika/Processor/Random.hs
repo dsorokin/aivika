@@ -15,7 +15,9 @@
 module Simulation.Aivika.Processor.Random
        (randomUniformProcessor,
         randomUniformIntProcessor,
+        randomTriangularProcessor,
         randomNormalProcessor,
+        randomLogNormalProcessor,
         randomExponentialProcessor,
         randomErlangProcessor,
         randomPoissonProcessor,
@@ -48,6 +50,19 @@ randomUniformIntProcessor min max =
   randomUniformIntProcess_ min max
 
 -- | When processing every input element, hold the process
+-- for a random time interval with the triangular distribution.
+randomTriangularProcessor :: Double
+                             -- ^ the minimum time interval
+                             -> Double
+                             -- ^ the median of the time interval
+                             -> Double
+                             -- ^ the maximum time interval
+                             -> Processor a a
+randomTriangularProcessor min median max =
+  withinProcessor $
+  randomTriangularProcess_ min median max
+
+-- | When processing every input element, hold the process
 -- for a random time interval distributed normally.
 randomNormalProcessor :: Double
                          -- ^ the mean time interval
@@ -58,6 +73,19 @@ randomNormalProcessor mu nu =
   withinProcessor $
   randomNormalProcess_ mu nu
          
+-- | When processing every input element, hold the process
+-- for a random time interval with the lognormal distribution.
+randomLogNormalProcessor :: Double
+                            -- ^ the mean for a normal distribution
+                            -- which this distribution is derived from
+                            -> Double
+                            -- ^ the deviation for a normal distribution
+                            -- which this distribution is derived from
+                            -> Processor a a
+randomLogNormalProcessor mu nu =
+  withinProcessor $
+  randomLogNormalProcess_ mu nu
+
 -- | When processing every input element, hold the process
 -- for a random time interval distributed exponentially
 -- with the specified mean (the reciprocal of the rate).

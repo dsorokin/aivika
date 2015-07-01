@@ -17,8 +17,12 @@ module Simulation.Aivika.Process.Random
         randomUniformProcess_,
         randomUniformIntProcess,
         randomUniformIntProcess_,
+        randomTriangularProcess,
+        randomTriangularProcess_,
         randomNormalProcess,
         randomNormalProcess_,
+        randomLogNormalProcess,
+        randomLogNormalProcess_,
         randomExponentialProcess,
         randomExponentialProcess_,
         randomErlangProcess,
@@ -81,6 +85,33 @@ randomUniformIntProcess_ min max =
   do t <- liftParameter $ randomUniformInt min max
      holdProcess $ fromIntegral t
 
+-- | Hold the process for a random time interval with the triangular distribution.
+randomTriangularProcess :: Double
+                           -- ^ the minimum time interval
+                           -> Double
+                           -- ^ a median of the time interval
+                           -> Double
+                           -- ^ the maximum time interval
+                           -> Process Double
+                           -- ^ a computation of the time interval
+                           -- for which the process was actually held
+randomTriangularProcess min median max =
+  do t <- liftParameter $ randomTriangular min median max
+     holdProcess t
+     return t
+
+-- | Hold the process for a random time interval with the triangular distribution.
+randomTriangularProcess_ :: Double
+                            -- ^ the minimum time interval
+                            -> Double
+                            -- ^ a median of the time interval
+                            -> Double
+                            -- ^ the maximum time interval
+                            -> Process ()
+randomTriangularProcess_ min median max =
+  do t <- liftParameter $ randomTriangular min median max
+     holdProcess t
+
 -- | Hold the process for a random time interval distributed normally.
 randomNormalProcess :: Double
                        -- ^ the mean time interval
@@ -105,7 +136,34 @@ randomNormalProcess_ mu nu =
   do t <- liftParameter $ randomNormal mu nu
      when (t > 0) $
        holdProcess t
-         
+
+-- | Hold the process for a random time interval with the lognormal distribution.
+randomLogNormalProcess :: Double
+                          -- ^ the mean for a normal distribution
+                          -- which this distribution is derived from
+                          -> Double
+                          -- ^ the deviation for a normal distribution
+                          -- which this distribution is derived from
+                          -> Process Double
+                          -- ^ a computation of the time interval
+                          -- for which the process was actually held
+randomLogNormalProcess mu nu =
+  do t <- liftParameter $ randomLogNormal mu nu
+     holdProcess t
+     return t
+
+-- | Hold the process for a random time interval with the lognormal distribution.
+randomLogNormalProcess_ :: Double
+                           -- ^ the mean for a normal distribution
+                           -- which this distribution is derived from
+                           -> Double
+                           -- ^ the deviation for a normal distribution
+                           -- which this distribution is derived from
+                           -> Process ()
+randomLogNormalProcess_ mu nu =
+  do t <- liftParameter $ randomLogNormal mu nu
+     holdProcess t
+
 -- | Hold the process for a random time interval distributed exponentially
 -- with the specified mean (the reciprocal of the rate).
 randomExponentialProcess :: Double

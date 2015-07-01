@@ -22,7 +22,9 @@
 module Simulation.Aivika.Dynamics.Random
        (memoRandomUniformDynamics,
         memoRandomUniformIntDynamics,
+        memoRandomTriangularDynamics,
         memoRandomNormalDynamics,
+        memoRandomLogNormalDynamics,
         memoRandomExponentialDynamics,
         memoRandomErlangDynamics,
         memoRandomPoissonDynamics,
@@ -65,6 +67,21 @@ memoRandomUniformIntDynamics min max =
      max' <- invokeDynamics p max
      generateUniformInt g min' max'
 
+-- | Computation that generates random numbers with the triangular distribution
+-- and memoizes them in the integration time points.
+memoRandomTriangularDynamics :: Dynamics Double     -- ^ minimum
+                                -> Dynamics Double  -- ^ median
+                                -> Dynamics Double  -- ^ maximum
+                                -> Simulation (Dynamics Double)
+memoRandomTriangularDynamics min median max =
+  memo0Dynamics $
+  Dynamics $ \p ->
+  do let g = runGenerator $ pointRun p
+     min' <- invokeDynamics p min
+     median' <- invokeDynamics p median
+     max' <- invokeDynamics p max
+     generateTriangular g min' median' max'
+
 -- | Computation that generates random numbers distributed normally and
 -- memoizes them in the integration time points.
 memoRandomNormalDynamics :: Dynamics Double     -- ^ mean
@@ -77,6 +94,23 @@ memoRandomNormalDynamics mu nu =
      mu' <- invokeDynamics p mu
      nu' <- invokeDynamics p nu
      generateNormal g mu' nu'
+
+-- | Computation that generates random numbers with the lognormal distribution
+-- and memoizes them in the integration time points.
+memoRandomLogNormalDynamics :: Dynamics Double
+                               -- ^ the mean of a normal distribution which
+                               -- this distribution is derived from
+                               -> Dynamics Double
+                               -- ^ the deviation of a normal distribution which
+                               -- this distribution is derived from
+                               -> Simulation (Dynamics Double)
+memoRandomLogNormalDynamics mu nu =
+  memo0Dynamics $
+  Dynamics $ \p ->
+  do let g = runGenerator $ pointRun p
+     mu' <- invokeDynamics p mu
+     nu' <- invokeDynamics p nu
+     generateLogNormal g mu' nu'
 
 -- | Computation that generates exponential random numbers with the specified mean
 -- (the reciprocal of the rate) and memoizes them in the integration time points.

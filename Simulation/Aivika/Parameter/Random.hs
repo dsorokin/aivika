@@ -22,7 +22,9 @@
 module Simulation.Aivika.Parameter.Random
        (randomUniform,
         randomUniformInt,
+        randomTriangular,
         randomNormal,
+        randomLogNormal,
         randomExponential,
         randomErlang,
         randomPoisson,
@@ -58,6 +60,16 @@ randomUniformInt min max =
   let g = runGenerator r
   in generateUniformInt g min max
 
+-- | Computation that generates a new random number with the triangular distribution.
+randomTriangular :: Double     -- ^ minimum
+                    -> Double  -- ^ median
+                    -> Double  -- ^ maximum
+                    -> Parameter Double
+randomTriangular min median max =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generateTriangular g min median max
+
 -- | Computation that generates a new random number distributed normally.
 randomNormal :: Double     -- ^ mean
                 -> Double  -- ^ deviation
@@ -66,6 +78,19 @@ randomNormal mu nu =
   Parameter $ \r ->
   let g = runGenerator r
   in generateNormal g mu nu
+
+-- | Computation that generates a new random number with the lognormal distribution.
+randomLogNormal :: Double
+                   -- ^ the mean of a normal distribution
+                   -- which this distribution is derived from
+                   -> Double
+                   -- ^ the deviation of a normal distribution
+                   -- which this distribution is derived from
+                   -> Parameter Double
+randomLogNormal mu nu =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generateLogNormal g mu nu
 
 -- | Computation that returns a new exponential random number with the specified mean
 -- (the reciprocal of the rate).
