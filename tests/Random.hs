@@ -15,6 +15,7 @@ specs = Specs 0 200 0.1 RungeKutta4 SimpleGenerator
 
 experiment = 
   defaultExperiment {
+    experimentTitle = "Test of Random Number Generators",
     experimentSpecs = specs }
 
 seriesGenerator title description series =
