@@ -30,6 +30,7 @@ module Simulation.Aivika.Parameter.Random
         randomPoisson,
         randomBinomial,
         randomGamma,
+        randomBeta,
         randomTrue,
         randomFalse) where
 
@@ -156,3 +157,12 @@ randomGamma kappa theta =
   Parameter $ \r ->
   let g = runGenerator r
   in generateGamma g kappa theta
+
+-- | Computation that returns a new random number from the Beta distribution.
+randomBeta :: Double     -- ^ the shape (alpha)
+              -> Double  -- ^ the shape (beta)
+              -> Parameter Double
+randomBeta alpha beta =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generateBeta g alpha beta

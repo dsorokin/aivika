@@ -29,7 +29,8 @@ module Simulation.Aivika.Dynamics.Random
         memoRandomErlangDynamics,
         memoRandomPoissonDynamics,
         memoRandomBinomialDynamics,
-        memoRandomGammaDynamics) where
+        memoRandomGammaDynamics,
+        memoRandomBetaDynamics) where
 
 import System.Random
 
@@ -179,3 +180,17 @@ memoRandomGammaDynamics kappa theta =
      kappa' <- invokeDynamics p kappa
      theta' <- invokeDynamics p theta
      generateGamma g kappa' theta'
+
+-- | Computation that generates random numbers from the Beta distribution
+-- by the specified shape parameters and memoizes the numbers in
+-- the integration time points.
+memoRandomBetaDynamics :: Dynamics Double     -- ^ shape (alpha)
+                          -> Dynamics Double  -- ^ shape (beta)
+                          -> Simulation (Dynamics Double)
+memoRandomBetaDynamics alpha beta =
+  memo0Dynamics $
+  Dynamics $ \p ->
+  do let g = runGenerator $ pointRun p
+     alpha' <- invokeDynamics p alpha
+     beta'  <- invokeDynamics p beta
+     generateBeta g alpha' beta'

@@ -19,7 +19,7 @@ removeDuplicates =
                     then seen
                     else seen ++ [x]) []
                     
-specs = Specs 0 300 0.1 RungeKutta4 SimpleGenerator
+specs = Specs 0 300 0.05 RungeKutta4 SimpleGenerator
 
 experiment = 
   defaultExperiment {
@@ -107,6 +107,30 @@ gammaDeviation kappa theta = sqrt (kappa * theta * theta)
 gammaParamSet = [[(0.5, 1), (1, 1), (3, 1)], [(3, 0.2), (3, 1/3), (3, 1)]]
 gammaParams   = removeDuplicates $ concat gammaParamSet
 
+betaTitle alpha beta  = "Beta " ++ show (alpha, beta) ++ " Random"
+betaDescr alpha beta  = "Beta " ++ show (alpha, beta) ++
+                          ", EX = " ++ show (betaMean alpha beta) ++
+                          ", sqrt(DX) = " ++ show (betaDeviation alpha beta)
+betaSeries alpha beta = resultByName $ "beta" ++ show (alpha, beta)
+
+betaSetTitle i pars  = "Beta Distribution Set " ++ show i
+betaSetDescr i pars  = "It shows the Beta distribution with different parameters."
+betaSetSeries i pars =
+  mconcat $
+  flip map pars $ \(alpha, beta) ->
+  resultByName $ "beta" ++ show (alpha, beta)
+
+betaMean alpha beta      = alpha / (alpha + beta)
+betaDeviation alpha beta = sqrt (alpha * beta / ((alpha + beta) * (alpha + beta) * (alpha + beta + 1)))
+
+-- betaParamSet = [[(5, 1.5), (1.5, 5), (3, 1.5), (1.5, 3)],
+--                 [(0.8, 0.2), (0.5, 0.5), (0.2, 0.8)],
+--                 [(2, 0.2), (2, 0.8), (2, 1)],
+--                 [(5, 5), (2, 2), (1, 1)]]
+
+betaParamSet = [[(0.5, 0.5), (5, 1), (1, 3), (2, 2), (2, 5)]]
+betaParams   = removeDuplicates $ concat betaParamSet
+
 generators =
   [outputView defaultExperimentSpecsView] ++
   seriesGenerator uniformTitle uniformDescr uniformSeries ++
@@ -126,6 +150,17 @@ generators =
     let title  = gammaSetTitle i pars
         descr  = gammaSetDescr i pars
         series = gammaSetSeries i pars
+    in histogramGenerator title descr series) ++
+  (concat $
+   flip map betaParams $ \(alpha, beta) ->
+   let title  = betaTitle alpha beta
+       descr  = betaDescr alpha beta
+       series = betaSeries alpha beta
+   in seriesGenerator title descr series) ++
+  (concat $ flip map (zip [1..] betaParamSet) $ \(i, pars) ->
+    let title  = betaSetTitle i pars
+        descr  = betaSetDescr i pars
+        series = betaSetSeries i pars
     in histogramGenerator title descr series)
 
 m1 = 2 :: Double
@@ -152,6 +187,8 @@ model =
      binomialX <- memoRandomBinomialDynamics (return p) (return n)
      gammaXs <- forM gammaParams $ \(kappa, theta) ->
        memoRandomGammaDynamics (return kappa) (return theta)
+     betaXs <- forM betaParams $ \(alpha, beta) ->
+       memoRandomBetaDynamics (return alpha) (return beta)
      return $
        results $
        [resultSource "rnd" "rnd" rndX,
@@ -164,6 +201,10 @@ model =
        (flip map (zip gammaXs gammaParams) $ \(gammaX, (kappa, theta)) ->
          let name  = "gamma" ++ show (kappa, theta)
              descr = "gamma" ++ show (kappa, theta)
-         in resultSource name descr gammaX)
+         in resultSource name descr gammaX) ++
+       (flip map (zip betaXs betaParams) $ \(betaX, (alpha, beta)) ->
+         let name  = "beta" ++ show (alpha, beta)
+             descr = "beta" ++ show (alpha, beta)
+         in resultSource name descr betaX)
     
 main = runExperiment experiment generators (WebPageRenderer $ CairoRenderer PNG) model

@@ -47,13 +47,20 @@ data Generator =
               generateBinomial :: Double -> Int -> IO Int,
               -- ^ Generate the binomial random number
               -- with the specified probability and number of trials.
-              generateGamma :: Double -> Double -> IO Double
+              generateGamma :: Double -> Double -> IO Double,
               -- ^ Generate a random number from the Gamma distribution with
               -- the specified shape (kappa) and scale (theta, a reciprocal of the rate).
               --
               -- The probability density for the Gamma distribution is
               --
               -- @f x = x ** (kappa - 1) * exp (- x \/ theta) \/ theta ** kappa * Gamma kappa@
+              generateBeta :: Double -> Double -> IO Double
+              -- ^ Generate a random number from the Beta distribution by
+              -- the specified shape parameters (alpha and beta).
+              --
+              -- The probability density for the Beta distribution is
+              --
+              -- @f x = x ** (alpha - 1) * (1 - x) ** (beta - 1) / B alpha beta@ 
             }
 
 -- | Generate the uniform random number with the specified minimum and maximum.
@@ -200,9 +207,9 @@ generateBinomial01 g prob trials = loop trials 0 where
 
 -- | Generate a random number from the Gamma distribution using Marsaglia and Tsang method.
 generateGamma01 :: IO Double
-                   -- ^ a normal random number N (0,1)
+                   -- ^ a normal random number ~ N (0,1)
                    -> IO Double
-                   -- ^ an uniform random number U (0, 1)
+                   -- ^ an uniform random number ~ U (0, 1)
                    -> Double
                    -- ^ the shape parameter (kappa) 
                    -> Double
@@ -227,6 +234,21 @@ generateGamma01 gn gu kappa theta
     do x <- generateGamma01 gn gu (1 + kappa) theta
        u <- gu
        return $ x * u ** (1 / kappa)
+
+-- | Generate a random number from the Beta distribution.
+generateBeta01 :: IO Double
+                  -- ^ a normal random number ~ N (0, 1)
+                  -> IO Double
+                  -- ^ an uniform random number ~ U (0, 1)
+                  -> Double
+                  -- ^ the shape parameter alpha
+                  -> Double
+                  -- ^ the shape parameter beta
+                  -> IO Double
+generateBeta01 gn gu alpha beta =
+  do g1 <- generateGamma01 gn gu alpha 1
+     g2 <- generateGamma01 gn gu beta 1
+     return $ g1 / (g1 + g2)
 
 -- | Defines a type of the random number generator.
 data GeneratorType = SimpleGenerator
@@ -278,4 +300,5 @@ newRandomGenerator01 g =
                         generateErlang = generateErlang01 g1,
                         generatePoisson = generatePoisson01 g1,
                         generateBinomial = generateBinomial01 g1,
-                        generateGamma = generateGamma01 g2 g1 }
+                        generateGamma = generateGamma01 g2 g1,
+                        generateBeta = generateBeta01 g2 g1 }
