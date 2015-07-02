@@ -146,6 +146,11 @@ weibullSetSeries i pars =
 weibullParamSet = [[(1, 1), (1.5, 1), (5, 1)]]
 weibullParams   = removeDuplicates $ concat weibullParamSet
 
+discreteTitle  = "Discrete Random"
+discreteDescr  = "Discrete PDF = " ++ show discretePDF
+discreteSeries = resultByName "discrete"
+discretePDF    = [(1, 0.1), (3, 0.3), (5, 0.5), (9, 0.1)] :: DiscretePDF Double
+
 generators =
   [outputView defaultExperimentSpecsView] ++
   seriesGenerator uniformTitle uniformDescr uniformSeries ++
@@ -155,6 +160,7 @@ generators =
   seriesGenerator expTitle expDescr expSeries ++
   seriesGenerator poissonTitle poissonDescr poissonSeries ++
   seriesGenerator binomialTitle binomialDescr binomialSeries ++
+  seriesGenerator discreteTitle discreteDescr discreteSeries ++
   parametricGenerator gammaTitle gammaDescr gammaSeries gammaParams ++
   setGenerator gammaSetTitle gammaSetDescr gammaSetSeries gammaParamSet ++
   parametricGenerator betaTitle betaDescr betaSeries betaParams ++
@@ -199,6 +205,7 @@ model =
      expX <- memoRandomExponentialDynamics (return mu)
      poissonX <- memoRandomPoissonDynamics (return mu)
      binomialX <- memoRandomBinomialDynamics (return p) (return n)
+     discreteX <- memoRandomDiscreteDynamics (return discretePDF)
      gammaXs <- forM gammaParams $ \(kappa, theta) ->
        memoRandomGammaDynamics (return kappa) (return theta)
      betaXs <- forM betaParams $ \(alpha, beta) ->
@@ -218,7 +225,8 @@ model =
         resultSource "lognormal" "lognormal" logNormalX,
         resultSource "exp" "exp" expX,
         resultSource "poisson" "poisson" poissonX,
-        resultSource "binomial" "binomial" binomialX] ++
+        resultSource "binomial" "binomial" binomialX,
+        resultSource "discrete" "discrete" discreteX] ++
        parametricSources "gamma" gammaXs gammaParams ++
        parametricSources "beta" betaXs betaParams ++
        parametricSources "weibull" weibullXs weibullParams

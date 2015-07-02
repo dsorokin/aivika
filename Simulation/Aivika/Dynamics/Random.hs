@@ -31,7 +31,8 @@ module Simulation.Aivika.Dynamics.Random
         memoRandomBinomialDynamics,
         memoRandomGammaDynamics,
         memoRandomBetaDynamics,
-        memoRandomWeibullDynamics) where
+        memoRandomWeibullDynamics,
+        memoRandomDiscreteDynamics) where
 
 import System.Random
 
@@ -43,6 +44,7 @@ import Simulation.Aivika.Internal.Parameter
 import Simulation.Aivika.Internal.Simulation
 import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Dynamics.Memo.Unboxed
+import Simulation.Aivika.Unboxed
 
 -- | Computation that generates random numbers distributed uniformly and
 -- memoizes the numbers in the integration time points.
@@ -209,3 +211,13 @@ memoRandomWeibullDynamics alpha beta =
      alpha' <- invokeDynamics p alpha
      beta'  <- invokeDynamics p beta
      generateWeibull g alpha' beta'
+
+-- | Computation that generates random values from the specified discrete
+-- distribution and memoizes the values in the integration time points.
+memoRandomDiscreteDynamics :: Unboxed a => Dynamics (DiscretePDF a) -> Simulation (Dynamics a)
+memoRandomDiscreteDynamics dpdf =
+  memo0Dynamics $
+  Dynamics $ \p ->
+  do let g = runGenerator $ pointRun p
+     dpdf' <- invokeDynamics p dpdf
+     generateDiscrete g dpdf'

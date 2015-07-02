@@ -1,4 +1,6 @@
 
+{-# LANGUAGE RankNTypes #-}
+
 -- |
 -- Module     : Simulation.Aivika.Generator
 -- Copyright  : Copyright (c) 2009-2015, David Sorokin <david.sorokin@gmail.com>
@@ -12,11 +14,15 @@
 module Simulation.Aivika.Generator 
        (Generator(..),
         GeneratorType(..),
+        DiscretePDF(..),
         newGenerator,
         newRandomGenerator) where
 
 import System.Random
 import Data.IORef
+
+-- | A discrete probability density function.
+type DiscretePDF a = [(a, Double)]
 
 -- | Defines a random number generator.
 data Generator =
@@ -61,9 +67,11 @@ data Generator =
               -- The probability density for the Beta distribution is
               --
               -- @f x = x ** (alpha - 1) * (1 - x) ** (beta - 1) \/ B alpha beta@
-              generateWeibull :: Double -> Double -> IO Double
+              generateWeibull :: Double -> Double -> IO Double,
               -- ^ Generate a random number from the Weibull distribution by
               -- the specified shape and scale.
+              generateDiscrete :: forall a. DiscretePDF a -> IO a
+              -- ^ Generate a random value from the specified discrete distribution.
             }
 
 -- | Generate the uniform random number with the specified minimum and maximum.
@@ -265,6 +273,22 @@ generateWeibull01 g alpha beta =
   do x <- g
      return $ beta * (- log x) ** (1 / alpha)
 
+-- | Generate a random value from the specified discrete distribution.
+generateDiscrete01 :: IO Double
+                      -- ^ an uniform random number ~ U (0, 1)
+                      -> DiscretePDF a
+                      -- ^ a discrete probability density function
+                      -> IO a
+generateDiscrete01 g []   = error "Empty PDF: generateDiscrete01"
+generateDiscrete01 g dpdf =
+  do x <- g
+     let loop acc [(a, p)] = a
+         loop acc ((a, p) : dpdf) =
+           if x <= acc + p
+           then a
+           else loop (acc + p) dpdf
+     return $ loop 0 dpdf
+
 -- | Defines a type of the random number generator.
 data GeneratorType = SimpleGenerator
                      -- ^ The simple random number generator.
@@ -317,4 +341,5 @@ newRandomGenerator01 g =
                         generateBinomial = generateBinomial01 g1,
                         generateGamma = generateGamma01 g2 g1,
                         generateBeta = generateBeta01 g2 g1,
-                        generateWeibull = generateWeibull01 g1 }
+                        generateWeibull = generateWeibull01 g1,
+                        generateDiscrete = generateDiscrete01 g1 }

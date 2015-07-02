@@ -32,6 +32,7 @@ module Simulation.Aivika.Parameter.Random
         randomGamma,
         randomBeta,
         randomWeibull,
+        randomDiscrete,
         randomTrue,
         randomFalse) where
 
@@ -176,3 +177,11 @@ randomWeibull alpha beta =
   Parameter $ \r ->
   let g = runGenerator r
   in generateWeibull g alpha beta
+
+-- | Computation that returns a new random value from the specified discrete distribution.
+randomDiscrete :: DiscretePDF a -> Parameter a
+randomDiscrete dpdf =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generateDiscrete g dpdf
+
