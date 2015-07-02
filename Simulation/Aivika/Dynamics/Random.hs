@@ -171,8 +171,8 @@ memoRandomBinomialDynamics prob trials =
 -- | Computation that generates random numbers from the Gamma distribution
 -- with the specified shape and scale but memoizes the numbers in
 -- the integration time points.
-memoRandomGammaDynamics :: Dynamics Double     -- ^ shape (kappa)
-                           -> Dynamics Double  -- ^ scale (theta, a reciprocal of the rate)
+memoRandomGammaDynamics :: Dynamics Double     -- ^ shape
+                           -> Dynamics Double  -- ^ scale (a reciprocal of the rate)
                            -> Simulation (Dynamics Double)
 memoRandomGammaDynamics kappa theta =
   memo0Dynamics $

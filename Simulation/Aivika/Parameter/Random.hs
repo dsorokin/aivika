@@ -151,8 +151,8 @@ randomFalse p =
      return (x > p)     
 
 -- | Computation that returns a new random number from the Gamma distribution.
-randomGamma :: Double     -- ^ the shape (kappa)
-               -> Double  -- ^ the scale (theta, the reciprocal of the rate)
+randomGamma :: Double     -- ^ the shape
+               -> Double  -- ^ the scale (a reciprocal of the rate)
                -> Parameter Double
 randomGamma kappa theta =
   Parameter $ \r ->
