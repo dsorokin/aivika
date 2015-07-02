@@ -53,7 +53,7 @@ data Generator =
               --
               -- The probability density for the Gamma distribution is
               --
-              -- @f(x) = x ** (kappa - 1) * exp( - x \/ theta) \/ theta ** kappa * Gamma kappa@
+              -- @f x = x ** (kappa - 1) * exp (- x \/ theta) \/ theta ** kappa * Gamma kappa@
             }
 
 -- | Generate the uniform random number with the specified minimum and maximum.
