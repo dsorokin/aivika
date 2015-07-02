@@ -37,7 +37,7 @@ seriesGenerator title description series =
 gammaGenerators =
   [outputView $ defaultHistogramView {
       histogramWidth = 1000,
-      histogramTitle = "Gamma Distribution - Histogram",
+      histogramTitle = "Gamma Distribution Set - Histogram",
       histogramDescription = "It shows the Gamma distribution for different parameters",
       histogramSeries =
         mconcat $
