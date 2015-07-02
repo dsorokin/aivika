@@ -143,4 +143,4 @@ modelSummary3 = fmap resultSummary model3
 main =
   do printSimulationResultsInStopTime
        printResultSourceInEnglish
-       modelSummary3 specs
+       modelSummary1 specs
