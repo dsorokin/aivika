@@ -33,7 +33,7 @@ data Generator =
               -- ^ Generate the normal random number
               -- with the specified mean and deviation.
               generateLogNormal :: Double -> Double -> IO Double,
-              -- ^ Generate a random number with the lognormal distribution derived
+              -- ^ Generate a random number from the lognormal distribution derived
               -- from a normal distribution with the specified mean and deviation.
               generateExponential :: Double -> IO Double,
               -- ^ Generate the random number distributed exponentially
@@ -44,9 +44,16 @@ data Generator =
               generatePoisson :: Double -> IO Int,
               -- ^ Generate the Poisson random number
               -- with the specified mean.
-              generateBinomial :: Double -> Int -> IO Int
+              generateBinomial :: Double -> Int -> IO Int,
               -- ^ Generate the binomial random number
               -- with the specified probability and number of trials.
+              generateGamma :: Double -> Double -> IO Double
+              -- ^ Generate a random number from the Gamma distribution with
+              -- the specified shape (kappa) and scale (theta).
+              --
+              -- The probability density for the Gamma distribution is
+              --
+              -- @f(x) = x ** (kappa - 1) * exp( - x \/ theta) \/ theta ** kappa * Gamma kappa@
             }
 
 -- | Generate the uniform random number with the specified minimum and maximum.
@@ -191,6 +198,36 @@ generateBinomial01 g prob trials = loop trials 0 where
                        then loop (n - 1) (acc + 1)
                        else loop (n - 1) acc
 
+-- | Generate a random number from the Gamma distribution using Marsaglia and Tsang method.
+generateGamma01 :: IO Double
+                   -- ^ a normal random number N (0,1)
+                   -> IO Double
+                   -- ^ an uniform random number U (0, 1)
+                   -> Double
+                   -- ^ the shape parameter (kappa) 
+                   -> Double
+                   -- ^ the scale parameter (theta)
+                   -> IO Double
+generateGamma01 gn gu kappa theta
+  | kappa <= 0 = error "The shape parameter (kappa) must be positive: generateGamma01"
+  | kappa > 1  =
+    let d = kappa - 1 / 3
+        c = 1 / sqrt (9 * d)
+        loop =
+          do z <- gn
+             if z <= - (1 / c)
+               then loop
+               else do let v = (1 + c * z) ** 3
+                       u <- gu
+                       if log u > 0.5 * z * z + d - d * v + d * log v
+                         then loop
+                         else return $ d * v * theta
+    in loop
+  | otherwise  =
+    do x <- generateGamma01 gn gu (1 + kappa) theta
+       u <- gu
+       return $ x * u ** (1 / kappa)
+
 -- | Defines a type of the random number generator.
 data GeneratorType = SimpleGenerator
                      -- ^ The simple random number generator.
@@ -240,4 +277,5 @@ newRandomGenerator01 g =
                         generateExponential = generateExponential01 g1,
                         generateErlang = generateErlang01 g1,
                         generatePoisson = generatePoisson01 g1,
-                        generateBinomial = generateBinomial01 g1 }
+                        generateBinomial = generateBinomial01 g1,
+                        generateGamma = generateGamma01 g2 g1 }

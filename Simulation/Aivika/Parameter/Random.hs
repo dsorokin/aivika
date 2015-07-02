@@ -29,6 +29,7 @@ module Simulation.Aivika.Parameter.Random
         randomErlang,
         randomPoisson,
         randomBinomial,
+        randomGamma,
         randomTrue,
         randomFalse) where
 
@@ -60,7 +61,7 @@ randomUniformInt min max =
   let g = runGenerator r
   in generateUniformInt g min max
 
--- | Computation that generates a new random number with the triangular distribution.
+-- | Computation that generates a new random number from the triangular distribution.
 randomTriangular :: Double     -- ^ minimum
                     -> Double  -- ^ median
                     -> Double  -- ^ maximum
@@ -79,7 +80,7 @@ randomNormal mu nu =
   let g = runGenerator r
   in generateNormal g mu nu
 
--- | Computation that generates a new random number with the lognormal distribution.
+-- | Computation that generates a new random number from the lognormal distribution.
 randomLogNormal :: Double
                    -- ^ the mean of a normal distribution
                    -- which this distribution is derived from
@@ -146,3 +147,12 @@ randomFalse :: Double      -- ^ the probability of the success
 randomFalse p =
   do x <- randomUniform 0 1
      return (x > p)     
+
+-- | Computation that returns a new random number from the Gamma distribution.
+randomGamma :: Double     -- ^ the shape (kappa)
+               -> Double  -- ^ the scale (theta, the reciprocal of the rate)
+               -> Parameter Double
+randomGamma kappa theta =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generateGamma g kappa theta
