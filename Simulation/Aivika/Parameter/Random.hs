@@ -31,6 +31,7 @@ module Simulation.Aivika.Parameter.Random
         randomBinomial,
         randomGamma,
         randomBeta,
+        randomWeibull,
         randomTrue,
         randomFalse) where
 
@@ -166,3 +167,12 @@ randomBeta alpha beta =
   Parameter $ \r ->
   let g = runGenerator r
   in generateBeta g alpha beta
+
+-- | Computation that returns a new random number from the Weibull distribution.
+randomWeibull :: Double     -- ^ shape
+                 -> Double  -- ^ scale
+                 -> Parameter Double
+randomWeibull alpha beta =
+  Parameter $ \r ->
+  let g = runGenerator r
+  in generateWeibull g alpha beta

@@ -54,13 +54,16 @@ data Generator =
               -- The probability density for the Gamma distribution is
               --
               -- @f x = x ** (kappa - 1) * exp (- x \/ theta) \/ theta ** kappa * Gamma kappa@
-              generateBeta :: Double -> Double -> IO Double
+              generateBeta :: Double -> Double -> IO Double,
               -- ^ Generate a random number from the Beta distribution by
               -- the specified shape parameters (alpha and beta).
               --
               -- The probability density for the Beta distribution is
               --
-              -- @f x = x ** (alpha - 1) * (1 - x) ** (beta - 1) / B alpha beta@ 
+              -- @f x = x ** (alpha - 1) * (1 - x) ** (beta - 1) \/ B alpha beta@
+              generateWeibull :: Double -> Double -> IO Double
+              -- ^ Generate a random number from the Weibull distribution by
+              -- the specified shape and scale.
             }
 
 -- | Generate the uniform random number with the specified minimum and maximum.
@@ -250,6 +253,18 @@ generateBeta01 gn gu alpha beta =
      g2 <- generateGamma01 gn gu beta 1
      return $ g1 / (g1 + g2)
 
+-- | Generate a random number from the Weibull distribution.
+generateWeibull01 :: IO Double
+                     -- ^ an uniform random number ~ U (0, 1)
+                     -> Double
+                     -- ^ shape
+                     -> Double
+                     -- ^ scale
+                     -> IO Double
+generateWeibull01 g alpha beta =
+  do x <- g
+     return $ beta * (- log x) ** (1 / alpha)
+
 -- | Defines a type of the random number generator.
 data GeneratorType = SimpleGenerator
                      -- ^ The simple random number generator.
@@ -301,4 +316,5 @@ newRandomGenerator01 g =
                         generatePoisson = generatePoisson01 g1,
                         generateBinomial = generateBinomial01 g1,
                         generateGamma = generateGamma01 g2 g1,
-                        generateBeta = generateBeta01 g2 g1 }
+                        generateBeta = generateBeta01 g2 g1,
+                        generateWeibull = generateWeibull01 g1 }

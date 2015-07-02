@@ -131,6 +131,21 @@ betaDeviation alpha beta = sqrt (alpha * beta / ((alpha + beta) * (alpha + beta)
 betaParamSet = [[(0.5, 0.5), (5, 1), (1, 3), (2, 2), (2, 5)]]
 betaParams   = removeDuplicates $ concat betaParamSet
 
+weibullTitle alpha beta  = "Weibull " ++ show (alpha, beta) ++ " Random"
+weibullDescr alpha beta  = "Weibull " ++ show (alpha, beta)
+weibullSeries alpha beta = resultByName $ "weibull" ++ show (alpha, beta)
+
+weibullSetTitle i pars  = "Weibull Distribution Set " ++ show i
+weibullSetDescr i pars  = "It shows the Weibull distribution with different parameters."
+weibullSetSeries i pars =
+  mconcat $
+  flip map pars $ \(alpha, beta) ->
+  resultByName $ "weibull" ++ show (alpha, beta)
+
+-- weibullParamSet = [[(0.5, 1), (1, 1), (1.5, 1), (5, 1)]]
+weibullParamSet = [[(1, 1), (1.5, 1), (5, 1)]]
+weibullParams   = removeDuplicates $ concat weibullParamSet
+
 generators =
   [outputView defaultExperimentSpecsView] ++
   seriesGenerator uniformTitle uniformDescr uniformSeries ++
@@ -140,28 +155,27 @@ generators =
   seriesGenerator expTitle expDescr expSeries ++
   seriesGenerator poissonTitle poissonDescr poissonSeries ++
   seriesGenerator binomialTitle binomialDescr binomialSeries ++
-  (concat $
-   flip map gammaParams $ \(kappa, theta) ->
-   let title  = gammaTitle kappa theta
-       descr  = gammaDescr kappa theta
-       series = gammaSeries kappa theta
-   in seriesGenerator title descr series) ++
-  (concat $ flip map (zip [1..] gammaParamSet) $ \(i, pars) ->
-    let title  = gammaSetTitle i pars
-        descr  = gammaSetDescr i pars
-        series = gammaSetSeries i pars
-    in histogramGenerator title descr series) ++
-  (concat $
-   flip map betaParams $ \(alpha, beta) ->
-   let title  = betaTitle alpha beta
-       descr  = betaDescr alpha beta
-       series = betaSeries alpha beta
-   in seriesGenerator title descr series) ++
-  (concat $ flip map (zip [1..] betaParamSet) $ \(i, pars) ->
-    let title  = betaSetTitle i pars
-        descr  = betaSetDescr i pars
-        series = betaSetSeries i pars
-    in histogramGenerator title descr series)
+  parametricGenerator gammaTitle gammaDescr gammaSeries gammaParams ++
+  setGenerator gammaSetTitle gammaSetDescr gammaSetSeries gammaParamSet ++
+  parametricGenerator betaTitle betaDescr betaSeries betaParams ++
+  setGenerator betaSetTitle betaSetDescr betaSetSeries betaParamSet ++
+  parametricGenerator weibullTitle weibullDescr weibullSeries weibullParams ++
+  setGenerator weibullSetTitle weibullSetDescr weibullSetSeries weibullParamSet
+  where
+    parametricGenerator title descr series params =
+      concat $
+      flip map params $ \(p1, p2) ->
+      let title'  = title p1 p2
+          descr'  = descr p1 p2
+          series' = series p1 p2
+      in seriesGenerator title' descr' series'
+    setGenerator title descr series params =
+      concat $
+      flip map (zip [1..] params) $ \(i, ps) ->
+      let title'  = title i ps
+          descr'  = descr i ps
+          series' = series i ps
+      in histogramGenerator title' descr' series'
 
 m1 = 2 :: Double
 m2 = 8 :: Double
@@ -189,6 +203,13 @@ model =
        memoRandomGammaDynamics (return kappa) (return theta)
      betaXs <- forM betaParams $ \(alpha, beta) ->
        memoRandomBetaDynamics (return alpha) (return beta)
+     weibullXs <- forM weibullParams $ \(alpha, beta) ->
+       memoRandomWeibullDynamics (return alpha) (return beta)
+     let parametricSources title series params =
+           flip map (zip series params) $ \(series, params) ->
+           let name  = title ++ show params
+               descr = title ++ show params
+           in resultSource name descr series
      return $
        results $
        [resultSource "rnd" "rnd" rndX,
@@ -198,13 +219,8 @@ model =
         resultSource "exp" "exp" expX,
         resultSource "poisson" "poisson" poissonX,
         resultSource "binomial" "binomial" binomialX] ++
-       (flip map (zip gammaXs gammaParams) $ \(gammaX, (kappa, theta)) ->
-         let name  = "gamma" ++ show (kappa, theta)
-             descr = "gamma" ++ show (kappa, theta)
-         in resultSource name descr gammaX) ++
-       (flip map (zip betaXs betaParams) $ \(betaX, (alpha, beta)) ->
-         let name  = "beta" ++ show (alpha, beta)
-             descr = "beta" ++ show (alpha, beta)
-         in resultSource name descr betaX)
+       parametricSources "gamma" gammaXs gammaParams ++
+       parametricSources "beta" betaXs betaParams ++
+       parametricSources "weibull" weibullXs weibullParams
     
 main = runExperiment experiment generators (WebPageRenderer $ CairoRenderer PNG) model

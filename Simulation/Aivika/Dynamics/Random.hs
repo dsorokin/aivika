@@ -30,7 +30,8 @@ module Simulation.Aivika.Dynamics.Random
         memoRandomPoissonDynamics,
         memoRandomBinomialDynamics,
         memoRandomGammaDynamics,
-        memoRandomBetaDynamics) where
+        memoRandomBetaDynamics,
+        memoRandomWeibullDynamics) where
 
 import System.Random
 
@@ -194,3 +195,17 @@ memoRandomBetaDynamics alpha beta =
      alpha' <- invokeDynamics p alpha
      beta'  <- invokeDynamics p beta
      generateBeta g alpha' beta'
+
+-- | Computation that generates random numbers from the Weibull distribution
+-- with the specified shape and scale but memoizes the numbers in
+-- the integration time points.
+memoRandomWeibullDynamics :: Dynamics Double     -- ^ shape
+                             -> Dynamics Double  -- ^ scale
+                             -> Simulation (Dynamics Double)
+memoRandomWeibullDynamics alpha beta =
+  memo0Dynamics $
+  Dynamics $ \p ->
+  do let g = runGenerator $ pointRun p
+     alpha' <- invokeDynamics p alpha
+     beta'  <- invokeDynamics p beta
+     generateWeibull g alpha' beta'
