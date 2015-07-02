@@ -49,7 +49,7 @@ data Generator =
               -- with the specified probability and number of trials.
               generateGamma :: Double -> Double -> IO Double
               -- ^ Generate a random number from the Gamma distribution with
-              -- the specified shape (kappa) and scale (theta).
+              -- the specified shape (kappa) and scale (theta, a reciprocal of the rate).
               --
               -- The probability density for the Gamma distribution is
               --
