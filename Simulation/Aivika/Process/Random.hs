@@ -85,7 +85,7 @@ randomUniformIntProcess_ min max =
   do t <- liftParameter $ randomUniformInt min max
      holdProcess $ fromIntegral t
 
--- | Hold the process for a random time interval with the triangular distribution.
+-- | Hold the process for a random time interval from the triangular distribution.
 randomTriangularProcess :: Double
                            -- ^ the minimum time interval
                            -> Double
@@ -100,7 +100,7 @@ randomTriangularProcess min median max =
      holdProcess t
      return t
 
--- | Hold the process for a random time interval with the triangular distribution.
+-- | Hold the process for a random time interval from the triangular distribution.
 randomTriangularProcess_ :: Double
                             -- ^ the minimum time interval
                             -> Double
@@ -137,7 +137,7 @@ randomNormalProcess_ mu nu =
      when (t > 0) $
        holdProcess t
 
--- | Hold the process for a random time interval with the lognormal distribution.
+-- | Hold the process for a random time interval from the lognormal distribution.
 randomLogNormalProcess :: Double
                           -- ^ the mean for a normal distribution
                           -- which this distribution is derived from
@@ -152,7 +152,7 @@ randomLogNormalProcess mu nu =
      holdProcess t
      return t
 
--- | Hold the process for a random time interval with the lognormal distribution.
+-- | Hold the process for a random time interval from the lognormal distribution.
 randomLogNormalProcess_ :: Double
                            -- ^ the mean for a normal distribution
                            -- which this distribution is derived from
@@ -185,7 +185,7 @@ randomExponentialProcess_ mu =
   do t <- liftParameter $ randomExponential mu
      holdProcess t
          
--- | Hold the process for a random time interval having the Erlang distribution with
+-- | Hold the process for a random time interval from the Erlang distribution with
 -- the specified scale (the reciprocal of the rate) and shape parameters.
 randomErlangProcess :: Double
                        -- ^ the scale (the reciprocal of the rate)
@@ -199,7 +199,7 @@ randomErlangProcess beta m =
      holdProcess t
      return t
 
--- | Hold the process for a random time interval having the Erlang distribution with
+-- | Hold the process for a random time interval from the Erlang distribution with
 -- the specified scale (the reciprocal of the rate) and shape parameters.
 randomErlangProcess_ :: Double
                         -- ^ the scale (the reciprocal of the rate)
@@ -210,7 +210,7 @@ randomErlangProcess_ beta m =
   do t <- liftParameter $ randomErlang beta m
      holdProcess t
 
--- | Hold the process for a random time interval having the Poisson distribution with
+-- | Hold the process for a random time interval from the Poisson distribution with
 -- the specified mean.
 randomPoissonProcess :: Double
                         -- ^ the mean time interval
@@ -222,7 +222,7 @@ randomPoissonProcess mu =
      holdProcess $ fromIntegral t
      return t
 
--- | Hold the process for a random time interval having the Poisson distribution with
+-- | Hold the process for a random time interval from the Poisson distribution with
 -- the specified mean.
 randomPoissonProcess_ :: Double
                          -- ^ the mean time interval
@@ -231,7 +231,7 @@ randomPoissonProcess_ mu =
   do t <- liftParameter $ randomPoisson mu
      holdProcess $ fromIntegral t
 
--- | Hold the process for a random time interval having the binomial distribution
+-- | Hold the process for a random time interval from the binomial distribution
 -- with the specified probability and trials.
 randomBinomialProcess :: Double
                          -- ^ the probability
@@ -245,7 +245,7 @@ randomBinomialProcess prob trials =
      holdProcess $ fromIntegral t
      return t
 
--- | Hold the process for a random time interval having the binomial distribution
+-- | Hold the process for a random time interval from the binomial distribution
 -- with the specified probability and trials.
 randomBinomialProcess_ :: Double
                          -- ^ the probability
