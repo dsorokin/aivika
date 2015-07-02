@@ -4,6 +4,8 @@
 import Control.Monad
 import Control.Monad.Trans
 
+import Data.List
+
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.Chart
@@ -11,6 +13,12 @@ import Simulation.Aivika.Experiment.Chart.Backend.Cairo
 
 import Graphics.Rendering.Chart.Backend.Cairo
 
+removeDuplicates :: Eq a => [a] -> [a]
+removeDuplicates =
+  foldl (\seen x -> if x `elem` seen
+                    then seen
+                    else seen ++ [x]) []
+                    
 specs = Specs 0 300 0.1 RungeKutta4 SimpleGenerator
 
 experiment = 
@@ -34,15 +42,12 @@ seriesGenerator title description series =
      timingStatsDescription = description,
      timingStatsSeries = series }]
 
-gammaGenerators =
+histogramGenerator title description series =
   [outputView $ defaultHistogramView {
       histogramWidth = 1000,
-      histogramTitle = "Gamma Distribution Set - Histogram",
-      histogramDescription = "It shows the Gamma distribution for different parameters",
-      histogramSeries =
-        mconcat $
-        flip map gammaParams $ \(kappa, theta) ->
-        resultByName $ "gamma" ++ show (kappa, theta) }]
+      histogramTitle = title ++ " - Histogram",
+      histogramDescription = description,
+      histogramSeries = series }]
 
 uniformTitle  = "Uniform Random"
 uniformDescr  = "Uniform " ++ show (m1, m2)
@@ -89,9 +94,18 @@ gammaDescr kappa theta  = "Gamma " ++ show (kappa, theta) ++
                           ", sqrt(DX) = " ++ show (gammaDeviation kappa theta)
 gammaSeries kappa theta = resultByName $ "gamma" ++ show (kappa, theta)
 
+gammaSetTitle i pars  = "Gamma Distribution Set " ++ show i
+gammaSetDescr i pars  = "It shows the Gamma distribution with different parameters."
+gammaSetSeries i pars =
+  mconcat $
+  flip map pars $ \(kappa, theta) ->
+  resultByName $ "gamma" ++ show (kappa, theta)
+
 gammaMean kappa theta      = kappa * theta
 gammaDeviation kappa theta = sqrt (kappa * theta * theta)
-gammaParams = [(0.5, 1), (1, 1), (3, 1), (3, 1/3), (3, 0.2)]
+
+gammaParamSet = [[(0.5, 1), (1, 1), (3, 1)], [(3, 0.2), (3, 1/3), (3, 1)]]
+gammaParams   = removeDuplicates $ concat gammaParamSet
 
 generators =
   [outputView defaultExperimentSpecsView] ++
@@ -108,7 +122,11 @@ generators =
        descr  = gammaDescr kappa theta
        series = gammaSeries kappa theta
    in seriesGenerator title descr series) ++
-  gammaGenerators
+  (concat $ flip map (zip [1..] gammaParamSet) $ \(i, pars) ->
+    let title  = gammaSetTitle i pars
+        descr  = gammaSetDescr i pars
+        series = gammaSetSeries i pars
+    in histogramGenerator title descr series)
 
 m1 = 2 :: Double
 m2 = 8 :: Double
