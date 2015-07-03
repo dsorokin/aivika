@@ -30,11 +30,20 @@ module Simulation.Aivika.Process.Random
         randomPoissonProcess,
         randomPoissonProcess_,
         randomBinomialProcess,
-        randomBinomialProcess_) where
+        randomBinomialProcess_,
+        randomGammaProcess,
+        randomGammaProcess_,
+        randomBetaProcess,
+        randomBetaProcess_,
+        randomWeibullProcess,
+        randomWeibullProcess_,
+        randomDiscreteProcess,
+        randomDiscreteProcess_) where
 
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Generator
 import Simulation.Aivika.Parameter
 import Simulation.Aivika.Parameter.Random
 import Simulation.Aivika.Process
@@ -255,3 +264,97 @@ randomBinomialProcess_ :: Double
 randomBinomialProcess_ prob trials =
   do t <- liftParameter $ randomBinomial prob trials
      holdProcess $ fromIntegral t
+
+-- | Hold the process for a random time interval from the Gamma distribution
+-- with the specified shape and scale.
+randomGammaProcess :: Double
+                      -- ^ the shape
+                      -> Double
+                      -- ^ the scale (a reciprocal of the rate)
+                      -> Process Double
+                      -- ^ a computation of the time interval
+                      -- for which the process was actually held
+randomGammaProcess kappa theta =
+  do t <- liftParameter $ randomGamma kappa theta
+     holdProcess t
+     return t
+
+-- | Hold the process for a random time interval from the Gamma distribution
+-- with the specified shape and scale.
+randomGammaProcess_ :: Double
+                       -- ^ the shape
+                       -> Double
+                       -- ^ the scale (a reciprocal of the rate)
+                       -> Process ()
+randomGammaProcess_ kappa theta =
+  do t <- liftParameter $ randomGamma kappa theta
+     holdProcess t
+
+-- | Hold the process for a random time interval from the Beta distribution
+-- with the specified shape parameters (alpha and beta).
+randomBetaProcess :: Double
+                     -- ^ the shape (alpha)
+                     -> Double
+                     -- ^ the shape (beta)
+                     -> Process Double
+                     -- ^ a computation of the time interval
+                     -- for which the process was actually held
+randomBetaProcess alpha beta =
+  do t <- liftParameter $ randomBeta alpha beta
+     holdProcess t
+     return t
+
+-- | Hold the process for a random time interval from the Beta distribution
+-- with the specified shape parameters (alpha and beta).
+randomBetaProcess_ :: Double
+                      -- ^ the shape (alpha)
+                      -> Double
+                      -- ^ the shape (beta)
+                      -> Process ()
+randomBetaProcess_ alpha beta =
+  do t <- liftParameter $ randomBeta alpha beta
+     holdProcess t
+
+-- | Hold the process for a random time interval from the Weibull distribution
+-- with the specified shape and scale.
+randomWeibullProcess :: Double
+                        -- ^ the shape
+                        -> Double
+                        -- ^ the scale
+                        -> Process Double
+                        -- ^ a computation of the time interval
+                        -- for which the process was actually held
+randomWeibullProcess alpha beta =
+  do t <- liftParameter $ randomWeibull alpha beta
+     holdProcess t
+     return t
+
+-- | Hold the process for a random time interval from the Weibull distribution
+-- with the specified shape and scale.
+randomWeibullProcess_ :: Double
+                         -- ^ the shape
+                         -> Double
+                         -- ^ the scale
+                         -> Process ()
+randomWeibullProcess_ alpha beta =
+  do t <- liftParameter $ randomWeibull alpha beta
+     holdProcess t
+
+-- | Hold the process for a random time interval from the specified discrete distribution.
+randomDiscreteProcess :: DiscretePDF Double
+                         -- ^ the discrete probability density function
+                         -> Process Double
+                         -- ^ a computation of the time interval
+                         -- for which the process was actually held
+randomDiscreteProcess dpdf =
+  do t <- liftParameter $ randomDiscrete dpdf
+     holdProcess t
+     return t
+
+-- | Hold the process for a random time interval from the specified discrete distribution.
+randomDiscreteProcess_ :: DiscretePDF Double
+                          -- ^ the discrete probability density function
+                          -> Process ()
+randomDiscreteProcess_ dpdf =
+  do t <- liftParameter $ randomDiscrete dpdf
+     holdProcess t
