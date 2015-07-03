@@ -75,7 +75,7 @@ newRandomUniformIntActivity =
   newPreemptibleRandomUniformIntActivity False
 
 -- | Create a new activity that holds the process for a random time interval
--- from the triangular distribution, when processing every input element.
+-- having the triangular distribution, when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
 -- because the handling of possible task preemption is rather costly
@@ -105,7 +105,7 @@ newRandomNormalActivity =
   newPreemptibleRandomNormalActivity False
          
 -- | Create a new activity that holds the process for a random time interval
--- from the lognormal distribution, when processing every input element.
+-- having the lognormal distribution, when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
 -- because the handling of possible task preemption is rather costly
@@ -134,7 +134,7 @@ newRandomExponentialActivity =
   newPreemptibleRandomExponentialActivity False
          
 -- | Create a new activity that holds the process for a random time interval
--- from the Erlang distribution with the specified scale (the reciprocal of the rate)
+-- having the Erlang distribution with the specified scale (the reciprocal of the rate)
 -- and shape parameters, when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
@@ -149,7 +149,7 @@ newRandomErlangActivity =
   newPreemptibleRandomErlangActivity False
 
 -- | Create a new activity that holds the process for a random time interval
--- from the Poisson distribution with the specified mean, when processing
+-- having the Poisson distribution with the specified mean, when processing
 -- every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
@@ -162,7 +162,7 @@ newRandomPoissonActivity =
   newPreemptibleRandomPoissonActivity False
 
 -- | Create a new activity that holds the process for a random time interval
--- from the binomial distribution with the specified probability and trials,
+-- having the binomial distribution with the specified probability and trials,
 -- when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
@@ -177,7 +177,7 @@ newRandomBinomialActivity =
   newPreemptibleRandomBinomialActivity False
 
 -- | Create a new activity that holds the process for a random time interval
--- from the Gamma distribution with the specified shape and scale,
+-- having the Gamma distribution with the specified shape and scale,
 -- when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
@@ -192,7 +192,7 @@ newRandomGammaActivity =
   newPreemptibleRandomGammaActivity False
 
 -- | Create a new activity that holds the process for a random time interval
--- from the Beta distribution with the specified shape parameters (alpha and beta),
+-- having the Beta distribution with the specified shape parameters (alpha and beta),
 -- when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
@@ -207,7 +207,7 @@ newRandomBetaActivity =
   newPreemptibleRandomBetaActivity False
 
 -- | Create a new activity that holds the process for a random time interval
--- from the Weibull distribution with the specified shape and scale,
+-- having the Weibull distribution with the specified shape and scale,
 -- when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
@@ -222,7 +222,7 @@ newRandomWeibullActivity =
   newPreemptibleRandomWeibullActivity False
 
 -- | Create a new activity that holds the process for a random time interval
--- from the specified discrete distribution, when processing every input element.
+-- having the specified discrete distribution, when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
 -- because the handling of possible task preemption is rather costly
@@ -262,7 +262,7 @@ newPreemptibleRandomUniformIntActivity preemptible min max =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
--- from the triangular distribution, when processing every input element.
+-- having the triangular distribution, when processing every input element.
 newPreemptibleRandomTriangularActivity :: Bool
                                           -- ^ whether the activity process can be preempted
                                           -> Double
@@ -292,7 +292,7 @@ newPreemptibleRandomNormalActivity preemptible mu nu =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
--- from the lognormal distribution, when processing every input element.
+-- having the lognormal distribution, when processing every input element.
 newPreemptibleRandomLogNormalActivity :: Bool
                                          -- ^ whether the activity process can be preempted
                                          -> Double
@@ -321,7 +321,7 @@ newPreemptibleRandomExponentialActivity preemptible mu =
      return a
          
 -- | Create a new activity that holds the process for a random time interval
--- from the Erlang distribution with the specified scale (the reciprocal of the rate)
+-- having the Erlang distribution with the specified scale (the reciprocal of the rate)
 -- and shape parameters, when processing every input element.
 newPreemptibleRandomErlangActivity :: Bool
                                       -- ^ whether the activity process can be preempted
@@ -336,7 +336,7 @@ newPreemptibleRandomErlangActivity preemptible beta m =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
--- from the Poisson distribution with the specified mean, when processing
+-- having the Poisson distribution with the specified mean, when processing
 -- every input element.
 newPreemptibleRandomPoissonActivity :: Bool
                                        -- ^ whether the activity process can be preempted
@@ -349,7 +349,7 @@ newPreemptibleRandomPoissonActivity preemptible mu =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
--- from the binomial distribution with the specified probability and trials,
+-- having the binomial distribution with the specified probability and trials,
 -- when processing every input element.
 newPreemptibleRandomBinomialActivity :: Bool
                                         -- ^ whether the activity process can be preempted
@@ -364,7 +364,7 @@ newPreemptibleRandomBinomialActivity preemptible prob trials =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
--- from the Gamma distribution with the specified shape and scale,
+-- having the Gamma distribution with the specified shape and scale,
 -- when processing every input element.
 newPreemptibleRandomGammaActivity :: Bool
                                      -- ^ whether the activity process can be preempted
@@ -379,7 +379,7 @@ newPreemptibleRandomGammaActivity preemptible kappa theta =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
--- from the Beta distribution with the specified shape parameters (alpha and beta),
+-- having the Beta distribution with the specified shape parameters (alpha and beta),
 -- when processing every input element.
 newPreemptibleRandomBetaActivity :: Bool
                                     -- ^ whether the activity process can be preempted
@@ -394,7 +394,7 @@ newPreemptibleRandomBetaActivity preemptible alpha beta =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
--- from the Weibull distribution with the specified shape and scale,
+-- having the Weibull distribution with the specified shape and scale,
 -- when processing every input element.
 newPreemptibleRandomWeibullActivity :: Bool
                                        -- ^ whether the activity process can be preempted
@@ -409,7 +409,7 @@ newPreemptibleRandomWeibullActivity preemptible alpha beta =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
--- from the specified discrete distribution, when processing every input element.
+-- having the specified discrete distribution, when processing every input element.
 newPreemptibleRandomDiscreteActivity :: Bool
                                         -- ^ whether the activity process can be preempted
                                         -> DiscretePDF Double
