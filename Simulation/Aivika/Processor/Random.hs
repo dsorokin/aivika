@@ -55,7 +55,7 @@ randomUniformIntProcessor min max =
   randomUniformIntProcess_ min max
 
 -- | When processing every input element, hold the process
--- for a random time interval from the triangular distribution.
+-- for a random time interval having the triangular distribution.
 randomTriangularProcessor :: Double
                              -- ^ the minimum time interval
                              -> Double
@@ -79,7 +79,7 @@ randomNormalProcessor mu nu =
   randomNormalProcess_ mu nu
          
 -- | When processing every input element, hold the process
--- for a random time interval from the lognormal distribution.
+-- for a random time interval having the lognormal distribution.
 randomLogNormalProcessor :: Double
                             -- ^ the mean for a normal distribution
                             -- which this distribution is derived from
@@ -102,7 +102,7 @@ randomExponentialProcessor mu =
   randomExponentialProcess_ mu
          
 -- | When processing every input element, hold the process
--- for a random time interval from the Erlang distribution with
+-- for a random time interval having the Erlang distribution with
 -- the specified scale (the reciprocal of the rate) and shape parameters.
 randomErlangProcessor :: Double
                          -- ^ the scale (the reciprocal of the rate)
@@ -114,7 +114,7 @@ randomErlangProcessor beta m =
   randomErlangProcess_ beta m
 
 -- | When processing every input element, hold the process
--- for a random time interval from the Poisson distribution
+-- for a random time interval having the Poisson distribution
 -- with the specified mean.
 randomPoissonProcessor :: Double
                           -- ^ the mean time interval
@@ -124,7 +124,7 @@ randomPoissonProcessor mu =
   randomPoissonProcess_ mu
 
 -- | When processing every input element, hold the process
--- for a random time interval from the binomial distribution
+-- for a random time interval having the binomial distribution
 -- with the specified probability and trials.
 randomBinomialProcessor :: Double
                            -- ^ the probability
@@ -136,7 +136,7 @@ randomBinomialProcessor prob trials =
   randomBinomialProcess_ prob trials
 
 -- | When processing every input element, hold the process
--- for a random time interval from the Gamma distribution
+-- for a random time interval having the Gamma distribution
 -- with the specified shape and scale.
 randomGammaProcessor :: Double
                         -- ^ the shape
@@ -148,7 +148,7 @@ randomGammaProcessor kappa theta =
   randomGammaProcess_ kappa theta
 
 -- | When processing every input element, hold the process
--- for a random time interval from the Beta distribution
+-- for a random time interval having the Beta distribution
 -- with the specified shape parameters (alpha and beta).
 randomBetaProcessor :: Double
                        -- ^ shape (alpha)
@@ -160,7 +160,7 @@ randomBetaProcessor alpha beta =
   randomBetaProcess_ alpha beta
 
 -- | When processing every input element, hold the process
--- for a random time interval from the Weibull distribution
+-- for a random time interval having the Weibull distribution
 -- with the specified shape and scale.
 randomWeibullProcessor :: Double
                           -- ^ shape
@@ -172,7 +172,7 @@ randomWeibullProcessor alpha beta =
   randomWeibullProcess_ alpha beta
 
 -- | When processing every input element, hold the process
--- for a random time interval from the specified discrete distribution.
+-- for a random time interval having the specified discrete distribution.
 randomDiscreteProcessor :: DiscretePDF Double
                            -- ^ the discrete probability density function
                            -> Processor a a
