@@ -68,7 +68,7 @@ randomStream delay = Cons $ loop Nothing where
                                    Just t0 -> Just delay }
        return (arrival, Cons $ loop (Just t2))
 
--- | Create a new stream with delays distributed uniformly.
+-- | Create a new stream with random delays distributed uniformly.
 randomUniformStream :: Double
                        -- ^ the minimum delay
                        -> Double
@@ -80,7 +80,7 @@ randomUniformStream min max =
   randomUniform min max >>= \x ->
   return (x, x)
 
--- | Create a new stream with integer delays distributed uniformly.
+-- | Create a new stream with integer random delays distributed uniformly.
 randomUniformIntStream :: Int
                           -- ^ the minimum delay
                           -> Int
@@ -92,7 +92,7 @@ randomUniformIntStream min max =
   randomUniformInt min max >>= \x ->
   return (fromIntegral x, x)
 
--- | Create a new stream with delays that have the triangular distribution.
+-- | Create a new stream with random delays from the triangular distribution.
 randomTriangularStream :: Double
                           -- ^ the minimum delay
                           -> Double
@@ -106,7 +106,7 @@ randomTriangularStream min median max =
   randomTriangular min median max >>= \x ->
   return (x, x)
 
--- | Create a new stream with delays distributed normally.
+-- | Create a new stream with random delays distributed normally.
 randomNormalStream :: Double
                       -- ^ the mean delay
                       -> Double
@@ -118,7 +118,7 @@ randomNormalStream mu nu =
   randomNormal mu nu >>= \x ->
   return (x, x)
 
--- | Create a new stream with delays that have the lognormal distribution.
+-- | Create a new stream with random delays from the lognormal distribution.
 randomLogNormalStream :: Double
                          -- ^ the mean of a normal distribution which
                          -- this distribution is derived from
@@ -132,7 +132,7 @@ randomLogNormalStream mu nu =
   randomLogNormal mu nu >>= \x ->
   return (x, x)
 
--- | Return a new stream with delays distibuted exponentially with the specified mean
+-- | Return a new stream with random delays distibuted exponentially with the specified mean
 -- (the reciprocal of the rate).
 randomExponentialStream :: Double
                            -- ^ the mean delay (the reciprocal of the rate)
@@ -143,7 +143,7 @@ randomExponentialStream mu =
   randomExponential mu >>= \x ->
   return (x, x)
          
--- | Return a new stream with delays having the Erlang distribution with the specified
+-- | Return a new stream with random delays from the Erlang distribution with the specified
 -- scale (the reciprocal of the rate) and shape parameters.
 randomErlangStream :: Double
                       -- ^ the scale (the reciprocal of the rate)
@@ -156,7 +156,7 @@ randomErlangStream beta m =
   randomErlang beta m >>= \x ->
   return (x, x)
 
--- | Return a new stream with delays having the Poisson distribution with
+-- | Return a new stream with random delays from the Poisson distribution with
 -- the specified mean.
 randomPoissonStream :: Double
                        -- ^ the mean delay
@@ -167,7 +167,7 @@ randomPoissonStream mu =
   randomPoisson mu >>= \x ->
   return (fromIntegral x, x)
 
--- | Return a new stream with delays having the binomial distribution with the specified
+-- | Return a new stream with random delays from the binomial distribution with the specified
 -- probability and trials.
 randomBinomialStream :: Double
                         -- ^ the probability
