@@ -21,8 +21,13 @@ module Simulation.Aivika.Net.Random
         randomExponentialNet,
         randomErlangNet,
         randomPoissonNet,
-        randomBinomialNet) where
+        randomBinomialNet,
+        randomGammaNet,
+        randomBetaNet,
+        randomWeibullNet,
+        randomDiscreteNet) where
 
+import Simulation.Aivika.Generator
 import Simulation.Aivika.Process
 import Simulation.Aivika.Process.Random
 import Simulation.Aivika.Net
@@ -129,3 +134,48 @@ randomBinomialNet :: Double
 randomBinomialNet prob trials =
   withinNet $
   randomBinomialProcess_ prob trials
+
+-- | When processing every input element, hold the process
+-- for a random time interval from the Gamma distribution
+-- with the specified shape and scale.
+randomGammaNet :: Double
+                  -- ^ the shape
+                  -> Double
+                  -- ^ the scale (a reciprocal of the rate)
+                  -> Net a a
+randomGammaNet kappa theta =
+  withinNet $
+  randomGammaProcess_ kappa theta
+
+-- | When processing every input element, hold the process
+-- for a random time interval from the Beta distribution
+-- with the specified shape parameters (alpha and beta).
+randomBetaNet :: Double
+                 -- ^ shape (alpha)
+                 -> Double
+                 -- ^ shape (beta)
+                 -> Net a a
+randomBetaNet alpha beta =
+  withinNet $
+  randomBetaProcess_ alpha beta
+
+-- | When processing every input element, hold the process
+-- for a random time interval from the Weibull distribution
+-- with the specified shape and scale.
+randomWeibullNet :: Double
+                    -- ^ shape
+                    -> Double
+                    -- ^ scale
+                    -> Net a a
+randomWeibullNet alpha beta =
+  withinNet $
+  randomWeibullProcess_ alpha beta
+
+-- | When processing every input element, hold the process
+-- for a random time interval from the specified discrete distribution.
+randomDiscreteNet :: DiscretePDF Double
+                     -- ^ the discrete probability density function
+                     -> Net a a
+randomDiscreteNet dpdf =
+  withinNet $
+  randomDiscreteProcess_ dpdf
