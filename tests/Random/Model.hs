@@ -7,6 +7,7 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Data.List
+import Data.Monoid
 
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
