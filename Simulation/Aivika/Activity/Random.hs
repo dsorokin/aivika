@@ -22,6 +22,10 @@ module Simulation.Aivika.Activity.Random
         newRandomErlangActivity,
         newRandomPoissonActivity,
         newRandomBinomialActivity,
+        newRandomGammaActivity,
+        newRandomBetaActivity,
+        newRandomWeibullActivity,
+        newRandomDiscreteActivity,
         newPreemptibleRandomUniformActivity,
         newPreemptibleRandomUniformIntActivity,
         newPreemptibleRandomTriangularActivity,
@@ -30,8 +34,13 @@ module Simulation.Aivika.Activity.Random
         newPreemptibleRandomExponentialActivity,
         newPreemptibleRandomErlangActivity,
         newPreemptibleRandomPoissonActivity,
-        newPreemptibleRandomBinomialActivity) where
+        newPreemptibleRandomBinomialActivity,
+        newPreemptibleRandomGammaActivity,
+        newPreemptibleRandomBetaActivity,
+        newPreemptibleRandomWeibullActivity,
+        newPreemptibleRandomDiscreteActivity) where
 
+import Simulation.Aivika.Generator
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Process
 import Simulation.Aivika.Process.Random
@@ -168,6 +177,63 @@ newRandomBinomialActivity =
   newPreemptibleRandomBinomialActivity False
 
 -- | Create a new activity that holds the process for a random time interval
+-- from the Gamma distribution with the specified shape and scale,
+-- when processing every input element.
+--
+-- By default, it is assumed that the activity process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newRandomGammaActivity :: Double
+                          -- ^ the shape
+                          -> Double
+                          -- ^ the scale (a reciprocal of the rate)
+                          -> Simulation (Activity () a a)
+newRandomGammaActivity =
+  newPreemptibleRandomGammaActivity False
+
+-- | Create a new activity that holds the process for a random time interval
+-- from the Beta distribution with the specified shape parameters (alpha and beta),
+-- when processing every input element.
+--
+-- By default, it is assumed that the activity process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newRandomBetaActivity :: Double
+                         -- ^ shape (alpha)
+                         -> Double
+                         -- ^ shape (beta)
+                         -> Simulation (Activity () a a)
+newRandomBetaActivity =
+  newPreemptibleRandomBetaActivity False
+
+-- | Create a new activity that holds the process for a random time interval
+-- from the Weibull distribution with the specified shape and scale,
+-- when processing every input element.
+--
+-- By default, it is assumed that the activity process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newRandomWeibullActivity :: Double
+                            -- ^ shape
+                            -> Double
+                            -- ^ scale
+                            -> Simulation (Activity () a a)
+newRandomWeibullActivity =
+  newPreemptibleRandomWeibullActivity False
+
+-- | Create a new activity that holds the process for a random time interval
+-- from the specified discrete distribution, when processing every input element.
+--
+-- By default, it is assumed that the activity process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newRandomDiscreteActivity :: DiscretePDF Double
+                             -- ^ the discrete probability density function
+                             -> Simulation (Activity () a a)
+newRandomDiscreteActivity =
+  newPreemptibleRandomDiscreteActivity False
+
+-- | Create a new activity that holds the process for a random time interval
 -- distributed uniformly, when processing every input element.
 newPreemptibleRandomUniformActivity :: Bool
                                        -- ^ whether the activity process can be preempted
@@ -295,4 +361,61 @@ newPreemptibleRandomBinomialActivity :: Bool
 newPreemptibleRandomBinomialActivity preemptible prob trials =
   newPreemptibleActivity preemptible $ \a ->
   do randomBinomialProcess_ prob trials
+     return a
+
+-- | Create a new activity that holds the process for a random time interval
+-- from the Gamma distribution with the specified shape and scale,
+-- when processing every input element.
+newPreemptibleRandomGammaActivity :: Bool
+                                     -- ^ whether the activity process can be preempted
+                                     -> Double
+                                     -- ^ the shape
+                                     -> Double
+                                     -- ^ the scale
+                                     -> Simulation (Activity () a a)
+newPreemptibleRandomGammaActivity preemptible kappa theta =
+  newPreemptibleActivity preemptible $ \a ->
+  do randomGammaProcess_ kappa theta
+     return a
+
+-- | Create a new activity that holds the process for a random time interval
+-- from the Beta distribution with the specified shape parameters (alpha and beta),
+-- when processing every input element.
+newPreemptibleRandomBetaActivity :: Bool
+                                    -- ^ whether the activity process can be preempted
+                                    -> Double
+                                    -- ^ shape (alpha)
+                                    -> Double
+                                    -- ^ shape (beta)
+                                    -> Simulation (Activity () a a)
+newPreemptibleRandomBetaActivity preemptible alpha beta =
+  newPreemptibleActivity preemptible $ \a ->
+  do randomBetaProcess_ alpha beta
+     return a
+
+-- | Create a new activity that holds the process for a random time interval
+-- from the Weibull distribution with the specified shape and scale,
+-- when processing every input element.
+newPreemptibleRandomWeibullActivity :: Bool
+                                       -- ^ whether the activity process can be preempted
+                                       -> Double
+                                       -- ^ shape
+                                       -> Double
+                                       -- ^ scale
+                                       -> Simulation (Activity () a a)
+newPreemptibleRandomWeibullActivity preemptible alpha beta =
+  newPreemptibleActivity preemptible $ \a ->
+  do randomWeibullProcess_ alpha beta
+     return a
+
+-- | Create a new activity that holds the process for a random time interval
+-- from the specified discrete distribution, when processing every input element.
+newPreemptibleRandomDiscreteActivity :: Bool
+                                        -- ^ whether the activity process can be preempted
+                                        -> DiscretePDF Double
+                                        -- ^ the discrete probability density function
+                                        -> Simulation (Activity () a a)
+newPreemptibleRandomDiscreteActivity preemptible dpdf =
+  newPreemptibleActivity preemptible $ \a ->
+  do randomDiscreteProcess_ dpdf
      return a
