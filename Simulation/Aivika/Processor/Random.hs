@@ -21,8 +21,13 @@ module Simulation.Aivika.Processor.Random
         randomExponentialProcessor,
         randomErlangProcessor,
         randomPoissonProcessor,
-        randomBinomialProcessor) where
+        randomBinomialProcessor,
+        randomGammaProcessor,
+        randomBetaProcessor,
+        randomWeibullProcessor,
+        randomDiscreteProcessor) where
 
+import Simulation.Aivika.Generator
 import Simulation.Aivika.Process
 import Simulation.Aivika.Process.Random
 import Simulation.Aivika.Processor
@@ -129,3 +134,48 @@ randomBinomialProcessor :: Double
 randomBinomialProcessor prob trials =
   withinProcessor $
   randomBinomialProcess_ prob trials
+
+-- | When processing every input element, hold the process
+-- for a random time interval from the Gamma distribution
+-- with the specified shape and scale.
+randomGammaProcessor :: Double
+                        -- ^ the shape
+                        -> Double
+                        -- ^ the scale (a reciprocal of the rate)
+                        -> Processor a a
+randomGammaProcessor kappa theta =
+  withinProcessor $
+  randomGammaProcess_ kappa theta
+
+-- | When processing every input element, hold the process
+-- for a random time interval from the Beta distribution
+-- with the specified shape parameters (alpha and beta).
+randomBetaProcessor :: Double
+                       -- ^ shape (alpha)
+                       -> Double
+                       -- ^ shape (beta)
+                       -> Processor a a
+randomBetaProcessor alpha beta =
+  withinProcessor $
+  randomBetaProcess_ alpha beta
+
+-- | When processing every input element, hold the process
+-- for a random time interval from the Weibull distribution
+-- with the specified shape and scale.
+randomWeibullProcessor :: Double
+                          -- ^ shape
+                          -> Double
+                          -- ^ scale
+                          -> Processor a a
+randomWeibullProcessor alpha beta =
+  withinProcessor $
+  randomWeibullProcess_ alpha beta
+
+-- | When processing every input element, hold the process
+-- for a random time interval from the specified discrete distribution.
+randomDiscreteProcessor :: DiscretePDF Double
+                           -- ^ the discrete probability density function
+                           -> Processor a a
+randomDiscreteProcessor dpdf =
+  withinProcessor $
+  randomDiscreteProcess_ dpdf
