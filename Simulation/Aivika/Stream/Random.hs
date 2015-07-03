@@ -22,11 +22,16 @@ module Simulation.Aivika.Stream.Random
         randomExponentialStream,
         randomErlangStream,
         randomPoissonStream,
-        randomBinomialStream) where
+        randomBinomialStream,
+        randomGammaStream,
+        randomBetaStream,
+        randomWeibullStream,
+        randomDiscreteStream) where
 
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Generator
 import Simulation.Aivika.Parameter
 import Simulation.Aivika.Parameter.Random
 import Simulation.Aivika.Simulation
@@ -179,3 +184,52 @@ randomBinomialStream prob trials =
   randomStream $
   randomBinomial prob trials >>= \x ->
   return (fromIntegral x, x)
+
+-- | Return a new stream with random delays from the Gamma distribution by the specified
+-- shape and scale.
+randomGammaStream :: Double
+                     -- ^ the shape
+                     -> Double
+                     -- ^ the scale (a reciprocal of the rate)
+                     -> Stream (Arrival Double)
+                     -- ^ the stream of random events with the delays generated
+randomGammaStream kappa theta =
+  randomStream $
+  randomGamma kappa theta >>= \x ->
+  return (x, x)
+
+-- | Return a new stream with random delays from the Beta distribution by the specified
+-- shape parameters (alpha and beta).
+randomBetaStream :: Double
+                    -- ^ the shape (alpha)
+                    -> Double
+                    -- ^ the shape (beta)
+                    -> Stream (Arrival Double)
+                    -- ^ the stream of random events with the delays generated
+randomBetaStream alpha beta =
+  randomStream $
+  randomBeta alpha beta >>= \x ->
+  return (x, x)
+
+-- | Return a new stream with random delays from the Weibull distribution by the specified
+-- shape and scale.
+randomWeibullStream :: Double
+                       -- ^ shape
+                       -> Double
+                       -- ^ scale
+                       -> Stream (Arrival Double)
+                       -- ^ the stream of random events with the delays generated
+randomWeibullStream alpha beta =
+  randomStream $
+  randomWeibull alpha beta >>= \x ->
+  return (x, x)
+
+-- | Return a new stream with random delays from the specified discrete distribution.
+randomDiscreteStream :: DiscretePDF Double
+                        -- ^ the discrete probability density function
+                        -> Stream (Arrival Double)
+                        -- ^ the stream of random events with the delays generated
+randomDiscreteStream dpdf =
+  randomStream $
+  randomDiscrete dpdf >>= \x ->
+  return (x, x)
