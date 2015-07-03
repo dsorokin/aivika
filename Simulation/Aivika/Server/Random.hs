@@ -22,6 +22,10 @@ module Simulation.Aivika.Server.Random
         newRandomErlangServer,
         newRandomPoissonServer,
         newRandomBinomialServer,
+        newRandomGammaServer,
+        newRandomBetaServer,
+        newRandomWeibullServer,
+        newRandomDiscreteServer,
         newPreemptibleRandomUniformServer,
         newPreemptibleRandomUniformIntServer,
         newPreemptibleRandomTriangularServer,
@@ -30,8 +34,13 @@ module Simulation.Aivika.Server.Random
         newPreemptibleRandomExponentialServer,
         newPreemptibleRandomErlangServer,
         newPreemptibleRandomPoissonServer,
-        newPreemptibleRandomBinomialServer) where
+        newPreemptibleRandomBinomialServer,
+        newPreemptibleRandomGammaServer,
+        newPreemptibleRandomBetaServer,
+        newPreemptibleRandomWeibullServer,
+        newPreemptibleRandomDiscreteServer) where
 
+import Simulation.Aivika.Generator
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Process
 import Simulation.Aivika.Process.Random
@@ -168,6 +177,63 @@ newRandomBinomialServer =
   newPreemptibleRandomBinomialServer False
 
 -- | Create a new server that holds the process for a random time interval
+-- from the Gamma distribution with the specified shape and scale,
+-- when processing every input element.
+--
+-- By default, it is assumed that the server process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newRandomGammaServer :: Double
+                        -- ^ the shape
+                        -> Double
+                        -- ^ the scale (a reciprocal of the rate)
+                        -> Simulation (Server () a a)
+newRandomGammaServer =
+  newPreemptibleRandomGammaServer False
+
+-- | Create a new server that holds the process for a random time interval
+-- from the Beta distribution with the specified shape parameters (alpha and beta),
+-- when processing every input element.
+--
+-- By default, it is assumed that the server process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newRandomBetaServer :: Double
+                       -- ^ shape (alpha)
+                       -> Double
+                       -- ^ shape (beta)
+                       -> Simulation (Server () a a)
+newRandomBetaServer =
+  newPreemptibleRandomBetaServer False
+
+-- | Create a new server that holds the process for a random time interval
+-- from the Weibull distribution with the specified shape and scale,
+-- when processing every input element.
+--
+-- By default, it is assumed that the server process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newRandomWeibullServer :: Double
+                          -- ^ shape
+                          -> Double
+                          -- ^ scale
+                          -> Simulation (Server () a a)
+newRandomWeibullServer =
+  newPreemptibleRandomWeibullServer False
+
+-- | Create a new server that holds the process for a random time interval
+-- from the specified discrete distribution, when processing every input element.
+--
+-- By default, it is assumed that the server process cannot be preempted,
+-- because the handling of possible task preemption is rather costly
+-- operation.
+newRandomDiscreteServer :: DiscretePDF Double
+                           -- ^ the discrete probability density function
+                           -> Simulation (Server () a a)
+newRandomDiscreteServer =
+  newPreemptibleRandomDiscreteServer False
+
+-- | Create a new server that holds the process for a random time interval
 -- distributed uniformly, when processing every input element.
 newPreemptibleRandomUniformServer :: Bool
                                      -- ^ whether the server process can be preempted
@@ -295,4 +361,61 @@ newPreemptibleRandomBinomialServer :: Bool
 newPreemptibleRandomBinomialServer preemptible prob trials =
   newPreemptibleServer preemptible $ \a ->
   do randomBinomialProcess_ prob trials
+     return a
+
+-- | Create a new server that holds the process for a random time interval
+-- from the Gamma distribution with the specified shape and scale,
+-- when processing every input element.
+newPreemptibleRandomGammaServer :: Bool
+                                   -- ^ whether the server process can be preempted
+                                   -> Double
+                                   -- ^ the shape
+                                   -> Double
+                                   -- ^ the scale (a reciprocal of the rate)
+                                   -> Simulation (Server () a a)
+newPreemptibleRandomGammaServer preemptible kappa theta =
+  newPreemptibleServer preemptible $ \a ->
+  do randomGammaProcess_ kappa theta
+     return a
+
+-- | Create a new server that holds the process for a random time interval
+-- from the Beta distribution with the specified shape parameters (alpha and beta),
+-- when processing every input element.
+newPreemptibleRandomBetaServer :: Bool
+                                  -- ^ whether the server process can be preempted
+                                  -> Double
+                                  -- ^ shape (alpha)
+                                  -> Double
+                                  -- ^ shape (beta)
+                                  -> Simulation (Server () a a)
+newPreemptibleRandomBetaServer preemptible alpha beta =
+  newPreemptibleServer preemptible $ \a ->
+  do randomBetaProcess_ alpha beta
+     return a
+
+-- | Create a new server that holds the process for a random time interval
+-- from the Weibull distribution with the specified shape and scale,
+-- when processing every input element.
+newPreemptibleRandomWeibullServer :: Bool
+                                  -- ^ whether the server process can be preempted
+                                  -> Double
+                                  -- ^ shape
+                                  -> Double
+                                  -- ^ scale
+                                  -> Simulation (Server () a a)
+newPreemptibleRandomWeibullServer preemptible alpha beta =
+  newPreemptibleServer preemptible $ \a ->
+  do randomWeibullProcess_ alpha beta
+     return a
+
+-- | Create a new server that holds the process for a random time interval
+-- from the specified discrete distribution, when processing every input element.
+newPreemptibleRandomDiscreteServer :: Bool
+                                      -- ^ whether the server process can be preempted
+                                      -> DiscretePDF Double
+                                      -- ^ the discrete probability density function
+                                      -> Simulation (Server () a a)
+newPreemptibleRandomDiscreteServer preemptible dpdf =
+  newPreemptibleServer preemptible $ \a ->
+  do randomDiscreteProcess_ dpdf
      return a
