@@ -97,7 +97,7 @@ randomUniformIntStream min max =
   randomUniformInt min max >>= \x ->
   return (fromIntegral x, x)
 
--- | Create a new stream with random delays from the triangular distribution.
+-- | Create a new stream with random delays having the triangular distribution.
 randomTriangularStream :: Double
                           -- ^ the minimum delay
                           -> Double
@@ -123,7 +123,7 @@ randomNormalStream mu nu =
   randomNormal mu nu >>= \x ->
   return (x, x)
 
--- | Create a new stream with random delays from the lognormal distribution.
+-- | Create a new stream with random delays having the lognormal distribution.
 randomLogNormalStream :: Double
                          -- ^ the mean of a normal distribution which
                          -- this distribution is derived from
@@ -148,7 +148,7 @@ randomExponentialStream mu =
   randomExponential mu >>= \x ->
   return (x, x)
          
--- | Return a new stream with random delays from the Erlang distribution with the specified
+-- | Return a new stream with random delays having the Erlang distribution with the specified
 -- scale (the reciprocal of the rate) and shape parameters.
 randomErlangStream :: Double
                       -- ^ the scale (the reciprocal of the rate)
@@ -161,7 +161,7 @@ randomErlangStream beta m =
   randomErlang beta m >>= \x ->
   return (x, x)
 
--- | Return a new stream with random delays from the Poisson distribution with
+-- | Return a new stream with random delays having the Poisson distribution with
 -- the specified mean.
 randomPoissonStream :: Double
                        -- ^ the mean delay
@@ -172,7 +172,7 @@ randomPoissonStream mu =
   randomPoisson mu >>= \x ->
   return (fromIntegral x, x)
 
--- | Return a new stream with random delays from the binomial distribution with the specified
+-- | Return a new stream with random delays having the binomial distribution with the specified
 -- probability and trials.
 randomBinomialStream :: Double
                         -- ^ the probability
@@ -185,7 +185,7 @@ randomBinomialStream prob trials =
   randomBinomial prob trials >>= \x ->
   return (fromIntegral x, x)
 
--- | Return a new stream with random delays from the Gamma distribution by the specified
+-- | Return a new stream with random delays having the Gamma distribution by the specified
 -- shape and scale.
 randomGammaStream :: Double
                      -- ^ the shape
@@ -198,7 +198,7 @@ randomGammaStream kappa theta =
   randomGamma kappa theta >>= \x ->
   return (x, x)
 
--- | Return a new stream with random delays from the Beta distribution by the specified
+-- | Return a new stream with random delays having the Beta distribution by the specified
 -- shape parameters (alpha and beta).
 randomBetaStream :: Double
                     -- ^ the shape (alpha)
@@ -211,7 +211,7 @@ randomBetaStream alpha beta =
   randomBeta alpha beta >>= \x ->
   return (x, x)
 
--- | Return a new stream with random delays from the Weibull distribution by the specified
+-- | Return a new stream with random delays having the Weibull distribution by the specified
 -- shape and scale.
 randomWeibullStream :: Double
                        -- ^ shape
@@ -224,7 +224,7 @@ randomWeibullStream alpha beta =
   randomWeibull alpha beta >>= \x ->
   return (x, x)
 
--- | Return a new stream with random delays from the specified discrete distribution.
+-- | Return a new stream with random delays having the specified discrete distribution.
 randomDiscreteStream :: DiscretePDF Double
                         -- ^ the discrete probability density function
                         -> Stream (Arrival Double)
