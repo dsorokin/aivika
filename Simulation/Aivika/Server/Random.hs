@@ -66,7 +66,7 @@ newRandomUniformIntServer =
   newPreemptibleRandomUniformIntServer False
 
 -- | Create a new server that holds the process for a random time interval
--- with the triangular distribution, when processing every input element.
+-- from the triangular distribution, when processing every input element.
 --
 -- By default, it is assumed that the server process cannot be preempted,
 -- because the handling of possible task preemption is rather costly
@@ -96,7 +96,7 @@ newRandomNormalServer =
   newPreemptibleRandomNormalServer False
          
 -- | Create a new server that holds the process for a random time interval
--- with the lognormal distribution, when processing every input element.
+-- from the lognormal distribution, when processing every input element.
 --
 -- By default, it is assumed that the server process cannot be preempted,
 -- because the handling of possible task preemption is rather costly
@@ -125,7 +125,7 @@ newRandomExponentialServer =
   newPreemptibleRandomExponentialServer False
          
 -- | Create a new server that holds the process for a random time interval
--- having the Erlang distribution with the specified scale (the reciprocal of the rate)
+-- from the Erlang distribution with the specified scale (the reciprocal of the rate)
 -- and shape parameters, when processing every input element.
 --
 -- By default, it is assumed that the server process cannot be preempted,
@@ -140,7 +140,7 @@ newRandomErlangServer =
   newPreemptibleRandomErlangServer False
 
 -- | Create a new server that holds the process for a random time interval
--- having the Poisson distribution with the specified mean, when processing
+-- from the Poisson distribution with the specified mean, when processing
 -- every input element.
 --
 -- By default, it is assumed that the server process cannot be preempted,
@@ -153,7 +153,7 @@ newRandomPoissonServer =
   newPreemptibleRandomPoissonServer False
 
 -- | Create a new server that holds the process for a random time interval
--- having the binomial distribution with the specified probability and trials,
+-- from the binomial distribution with the specified probability and trials,
 -- when processing every input element.
 --
 -- By default, it is assumed that the server process cannot be preempted,
@@ -196,7 +196,7 @@ newPreemptibleRandomUniformIntServer preemptible min max =
      return a
 
 -- | Create a new server that holds the process for a random time interval
--- with the triangular distribution, when processing every input element.
+-- from the triangular distribution, when processing every input element.
 newPreemptibleRandomTriangularServer :: Bool
                                         -- ^ whether the server process can be preempted
                                         -> Double
@@ -226,7 +226,7 @@ newPreemptibleRandomNormalServer preemptible mu nu =
      return a
 
 -- | Create a new server that holds the process for a random time interval
--- with the lognormal distribution, when processing every input element.
+-- from the lognormal distribution, when processing every input element.
 newPreemptibleRandomLogNormalServer :: Bool
                                        -- ^ whether the server process can be preempted
                                        -> Double
@@ -255,7 +255,7 @@ newPreemptibleRandomExponentialServer preemptible mu =
      return a
          
 -- | Create a new server that holds the process for a random time interval
--- having the Erlang distribution with the specified scale (the reciprocal of the rate)
+-- from the Erlang distribution with the specified scale (the reciprocal of the rate)
 -- and shape parameters, when processing every input element.
 newPreemptibleRandomErlangServer :: Bool
                                     -- ^ whether the server process can be preempted
@@ -270,7 +270,7 @@ newPreemptibleRandomErlangServer preemptible beta m =
      return a
 
 -- | Create a new server that holds the process for a random time interval
--- having the Poisson distribution with the specified mean, when processing
+-- from the Poisson distribution with the specified mean, when processing
 -- every input element.
 newPreemptibleRandomPoissonServer :: Bool
                                      -- ^ whether the server process can be preempted
@@ -283,7 +283,7 @@ newPreemptibleRandomPoissonServer preemptible mu =
      return a
 
 -- | Create a new server that holds the process for a random time interval
--- having the binomial distribution with the specified probability and trials,
+-- from the binomial distribution with the specified probability and trials,
 -- when processing every input element.
 newPreemptibleRandomBinomialServer :: Bool
                                      -- ^ whether the server process can be preempted
