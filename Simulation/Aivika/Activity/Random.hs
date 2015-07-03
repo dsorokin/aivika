@@ -66,7 +66,7 @@ newRandomUniformIntActivity =
   newPreemptibleRandomUniformIntActivity False
 
 -- | Create a new activity that holds the process for a random time interval
--- with the triangular distribution, when processing every input element.
+-- from the triangular distribution, when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
 -- because the handling of possible task preemption is rather costly
@@ -96,7 +96,7 @@ newRandomNormalActivity =
   newPreemptibleRandomNormalActivity False
          
 -- | Create a new activity that holds the process for a random time interval
--- with the lognormal distribution, when processing every input element.
+-- from the lognormal distribution, when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
 -- because the handling of possible task preemption is rather costly
@@ -125,7 +125,7 @@ newRandomExponentialActivity =
   newPreemptibleRandomExponentialActivity False
          
 -- | Create a new activity that holds the process for a random time interval
--- having the Erlang distribution with the specified scale (the reciprocal of the rate)
+-- from the Erlang distribution with the specified scale (the reciprocal of the rate)
 -- and shape parameters, when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
@@ -140,7 +140,7 @@ newRandomErlangActivity =
   newPreemptibleRandomErlangActivity False
 
 -- | Create a new activity that holds the process for a random time interval
--- having the Poisson distribution with the specified mean, when processing
+-- from the Poisson distribution with the specified mean, when processing
 -- every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
@@ -153,7 +153,7 @@ newRandomPoissonActivity =
   newPreemptibleRandomPoissonActivity False
 
 -- | Create a new activity that holds the process for a random time interval
--- having the binomial distribution with the specified probability and trials,
+-- from the binomial distribution with the specified probability and trials,
 -- when processing every input element.
 --
 -- By default, it is assumed that the activity process cannot be preempted,
@@ -196,7 +196,7 @@ newPreemptibleRandomUniformIntActivity preemptible min max =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
--- with the triangular distribution, when processing every input element.
+-- from the triangular distribution, when processing every input element.
 newPreemptibleRandomTriangularActivity :: Bool
                                           -- ^ whether the activity process can be preempted
                                           -> Double
@@ -226,7 +226,7 @@ newPreemptibleRandomNormalActivity preemptible mu nu =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
--- with the lognormal distribution, when processing every input element.
+-- from the lognormal distribution, when processing every input element.
 newPreemptibleRandomLogNormalActivity :: Bool
                                          -- ^ whether the activity process can be preempted
                                          -> Double
@@ -255,7 +255,7 @@ newPreemptibleRandomExponentialActivity preemptible mu =
      return a
          
 -- | Create a new activity that holds the process for a random time interval
--- having the Erlang distribution with the specified scale (the reciprocal of the rate)
+-- from the Erlang distribution with the specified scale (the reciprocal of the rate)
 -- and shape parameters, when processing every input element.
 newPreemptibleRandomErlangActivity :: Bool
                                       -- ^ whether the activity process can be preempted
@@ -270,7 +270,7 @@ newPreemptibleRandomErlangActivity preemptible beta m =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
--- having the Poisson distribution with the specified mean, when processing
+-- from the Poisson distribution with the specified mean, when processing
 -- every input element.
 newPreemptibleRandomPoissonActivity :: Bool
                                        -- ^ whether the activity process can be preempted
@@ -283,7 +283,7 @@ newPreemptibleRandomPoissonActivity preemptible mu =
      return a
 
 -- | Create a new activity that holds the process for a random time interval
--- having the binomial distribution with the specified probability and trials,
+-- from the binomial distribution with the specified probability and trials,
 -- when processing every input element.
 newPreemptibleRandomBinomialActivity :: Bool
                                         -- ^ whether the activity process can be preempted
