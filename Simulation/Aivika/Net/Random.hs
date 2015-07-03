@@ -55,7 +55,7 @@ randomUniformIntNet min max =
   randomUniformIntProcess_ min max
 
 -- | When processing every input element, hold the process
--- for a random time interval from the triangular distribution.
+-- for a random time interval having the triangular distribution.
 randomTriangularNet :: Double
                        -- ^ the minimum time interval
                        -> Double
@@ -79,7 +79,7 @@ randomNormalNet mu nu =
   randomNormalProcess_ mu nu
          
 -- | When processing every input element, hold the process
--- for a random time interval from the lognormal distribution.
+-- for a random time interval having the lognormal distribution.
 randomLogNormalNet :: Double
                       -- ^ the mean of a normal distribution which
                       -- this distribution is derived from
@@ -102,7 +102,7 @@ randomExponentialNet mu =
   randomExponentialProcess_ mu
          
 -- | When processing every input element, hold the process
--- for a random time interval from the Erlang distribution with
+-- for a random time interval having the Erlang distribution with
 -- the specified scale (the reciprocal of the rate) and shape parameters.
 randomErlangNet :: Double
                    -- ^ the scale (the reciprocal of the rate)
@@ -114,7 +114,7 @@ randomErlangNet beta m =
   randomErlangProcess_ beta m
 
 -- | When processing every input element, hold the process
--- for a random time interval from the Poisson distribution
+-- for a random time interval having the Poisson distribution
 -- with the specified mean.
 randomPoissonNet :: Double
                     -- ^ the mean time interval
@@ -124,7 +124,7 @@ randomPoissonNet mu =
   randomPoissonProcess_ mu
 
 -- | When processing every input element, hold the process
--- for a random time interval from the binomial distribution
+-- for a random time interval having the binomial distribution
 -- with the specified probability and trials.
 randomBinomialNet :: Double
                      -- ^ the probability
@@ -136,7 +136,7 @@ randomBinomialNet prob trials =
   randomBinomialProcess_ prob trials
 
 -- | When processing every input element, hold the process
--- for a random time interval from the Gamma distribution
+-- for a random time interval having the Gamma distribution
 -- with the specified shape and scale.
 randomGammaNet :: Double
                   -- ^ the shape
@@ -148,7 +148,7 @@ randomGammaNet kappa theta =
   randomGammaProcess_ kappa theta
 
 -- | When processing every input element, hold the process
--- for a random time interval from the Beta distribution
+-- for a random time interval having the Beta distribution
 -- with the specified shape parameters (alpha and beta).
 randomBetaNet :: Double
                  -- ^ shape (alpha)
@@ -160,7 +160,7 @@ randomBetaNet alpha beta =
   randomBetaProcess_ alpha beta
 
 -- | When processing every input element, hold the process
--- for a random time interval from the Weibull distribution
+-- for a random time interval having the Weibull distribution
 -- with the specified shape and scale.
 randomWeibullNet :: Double
                     -- ^ shape
@@ -172,7 +172,7 @@ randomWeibullNet alpha beta =
   randomWeibullProcess_ alpha beta
 
 -- | When processing every input element, hold the process
--- for a random time interval from the specified discrete distribution.
+-- for a random time interval having the specified discrete distribution.
 randomDiscreteNet :: DiscretePDF Double
                      -- ^ the discrete probability density function
                      -> Net a a
