@@ -50,7 +50,7 @@ randomUniformIntProcessor min max =
   randomUniformIntProcess_ min max
 
 -- | When processing every input element, hold the process
--- for a random time interval with the triangular distribution.
+-- for a random time interval from the triangular distribution.
 randomTriangularProcessor :: Double
                              -- ^ the minimum time interval
                              -> Double
@@ -74,7 +74,7 @@ randomNormalProcessor mu nu =
   randomNormalProcess_ mu nu
          
 -- | When processing every input element, hold the process
--- for a random time interval with the lognormal distribution.
+-- for a random time interval from the lognormal distribution.
 randomLogNormalProcessor :: Double
                             -- ^ the mean for a normal distribution
                             -- which this distribution is derived from
@@ -97,7 +97,7 @@ randomExponentialProcessor mu =
   randomExponentialProcess_ mu
          
 -- | When processing every input element, hold the process
--- for a random time interval having the Erlang distribution with
+-- for a random time interval from the Erlang distribution with
 -- the specified scale (the reciprocal of the rate) and shape parameters.
 randomErlangProcessor :: Double
                          -- ^ the scale (the reciprocal of the rate)
@@ -109,7 +109,7 @@ randomErlangProcessor beta m =
   randomErlangProcess_ beta m
 
 -- | When processing every input element, hold the process
--- for a random time interval having the Poisson distribution
+-- for a random time interval from the Poisson distribution
 -- with the specified mean.
 randomPoissonProcessor :: Double
                           -- ^ the mean time interval
@@ -119,7 +119,7 @@ randomPoissonProcessor mu =
   randomPoissonProcess_ mu
 
 -- | When processing every input element, hold the process
--- for a random time interval having the binomial distribution
+-- for a random time interval from the binomial distribution
 -- with the specified probability and trials.
 randomBinomialProcessor :: Double
                            -- ^ the probability
