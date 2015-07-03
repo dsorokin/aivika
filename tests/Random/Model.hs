@@ -1,6 +1,8 @@
 
 {-# LANGUAGE FlexibleContexts #-}
 
+module Model (model, specs, experiment, generators) where
+
 import Control.Monad
 import Control.Monad.Trans
 
@@ -9,9 +11,6 @@ import Data.List
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.Chart
-import Simulation.Aivika.Experiment.Chart.Backend.Cairo
-
-import Graphics.Rendering.Chart.Backend.Cairo
 
 removeDuplicates :: Eq a => [a] -> [a]
 removeDuplicates =
@@ -151,6 +150,7 @@ discreteDescr  = "Discrete PDF = " ++ show discretePDF
 discreteSeries = resultByName "discrete"
 discretePDF    = [(1, 0.1), (3, 0.3), (5, 0.5), (9, 0.1)] :: DiscretePDF Double
 
+generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView] ++
   seriesGenerator uniformTitle uniformDescr uniformSeries ++
@@ -230,5 +230,3 @@ model =
        parametricSources "gamma" gammaXs gammaParams ++
        parametricSources "beta" betaXs betaParams ++
        parametricSources "weibull" weibullXs weibullParams
-    
-main = runExperiment experiment generators (WebPageRenderer $ CairoRenderer PNG) model
