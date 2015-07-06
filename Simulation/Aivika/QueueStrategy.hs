@@ -73,6 +73,29 @@ class DequeueStrategy s => PriorityQueueStrategy s p | s -> p where
                                  -> Event ()
                                  -- ^ the action of enqueuing
 
+-- | Defines a strategy with support of the deleting operation.
+class DequeueStrategy s => DeletingQueueStrategy s where
+
+  -- | Remove the element and return a flag indicating whether
+  -- the element was found and removed.
+  strategyQueueDelete :: Eq i
+                         => StrategyQueue s i
+                         -- ^ the queue
+                         -> i
+                         -- ^ the element
+                         -> Event Bool
+                         -- ^ whether the element was found and removed
+  strategyQueueDelete s i = strategyQueueDeleteBy s (== i)
+
+  -- | Remove an element satisfying the predicate and return a flag
+  -- indicating whether the element was found and removed.
+  strategyQueueDeleteBy :: StrategyQueue s i
+                           -- ^ the queue
+                           -> (i -> Bool)
+                           -- ^ the predicate
+                           -> Event Bool
+                           -- ^ whether the element was found and removed
+
 -- | Strategy: First Come - First Served (FCFS).
 data FCFS = FCFS deriving (Eq, Ord, Show)
 
@@ -109,6 +132,11 @@ instance EnqueueStrategy FCFS where
 
   strategyEnqueue (FCFSQueue q) i = liftIO $ listAddLast q i
 
+-- | An implementation of the 'FCFS' queue strategy.
+instance DeletingQueueStrategy FCFS where
+
+  strategyQueueDeleteBy (FCFSQueue q) p = liftIO $ listRemoveBy q p
+
 -- | An implementation of the 'LCFS' queue strategy.
 instance QueueStrategy LCFS where
 
@@ -133,6 +161,11 @@ instance EnqueueStrategy LCFS where
 
   strategyEnqueue (LCFSQueue q) i = liftIO $ listInsertFirst q i
 
+-- | An implementation of the 'LCFS' queue strategy.
+instance DeletingQueueStrategy LCFS where
+
+  strategyQueueDeleteBy (LCFSQueue q) p = liftIO $ listRemoveBy q p
+
 -- | An implementation of the 'StaticPriorities' queue strategy.
 instance QueueStrategy StaticPriorities where
 
@@ -156,6 +189,11 @@ instance DequeueStrategy StaticPriorities where
 instance PriorityQueueStrategy StaticPriorities Double where
 
   strategyEnqueueWithPriority (StaticPriorityQueue q) p i = liftIO $ PQ.enqueue q p i
+
+-- | An implementation of the 'StaticPriorities' queue strategy.
+instance DeletingQueueStrategy StaticPriorities where
+
+  strategyQueueDeleteBy (StaticPriorityQueue q) p = liftIO $ PQ.queueDeleteBy q p
 
 -- | An implementation of the 'SIRO' queue strategy.
 instance QueueStrategy SIRO where
@@ -185,3 +223,8 @@ instance DequeueStrategy SIRO where
 instance EnqueueStrategy SIRO where
 
   strategyEnqueue (SIROQueue q) i = liftIO $ V.appendVector q i
+
+-- | An implementation of the 'SIRO' queue strategy.
+instance DeletingQueueStrategy SIRO where
+
+  strategyQueueDeleteBy (SIROQueue q) p = liftIO $ V.vectorDeleteBy q p
