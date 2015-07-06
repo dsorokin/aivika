@@ -308,7 +308,7 @@ releaseResource r =
   Process $ \pid ->
   Cont $ \c ->
   Event $ \p ->
-  do f <- PQ.removeBy (resourceActingQueue r) (\item -> actingItemId item == pid)
+  do f <- PQ.queueDeleteBy (resourceActingQueue r) (\item -> actingItemId item == pid)
      if f
        then do invokeEvent p $ updateResourceUtilisationCount r (-1)
                invokeEvent p $ releaseResource' r

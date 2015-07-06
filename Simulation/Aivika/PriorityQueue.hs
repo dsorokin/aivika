@@ -19,6 +19,8 @@ module Simulation.Aivika.PriorityQueue
         enqueue, 
         dequeue, 
         queueFront,
+        queueDelete,
+        queueDeleteBy,
         remove,
         removeBy) where 
 
@@ -171,16 +173,16 @@ queueFront pq =
 -- indicating whether the element was actually removed.
 --
 -- Note that unlike other functions it has complexity O(n).
-remove :: Eq a => PriorityQueue a -> a -> IO Bool
-remove pq a = removeBy pq (== a)
+queueDelete :: Eq a => PriorityQueue a -> a -> IO Bool
+queueDelete pq a = queueDeleteBy pq (== a)
 
 -- | Remove an element satisfying the predicate and return a computation of the flag
 -- indicating whether the element was actually removed.
 --
 -- Note that unlike other functions it has complexity O(n).
-removeBy :: PriorityQueue a -> (a -> Bool) -> IO Bool
-removeBy pq pred =
-  do index <- indexBy pq pred
+queueDeleteBy :: PriorityQueue a -> (a -> Bool) -> IO Bool
+queueDeleteBy pq pred =
+  do index <- queueIndexBy pq pred
      if index < 0
        then return False
        else do size <- readIORef (pqSize pq)
@@ -201,8 +203,8 @@ removeBy pq pred =
                return True
      
 -- | Return the index of the item satisfying the predicate or -1.     
-indexBy :: PriorityQueue a -> (a -> Bool) -> IO Int
-indexBy pq pred =
+queueIndexBy :: PriorityQueue a -> (a -> Bool) -> IO Int
+queueIndexBy pq pred =
   do size <- readIORef (pqSize pq)
      vals <- readIORef (pqVals pq)
      let loop index =
@@ -213,3 +215,13 @@ indexBy pq pred =
                      then return index
                      else loop $ index + 1
      loop 0
+
+-- | Use 'queueDelete' instead.
+remove :: Eq a => PriorityQueue a -> a -> IO Bool
+{-# DEPRECATED remove "Use queueDelete instead." #-}
+remove = queueDelete
+
+-- | Use 'queueDeleteBy' instead.
+removeBy :: PriorityQueue a -> (a -> Bool) -> IO Bool
+{-# DEPRECATED removeBy "Use queueDeleteBy instead." #-}
+removeBy = queueDeleteBy
