@@ -46,6 +46,7 @@ module Simulation.Aivika.Resource.Preemption
 
 import Data.IORef
 import Data.Monoid
+import Data.Maybe
 
 import Control.Monad
 import Control.Monad.Trans
@@ -308,7 +309,7 @@ releaseResource r =
   Process $ \pid ->
   Cont $ \c ->
   Event $ \p ->
-  do f <- PQ.queueDeleteBy (resourceActingQueue r) (\item -> actingItemId item == pid)
+  do f <- fmap isJust $ PQ.queueDeleteBy (resourceActingQueue r) (\item -> actingItemId item == pid)
      if f
        then do invokeEvent p $ updateResourceUtilisationCount r (-1)
                invokeEvent p $ releaseResource' r

@@ -211,12 +211,12 @@ vectorDelete vector item =
                return True
        else return False
             
--- | Remove an element by the specified predicate and return a flag indicating
--- whether the element was found and removed.
-vectorDeleteBy :: Vector a -> (a -> Bool) -> IO Bool
+-- | Remove an element by the specified predicate and return the element if found.
+vectorDeleteBy :: Vector a -> (a -> Bool) -> IO (Maybe a)
 vectorDeleteBy vector pred =
   do index <- vectorIndexBy vector pred
      if index >= 0
-       then do vectorDeleteAt vector index
-               return True
-       else return False
+       then do a <- readVector vector index
+               vectorDeleteAt vector index
+               return (Just a)
+       else return Nothing

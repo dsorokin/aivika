@@ -15,6 +15,7 @@ module Simulation.Aivika.QueueStrategy where
 
 import System.Random
 import Control.Monad.Trans
+import Data.Maybe
 
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Event
@@ -85,16 +86,15 @@ class DequeueStrategy s => DeletingQueueStrategy s where
                          -- ^ the element
                          -> Event Bool
                          -- ^ whether the element was found and removed
-  strategyQueueDelete s i = strategyQueueDeleteBy s (== i)
+  strategyQueueDelete s i = fmap isJust $ strategyQueueDeleteBy s (== i)
 
-  -- | Remove an element satisfying the predicate and return a flag
-  -- indicating whether the element was found and removed.
+  -- | Remove an element satisfying the predicate and return the element if found.
   strategyQueueDeleteBy :: StrategyQueue s i
                            -- ^ the queue
                            -> (i -> Bool)
                            -- ^ the predicate
-                           -> Event Bool
-                           -- ^ whether the element was found and removed
+                           -> Event (Maybe i)
+                           -- ^ the element if it was found and removed
 
 -- | Strategy: First Come - First Served (FCFS).
 data FCFS = FCFS deriving (Eq, Ord, Show)

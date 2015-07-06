@@ -24,6 +24,8 @@ module Simulation.Aivika.DoubleLinkedList
         listLast) where 
 
 import Data.IORef
+import Data.Maybe
+
 import Control.Monad
 
 -- | A cell of the double-linked list.
@@ -173,15 +175,15 @@ listLast x =
 -- | Remove the specified element from the list and return a flag
 -- indicating whether the element was found and removed.
 listRemove :: Eq a => DoubleLinkedList a -> a -> IO Bool
-listRemove x v = listRemoveBy x (== v)
+listRemove x v = fmap isJust $ listRemoveBy x (== v)
 
 -- | Remove an element satisfying the specified predicate and return
--- a flag indicating whether the element was found and removed.
-listRemoveBy :: DoubleLinkedList a -> (a -> Bool) -> IO Bool
+-- the element if found.
+listRemoveBy :: DoubleLinkedList a -> (a -> Bool) -> IO (Maybe a)
 listRemoveBy x p = readIORef (listHead x) >>= loop
   where loop item =
           case item of
-            Nothing   -> return False
+            Nothing   -> return Nothing
             Just item ->
               do let f = p (itemVal item)
                  if not f
@@ -204,5 +206,4 @@ listRemoveBy x p = readIORef (listHead x) >>= loop
                              (Just prev', Just next') ->
                                do writeIORef (itemNext prev') (Just next')
                                   writeIORef (itemPrev next') (Just prev')
-                           return True
-                 
+                           return (Just $ itemVal item)

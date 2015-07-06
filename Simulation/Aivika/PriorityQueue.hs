@@ -28,6 +28,8 @@ import Data.Array
 import Data.Array.MArray.Safe
 import Data.Array.IO.Safe
 import Data.IORef
+import Data.Maybe
+
 import Control.Monad
 
 -- | The 'PriorityQueue' type represents an imperative heap-based 
@@ -174,24 +176,25 @@ queueFront pq =
 --
 -- Note that unlike other functions it has complexity O(n).
 queueDelete :: Eq a => PriorityQueue a -> a -> IO Bool
-queueDelete pq a = queueDeleteBy pq (== a)
+queueDelete pq a = fmap isJust $ queueDeleteBy pq (== a)
 
--- | Remove an element satisfying the predicate and return a computation of the flag
--- indicating whether the element was actually removed.
+-- | Remove an element satisfying the predicate and return a computation of
+-- the element if found.
 --
 -- Note that unlike other functions it has complexity O(n).
-queueDeleteBy :: PriorityQueue a -> (a -> Bool) -> IO Bool
+queueDeleteBy :: PriorityQueue a -> (a -> Bool) -> IO (Maybe a)
 queueDeleteBy pq pred =
   do index <- queueIndexBy pq pred
      if index < 0
-       then return False
+       then return Nothing
        else do size <- readIORef (pqSize pq)
                when (size == 0) $
-                 error "Internal error in the priority queue implementation: removeBy"
+                 error "Internal error in the priority queue implementation: queueDeleteBy"
                let i = size - 1
                writeIORef (pqSize pq) i
                keys <- readIORef (pqKeys pq)
                vals <- readIORef (pqVals pq)
+               x <- readArray vals index
                k <- readArray keys i
                v <- readArray vals i
                let k0 = 0.0
@@ -200,7 +203,7 @@ queueDeleteBy pq pred =
                writeArray vals i v0
                when (i > 0) $
                  siftDown keys vals i index k v
-               return True
+               return (Just x)
      
 -- | Return the index of the item satisfying the predicate or -1.     
 queueIndexBy :: PriorityQueue a -> (a -> Bool) -> IO Int
@@ -224,4 +227,4 @@ remove = queueDelete
 -- | Use 'queueDeleteBy' instead.
 removeBy :: PriorityQueue a -> (a -> Bool) -> IO Bool
 {-# DEPRECATED removeBy "Use queueDeleteBy instead." #-}
-removeBy = queueDeleteBy
+removeBy pq pred = fmap isJust $ queueDeleteBy pq pred
