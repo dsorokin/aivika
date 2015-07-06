@@ -18,6 +18,8 @@ module Simulation.Aivika.DoubleLinkedList
         listAddLast,
         listRemoveFirst,
         listRemoveLast,
+        listRemove,
+        listRemoveBy,
         listFirst,
         listLast) where 
 
@@ -62,7 +64,8 @@ newList =
 listInsertFirst :: DoubleLinkedList a -> a -> IO ()
 listInsertFirst x v =
   do size <- readIORef (listSize x)
-     writeIORef (listSize x) (size + 1)
+     let size' = size + 1
+     size' `seq` writeIORef (listSize x) size'
      head <- readIORef (listHead x)
      case head of
        Nothing ->
@@ -86,7 +89,8 @@ listInsertFirst x v =
 listAddLast :: DoubleLinkedList a -> a -> IO ()
 listAddLast x v =
   do size <- readIORef (listSize x)
-     writeIORef (listSize x) (size + 1)
+     let size' = size + 1
+     size' `seq` writeIORef (listSize x) size'
      tail <- readIORef (listTail x)
      case tail of
        Nothing ->
@@ -115,7 +119,8 @@ listRemoveFirst x =
          error "Empty list: listRemoveFirst"
        Just h ->
          do size  <- readIORef (listSize x)
-            writeIORef (listSize x) (size - 1)
+            let size' = size - 1
+            size' `seq` writeIORef (listSize x) size'
             head' <- readIORef (itemNext h)
             case head' of
               Nothing ->
@@ -134,7 +139,8 @@ listRemoveLast x =
          error "Empty list: listRemoveLast"
        Just t ->
          do size  <- readIORef (listSize x)
-            writeIORef (listSize x) (size - 1)
+            let size' =  size - 1
+            size' `seq` writeIORef (listSize x) size'
             tail' <- readIORef (itemPrev t)
             case tail' of
               Nothing ->
@@ -163,3 +169,40 @@ listLast x =
          error "Empty list: listLast"
        Just t ->
          return $ itemVal t
+
+-- | Remove the specified element from the list and return a flag
+-- indicating whether the element was found and removed.
+listRemove :: Eq a => DoubleLinkedList a -> a -> IO Bool
+listRemove x v = listRemoveBy x (== v)
+
+-- | Remove an element satisfying the specified predicate and return
+-- a flag indicating whether the element was found and removed.
+listRemoveBy :: DoubleLinkedList a -> (a -> Bool) -> IO Bool
+listRemoveBy x p = readIORef (listHead x) >>= loop
+  where loop item =
+          case item of
+            Nothing   -> return False
+            Just item ->
+              do let f = p (itemVal item)
+                 if not f
+                   then readIORef (itemNext item) >>= loop
+                   else do size <- readIORef (listSize x)
+                           prev <- readIORef (itemPrev item)
+                           next <- readIORef (itemNext item)
+                           let size' = size - 1
+                           size' `seq` writeIORef (listSize x) size'
+                           case (prev, next) of
+                             (Nothing, Nothing) ->
+                               do writeIORef (listHead x) Nothing
+                                  writeIORef (listTail x) Nothing
+                             (Nothing, head' @ (Just item')) ->
+                               do writeIORef (itemPrev item') Nothing
+                                  writeIORef (listHead x) head'
+                             (tail' @ (Just item'), Nothing) ->
+                               do writeIORef (itemNext item') Nothing
+                                  writeIORef (listTail x) tail'
+                             (Just prev', Just next') ->
+                               do writeIORef (itemNext prev') (Just next')
+                                  writeIORef (itemPrev next') (Just prev')
+                           return True
+                 
