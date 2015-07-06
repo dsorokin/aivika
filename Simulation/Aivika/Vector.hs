@@ -22,7 +22,10 @@ module Simulation.Aivika.Vector
         vectorBinarySearch,
         vectorInsert,
         vectorDeleteAt,
+        vectorDelete,
+        vectorDeleteBy,
         vectorIndex,
+        vectorIndexBy,
         freezeVector) where 
 
 import Data.Array
@@ -183,3 +186,37 @@ vectorIndex vector item =
                      then return index
                      else loop $ index + 1
      loop 0
+     
+-- | Return an index of the item satisfying the predicate or -1.     
+vectorIndexBy :: Vector a -> (a -> Bool) -> IO Int
+vectorIndexBy vector pred =
+  do count <- readIORef (vectorCountRef vector)
+     array <- readIORef (vectorArrayRef vector)
+     let loop index =
+           if index >= count
+           then return $ -1
+           else do x <- readArray array index
+                   if pred x
+                     then return index
+                     else loop $ index + 1
+     loop 0
+
+-- | Remove the specified element and return a flag indicating
+-- whether the element was found and removed.
+vectorDelete :: Eq a => Vector a -> a -> IO Bool
+vectorDelete vector item =
+  do index <- vectorIndex vector item
+     if index >= 0
+       then do vectorDeleteAt vector index
+               return True
+       else return False
+            
+-- | Remove an element by the specified predicate and return a flag indicating
+-- whether the element was found and removed.
+vectorDeleteBy :: Vector a -> (a -> Bool) -> IO Bool
+vectorDeleteBy vector pred =
+  do index <- vectorIndexBy vector pred
+     if index >= 0
+       then do vectorDeleteAt vector index
+               return True
+       else return False
