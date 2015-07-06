@@ -63,6 +63,7 @@ module Simulation.Aivika.Queue
         enqueueOrLost_,
         enqueueWithStoringPriorityOrLost,
         enqueueWithStoringPriorityOrLost_,
+        clearQueue,
         -- * Awaiting
         waitWhileFullQueue,
         -- * Summary
@@ -607,6 +608,18 @@ tryDequeue q =
                fmap Just $ dequeueExtract q t
        else return Nothing
 
+-- | Clear the queue immediately.
+clearQueue :: (DequeueStrategy si,
+               DequeueStrategy sm)
+              => Queue si sm so a
+              -- ^ the queue
+              -> Event ()
+clearQueue q =
+  do x <- tryDequeue q
+     case x of
+       Nothing -> return ()
+       Just a  -> clearQueue q
+              
 -- | Enqueue the item suspending the process if the queue is full.  
 enqueue :: (EnqueueStrategy si,
             EnqueueStrategy sm,

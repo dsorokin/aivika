@@ -43,6 +43,7 @@ module Simulation.Aivika.Queue.Infinite
         tryDequeue,
         enqueue,
         enqueueWithStoringPriority,
+        clearQueue,
         -- * Summary
         queueSummary,
         -- * Derived Signals for Properties
@@ -407,6 +408,17 @@ tryDequeue q =
        then do t <- dequeueRequest q
                fmap Just $ dequeueExtract q t
        else return Nothing
+
+-- | Clear the queue immediately.
+clearQueue :: DequeueStrategy sm
+              => Queue sm so a
+              -- ^ the queue
+              -> Event ()
+clearQueue q =
+  do x <- tryDequeue q
+     case x of
+       Nothing -> return ()
+       Just a  -> clearQueue q
 
 -- | Enqueue the item.  
 enqueue :: (EnqueueStrategy sm,
