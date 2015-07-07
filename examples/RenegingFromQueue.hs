@@ -3,6 +3,16 @@
 --
 -- It is described in [1]. This is section 7.8.
 -- 
+-- This example models customers arriving to a queue and leaving a queue
+-- after a prescribed period of time. The time between arrivals is 
+-- exponentially distributed with a mean of 20 minutes. The service time 
+-- for customers is uniformly distributed between 15 and 25 minutes. 
+-- Customers will only wait for service if the waiting time is less than
+-- a renege time which is lognormally distributed with a mean of 10 minutes
+-- and a standard deviation of 2 minutes. It is desired to estimate the time
+-- in the system for those customers served, the percent of customers that
+-- renege and the length of the waiting time.
+-- 
 -- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
 
 import Control.Monad
