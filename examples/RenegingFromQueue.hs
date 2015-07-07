@@ -73,7 +73,7 @@ model = do
      timeInSystem,
      --
      resultSource
-     "renegeEvents" "reneging events"
+     "renegeEvents" "renege events"
      renegeEvents]
 
 modelSummary :: Simulation Results
