@@ -1,4 +1,13 @@
 
+Version 4.2
+-----
+
+* Added new random distributions: lognormal, Gamma, Beta, Weibull and 
+  a generic discrete by pdf.
+
+* The items can be removed from the queue; moreover, the queue can be 
+  cleared.
+
 Version 4.1.1
 -----
 
