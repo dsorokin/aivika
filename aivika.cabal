@@ -120,6 +120,7 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/PingPong.hs
                      examples/PortOperations.hs
                      examples/SingleLaneTraffic.hs
+                     examples/RenegingFromQueue.hs
                      CHANGELOG.md
 
 library
