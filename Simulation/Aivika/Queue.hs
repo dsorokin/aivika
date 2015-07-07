@@ -64,7 +64,9 @@ module Simulation.Aivika.Queue
         enqueueWithStoringPriorityOrLost,
         enqueueWithStoringPriorityOrLost_,
         queueDelete,
+        queueDelete_,
         queueDeleteBy,
+        queueDeleteBy_,
         clearQueue,
         -- * Awaiting
         waitWhileFullQueue,
@@ -625,6 +627,18 @@ queueDelete :: (Eq a,
                -- ^ whether the item was found and removed
 queueDelete q a = fmap isJust $ queueDeleteBy q (== a)
 
+-- | Remove the specified item from the queue.
+queueDelete_ :: (Eq a,
+                 DequeueStrategy si,
+                 DeletingQueueStrategy sm,
+                 DequeueStrategy so)
+                => Queue si sm so a
+                -- ^ the queue
+                -> a
+                -- ^ the item to remove from the queue
+                -> Event ()
+queueDelete_ q a = fmap (const ()) $ queueDeleteBy q (== a)
+
 -- | Remove an item satisfying the specified predicate and return the item if found.
 queueDeleteBy :: (DequeueStrategy si,
                   DeletingQueueStrategy sm,
@@ -647,6 +661,17 @@ queueDeleteBy q pred =
                       fmap Just $ dequeuePostExtract q t i
        else return Nothing
                
+-- | Remove an item satisfying the specified predicate.
+queueDeleteBy_ :: (DequeueStrategy si,
+                   DeletingQueueStrategy sm,
+                   DequeueStrategy so)
+                  => Queue si sm so a
+                  -- ^ the queue
+                  -> (a -> Bool)
+                  -- ^ the predicate
+                  -> Event ()
+queueDeleteBy_ q pred = fmap (const ()) $ queueDeleteBy q pred
+
 -- | Clear the queue immediately.
 clearQueue :: (DequeueStrategy si,
                DequeueStrategy sm)
