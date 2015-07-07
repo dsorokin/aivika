@@ -43,6 +43,8 @@ module Simulation.Aivika.Queue.Infinite
         tryDequeue,
         enqueue,
         enqueueWithStoringPriority,
+        queueDelete,
+        queueDeleteBy,
         clearQueue,
         -- * Summary
         queueSummary,
@@ -72,6 +74,7 @@ module Simulation.Aivika.Queue.Infinite
 
 import Data.IORef
 import Data.Monoid
+import Data.Maybe
 
 import Control.Monad
 import Control.Monad.Trans
@@ -409,6 +412,40 @@ tryDequeue q =
                fmap Just $ dequeueExtract q t
        else return Nothing
 
+-- | Remove the item from the queue and return a flag indicating
+-- whether the item was found and actually removed.
+queueDelete :: (Eq a,
+                DeletingQueueStrategy sm,
+                DequeueStrategy so)
+               => Queue sm so a
+               -- ^ the queue
+               -> a
+               -- ^ the item to remove from the queue
+               -> Event Bool
+               -- ^ whether the item was found and removed
+queueDelete q a = fmap isJust $ queueDeleteBy q (== a)
+
+-- | Remove an element satisfying the specified predicate and return the element if found.
+queueDeleteBy :: (DeletingQueueStrategy sm,
+                  DequeueStrategy so)
+                 => Queue sm so a
+                 -- ^ the queue
+                 -> (a -> Bool)
+                 -- ^ the predicate
+                 -> Event (Maybe a)
+queueDeleteBy q pred =
+  do x <- tryRequestResourceWithinEvent (dequeueRes q)
+     if x
+       then do i <- strategyQueueDeleteBy (queueStore q) (pred . itemValue)
+               case i of
+                 Nothing ->
+                   do releaseResourceWithinEvent (dequeueRes q)
+                      return Nothing
+                 Just i ->
+                   do t <- dequeueRequest q
+                      fmap Just $ dequeuePostExtract q t i
+       else return Nothing
+
 -- | Clear the queue immediately.
 clearQueue :: DequeueStrategy sm
               => Queue sm so a
@@ -532,7 +569,22 @@ dequeueExtract q t' =
   Event $ \p ->
   do i <- invokeEvent p $
           strategyDequeue (queueStore q)
-     c <- readIORef (queueCountRef q)
+     invokeEvent p $
+       dequeuePostExtract q t' i
+
+-- | A post action after extracting the item by the dequeuing request.  
+dequeuePostExtract :: DequeueStrategy sm
+                      => Queue sm so a
+                      -- ^ the queue
+                      -> Double
+                      -- ^ the time of the dequeuing request
+                      -> QueueItem a
+                      -- ^ the item to dequeue
+                      -> Event a
+                      -- ^ the dequeued value
+dequeuePostExtract q t' i =
+  Event $ \p ->
+  do c <- readIORef (queueCountRef q)
      let c' = c - 1
          t  = pointTime p
      c' `seq` writeIORef (queueCountRef q) c'
