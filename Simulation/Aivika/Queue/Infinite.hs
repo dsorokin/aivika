@@ -425,7 +425,7 @@ queueDelete :: (Eq a,
                -- ^ whether the item was found and removed
 queueDelete q a = fmap isJust $ queueDeleteBy q (== a)
 
--- | Remove an element satisfying the specified predicate and return the element if found.
+-- | Remove an item satisfying the specified predicate and return the item if found.
 queueDeleteBy :: (DeletingQueueStrategy sm,
                   DequeueStrategy so)
                  => Queue sm so a
