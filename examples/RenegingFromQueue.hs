@@ -22,7 +22,6 @@ import Data.Array
 
 import Simulation.Aivika
 import qualified Simulation.Aivika.Queue.Infinite as IQ
-import qualified Simulation.Aivika.Resource as R
 
 -- | The simulation specs.
 specs = Specs { spcStartTime = 0.0,
