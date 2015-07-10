@@ -89,7 +89,7 @@ import Simulation.Aivika.Process
 import Simulation.Aivika.Signal
 import Simulation.Aivika.Resource.Base
 import Simulation.Aivika.QueueStrategy
-import Simulation.Aivika.Queue.Infinite
+import Simulation.Aivika.Queue.Infinite.Base
 import Simulation.Aivika.Internal.Arrival
 
 -- | Represents an infinite stream of data in time,
@@ -522,7 +522,7 @@ prefetchStream s = Cons z where
 -- Cancel the stream's process to unsubscribe from the specified signal.
 signalStream :: Signal a -> Process (Stream a)
 signalStream s =
-  do q <- liftEvent newFCFSQueue
+  do q <- liftSimulation newFCFSQueue
      h <- liftEvent $
           handleSignal s $ 
           enqueue q
