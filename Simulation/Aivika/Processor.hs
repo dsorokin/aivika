@@ -141,12 +141,7 @@ arrProcessor = Processor . mapStreamM
 
 -- | Accumulator that outputs a value determined by the supplied function.
 accumProcessor :: (acc -> a -> Process (acc, b)) -> acc -> Processor a b
-accumProcessor f acc =
-  Processor $ \xs -> Cons $ loop xs acc where
-    loop xs acc =
-      do (a, xs') <- runStream xs
-         (acc', b) <- f acc a
-         return (b, Cons $ loop xs' acc') 
+accumProcessor f acc = Processor $ accumStream f acc
 
 -- | Involve the computation with side effect when processing a stream of data.
 withinProcessor :: Process () -> Processor a a

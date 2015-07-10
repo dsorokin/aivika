@@ -46,6 +46,7 @@ module Simulation.Aivika.Stream
         repeatProcess,
         mapStream,
         mapStreamM,
+        accumStream,
         apStream,
         apStreamM,
         filterStream,
@@ -212,6 +213,14 @@ mapStreamM f (Cons s) = Cons y where
   y = do (a, xs) <- s
          b <- f a
          return (b, mapStreamM f xs)
+
+-- | Accumulator that outputs a value determined by the supplied function.
+accumStream :: (acc -> a -> Process (acc, b)) -> acc -> Stream a -> Stream b
+accumStream f acc xs = Cons $ loop xs acc where
+  loop (Cons s) acc =
+    do (a, xs) <- s
+       (acc', b) <- f acc a
+       return (b, Cons $ loop xs acc') 
 
 -- | Sequential application.
 apStream :: Stream (a -> b) -> Stream a -> Stream b
