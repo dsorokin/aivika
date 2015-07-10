@@ -33,7 +33,7 @@ model =
                   do putStr "Preparing to enqueue: "
                      putStr $ show i
                      putStrLn "... "
-                enqueueWithStoringPriority q (100 - 1) i
+                enqueueWithStoringPriority q (100 - i) i
                 liftIO $
                   do putStr "Enqueued: "
                      putStrLn $ show i
