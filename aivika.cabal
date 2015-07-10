@@ -154,6 +154,7 @@ library
                      Simulation.Aivika.Queue
                      Simulation.Aivika.Queue.Base
                      Simulation.Aivika.Queue.Infinite
+                     Simulation.Aivika.Queue.Infinite.Base
                      Simulation.Aivika.QueueStrategy
                      Simulation.Aivika.Ref
                      Simulation.Aivika.Ref.Base
