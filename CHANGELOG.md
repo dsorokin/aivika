@@ -7,8 +7,10 @@ Version 4.2
 
 * The items can be removed from the queue; moreover, the queue can be 
   cleared.
-  
+
 * Added a simplified API for accessing the results of simulation.
+
+* Added the Gate entity.
 
 Version 4.1.1
 -----
