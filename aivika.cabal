@@ -152,6 +152,7 @@ library
                      Simulation.Aivika.Processor.Random
                      Simulation.Aivika.Processor.RoundRobbin
                      Simulation.Aivika.Queue
+                     Simulation.Aivika.Queue.Base
                      Simulation.Aivika.Queue.Infinite
                      Simulation.Aivika.QueueStrategy
                      Simulation.Aivika.Ref
