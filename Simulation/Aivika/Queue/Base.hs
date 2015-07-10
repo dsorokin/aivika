@@ -99,19 +99,19 @@ data Queue si sm so a =
         }
 
 -- | Create a new FCFS queue with the specified capacity.  
-newFCFSQueue :: Int -> Event (FCFSQueue a)  
+newFCFSQueue :: Int -> Simulation (FCFSQueue a)  
 newFCFSQueue = newQueue FCFS FCFS FCFS
   
 -- | Create a new LCFS queue with the specified capacity.  
-newLCFSQueue :: Int -> Event (LCFSQueue a)  
+newLCFSQueue :: Int -> Simulation (LCFSQueue a)  
 newLCFSQueue = newQueue FCFS LCFS FCFS
   
 -- | Create a new SIRO queue with the specified capacity.  
-newSIROQueue :: Int -> Event (SIROQueue a)  
+newSIROQueue :: Int -> Simulation (SIROQueue a)  
 newSIROQueue = newQueue FCFS SIRO FCFS
   
 -- | Create a new priority queue with the specified capacity.  
-newPriorityQueue :: Int -> Event (PriorityQueue a)  
+newPriorityQueue :: Int -> Simulation (PriorityQueue a)  
 newPriorityQueue = newQueue FCFS StaticPriorities FCFS
   
 -- | Create a new queue with the specified strategies and capacity.  
@@ -126,13 +126,12 @@ newQueue :: (QueueStrategy si,
             -- ^ the strategy applied to the dequeueing (output) processes when the queue is empty
             -> Int
             -- ^ the queue capacity
-            -> Event (Queue si sm so a)  
+            -> Simulation (Queue si sm so a)  
 newQueue si sm so count =
-  do t  <- liftDynamics time
-     i  <- liftIO $ newIORef 0
-     ri <- liftSimulation $ newResourceWithMaxCount si count (Just count)
-     qm <- liftSimulation $ newStrategyQueue sm
-     ro <- liftSimulation $ newResourceWithMaxCount so 0 (Just count)
+  do i  <- liftIO $ newIORef 0
+     ri <- newResourceWithMaxCount si count (Just count)
+     qm <- newStrategyQueue sm
+     ro <- newResourceWithMaxCount so 0 (Just count)
      return Queue { queueMaxCount = count,
                     enqueueStrategy = si,
                     enqueueStoringStrategy = sm,
