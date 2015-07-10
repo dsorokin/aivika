@@ -70,6 +70,8 @@ module Simulation.Aivika.Stream
         replaceLeftStream,
         replaceRightStream,
         partitionEitherStream,
+        -- * Cloning Stream
+        cloneStream,
         -- * Debugging
         traceStream) where
 
@@ -666,6 +668,15 @@ dropStreamWhileM p s =
      if f
        then runStream $ dropStreamWhileM p xs
        else return (a, xs)
+
+-- | Create the specified number of equivalent clones of the input stream.
+cloneStream :: Int -> Stream a -> Process [Stream a]
+cloneStream n s =
+  do qs <- forM [1..n] $ \i -> liftSimulation newFCFSQueue
+     spawnProcess $
+       flip consumeStream s $ \a ->
+       forM_ qs $ \q -> liftEvent $ enqueue q a
+     forM qs $ \q -> return $ repeatProcess $ dequeue q
 
 -- | Show the debug messages with the current simulation time.
 traceStream :: Maybe String
