@@ -86,19 +86,19 @@ data Queue sm so a =
           queueCountRef :: IORef Int }
   
 -- | Create a new infinite FCFS queue.  
-newFCFSQueue :: Event (FCFSQueue a)  
+newFCFSQueue :: Simulation (FCFSQueue a)  
 newFCFSQueue = newQueue FCFS FCFS
   
 -- | Create a new infinite LCFS queue.  
-newLCFSQueue :: Event (LCFSQueue a)  
+newLCFSQueue :: Simulation (LCFSQueue a)  
 newLCFSQueue = newQueue LCFS FCFS
   
 -- | Create a new infinite SIRO queue.  
-newSIROQueue :: Event (SIROQueue a)  
+newSIROQueue :: Simulation (SIROQueue a)  
 newSIROQueue = newQueue SIRO FCFS
   
 -- | Create a new infinite priority queue.  
-newPriorityQueue :: Event (PriorityQueue a)  
+newPriorityQueue :: Simulation (PriorityQueue a)  
 newPriorityQueue = newQueue StaticPriorities FCFS
   
 -- | Create a new infinite queue with the specified strategies.  
@@ -108,12 +108,11 @@ newQueue :: (QueueStrategy sm,
             -- ^ the strategy applied when storing items in the queue
             -> so
             -- ^ the strategy applied to the dequeueing (output) processes when the queue is empty
-            -> Event (Queue sm so a)  
+            -> Simulation (Queue sm so a)  
 newQueue sm so =
-  do t  <- liftDynamics time
-     i  <- liftIO $ newIORef 0
-     qm <- liftSimulation $ newStrategyQueue sm
-     ro <- liftSimulation $ newResourceWithMaxCount so 0 Nothing
+  do i  <- liftIO $ newIORef 0
+     qm <- newStrategyQueue sm
+     ro <- newResourceWithMaxCount so 0 Nothing
      return Queue { enqueueStoringStrategy = sm,
                     dequeueStrategy = so,
                     queueStore = qm,
