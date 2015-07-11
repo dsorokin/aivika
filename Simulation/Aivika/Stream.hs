@@ -70,8 +70,10 @@ module Simulation.Aivika.Stream
         replaceLeftStream,
         replaceRightStream,
         partitionEitherStream,
-        -- * Cloning Stream
+        -- * Assemblying Streams
         cloneStream,
+        firstArrivalStream,
+        lastArrivalStream,
         -- * Debugging
         traceStream) where
 
@@ -675,7 +677,7 @@ cloneStream n s =
   do qs  <- forM [1..n] $ \i -> newFCFSQueue
      rs  <- newFCFSResource 1
      ref <- liftIO $ newIORef s
-     let reader q =
+     let reader m q =
            do a <- liftEvent $ tryDequeue q
               case a of
                 Just a  -> return a
@@ -688,12 +690,36 @@ cloneStream n s =
                          do s <- liftIO $ readIORef ref
                             (a, xs) <- runStream s
                             liftIO $ writeIORef ref xs
-                            forM_ qs $ \q ->
+                            forM_ (zip [1..] qs) $ \(i, q) ->
+                              unless (i == m) $
                               liftEvent $ enqueue q a
                             return a
-     forM qs $ \q ->
-       return $ repeatProcess $ reader q
+     forM (zip [1..] qs) $ \(i, q) ->
+       return $ repeatProcess $ reader i q
 
+-- | Return a stream of first arrivals after assembling the specified number of elements.
+firstArrivalStream :: Int -> Stream a -> Stream a
+firstArrivalStream n s =
+  mapStream fromJust $
+  filterStream isJust $
+  accumStream f (1, Nothing) s
+  where f (i, a0) a =
+          let a0' = Just $ fromMaybe a a0
+          in if i `mod` n == 0
+             then return ((1, Nothing), a0')
+             else return ((i + 1, a0'), Nothing)
+
+-- | Return a stream of last arrivals after assembling the specified number of elements.
+lastArrivalStream :: Int -> Stream a -> Stream a
+lastArrivalStream n s =
+  mapStream fromJust $
+  filterStream isJust $
+  accumStream f 1 s
+  where f i a =
+          if i `mod` n == 0
+          then return (1, Just a)
+          else return (i + 1, Nothing)
+          
 -- | Show the debug messages with the current simulation time.
 traceStream :: Maybe String
                -- ^ the request message
