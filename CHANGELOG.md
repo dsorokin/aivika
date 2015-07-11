@@ -1,4 +1,9 @@
 
+Version 4.2.1
+-----
+
+* Added assembling functions for streams.
+
 Version 4.2
 -----
 
