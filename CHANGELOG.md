@@ -2,6 +2,8 @@
 Version 4.2.1
 -----
 
+* Added optimised queues which have no counters nor signals.
+
 * Added assembling functions for streams.
 
 Version 4.2
