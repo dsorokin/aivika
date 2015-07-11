@@ -670,13 +670,29 @@ dropStreamWhileM p s =
        else return (a, xs)
 
 -- | Create the specified number of equivalent clones of the input stream.
-cloneStream :: Int -> Stream a -> Process [Stream a]
+cloneStream :: Int -> Stream a -> Simulation [Stream a]
 cloneStream n s =
-  do qs <- forM [1..n] $ \i -> liftSimulation newFCFSQueue
-     spawnProcess $
-       flip consumeStream s $ \a ->
-       forM_ qs $ \q -> liftEvent $ enqueue q a
-     forM qs $ \q -> return $ repeatProcess $ dequeue q
+  do qs  <- forM [1..n] $ \i -> newFCFSQueue
+     rs  <- newFCFSResource 1
+     ref <- liftIO $ newIORef s
+     let reader q =
+           do a <- liftEvent $ tryDequeue q
+              case a of
+                Just a  -> return a
+                Nothing ->
+                  usingResource rs $
+                  do a <- liftEvent $ tryDequeue q
+                     case a of
+                       Just a  -> return a
+                       Nothing ->
+                         do s <- liftIO $ readIORef ref
+                            (a, xs) <- runStream s
+                            liftIO $ writeIORef ref xs
+                            forM_ qs $ \q ->
+                              liftEvent $ enqueue q a
+                            return a
+     forM qs $ \q ->
+       return $ repeatProcess $ reader q
 
 -- | Show the debug messages with the current simulation time.
 traceStream :: Maybe String
