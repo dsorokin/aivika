@@ -74,7 +74,7 @@ module Simulation.Aivika.Stream
         cloneStream,
         firstArrivalStream,
         lastArrivalStream,
-        assemblyAccumStream,
+        assembleAccumStream,
         -- * Debugging
         traceStream) where
 
@@ -700,7 +700,7 @@ cloneStream n s =
 
 -- | Return a stream of first arrivals after assembling the specified number of elements.
 firstArrivalStream :: Int -> Stream a -> Stream a
-firstArrivalStream n s = assemblyAccumStream f (1, Nothing) s
+firstArrivalStream n s = assembleAccumStream f (1, Nothing) s
   where f (i, a0) a =
           let a0' = Just $ fromMaybe a a0
           in if i `mod` n == 0
@@ -709,15 +709,15 @@ firstArrivalStream n s = assemblyAccumStream f (1, Nothing) s
 
 -- | Return a stream of last arrivals after assembling the specified number of elements.
 lastArrivalStream :: Int -> Stream a -> Stream a
-lastArrivalStream n s = assemblyAccumStream f 1 s
+lastArrivalStream n s = assembleAccumStream f 1 s
   where f i a =
           if i `mod` n == 0
           then return (1, Just a)
           else return (i + 1, Nothing)
 
--- | Assembly an accumulated stream using the supplied function.
-assemblyAccumStream :: (acc -> a -> Process (acc, Maybe b)) -> acc -> Stream a -> Stream b
-assemblyAccumStream f acc s =
+-- | Assemble an accumulated stream using the supplied function.
+assembleAccumStream :: (acc -> a -> Process (acc, Maybe b)) -> acc -> Stream a -> Stream b
+assembleAccumStream f acc s =
   mapStream fromJust $
   filterStream isJust $
   accumStream f acc s
