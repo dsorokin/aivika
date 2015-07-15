@@ -144,6 +144,7 @@ library
                      Simulation.Aivika.Generator
                      Simulation.Aivika.Net
                      Simulation.Aivika.Net.Random
+                     Simulation.Aivika.Operation
                      Simulation.Aivika.Parameter
                      Simulation.Aivika.Parameter.Random
                      Simulation.Aivika.PriorityQueue
