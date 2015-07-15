@@ -20,7 +20,7 @@ import Simulation.Aivika.Event
 import Simulation.Aivika.Process
 import Simulation.Aivika.Processor
 import Simulation.Aivika.Stream
-import Simulation.Aivika.Queue.Infinite
+import Simulation.Aivika.Queue.Infinite.Base
 
 -- | Represents the Round-Robbin processor that tries to perform the task within
 -- the specified timeout. If the task times out, then it is canceled and returned
@@ -41,7 +41,7 @@ roundRobbinProcessorUsingIds :: Processor (Process (Double, ProcessId), Process 
 roundRobbinProcessorUsingIds =
   Processor $ \xs ->
   Cons $
-  do q <- liftEvent newFCFSQueue
+  do q <- liftSimulation newFCFSQueue
      let process =
            do t@(x, p) <- dequeue q
               (timeout, pid) <- x
