@@ -1,5 +1,7 @@
 
--- Example: A Truck Hauling Situation
+{-# LANGUAGE Arrows #-}
+
+-- Example: A Truck Hauling Situation (A More Complete Version)
 --
 -- It is described in different sources [1, 2]. So, this is chapter 9 of [2] and section 7.16 of [1].
 -- 
@@ -69,6 +71,12 @@ model = do
   truckQueue <- runEventInStartTime IQ.newFCFSQueue
   loadQueue <- runEventInStartTime IQ.newFCFSQueue
   loaderQueue <- runEventInStartTime IQ.newFCFSQueue
+  loaderActvty1 <- newRandomExponentialActivity 14
+  loaderActvty2 <- newRandomExponentialActivity 12
+  let loaderActvties =
+        array (Loader1, Loader2)
+        [(Loader1, loaderActvty1),
+         (Loader2, loaderActvty2)]
   let start :: Process ()
       start =
         do randomErlangProcess_ 4 2
@@ -77,36 +85,39 @@ model = do
              IQ.enqueue loadQueue Pile
            t <- liftDynamics time
            when (t <= 480) start
-      begin :: Process ()
-      begin =
-        do awaitQueuesNonEmpty truckQueue loadQueue loaderQueue
-           truck  <- IQ.dequeue truckQueue
-           pile   <- IQ.dequeue loadQueue
-           loader <- IQ.dequeue loaderQueue
-           -- the load operation
-           case loader of
-             Loader1 -> randomExponentialProcess_ 14
-             Loader2 -> randomExponentialProcess_ 12
-           -- truck hauling
-           liftEvent $
-             do runProcess $
-                  do holdProcess 5
-                     liftEvent $
-                       IQ.enqueue loaderQueue loader
-                runProcess $
-                  do randomNormalProcess_ 22 3
-                     randomUniformProcess_ 2 8
-                     randomNormalProcess_ 18 3
-                     liftEvent $
-                       IQ.enqueue truckQueue truck
-           begin
+      actvty :: Net () ()
+      actvty =
+        (arrNet $ \() ->
+         do awaitQueuesNonEmpty truckQueue loadQueue loaderQueue
+            x1 <- IQ.dequeue truckQueue
+            x2 <- IQ.dequeue loadQueue
+            x3 <- IQ.dequeue loaderQueue
+            return (x1, x3)) >>>
+        (proc (truck, loader) ->
+          case loader of
+            Loader1 ->
+              activityNet (loaderActvties ! Loader1) -< (truck, loader)
+            Loader2 ->
+              activityNet (loaderActvties ! Loader2) -< (truck, loader)) >>>
+        (arrNet $ \(truck, loader) ->
+          do spawnProcess $
+               do holdProcess 5
+                  liftEvent $
+                    IQ.enqueue loaderQueue loader
+             spawnProcess $
+               do randomNormalProcess_ 22 3
+                  randomUniformProcess_ 2 8
+                  randomNormalProcess_ 18 3
+                  liftEvent $
+                    IQ.enqueue truckQueue truck
+             return ())
   runEventInStartTime $
     do forM_ [1..4] $ \i ->
          IQ.enqueue truckQueue Truck
        IQ.enqueue loaderQueue Loader1
        IQ.enqueue loaderQueue Loader2
-  runProcessInStartTime begin
-  runProcessInStartTime begin
+  runProcessInStartTime $ iterateNet actvty ()
+  runProcessInStartTime $ iterateNet actvty ()
   runProcessInStartTime start
   return $
     results
@@ -120,7 +131,11 @@ model = do
      --
      resultSource
      "loaderQueue" "Queue Loader"
-     loaderQueue ]
+     loaderQueue,
+     --
+     resultSource
+     "loaderActvties" "Activity Loader"
+     loaderActvties]
 
 main =
   printSimulationResultsInStopTime
