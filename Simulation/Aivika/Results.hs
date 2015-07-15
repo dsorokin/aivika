@@ -1839,9 +1839,7 @@ operationResultSource c =
       resultContainerProperty c "totalUtilisationTime" OperationTotalUtilisationTimeId operationTotalUtilisationTime operationTotalUtilisationTimeChanged_,
       resultContainerProperty c "totalPreemptionTime" OperationTotalPreemptionTimeId operationTotalPreemptionTime operationTotalPreemptionTimeChanged_,
       resultContainerProperty c "utilisationTime" OperationUtilisationTimeId operationUtilisationTime operationUtilisationTimeChanged_,
-      resultContainerProperty c "preemptionTime" OperationPreemptionTimeId operationPreemptionTime operationPreemptionTimeChanged_,
-      resultContainerIntegProperty c "utilisationFactor" OperationUtilisationFactorId operationUtilisationFactor,
-      resultContainerIntegProperty c "preemptionFactor" OperationPreemptionFactorId operationPreemptionFactor ] }
+      resultContainerProperty c "preemptionTime" OperationPreemptionTimeId operationPreemptionTime operationPreemptionTimeChanged_ ] }
 
 -- | Return a summary by the specified operation.
 operationResultSummary :: ResultContainer (Operation a b)
@@ -1857,9 +1855,7 @@ operationResultSummary c =
     resultObjectSummary = operationResultSummary c,
     resultObjectProperties = [
       resultContainerProperty c "utilisationTime" OperationUtilisationTimeId operationUtilisationTime operationUtilisationTimeChanged_,
-      resultContainerProperty c "preemptionTime" OperationPreemptionTimeId operationPreemptionTime operationPreemptionTimeChanged_,
-      resultContainerIntegProperty c "utilisationFactor" OperationUtilisationFactorId operationUtilisationFactor,
-      resultContainerIntegProperty c "preemptionFactor" OperationPreemptionFactorId operationPreemptionFactor ] }
+      resultContainerProperty c "preemptionTime" OperationPreemptionTimeId operationPreemptionTime operationPreemptionTimeChanged_ ] }
 
 -- | Return an arbitrary text as a separator source.
 textResultSource :: String -> ResultSource

@@ -20,8 +20,6 @@ module Simulation.Aivika.Operation
         operationTotalPreemptionTime,
         operationUtilisationTime,
         operationPreemptionTime,
-        operationUtilisationFactor,
-        operationPreemptionFactor,
         -- * Summary
         operationSummary,
         -- * Derived Signals for Properties
@@ -255,27 +253,6 @@ operationPreemptionTimeChanged_ :: Operation a b -> Signal ()
 operationPreemptionTimeChanged_ op =
   mapSignal (const ()) (operationPreemptionEnding op)
   
--- | It returns the factor changing from 0 to 1, which estimates how often
--- the operation activity was utilised since the start time of simulation.
-operationUtilisationFactor :: Operation a b -> Event Double
-operationUtilisationFactor op =
-  Event $ \p ->
-  do let t0 = spcStartTime $ pointSpecs p
-         t  = pointTime p
-     x <- readIORef (operationTotalUtilisationTimeRef op)
-     return (x / (t - t0))
-  
--- | It returns the factor changing from 0 to 1, which estimates how often
--- the operation activity was preempted waiting for the further proceeding
--- since the start time of simulation.
-operationPreemptionFactor :: Operation a b -> Event Double
-operationPreemptionFactor op =
-  Event $ \p ->
-  do let t0 = spcStartTime $ pointSpecs p
-         t  = pointTime p
-     x <- readIORef (operationTotalPreemptionTimeRef op)
-     return (x / (t - t0))
-  
 -- | Raised when starting to utilise the operation activity after a new input task is received.
 operationUtilising :: Operation a b -> Signal a
 operationUtilising = publishSignal . operationUtilisingSource
@@ -308,8 +285,6 @@ operationSummary op indent =
          t  = pointTime p
      tx1 <- readIORef (operationTotalUtilisationTimeRef op)
      tx2 <- readIORef (operationTotalPreemptionTimeRef op)
-     let xf1 = tx1 / (t - t0)
-         xf2 = tx2 / (t - t0)
      xs1 <- readIORef (operationUtilisationTimeRef op)
      xs2 <- readIORef (operationPreemptionTimeRef op)
      let tab = replicate indent ' '
@@ -319,12 +294,6 @@ operationSummary op indent =
        showString "\n" .
        showString tab .
        showString "total preemption time = " . shows tx2 .
-       showString "\n" .
-       showString tab .
-       showString "utilisation factor (from 0 to 1) = " . shows xf1 .
-       showString "\n" .
-       showString tab .
-       showString "preemption factor (from 0 to 1) = " . shows xf2 .
        showString "\n" .
        showString tab .
        showString "utilisation time:\n\n" .
