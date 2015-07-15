@@ -6,6 +6,8 @@ Version 4.2.1
 
 * Added assembling functions for streams.
 
+* Added the operation activity as a simplification or server and stateful activity.
+
 Version 4.2
 -----
 
