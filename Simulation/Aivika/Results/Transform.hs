@@ -112,7 +112,15 @@ module Simulation.Aivika.Results.Transform
         resourceQueueCount,
         resourceQueueCountStats,
         resourceTotalWaitTime,
-        resourceWaitTime) where
+        resourceWaitTime,
+        -- * Operation
+        Operation(..),
+        operationTotalUtilisationTime,
+        operationTotalPreemptionTime,
+        operationUtilisationTime,
+        operationPreemptionTime,
+        operationUtilisationFactor,
+        operationPreemptionFactor) where
 
 import Control.Arrow
 
@@ -608,3 +616,43 @@ resourceTotalWaitTime (Resource a) =
 resourceWaitTime :: Resource -> SamplingStats
 resourceWaitTime (Resource a) =
   SamplingStats (a >>> resultById ResourceWaitTimeId)
+
+-- | It models an opreation which actvity can be utilised.
+newtype Operation = Operation ResultTransform
+
+instance ResultTransformer Operation where
+  tr (Operation a) = a
+
+-- | Return the counted total time when the operation activity was utilised.
+operationTotalUtilisationTime :: Operation -> ResultTransform
+operationTotalUtilisationTime (Operation a) =
+  a >>> resultById OperationTotalUtilisationTimeId
+
+-- | Return the counted total time when the operation activity was preemted
+-- waiting for the further proceeding.
+operationTotalPreemptionTime :: Operation -> ResultTransform
+operationTotalPreemptionTime (Operation a) =
+  a >>> resultById OperationTotalPreemptionTimeId
+
+-- | Return the statistics for the time when the operation activity was utilised.
+operationUtilisationTime :: Operation -> SamplingStats
+operationUtilisationTime (Operation a) =
+  SamplingStats (a >>> resultById OperationUtilisationTimeId)
+
+-- | Return the statistics for the time when the operation activity was preempted
+-- waiting for the further proceeding.
+operationPreemptionTime :: Operation -> SamplingStats
+operationPreemptionTime (Operation a) =
+  SamplingStats (a >>> resultById OperationPreemptionTimeId)
+
+-- | It returns the factor changing from 0 to 1, which estimates how often
+-- the operation activity was utilised.
+operationUtilisationFactor :: Operation -> ResultTransform
+operationUtilisationFactor (Operation a) =
+  a >>> resultById OperationUtilisationFactorId
+
+-- | It returns the factor changing from 0 to 1, which estimates how often
+-- the operation activity was preempted waiting for the further proceeding.
+operationPreemptionFactor :: Operation -> ResultTransform
+operationPreemptionFactor (Operation a) =
+  a >>> resultById OperationPreemptionFactorId

@@ -134,6 +134,7 @@ import Simulation.Aivika.Server
 import Simulation.Aivika.Activity
 import Simulation.Aivika.Resource
 import qualified Simulation.Aivika.Resource.Preemption as PR
+import Simulation.Aivika.Operation
 import Simulation.Aivika.Results.Locale
 
 -- | A name used for indentifying the results when generating output.
@@ -1822,6 +1823,44 @@ preemptibleResourceResultSummary c =
       resultContainerProperty c "countStats" ResourceCountStatsId PR.resourceCountStats PR.resourceCountChanged_,
       resultContainerProperty c "utilisationCountStats" ResourceUtilisationCountStatsId PR.resourceUtilisationCountStats PR.resourceUtilisationCountChanged_ ] }
 
+-- | Return a source by the specified operation.
+operationResultSource :: ResultContainer (Operation a b)
+                         -- ^ the operation container
+                         -> ResultSource
+operationResultSource c =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
+    resultObjectTypeId = OperationId,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = operationResultSummary c,
+    resultObjectProperties = [
+      resultContainerProperty c "totalUtilisationTime" OperationTotalUtilisationTimeId operationTotalUtilisationTime operationTotalUtilisationTimeChanged_,
+      resultContainerProperty c "totalPreemptionTime" OperationTotalPreemptionTimeId operationTotalPreemptionTime operationTotalPreemptionTimeChanged_,
+      resultContainerProperty c "utilisationTime" OperationUtilisationTimeId operationUtilisationTime operationUtilisationTimeChanged_,
+      resultContainerProperty c "preemptionTime" OperationPreemptionTimeId operationPreemptionTime operationPreemptionTimeChanged_,
+      resultContainerIntegProperty c "utilisationFactor" OperationUtilisationFactorId operationUtilisationFactor,
+      resultContainerIntegProperty c "preemptionFactor" OperationPreemptionFactorId operationPreemptionFactor ] }
+
+-- | Return a summary by the specified operation.
+operationResultSummary :: ResultContainer (Operation a b)
+                          -- ^ the operation container
+                          -> ResultSource
+operationResultSummary c =
+  ResultObjectSource $
+  ResultObject {
+    resultObjectName = resultContainerName c,
+    resultObjectId = resultContainerId c,
+    resultObjectTypeId = OperationId,
+    resultObjectSignal = resultContainerSignal c,
+    resultObjectSummary = operationResultSummary c,
+    resultObjectProperties = [
+      resultContainerProperty c "utilisationTime" OperationUtilisationTimeId operationUtilisationTime operationUtilisationTimeChanged_,
+      resultContainerProperty c "preemptionTime" OperationPreemptionTimeId operationPreemptionTime operationPreemptionTimeChanged_,
+      resultContainerIntegProperty c "utilisationFactor" OperationUtilisationFactorId operationUtilisationFactor,
+      resultContainerIntegProperty c "preemptionFactor" OperationPreemptionFactorId operationPreemptionFactor ] }
+
 -- | Return an arbitrary text as a separator source.
 textResultSource :: String -> ResultSource
 textResultSource text =
@@ -2062,3 +2101,8 @@ instance ResultProvider PR.Resource where
 
   resultSource' name i m =
     preemptibleResourceResultSource $ ResultContainer name i m (ResultSignal $ PR.resourceChanged_ m)
+
+instance ResultProvider (Operation a b) where
+
+  resultSource' name i m =
+    operationResultSource $ ResultContainer name i m (ResultSignal $ operationChanged_ m)
