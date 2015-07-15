@@ -121,6 +121,7 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/PortOperations.hs
                      examples/SingleLaneTraffic.hs
                      examples/RenegingFromQueue.hs
+                     examples/TruckHaulingSituation.hs
                      CHANGELOG.md
 
 library
