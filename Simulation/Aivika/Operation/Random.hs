@@ -7,7 +7,7 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.10.1
 --
--- This module defines some useful predefined activities that
+-- This module defines some useful predefined operations that
 -- hold the current process for the corresponding random time
 -- interval, when processing every input element.
 --
