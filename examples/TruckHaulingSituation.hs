@@ -4,7 +4,27 @@
 -- Example: A Truck Hauling Situation
 --
 -- It is described in different sources [1, 2]. So, this is chapter 9 of [2] and section 7.16 of [1].
---
+-- 
+-- The system to be modeled in this example consists of one bulldozer, four trucks,
+-- and two man-machine loaders. The bulldozer stockpiles material for the loaders.
+-- Two piles of material must be stocked prior to the initiation of any load operation.
+-- The time for the bulldozer to stockpile material is Erlang distributed and consists
+-- of the sum of two exponential variables each with a men of 4. (This corresponds to
+-- an Erlang variable with a mean of 8 and a variance of 32.) In addition to this
+-- material, a loader and an unloaded truck must be available before the loading
+-- operations can begin. Loading time is exponentially distributed with a mean time of
+-- 14 minutes for server 1 and 12 minutes for server 2.
+-- 
+-- After a truck is loaded, it is hauled, then dumped and must be returned before
+-- the truck is available for further loading. Hauling time is normally distributed.
+-- When loaded, the average hauling time is 22 minutes. When unloaded, the average
+-- time is 18 minutes. In both cases, the standard deviation is 3 minutes. Dumping
+-- time is uniformly distributed between 2 and 8 minutes. Following a loading
+-- operation, the loaded must rest for a 5 minute period before he is available
+-- to begin loading again. The system is to be analyzed for 8 hours and all operations
+-- in progress at the end of 8 hours should be completed before terminating
+-- the operations for a run.
+-- 
 -- [1] A. Alan B. Pritsker, Simulation with Visual SLAM and AweSim, 2nd ed.
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 
