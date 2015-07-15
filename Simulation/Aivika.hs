@@ -27,6 +27,8 @@ module Simulation.Aivika
         module Simulation.Aivika.Generator,
         module Simulation.Aivika.Net,
         module Simulation.Aivika.Net.Random,
+        module Simulation.Aivika.Operation,
+        module Simulation.Aivika.Operation.Random,
         module Simulation.Aivika.Parameter,
         module Simulation.Aivika.Parameter.Random,
         module Simulation.Aivika.Process,
@@ -70,6 +72,8 @@ import Simulation.Aivika.Gate
 import Simulation.Aivika.Generator
 import Simulation.Aivika.Net
 import Simulation.Aivika.Net.Random
+import Simulation.Aivika.Operation
+import Simulation.Aivika.Operation.Random
 import Simulation.Aivika.Parameter
 import Simulation.Aivika.Parameter.Random
 import Simulation.Aivika.Process
