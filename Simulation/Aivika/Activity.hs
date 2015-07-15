@@ -554,7 +554,7 @@ activitySummary act indent =
        showString "preemption factor (from 0 to 1) = " . shows xf3 .
        showString "\n" .
        showString tab .
-       showString "utilisation time (locked while awaiting the input):\n\n" .
+       showString "utilisation time:\n\n" .
        samplingStatsSummary xs1 (2 + indent) .
        showString "\n\n" .
        showString tab .
