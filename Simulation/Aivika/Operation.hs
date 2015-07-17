@@ -20,6 +20,8 @@ module Simulation.Aivika.Operation
         operationTotalPreemptionTime,
         operationUtilisationTime,
         operationPreemptionTime,
+        operationUtilisationFactor,
+        operationPreemptionFactor,
         -- * Summary
         operationSummary,
         -- * Derived Signals for Properties
@@ -31,6 +33,10 @@ module Simulation.Aivika.Operation
         operationUtilisationTimeChanged_,
         operationPreemptionTimeChanged,
         operationPreemptionTimeChanged_,
+        operationUtilisationFactorChanged,
+        operationUtilisationFactorChanged_,
+        operationPreemptionFactorChanged,
+        operationPreemptionFactorChanged_,
         -- * Basic Signals
         operationUtilising,
         operationUtilised,
@@ -64,6 +70,10 @@ data Operation a b =
               -- ^ Provide @b@ by specified @a@.
               operationProcessPreemptible :: Bool,
               -- ^ Whether the process is preemptible.
+              operationStartTime :: Double,
+              -- ^ The start time of creating the operation.
+              operationLastTimeRef :: IORef Double,
+              -- ^ The last time of utilising the operation activity.
               operationTotalUtilisationTimeRef :: IORef Double,
               -- ^ The counted total time of utilising the activity.
               operationTotalPreemptionTimeRef :: IORef Double,
@@ -89,7 +99,7 @@ data Operation a b =
 -- operation.
 newOperation :: (a -> Process b)
                 -- ^ provide an output by the specified input
-                -> Simulation (Operation a b)
+                -> Event (Operation a b)
 newOperation = newPreemptibleOperation False
 
 -- | Create a new operation that can provide output @b@ by input @a@.
@@ -97,18 +107,22 @@ newPreemptibleOperation :: Bool
                            -- ^ whether the activity can be preempted
                            -> (a -> Process b)
                            -- ^ provide an output by the specified input
-                           -> Simulation (Operation a b)
+                           -> Event (Operation a b)
 newPreemptibleOperation preemptible provide =
-  do r1 <- liftIO $ newIORef 0
+  do t0 <- liftDynamics time
+     r0 <- liftIO $ newIORef t0
+     r1 <- liftIO $ newIORef 0
      r2 <- liftIO $ newIORef 0
      r3 <- liftIO $ newIORef emptySamplingStats
      r4 <- liftIO $ newIORef emptySamplingStats
-     s1 <- newSignalSource
-     s2 <- newSignalSource
-     s3 <- newSignalSource
-     s4 <- newSignalSource
+     s1 <- liftSimulation newSignalSource
+     s2 <- liftSimulation newSignalSource
+     s3 <- liftSimulation newSignalSource
+     s4 <- liftSimulation newSignalSource
      return Operation { operationInitProcess = provide,
                         operationProcessPreemptible = preemptible,
+                        operationStartTime = t0,
+                        operationLastTimeRef = r0,
                         operationTotalUtilisationTimeRef = r1,
                         operationTotalPreemptionTimeRef = r2,
                         operationUtilisationTimeRef = r3,
@@ -119,6 +133,8 @@ newPreemptibleOperation preemptible provide =
                         operationPreemptionEndingSource = s4 }
 
 -- | Return a computation for the specified operation. It updates internal counters.
+--
+-- The computation can be used only within one process at any time.
 operationProcess :: Operation a b -> a -> Process b
 operationProcess op a =
   do t0 <- liftDynamics time
@@ -135,6 +151,7 @@ operationProcess op a =
             do modifyIORef' (operationTotalUtilisationTimeRef op) (+ (t1 - t0 - dt))
                modifyIORef' (operationUtilisationTimeRef op) $
                  addSamplingStats (t1 - t0 - dt)
+               writeIORef (operationLastTimeRef op) t1
           triggerSignal (operationUtilisedSource op) (a, b)
      return b
 
@@ -160,6 +177,7 @@ operationProcessPreempting op a =
                     modifyIORef' (operationTotalPreemptionTimeRef op) (+ dt)
                     modifyIORef' (operationPreemptionTimeRef op) $
                       addSamplingStats dt
+                    writeIORef (operationLastTimeRef op) t1
                triggerSignal (operationPreemptionEndingSource op) a 
      let m1 =
            do b <- operationInitProcess op a
@@ -253,6 +271,59 @@ operationPreemptionTimeChanged_ :: Operation a b -> Signal ()
 operationPreemptionTimeChanged_ op =
   mapSignal (const ()) (operationPreemptionEnding op)
   
+-- | It returns the factor changing from 0 to 1, which estimates how often
+-- the operation activity was utilised since the time of creating the operation.
+--
+-- The value returned changes discretely and it is usually delayed relative
+-- to the current simulation time.
+--
+-- See also 'operationUtilisationFactorChanged' and 'operationUtilisationFactorChanged_'.
+operationUtilisationFactor :: Operation a b -> Event Double
+operationUtilisationFactor op =
+  Event $ \p ->
+  do let t0 = operationStartTime op
+     t1 <- readIORef (operationLastTimeRef op)
+     x  <- readIORef (operationTotalUtilisationTimeRef op)
+     return (x / (t1 - t0))
+  
+-- | Signal when the 'operationUtilisationFactor' property value has changed.
+operationUtilisationFactorChanged :: Operation a b -> Signal Double
+operationUtilisationFactorChanged op =
+  mapSignalM (const $ operationUtilisationFactor op) (operationUtilisationFactorChanged_ op)
+  
+-- | Signal when the 'operationUtilisationFactor' property value has changed.
+operationUtilisationFactorChanged_ :: Operation a b -> Signal ()
+operationUtilisationFactorChanged_ op =
+  mapSignal (const ()) (operationUtilised op) <>
+  mapSignal (const ()) (operationPreemptionEnding op)
+  
+-- | It returns the factor changing from 0 to 1, which estimates how often
+-- the operation activity was preempted waiting for the further proceeding
+-- since the time of creating the operation.
+--
+-- The value returned changes discretely and it is usually delayed relative
+-- to the current simulation time.
+--
+-- See also 'operationPreemptionFactorChanged' and 'operationPreemptionFactorChanged_'.
+operationPreemptionFactor :: Operation a b -> Event Double
+operationPreemptionFactor op =
+  Event $ \p ->
+  do let t0 = operationStartTime op
+     t1 <- readIORef (operationLastTimeRef op)
+     x  <- readIORef (operationTotalPreemptionTimeRef op)
+     return (x / (t1 - t0))
+  
+-- | Signal when the 'operationPreemptionFactor' property value has changed.
+operationPreemptionFactorChanged :: Operation a b -> Signal Double
+operationPreemptionFactorChanged op =
+  mapSignalM (const $ operationPreemptionFactor op) (operationPreemptionFactorChanged_ op)
+  
+-- | Signal when the 'operationPreemptionFactor' property value has changed.
+operationPreemptionFactorChanged_ :: Operation a b -> Signal ()
+operationPreemptionFactorChanged_ op =
+  mapSignal (const ()) (operationUtilised op) <>
+  mapSignal (const ()) (operationPreemptionEnding op)
+  
 -- | Raised when starting to utilise the operation activity after a new input task is received.
 operationUtilising :: Operation a b -> Signal a
 operationUtilising = publishSignal . operationUtilisingSource
@@ -281,10 +352,12 @@ operationChanged_ op =
 operationSummary :: Operation a b -> Int -> Event ShowS
 operationSummary op indent =
   Event $ \p ->
-  do let t0 = spcStartTime $ pointSpecs p
-         t  = pointTime p
+  do let t0 = operationStartTime op
+     t1  <- readIORef (operationLastTimeRef op)
      tx1 <- readIORef (operationTotalUtilisationTimeRef op)
      tx2 <- readIORef (operationTotalPreemptionTimeRef op)
+     let xf1 = tx1 / (t1 - t0)
+         xf2 = tx2 / (t1 - t0)
      xs1 <- readIORef (operationUtilisationTimeRef op)
      xs2 <- readIORef (operationPreemptionTimeRef op)
      let tab = replicate indent ' '
@@ -294,6 +367,12 @@ operationSummary op indent =
        showString "\n" .
        showString tab .
        showString "total preemption time = " . shows tx2 .
+       showString "\n" .
+       showString tab .
+       showString "utilisation factor (from 0 to 1) = " . shows xf1 .
+       showString "\n" .
+       showString tab .
+       showString "preemption factor (from 0 to 1) = " . shows xf2 .
        showString "\n" .
        showString tab .
        showString "utilisation time:\n\n" .

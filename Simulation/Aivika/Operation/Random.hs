@@ -41,7 +41,7 @@ module Simulation.Aivika.Operation.Random
         newPreemptibleRandomDiscreteOperation) where
 
 import Simulation.Aivika.Generator
-import Simulation.Aivika.Simulation
+import Simulation.Aivika.Event
 import Simulation.Aivika.Process
 import Simulation.Aivika.Process.Random
 import Simulation.Aivika.Operation
@@ -55,7 +55,7 @@ newRandomUniformOperation :: Double
                              -- ^ the minimum time interval
                              -> Double
                              -- ^ the maximum time interval
-                             -> Simulation (Operation a a)
+                             -> Event (Operation a a)
 newRandomUniformOperation =
   newPreemptibleRandomUniformOperation False
 
@@ -68,7 +68,7 @@ newRandomUniformIntOperation :: Int
                                 -- ^ the minimum time interval
                                 -> Int
                                 -- ^ the maximum time interval
-                                -> Simulation (Operation a a)
+                                -> Event (Operation a a)
 newRandomUniformIntOperation =
   newPreemptibleRandomUniformIntOperation False
 
@@ -83,7 +83,7 @@ newRandomTriangularOperation :: Double
                                 -- ^ the median of the time interval
                                 -> Double
                                 -- ^ the maximum time interval
-                                -> Simulation (Operation a a)
+                                -> Event (Operation a a)
 newRandomTriangularOperation =
   newPreemptibleRandomTriangularOperation False
 
@@ -96,7 +96,7 @@ newRandomNormalOperation :: Double
                             -- ^ the mean time interval
                             -> Double
                             -- ^ the time interval deviation
-                            -> Simulation (Operation a a)
+                            -> Event (Operation a a)
 newRandomNormalOperation =
   newPreemptibleRandomNormalOperation False
          
@@ -111,7 +111,7 @@ newRandomLogNormalOperation :: Double
                                -> Double
                                -- ^ the deviation of a normal distribution which
                                -- this distribution is derived from
-                               -> Simulation (Operation a a)
+                               -> Event (Operation a a)
 newRandomLogNormalOperation =
   newPreemptibleRandomLogNormalOperation False
 
@@ -123,7 +123,7 @@ newRandomLogNormalOperation =
 -- because the handling of possible task preemption is rather costly.
 newRandomExponentialOperation :: Double
                                  -- ^ the mean time interval (the reciprocal of the rate)
-                                 -> Simulation (Operation a a)
+                                 -> Event (Operation a a)
 newRandomExponentialOperation =
   newPreemptibleRandomExponentialOperation False
          
@@ -137,7 +137,7 @@ newRandomErlangOperation :: Double
                             -- ^ the scale (the reciprocal of the rate)
                             -> Int
                             -- ^ the shape
-                            -> Simulation (Operation a a)
+                            -> Event (Operation a a)
 newRandomErlangOperation =
   newPreemptibleRandomErlangOperation False
 
@@ -149,7 +149,7 @@ newRandomErlangOperation =
 -- because the handling of possible task preemption is rather costly.
 newRandomPoissonOperation :: Double
                              -- ^ the mean time interval
-                             -> Simulation (Operation a a)
+                             -> Event (Operation a a)
 newRandomPoissonOperation =
   newPreemptibleRandomPoissonOperation False
 
@@ -163,7 +163,7 @@ newRandomBinomialOperation :: Double
                               -- ^ the probability
                               -> Int
                               -- ^ the number of trials
-                              -> Simulation (Operation a a)
+                              -> Event (Operation a a)
 newRandomBinomialOperation =
   newPreemptibleRandomBinomialOperation False
 
@@ -177,7 +177,7 @@ newRandomGammaOperation :: Double
                            -- ^ the shape
                            -> Double
                            -- ^ the scale (a reciprocal of the rate)
-                           -> Simulation (Operation a a)
+                           -> Event (Operation a a)
 newRandomGammaOperation =
   newPreemptibleRandomGammaOperation False
 
@@ -191,7 +191,7 @@ newRandomBetaOperation :: Double
                           -- ^ shape (alpha)
                           -> Double
                           -- ^ shape (beta)
-                          -> Simulation (Operation a a)
+                          -> Event (Operation a a)
 newRandomBetaOperation =
   newPreemptibleRandomBetaOperation False
 
@@ -205,7 +205,7 @@ newRandomWeibullOperation :: Double
                              -- ^ shape
                              -> Double
                              -- ^ scale
-                             -> Simulation (Operation a a)
+                             -> Event (Operation a a)
 newRandomWeibullOperation =
   newPreemptibleRandomWeibullOperation False
 
@@ -216,7 +216,7 @@ newRandomWeibullOperation =
 -- because the handling of possible task preemption is rather costly.
 newRandomDiscreteOperation :: DiscretePDF Double
                               -- ^ the discrete probability density function
-                              -> Simulation (Operation a a)
+                              -> Event (Operation a a)
 newRandomDiscreteOperation =
   newPreemptibleRandomDiscreteOperation False
 
@@ -228,7 +228,7 @@ newPreemptibleRandomUniformOperation :: Bool
                                         -- ^ the minimum time interval
                                         -> Double
                                         -- ^ the maximum time interval
-                                        -> Simulation (Operation a a)
+                                        -> Event (Operation a a)
 newPreemptibleRandomUniformOperation preemptible min max =
   newPreemptibleOperation preemptible $ \a ->
   do randomUniformProcess_ min max
@@ -242,7 +242,7 @@ newPreemptibleRandomUniformIntOperation :: Bool
                                            -- ^ the minimum time interval
                                            -> Int
                                            -- ^ the maximum time interval
-                                           -> Simulation (Operation a a)
+                                           -> Event (Operation a a)
 newPreemptibleRandomUniformIntOperation preemptible min max =
   newPreemptibleOperation preemptible $ \a ->
   do randomUniformIntProcess_ min max
@@ -258,7 +258,7 @@ newPreemptibleRandomTriangularOperation :: Bool
                                            -- ^ the median of the time interval
                                            -> Double
                                            -- ^ the maximum time interval
-                                           -> Simulation (Operation a a)
+                                           -> Event (Operation a a)
 newPreemptibleRandomTriangularOperation preemptible min median max =
   newPreemptibleOperation preemptible $ \a ->
   do randomTriangularProcess_ min median max
@@ -272,7 +272,7 @@ newPreemptibleRandomNormalOperation :: Bool
                                        -- ^ the mean time interval
                                        -> Double
                                        -- ^ the time interval deviation
-                                       -> Simulation (Operation a a)
+                                       -> Event (Operation a a)
 newPreemptibleRandomNormalOperation preemptible mu nu =
   newPreemptibleOperation preemptible $ \a ->
   do randomNormalProcess_ mu nu
@@ -288,7 +288,7 @@ newPreemptibleRandomLogNormalOperation :: Bool
                                           -> Double
                                           -- ^ the deviation of a normal distribution which
                                           -- this distribution is derived from
-                                          -> Simulation (Operation a a)
+                                          -> Event (Operation a a)
 newPreemptibleRandomLogNormalOperation preemptible mu nu =
   newPreemptibleOperation preemptible $ \a ->
   do randomLogNormalProcess_ mu nu
@@ -301,7 +301,7 @@ newPreemptibleRandomExponentialOperation :: Bool
                                             -- ^ whether the operation process can be preempted
                                             -> Double
                                             -- ^ the mean time interval (the reciprocal of the rate)
-                                            -> Simulation (Operation a a)
+                                            -> Event (Operation a a)
 newPreemptibleRandomExponentialOperation preemptible mu =
   newPreemptibleOperation preemptible $ \a ->
   do randomExponentialProcess_ mu
@@ -316,7 +316,7 @@ newPreemptibleRandomErlangOperation :: Bool
                                        -- ^ the scale (the reciprocal of the rate)
                                        -> Int
                                        -- ^ the shape
-                                       -> Simulation (Operation a a)
+                                       -> Event (Operation a a)
 newPreemptibleRandomErlangOperation preemptible beta m =
   newPreemptibleOperation preemptible $ \a ->
   do randomErlangProcess_ beta m
@@ -329,7 +329,7 @@ newPreemptibleRandomPoissonOperation :: Bool
                                         -- ^ whether the operation process can be preempted
                                         -> Double
                                         -- ^ the mean time interval
-                                        -> Simulation (Operation a a)
+                                        -> Event (Operation a a)
 newPreemptibleRandomPoissonOperation preemptible mu =
   newPreemptibleOperation preemptible $ \a ->
   do randomPoissonProcess_ mu
@@ -344,7 +344,7 @@ newPreemptibleRandomBinomialOperation :: Bool
                                          -- ^ the probability
                                          -> Int
                                          -- ^ the number of trials
-                                         -> Simulation (Operation a a)
+                                         -> Event (Operation a a)
 newPreemptibleRandomBinomialOperation preemptible prob trials =
   newPreemptibleOperation preemptible $ \a ->
   do randomBinomialProcess_ prob trials
@@ -359,7 +359,7 @@ newPreemptibleRandomGammaOperation :: Bool
                                       -- ^ the shape
                                       -> Double
                                       -- ^ the scale
-                                      -> Simulation (Operation a a)
+                                      -> Event (Operation a a)
 newPreemptibleRandomGammaOperation preemptible kappa theta =
   newPreemptibleOperation preemptible $ \a ->
   do randomGammaProcess_ kappa theta
@@ -374,7 +374,7 @@ newPreemptibleRandomBetaOperation :: Bool
                                      -- ^ shape (alpha)
                                      -> Double
                                      -- ^ shape (beta)
-                                     -> Simulation (Operation a a)
+                                     -> Event (Operation a a)
 newPreemptibleRandomBetaOperation preemptible alpha beta =
   newPreemptibleOperation preemptible $ \a ->
   do randomBetaProcess_ alpha beta
@@ -389,7 +389,7 @@ newPreemptibleRandomWeibullOperation :: Bool
                                         -- ^ shape
                                         -> Double
                                         -- ^ scale
-                                        -> Simulation (Operation a a)
+                                        -> Event (Operation a a)
 newPreemptibleRandomWeibullOperation preemptible alpha beta =
   newPreemptibleOperation preemptible $ \a ->
   do randomWeibullProcess_ alpha beta
@@ -401,7 +401,7 @@ newPreemptibleRandomDiscreteOperation :: Bool
                                          -- ^ whether the operation process can be preempted
                                          -> DiscretePDF Double
                                          -- ^ the discrete probability density function
-                                         -> Simulation (Operation a a)
+                                         -> Event (Operation a a)
 newPreemptibleRandomDiscreteOperation preemptible dpdf =
   newPreemptibleOperation preemptible $ \a ->
   do randomDiscreteProcess_ dpdf

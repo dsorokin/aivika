@@ -118,7 +118,9 @@ module Simulation.Aivika.Results.Transform
         operationTotalUtilisationTime,
         operationTotalPreemptionTime,
         operationUtilisationTime,
-        operationPreemptionTime) where
+        operationPreemptionTime,
+        operationUtilisationFactor,
+        operationPreemptionFactor) where
 
 import Control.Arrow
 
@@ -642,3 +644,15 @@ operationUtilisationTime (Operation a) =
 operationPreemptionTime :: Operation -> SamplingStats
 operationPreemptionTime (Operation a) =
   SamplingStats (a >>> resultById OperationPreemptionTimeId)
+
+-- | It returns the factor changing from 0 to 1, which estimates how often
+-- the operation activity was utilised.
+operationUtilisationFactor :: Operation -> ResultTransform
+operationUtilisationFactor (Operation a) =
+  a >>> resultById OperationUtilisationFactorId
+
+-- | It returns the factor changing from 0 to 1, which estimates how often
+-- the operation activity was preempted waiting for the further proceeding.
+operationPreemptionFactor :: Operation -> ResultTransform
+operationPreemptionFactor (Operation a) =
+  a >>> resultById OperationPreemptionFactorId
