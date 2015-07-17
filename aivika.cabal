@@ -122,7 +122,6 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/SingleLaneTraffic.hs
                      examples/RenegingFromQueue.hs
                      examples/TruckHaulingSituation.hs
-                     examples/TruckHaulingSituationVer2.hs
                      CHANGELOG.md
 
 library
