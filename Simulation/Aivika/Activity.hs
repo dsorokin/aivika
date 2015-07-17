@@ -155,7 +155,7 @@ newPreemptibleStateActivity :: Bool
                                -- old state and input
                                -> s
                                -- ^ the initial state
-                              -> Simulation (Activity s a b)
+                               -> Simulation (Activity s a b)
 newPreemptibleStateActivity preemptible provide state =
   do r0 <- liftIO $ newIORef state
      r1 <- liftIO $ newIORef 0
