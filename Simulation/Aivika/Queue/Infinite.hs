@@ -47,6 +47,8 @@ module Simulation.Aivika.Queue.Infinite
         queueDelete_,
         queueDeleteBy,
         queueDeleteBy_,
+        queueContains,
+        queueContainsBy,
         clearQueue,
         -- * Summary
         queueSummary,
@@ -468,6 +470,31 @@ queueDeleteBy_ :: (DeletingQueueStrategy sm,
                   -- ^ the predicate
                   -> Event ()
 queueDeleteBy_ q pred = fmap (const ()) $ queueDeleteBy q pred
+
+-- | Detect whether the item is contained in the queue.
+queueContains :: (Eq a,
+                  DeletingQueueStrategy sm)
+                 => Queue sm so a
+                 -- ^ the queue
+                 -> a
+                 -- ^ the item to search the queue for
+                 -> Event Bool
+                 -- ^ whether the item was found
+queueContains q a = fmap isJust $ queueContainsBy q (== a)
+
+-- | Detect whether an item satisfying the specified predicate is contained in the queue.
+queueContainsBy :: DeletingQueueStrategy sm
+                   => Queue sm so a
+                   -- ^ the queue
+                   -> (a -> Bool)
+                   -- ^ the predicate
+                   -> Event (Maybe a)
+                   -- ^ the item if it was found
+queueContainsBy q pred =
+  do x <- strategyQueueContainsBy (queueStore q) (pred . itemValue)
+     case x of
+       Nothing -> return Nothing
+       Just i  -> return $ Just (itemValue i)
 
 -- | Clear the queue immediately.
 clearQueue :: DequeueStrategy sm
