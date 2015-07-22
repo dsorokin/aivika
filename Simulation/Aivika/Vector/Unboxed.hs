@@ -26,6 +26,8 @@ module Simulation.Aivika.Vector.Unboxed
         vectorDeleteBy,
         vectorIndex,
         vectorIndexBy,
+        vectorContains,
+        vectorContainsBy,
         freezeVector) where 
 
 import Data.Array
@@ -222,3 +224,18 @@ vectorDeleteBy vector pred =
        then do vectorDeleteAt vector index
                return True
        else return False
+
+-- | Detect whether the specified element is contained in the vector.
+vectorContains :: (Unboxed a, Eq a) => Vector a -> a -> IO Bool
+vectorContains vector item =
+  do index <- vectorIndex vector item
+     return (index >= 0)
+            
+-- | Detect whether an element satisfying the specified predicate is contained in the vector.
+vectorContainsBy :: Unboxed a => Vector a -> (a -> Bool) -> IO (Maybe a)
+vectorContainsBy vector pred =
+  do index <- vectorIndexBy vector pred
+     if index >= 0
+       then do a <- readVector vector index
+               return (Just a)
+       else return Nothing

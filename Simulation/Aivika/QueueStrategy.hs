@@ -96,6 +96,24 @@ class DequeueStrategy s => DeletingQueueStrategy s where
                            -> Event (Maybe i)
                            -- ^ the element if it was found and removed
 
+  -- | Detect whether the specified element is contained in the queue.
+  strategyQueueContains :: Eq i
+                           => StrategyQueue s i
+                           -- ^ the queue
+                           -> i
+                           -- ^ the element to find
+                           -> Event Bool
+                           -- ^ whether the element is contained in the queue
+  strategyQueueContains s i = fmap isJust $ strategyQueueContainsBy s (== i)
+
+  -- | Detect whether an element satifying the specified predicate is contained in the queue.
+  strategyQueueContainsBy :: StrategyQueue s i
+                             -- ^ the queue
+                             -> (i -> Bool)
+                             -- ^ the predicate
+                             -> Event (Maybe i)
+                             -- ^ the element if it was found
+
 -- | Strategy: First Come - First Served (FCFS).
 data FCFS = FCFS deriving (Eq, Ord, Show)
 
@@ -137,6 +155,8 @@ instance DeletingQueueStrategy FCFS where
 
   strategyQueueDeleteBy (FCFSQueue q) p = liftIO $ listRemoveBy q p
 
+  strategyQueueContainsBy (FCFSQueue q) p = liftIO $ listContainsBy q p
+
 -- | An implementation of the 'LCFS' queue strategy.
 instance QueueStrategy LCFS where
 
@@ -166,6 +186,8 @@ instance DeletingQueueStrategy LCFS where
 
   strategyQueueDeleteBy (LCFSQueue q) p = liftIO $ listRemoveBy q p
 
+  strategyQueueContainsBy (LCFSQueue q) p = liftIO $ listContainsBy q p
+
 -- | An implementation of the 'StaticPriorities' queue strategy.
 instance QueueStrategy StaticPriorities where
 
@@ -194,6 +216,8 @@ instance PriorityQueueStrategy StaticPriorities Double where
 instance DeletingQueueStrategy StaticPriorities where
 
   strategyQueueDeleteBy (StaticPriorityQueue q) p = liftIO $ PQ.queueDeleteBy q p
+
+  strategyQueueContainsBy (StaticPriorityQueue q) p = liftIO $ PQ.queueContainsBy q p
 
 -- | An implementation of the 'SIRO' queue strategy.
 instance QueueStrategy SIRO where
@@ -228,3 +252,5 @@ instance EnqueueStrategy SIRO where
 instance DeletingQueueStrategy SIRO where
 
   strategyQueueDeleteBy (SIROQueue q) p = liftIO $ V.vectorDeleteBy q p
+
+  strategyQueueContainsBy (SIROQueue q) p = liftIO $ V.vectorContainsBy q p

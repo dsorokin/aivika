@@ -21,6 +21,8 @@ module Simulation.Aivika.PriorityQueue
         queueFront,
         queueDelete,
         queueDeleteBy,
+        queueContains,
+        queueContainsBy,
         remove,
         removeBy) where 
 
@@ -203,6 +205,24 @@ queueDeleteBy pq pred =
                writeArray vals i v0
                when (i > 0) $
                  siftDown keys vals i index k v
+               return (Just x)
+
+-- | Detect whether the specified element is contained in the queue.
+--
+-- Note that unlike other functions it has complexity O(n).
+queueContains :: Eq a => PriorityQueue a -> a -> IO Bool
+queueContains pq a = fmap isJust $ queueContainsBy pq (== a)
+
+-- | Detect whether an element satisfying the predicate is contained in the queue.
+--
+-- Note that unlike other functions it has complexity O(n).
+queueContainsBy :: PriorityQueue a -> (a -> Bool) -> IO (Maybe a)
+queueContainsBy pq pred =
+  do index <- queueIndexBy pq pred
+     if index < 0
+       then return Nothing
+       else do vals <- readIORef (pqVals pq)
+               x <- readArray vals index
                return (Just x)
      
 -- | Return the index of the item satisfying the predicate or -1.     

@@ -20,6 +20,8 @@ module Simulation.Aivika.DoubleLinkedList
         listRemoveLast,
         listRemove,
         listRemoveBy,
+        listContains,
+        listContainsBy,
         listFirst,
         listLast) where 
 
@@ -207,3 +209,19 @@ listRemoveBy x p = readIORef (listHead x) >>= loop
                                do writeIORef (itemNext prev') (Just next')
                                   writeIORef (itemPrev next') (Just prev')
                            return (Just $ itemVal item)
+
+-- | Detect whether the specified element is contained in the list.
+listContains :: Eq a => DoubleLinkedList a -> a -> IO Bool
+listContains x v = fmap isJust $ listContainsBy x (== v)
+
+-- | Detect whether an element satisfying the specified predicate is contained in the list.
+listContainsBy :: DoubleLinkedList a -> (a -> Bool) -> IO (Maybe a)
+listContainsBy x p = readIORef (listHead x) >>= loop
+  where loop item =
+          case item of
+            Nothing   -> return Nothing
+            Just item ->
+              do let f = p (itemVal item)
+                 if not f
+                   then readIORef (itemNext item) >>= loop
+                   else return $ Just (itemVal item)
