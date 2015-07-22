@@ -1,12 +1,14 @@
 
-Version 4.2.1
+Version 4.3
 -----
 
 * Added optimised queues which have no counters nor signals.
 
 * Added assembling functions for streams.
 
-* Added the operation activity as a simplification or server and stateful activity.
+* Added the operation activity as a simplification of server.
+
+* Added new functions for the queues.
 
 Version 4.2
 -----
