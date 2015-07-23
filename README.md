@@ -75,7 +75,7 @@ The charting library has two interchangeable back-ends:
 
 All libraries were tested on Linux, Windows and OS X.
 
-The PDF documentation is available on the [Aivika Wiki] [6] website.
+The PDF documentation and installation instructions are available on the [Aivika Wiki] [6] website.
 
 ### Consulting
 
