@@ -120,21 +120,21 @@ newTaskUsingId pid p =
      return (t, m)
 
 -- | Run the process with the specified identifier in background and
--- return the corresponded task immediately.
+-- return the corresponding task immediately.
 runTaskUsingId :: ProcessId -> Process a -> Event (Task a)
 runTaskUsingId pid p =
   do (t, m) <- newTaskUsingId pid p
      runProcessUsingId pid m
      return t
 
--- | Run the process in background and return the corresponded task immediately.
+-- | Run the process in background and return the corresponding task immediately.
 runTask :: Process a -> Event (Task a)
 runTask p =
   do pid <- liftSimulation newProcessId
      runTaskUsingId pid p
 
 -- | Enqueue the process that will be started at the specified time with the given
--- identifier from the event queue. It returns the corresponded task immediately.
+-- identifier from the event queue. It returns the corresponding task immediately.
 enqueueTaskUsingId :: Double -> ProcessId -> Process a -> Event (Task a)
 enqueueTaskUsingId time pid p =
   do (t, m) <- newTaskUsingId pid p
@@ -142,30 +142,30 @@ enqueueTaskUsingId time pid p =
      return t
 
 -- | Enqueue the process that will be started at the specified time from the event queue.
--- It returns the corresponded task immediately.
+-- It returns the corresponding task immediately.
 enqueueTask :: Double -> Process a -> Event (Task a)
 enqueueTask time p =
   do pid <- liftSimulation newProcessId
      enqueueTaskUsingId time pid p
 
 -- | Run using the specified identifier a child process in background and return
--- immediately the corresponded task.
+-- immediately the corresponding task.
 spawnTaskUsingId :: ProcessId -> Process a -> Process (Task a)
 spawnTaskUsingId = spawnTaskUsingIdWith CancelTogether
 
--- | Run a child process in background and return immediately the corresponded task.
+-- | Run a child process in background and return immediately the corresponding task.
 spawnTask :: Process a -> Process (Task a)
 spawnTask = spawnTaskWith CancelTogether
 
 -- | Run using the specified identifier a child process in background and return
--- immediately the corresponded task.
+-- immediately the corresponding task.
 spawnTaskUsingIdWith :: ContCancellation -> ProcessId -> Process a -> Process (Task a)
 spawnTaskUsingIdWith cancellation pid p =
   do (t, m) <- liftEvent $ newTaskUsingId pid p
      spawnProcessUsingIdWith cancellation pid m
      return t
 
--- | Run a child process in background and return immediately the corresponded task.
+-- | Run a child process in background and return immediately the corresponding task.
 spawnTaskWith :: ContCancellation -> Process a -> Process (Task a)
 spawnTaskWith cancellation p =
   do pid <- liftSimulation newProcessId
