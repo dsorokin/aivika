@@ -73,7 +73,8 @@ description:
     .
     All libraries were tested on Linux, Windows and OS X.
     .
-    The PDF documentation is available on the Aivika Wiki [5] website.
+    The PDF documentation and installation instructions are 
+    available on the Aivika Wiki [5] website.
     .
     \[1] <http://hackage.haskell.org/package/aivika-experiment>
     .
