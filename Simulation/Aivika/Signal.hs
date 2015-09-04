@@ -402,7 +402,7 @@ arrivalSignal m =
                                        Just t0 -> Just (t - t0) }
          }
 
--- | Delay the signal events for the specified time interval.
+-- | Delay the signal values for the specified time interval.
 delaySignal :: Double -> Signal a -> Signal a
 delaySignal delta m =
   Signal { handleSignal = \h ->
@@ -418,7 +418,7 @@ delaySignal delta m =
                  (liftIO $ writeIORef r True)
          }
 
--- | Delay the signal events for time intervals recalculated for each event.
+-- | Delay the signal values for time intervals recalculated for each value.
 delaySignalM :: Event Double -> Signal a -> Signal a
 delaySignalM delta m =
   Signal { handleSignal = \h ->
