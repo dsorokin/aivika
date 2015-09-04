@@ -40,6 +40,9 @@ module Simulation.Aivika.Signal
         newSignalInIntegTimes,
         newSignalInStartTime,
         newSignalInStopTime,
+        -- * Delaying Signal
+        delaySignal,
+        delaySignalM,
         -- * Signal History
         SignalHistory,
         signalHistorySignal,
@@ -397,6 +400,39 @@ arrivalSignal m =
                                      case t0 of
                                        Nothing -> Nothing
                                        Just t0 -> Just (t - t0) }
+         }
+
+-- | Delay the signal events for the specified time interval.
+delaySignal :: Double -> Signal a -> Signal a
+delaySignal delta m =
+  Signal { handleSignal = \h ->
+            do r <- liftIO $ newIORef False
+               h <- handleSignal m $ \a ->
+                 Event $ \p ->
+                 invokeEvent p $
+                 enqueueEvent (pointTime p + delta) $ 
+                 do x <- liftIO $ readIORef r
+                    unless x $ h a
+               return $ DisposableEvent $
+                 disposeEvent h >>
+                 (liftIO $ writeIORef r True)
+         }
+
+-- | Delay the signal events for time intervals recalculated for each event.
+delaySignalM :: Event Double -> Signal a -> Signal a
+delaySignalM delta m =
+  Signal { handleSignal = \h ->
+            do r <- liftIO $ newIORef False
+               h <- handleSignal m $ \a ->
+                 Event $ \p ->
+                 do delta' <- invokeEvent p delta
+                    invokeEvent p $
+                      enqueueEvent (pointTime p + delta') $ 
+                      do x <- liftIO $ readIORef r
+                         unless x $ h a
+               return $ DisposableEvent $
+                 disposeEvent h >>
+                 (liftIO $ writeIORef r True)
          }
 
 -- | Show the debug message with the current simulation time.
