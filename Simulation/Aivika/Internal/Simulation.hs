@@ -21,6 +21,7 @@ module Simulation.Aivika.Internal.Simulation
         invokeSimulation,
         runSimulation,
         runSimulations,
+        runSimulationByIndex,
         -- * Error Handling
         catchSimulation,
         finallySimulation,
@@ -74,6 +75,25 @@ runSimulation (Simulation m) sc =
      m Run { runSpecs = sc,
              runIndex = 1,
              runCount = 1,
+             runEventQueue = q,
+             runGenerator = g }
+
+-- | Run the simulation by the specified specs and run index in series.
+runSimulationByIndex :: Simulation a
+                        -- ^ the simulation model
+                        -> Specs
+                        -- ^ the simulation specs
+                        -> Int
+                        -- ^ the number of runs in series
+                        -> Int
+                        -- ^ the index of the current run (started from 1)
+                        -> IO a
+runSimulationByIndex (Simulation m) sc runs index =
+  do q <- newEventQueue sc
+     g <- newGenerator $ spcGeneratorType sc
+     m Run { runSpecs = sc,
+             runIndex = index,
+             runCount = runs,
              runEventQueue = q,
              runGenerator = g }
 
