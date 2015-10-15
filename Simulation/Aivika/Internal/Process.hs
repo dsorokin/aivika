@@ -673,10 +673,9 @@ timeoutProcessUsingId timeout pid p =
   do s <- liftSimulation newSignalSource
      timeoutPid <- liftSimulation newProcessId
      spawnProcessUsingIdWith CancelChildAfterParent timeoutPid $
-       finallyProcess
-       (holdProcess timeout)
-       (liftEvent $
-        cancelProcessWithId pid)
+       do holdProcess timeout
+          liftEvent $
+            cancelProcessWithId pid
      spawnProcessUsingIdWith CancelChildAfterParent pid $
        do r <- liftIO $ newIORef Nothing
           finallyProcess
@@ -686,7 +685,8 @@ timeoutProcessUsingId timeout pid p =
              (\e ->
                liftIO $ writeIORef r $ Just (Left e)))
             (liftEvent $
-             do x <- liftIO $ readIORef r
+             do cancelProcessWithId timeoutPid
+                x <- liftIO $ readIORef r
                 triggerSignal s x)
      x <- processAwait $ publishSignal s
      case x of
