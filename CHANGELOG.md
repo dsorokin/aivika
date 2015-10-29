@@ -1,3 +1,11 @@
+Version 4.3.1
+-----
+
+* Improved the timeoutProcessUsingId function: no need in additional cancellation signal.
+  Thanks to Gabriel Garcia who pointed to this issue and suggested a possible solution.
+
+* Added functions delaySignal and delaySignalM to delay a signal in time through 
+  the event queue.
 
 Version 4.3
 -----
