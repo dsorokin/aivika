@@ -94,7 +94,7 @@ license-file:    LICENSE
 copyright:       (c) 2009-2015. David Sorokin <david.sorokin@gmail.com>
 author:          David Sorokin
 maintainer:      David Sorokin <david.sorokin@gmail.com>
-homepage:        http://github.com/dsorokin/aivika
+homepage:        http://www.aivikasoft.com/en/products/aivika.html
 cabal-version:   >= 1.10
 build-type:      Simple
 tested-with:     GHC == 7.10.1
