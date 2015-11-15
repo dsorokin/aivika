@@ -7,6 +7,8 @@ Version 4.3.1
 * Added functions delaySignal and delaySignalM to delay a signal in time through 
   the event queue.
 
+* Added function runSimulationByIndex to run the simulation with an arbitrary run index.
+
 Version 4.3
 -----
 
