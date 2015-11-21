@@ -1,3 +1,9 @@
+Version x.x.x
+-----
+
+* Added functions splitStreamFiltering, splitStreamFilteringQueueing and splitStreamFilteringPrioritising
+  to filter when splitting the input stream.
+
 Version 4.3.1
 -----
 
