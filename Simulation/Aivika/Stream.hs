@@ -23,6 +23,8 @@ module Simulation.Aivika.Stream
         splitStream,
         splitStreamQueueing,
         splitStreamPrioritising,
+        splitStreamFiltering,
+        splitStreamFilteringQueueing,
         -- * Specifying Identifier
         streamUsingId,
         -- * Prefetching and Delaying Stream
@@ -356,6 +358,45 @@ splitStreamPrioritising s ps x =
                           return a
                   return (a, stream ps)
      return $ map stream ps
+
+-- | Split the input stream into the specified number of output streams
+-- after filtering and applying the 'FCFS' strategy for enqueuing the output requests.
+splitStreamFiltering :: [a -> Event Bool] -> Stream a -> Simulation [Stream a]
+splitStreamFiltering = splitStreamFilteringQueueing FCFS
+
+-- | Split the input stream into the specified number of output streams after filtering.
+--
+-- If you don't know what the strategy to apply, then you probably
+-- need the 'FCFS' strategy, or function 'splitStreamFiltering' that
+-- does namely this.
+splitStreamFilteringQueueing :: EnqueueStrategy s
+                                => s
+                                -- ^ the strategy applied for enqueuing the output requests
+                                -> [a -> Event Bool]
+                                -- ^ the filters for output streams
+                                -> Stream a
+                                -- ^ the input stream
+                                -> Simulation [Stream a]
+                                -- ^ the splitted output streams
+splitStreamFilteringQueueing s preds x =
+  do ref <- liftIO $ newIORef x
+     res <- newResource s 1
+     let reader pred =
+           do a <-
+                usingResource res $
+                do p <- liftIO $ readIORef ref
+                   (a, xs) <- runStream p
+                   liftEvent $
+                     do f <- pred a
+                        if f
+                          then do liftIO $ writeIORef ref xs
+                                  return $ Just a
+                          else do liftIO $ writeIORef ref $ Cons (return (a, xs))
+                                  return Nothing
+              case a of
+                Just a  -> return a
+                Nothing -> reader pred
+     return $ map (repeatProcess . reader) preds
 
 -- | Concatenate the input streams applying the 'FCFS' strategy and
 -- producing one output stream.
