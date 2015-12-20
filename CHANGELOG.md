@@ -4,6 +4,9 @@ Version x.x.x
 * Added functions splitStreamFiltering, splitStreamFilteringQueueing to filter when 
   splitting the input stream.
 
+* Explicit exporting function newRandomGenerator01 for generating random numbers by 
+  the specified custom generator returning numbers from 0 to 1.
+
 Version 4.3.1
 -----
 

@@ -16,7 +16,8 @@ module Simulation.Aivika.Generator
         GeneratorType(..),
         DiscretePDF(..),
         newGenerator,
-        newRandomGenerator) where
+        newRandomGenerator,
+        newRandomGenerator01) where
 
 import System.Random
 import Data.IORef
