@@ -1,4 +1,4 @@
-Version x.x.x
+Version 4.3.2
 -----
 
 * Added functions splitStreamFiltering, splitStreamFilteringQueueing to filter when 
@@ -6,6 +6,8 @@ Version x.x.x
 
 * Explicit exporting function newRandomGenerator01 for generating random numbers by 
   the specified custom generator returning numbers from 0 to 1.
+  
+* Added function freezeList for the double linked list.
 
 Version 4.3.1
 -----

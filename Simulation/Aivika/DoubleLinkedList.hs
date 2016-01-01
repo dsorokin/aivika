@@ -23,7 +23,8 @@ module Simulation.Aivika.DoubleLinkedList
         listContains,
         listContainsBy,
         listFirst,
-        listLast) where 
+        listLast,
+        freezeList) where 
 
 import Data.IORef
 import Data.Maybe
@@ -225,3 +226,10 @@ listContainsBy x p = readIORef (listHead x) >>= loop
                  if not f
                    then readIORef (itemNext item) >>= loop
                    else return $ Just (itemVal item)
+
+-- | Freeze the list and return its contents.
+freezeList :: DoubleLinkedList a -> IO [a]
+freezeList x = readIORef (listTail x) >>= loop []
+  where loop acc Nothing     = return acc
+        loop acc (Just item) = readIORef (itemPrev item) >>= loop (itemVal item : acc)
+  
