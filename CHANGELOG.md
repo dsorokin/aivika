@@ -9,6 +9,8 @@ Version 4.3.2
   
 * Added function freezeList for the double linked list.
 
+* Added an immutable priority queue.
+
 Version 4.3.1
 -----
 

@@ -150,6 +150,7 @@ library
                      Simulation.Aivika.Parameter
                      Simulation.Aivika.Parameter.Random
                      Simulation.Aivika.PriorityQueue
+                     Simulation.Aivika.PriorityQueue.Pure
                      Simulation.Aivika.Process
                      Simulation.Aivika.Process.Random
                      Simulation.Aivika.Processor
