@@ -1,9 +1,4 @@
 
-Version 4.3.3
------
-
-* More safe version of functions randomLogNormalProcess and randomLogNormalProcess_.
-
 Version 4.3.2
 -----
 
