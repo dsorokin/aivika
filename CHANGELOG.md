@@ -1,4 +1,10 @@
 
+Version 4.3.3
+-----
+
+* Added function vectorDeleteRange to remove the range of elements from the mutable vector.
+
+
 Version 4.3.2
 -----
 

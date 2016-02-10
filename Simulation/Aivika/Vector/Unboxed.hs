@@ -22,6 +22,7 @@ module Simulation.Aivika.Vector.Unboxed
         vectorBinarySearch,
         vectorInsert,
         vectorDeleteAt,
+        vectorDeleteRange,
         vectorDelete,
         vectorDeleteBy,
         vectorIndex,
@@ -176,6 +177,35 @@ vectorDeleteAt vector index =
           writeArray array i x
      writeArray array (count - 1) undefined
      writeIORef (vectorCountRef vector) (count - 1)
+
+-- | Delete the specified range of elements.
+vectorDeleteRange :: Unboxed a
+                     => Vector a
+                     -- ^ the vector
+                     -> Int
+                     -- ^ the start index
+                     -> Int
+                     -- ^ the count of items to be removed
+                     -> IO ()
+vectorDeleteRange vector index len =
+  do count <- readIORef (vectorCountRef vector)
+     when (index < 0) $
+       error $
+       "The first index cannot be " ++
+       "negative: vectorDeleteRange."
+     when (index + len - 1 >= count) $
+       error $
+       "The last index must be less " ++
+       "than the count: vectorDeleteRange."
+     when (len < 0) $
+       error "Negative range length: vectorDeleteRange." 
+     array <- readIORef (vectorArrayRef vector)
+     forM_ [index, index + 1 .. (count - len) - 1] $ \i ->
+       do x <- readArray array (i + len)
+          writeArray array i x
+     forM_ [(count - len) .. count - 1] $ \i ->
+       writeArray array i undefined
+     writeIORef (vectorCountRef vector) (count - len)
      
 -- | Return the index of the item or -1.     
 vectorIndex :: (Unboxed a, Eq a) => Vector a -> a -> IO Int
