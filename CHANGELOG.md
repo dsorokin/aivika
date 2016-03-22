@@ -1,4 +1,9 @@
 
+Version 4.3.4
+-----
+
+* Yet more safe the resource preemption.
+
 Version 4.3.3
 -----
 
