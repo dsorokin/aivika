@@ -349,7 +349,7 @@ releaseResource' r =
                           do PQ.enqueue (resourceActingQueue r) (- priority) $ ResourceActingItem priority pid
                              invokeEvent p $ updateResourceWaitTime r (pointTime p - t)
                              invokeEvent p $ updateResourceUtilisationCount r 1
-                             invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
+                             invokeEvent p $ enqueueEvent (pointTime p) $ reenterCont c ()
                  Right (ResourcePreemptedItem priority t pid) ->
                    do f <- invokeEvent p $ processCancelled pid
                       case f of

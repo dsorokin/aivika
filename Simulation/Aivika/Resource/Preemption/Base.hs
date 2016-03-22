@@ -223,7 +223,7 @@ releaseResource' r =
                           invokeEvent p $ releaseResource' r
                         Just c ->
                           do PQ.enqueue (resourceActingQueue r) (- priority) $ ResourceActingItem priority pid
-                             invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
+                             invokeEvent p $ enqueueEvent (pointTime p) $ reenterCont c ()
                  Right (ResourcePreemptedItem priority pid) ->
                    do f <- invokeEvent p $ processCancelled pid
                       case f of
