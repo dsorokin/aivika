@@ -4,6 +4,8 @@ Version 4.3.3
 
 * Added function vectorDeleteRange to remove the range of elements from the mutable vector.
 
+* Fixed the resource preemption when releasing and requesting again for the resource at
+  the same modeling time.
 
 Version 4.3.2
 -----
