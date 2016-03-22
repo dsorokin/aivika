@@ -790,7 +790,15 @@ reenterCont c a =
      if not f
        then invokeEvent p $
             enqueueEvent (pointTime p) $
-            resumeCont c a
+            Event $ \p ->
+            do f <- invokeEvent p $
+                    contPreemptionBegun $
+                    contId $ contAux c
+               if not f
+                 then invokeEvent p $
+                      resumeCont c a
+                 else invokeEvent p $
+                      sleepCont c a
        else invokeEvent p $
             sleepCont c a
 
