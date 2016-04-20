@@ -32,7 +32,8 @@ module Simulation.Aivika.Internal.Simulation
         memoSimulation,
         -- * Exceptions
         SimulationException(..),
-        SimulationAbort(..)) where
+        SimulationAbort(..),
+        SimulationRetry(..)) where
 
 import Control.Exception
 import Control.Monad
@@ -197,11 +198,22 @@ instance Show SimulationException where
 instance Exception SimulationException
 
 -- | An exception that signals of aborting the simulation.
-data SimulationAbort = SimulationAbort
+data SimulationAbort = SimulationAbort String
                        -- ^ The exception to abort the simulation.
                      deriving (Show, Typeable)
 
+-- | An exception that signals that the current computation should be retried
+-- as possible, which feature may be supported by the simulation engine or not.
+data SimulationRetry = SimulationRetry String
+                       -- ^ The exception to retry the computation.
+                     deriving (Show, Typeable)
+
 instance Exception SimulationAbort where
+  
+  toException = toException . SimulationException
+  fromException x = do { SimulationException a <- fromException x; cast a }
+
+instance Exception SimulationRetry where
   
   toException = toException . SimulationException
   fromException x = do { SimulationException a <- fromException x; cast a }

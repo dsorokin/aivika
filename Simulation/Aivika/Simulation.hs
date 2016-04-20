@@ -25,6 +25,7 @@ module Simulation.Aivika.Simulation
         memoSimulation,
         -- * Exceptions
         SimulationException(..),
-        SimulationAbort(..)) where
+        SimulationAbort(..),
+        SimulationRetry(..)) where
 
 import Simulation.Aivika.Internal.Simulation
