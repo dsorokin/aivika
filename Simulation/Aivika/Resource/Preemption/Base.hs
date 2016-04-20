@@ -88,7 +88,7 @@ newResource :: Int
 newResource count =
   Simulation $ \r ->
   do when (count < 0) $
-       error $
+       fail $
        "The resource count cannot be negative: " ++
        "newResource."
      countRef <- newIORef count
@@ -109,12 +109,12 @@ newResourceWithMaxCount :: Int
 newResourceWithMaxCount count maxCount =
   Simulation $ \r ->
   do when (count < 0) $
-       error $
+       fail $
        "The resource count cannot be negative: " ++
        "newResourceWithMaxCount."
      case maxCount of
        Just maxCount | count > maxCount ->
-         error $
+         fail $
          "The resource count cannot be greater than " ++
          "its maximum value: newResourceWithMaxCount."
        _ ->
@@ -191,7 +191,7 @@ releaseResource r =
      if f
        then do invokeEvent p $ releaseResource' r
                invokeEvent p $ resumeCont c ()
-       else error $
+       else fail $
             "The resource was not acquired by this process: releaseResource"
 
 -- | Release the resource increasing its count and resuming one of the
@@ -205,7 +205,7 @@ releaseResource' r =
      let a' = a + 1
      case resourceMaxCount r of
        Just maxCount | a' > maxCount ->
-         error $
+         fail $
          "The resource count cannot be greater than " ++
          "its maximum value: releaseResource'."
        _ ->
@@ -256,7 +256,7 @@ decResourceCount' r =
   Event $ \p ->
   do a <- readIORef (resourceCountRef r)
      when (a == 0) $
-       error $
+       fail $
        "The resource exceeded and its count is zero: decResourceCount'"
      f <- PQ.queueNull (resourceActingQueue r)
      unless f $
@@ -278,7 +278,7 @@ incResourceCount :: Resource
                     -- ^ the increment for the resource count
                     -> Event ()
 incResourceCount r n
-  | n < 0     = error "The increment cannot be negative: incResourceCount"
+  | n < 0     = fail "The increment cannot be negative: incResourceCount"
   | n == 0    = return ()
   | otherwise =
     do releaseResource' r
@@ -292,7 +292,7 @@ decResourceCount :: Resource
                     -- ^ the decrement for the resource count
                     -> Event ()
 decResourceCount r n
-  | n < 0     = error "The decrement cannot be negative: decResourceCount"
+  | n < 0     = fail "The decrement cannot be negative: decResourceCount"
   | n == 0    = return ()
   | otherwise =
     do decResourceCount' r

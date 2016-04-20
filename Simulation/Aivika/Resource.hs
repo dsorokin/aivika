@@ -214,12 +214,12 @@ newResourceWithMaxCount s count maxCount =
   do let r = pointRun p
          t = pointTime p
      when (count < 0) $
-       error $
+       fail $
        "The resource count cannot be negative: " ++
        "newResourceWithMaxCount."
      case maxCount of
        Just maxCount | count > maxCount ->
-         error $
+         fail $
          "The resource count cannot be greater than " ++
          "its maximum value: newResourceWithMaxCount."
        _ ->
@@ -424,7 +424,7 @@ releaseResource' r =
      let a' = a + 1
      case resourceMaxCount r of
        Just maxCount | a' > maxCount ->
-         error $
+         fail $
          "The resource count cannot be greater than " ++
          "its maximum value: releaseResource'."
        _ ->
@@ -509,7 +509,7 @@ incResourceCount :: DequeueStrategy s
                     -- ^ the increment for the resource count
                     -> Event ()
 incResourceCount r n
-  | n < 0     = error "The increment cannot be negative: incResourceCount"
+  | n < 0     = fail "The increment cannot be negative: incResourceCount"
   | n == 0    = return ()
   | otherwise =
     do releaseResource' r
@@ -524,7 +524,7 @@ decResourceCount :: EnqueueStrategy s
                     -- ^ the decrement for the resource count
                     -> Process ()
 decResourceCount r n
-  | n < 0     = error "The decrement cannot be negative: decResourceCount"
+  | n < 0     = fail "The decrement cannot be negative: decResourceCount"
   | n == 0    = return ()
   | otherwise =
     do decResourceCount' r

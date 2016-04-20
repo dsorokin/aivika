@@ -167,7 +167,7 @@ newResource :: QueueStrategy s
 newResource s count =
   Simulation $ \r ->
   do when (count < 0) $
-       error $
+       fail $
        "The resource count cannot be negative: " ++
        "newResource."
      countRef <- newIORef count
@@ -190,12 +190,12 @@ newResourceWithMaxCount :: QueueStrategy s
 newResourceWithMaxCount s count maxCount =
   Simulation $ \r ->
   do when (count < 0) $
-       error $
+       fail $
        "The resource count cannot be negative: " ++
        "newResourceWithMaxCount."
      case maxCount of
        Just maxCount | count > maxCount ->
-         error $
+         fail $
          "The resource count cannot be greater than " ++
          "its maximum value: newResourceWithMaxCount."
        _ ->
@@ -287,7 +287,7 @@ releaseResourceWithinEvent r =
      let a' = a + 1
      case resourceMaxCount r of
        Just maxCount | a' > maxCount ->
-         error $
+         fail $
          "The resource count cannot be greater than " ++
          "its maximum value: releaseResourceWithinEvent."
        _ ->
@@ -358,7 +358,7 @@ incResourceCount :: DequeueStrategy s
                     -- ^ the increment for the resource count
                     -> Event ()
 incResourceCount r n
-  | n < 0     = error "The increment cannot be negative: incResourceCount"
+  | n < 0     = fail "The increment cannot be negative: incResourceCount"
   | n == 0    = return ()
   | otherwise =
     do releaseResourceWithinEvent r
@@ -373,7 +373,7 @@ decResourceCount :: EnqueueStrategy s
                     -- ^ the decrement for the resource count
                     -> Process ()
 decResourceCount r n
-  | n < 0     = error "The decrement cannot be negative: decResourceCount"
+  | n < 0     = fail "The decrement cannot be negative: decResourceCount"
   | n == 0    = return ()
   | otherwise =
     do requestResource r
