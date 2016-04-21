@@ -129,12 +129,14 @@ newResourceWithMaxCount count maxCount =
   do let r = pointRun p
          t = pointTime p
      when (count < 0) $
-       fail $
+       throwIO $
+       SimulationRetry $
        "The resource count cannot be negative: " ++
        "newResourceWithMaxCount."
      case maxCount of
        Just maxCount | count > maxCount ->
-         fail $
+         throwIO $
+         SimulationRetry $
          "The resource count cannot be greater than " ++
          "its maximum value: newResourceWithMaxCount."
        _ ->
@@ -314,7 +316,8 @@ releaseResource r =
        then do invokeEvent p $ updateResourceUtilisationCount r (-1)
                invokeEvent p $ releaseResource' r
                invokeEvent p $ resumeCont c ()
-       else fail $
+       else throwIO $
+            SimulationRetry
             "The resource was not acquired by this process: releaseResource"
 
 -- | Release the resource increasing its count and resuming one of the
@@ -328,7 +331,8 @@ releaseResource' r =
      let a' = a + 1
      case resourceMaxCount r of
        Just maxCount | a' > maxCount ->
-         fail $
+         throwIO $
+         SimulationRetry $
          "The resource count cannot be greater than " ++
          "its maximum value: releaseResource'."
        _ ->
@@ -385,7 +389,8 @@ decResourceCount' r =
   do let t = pointTime p
      a <- readIORef (resourceCountRef r)
      when (a == 0) $
-       fail $
+       throwIO $
+       SimulationRetry
        "The resource exceeded and its count is zero: decResourceCount'"
      f <- PQ.queueNull (resourceActingQueue r)
      unless f $
@@ -408,7 +413,7 @@ incResourceCount :: Resource
                     -- ^ the increment for the resource count
                     -> Event ()
 incResourceCount r n
-  | n < 0     = fail "The increment cannot be negative: incResourceCount"
+  | n < 0     = throwEvent $ SimulationRetry "The increment cannot be negative: incResourceCount"
   | n == 0    = return ()
   | otherwise =
     do releaseResource' r
@@ -422,7 +427,7 @@ decResourceCount :: Resource
                     -- ^ the decrement for the resource count
                     -> Event ()
 decResourceCount r n
-  | n < 0     = fail "The decrement cannot be negative: decResourceCount"
+  | n < 0     = throwEvent $ SimulationRetry "The decrement cannot be negative: decResourceCount"
   | n == 0    = return ()
   | otherwise =
     do decResourceCount' r
