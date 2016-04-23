@@ -4,6 +4,8 @@ Version 4.3.4
 
 * Yet more safe the resource preemption.
 
+* Introducing exception SimulationRetry, which is needed for parallel distributed simulation.
+
 Version 4.3.3
 -----
 
