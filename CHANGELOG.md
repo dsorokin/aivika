@@ -1,4 +1,9 @@
 
+Version 4.3.5
+-----
+
+* Removed the obsolete preprocessor instructions for conditional compilation.
+
 Version 4.3.4
 -----
 

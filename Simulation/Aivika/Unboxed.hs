@@ -1,5 +1,5 @@
 
-{-# LANGUAGE CPP, FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- |
 -- Module     : Simulation.Aivika.Unboxed
@@ -40,9 +40,5 @@ instance Unboxed Word8
 instance Unboxed Word16
 instance Unboxed Word32
 
-#ifndef __HASTE__
-
 instance Unboxed Int64
 instance Unboxed Word64
-
-#endif
