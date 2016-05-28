@@ -5,7 +5,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- This module defines memoization transforms. The memoization creates such 'Dynamics'
 -- computations, which values are cached in the integration time points. Then

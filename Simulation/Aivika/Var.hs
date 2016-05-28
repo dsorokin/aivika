@@ -5,7 +5,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- This module defines a variable that is bound up with the event queue and 
 -- that keeps the history of changes storing the values in arrays, which

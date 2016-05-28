@@ -5,7 +5,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- This module defines the random functions that always return the same values
 -- in the integration time points within a single simulation run. The values

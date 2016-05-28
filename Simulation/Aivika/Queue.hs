@@ -5,7 +5,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- This module defines a queue that can use the specified strategies. So, having only
 -- the 'FCFS', 'LCFS', 'SIRO' and 'StaticPriorities' strategies, you can build

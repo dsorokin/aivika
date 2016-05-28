@@ -5,7 +5,7 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- The module defines the 'Event' monad which is very similar to the 'Dynamics'
 -- monad but only now the computation is strongly synchronized with the event queue.
