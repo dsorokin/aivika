@@ -70,7 +70,7 @@ description:
     * has an extensible architecture.
     .
     The charting package has two interchangeable back-ends [3, 4],
-    where one of them is based on Cairo and it is more preferable.
+    where one of them uses Cairo and it is more preferable.
     .
     The PDF documentation and installation instructions are 
     available on the Aivika Wiki website [5]. 
