@@ -1,14 +1,15 @@
 name:            aivika
-version:         4.3.4
-synopsis:        A multi-paradigm simulation library
+version:         4.3.5
+synopsis:        A multi-method simulation library
 description:
-    Aivika is a multi-paradigm simulation library with a strong emphasis
-    on Discrete Event Simulation (DES) and System Dynamics (SD).
+    Aivika is a multi-method simulation library focused on 
+    discrete event simulation (DES) with partial support of 
+    system dynamics and agent-based modeling.
     .
     The library has the following features:
     .
     * allows defining recursive stochastic differential equations of 
-      System Dynamics (unordered as in maths via the recursive do-notation);
+      system dynamics (unordered as in maths via the recursive do-notation);
     .
     * supports the event-driven paradigm of DES as a basic core for 
       implementing other paradigms;
@@ -24,15 +25,15 @@ description:
     .
     * supports the resource preemption;
     .
-    * allows defining a queue network based on infinite streams of data
-      and their processors, where we can define a complex enough
-      behaviour just in a few lines of code;
+    * allows defining a queue network based on streams of data (transacts) 
+      and their processors;
     .
     * allows simulating circuits with recursive links and delays;
     .
     * supports the activity-oriented paradigm of DES;
     .
-    * supports the basic constructs for the agent-based modeling;
+    * supports basic constructs for the agent-based modeling such as 
+      agents, states, timeout and timer handlers;
     .
     * allows creating combined discrete-continuous models as all parts
       of the library are well integrated and this is reflected directly 
@@ -52,8 +53,8 @@ description:
       (monads, streams and arrows).
     .
     Aivika itself is a light-weight engine with minimal dependencies. 
-    However, it has additional packages Aivika Experiment [1] and 
-    Aivika Experiment Chart [2] that offer the following features:
+    However, it has additional packages [1, 2] that offer the following 
+    features:
     .
     * automating simulation experiments;
     .
@@ -68,13 +69,18 @@ description:
     .
     * has an extensible architecture.
     .
-    The charting package has two interchangeable back-ends:
-    Aivika Experiment Cairo [3] and Aivika Experiment Diagrams [4].
-    .
-    All libraries were tested on Linux, Windows and OS X.
+    The charting package has two interchangeable back-ends [3, 4],
+    where one of them is based on Cairo and it is more preferable.
     .
     The PDF documentation and installation instructions are 
-    available on the Aivika Wiki [5] website.
+    available on the Aivika Wiki website [5]. 
+    .
+    Moreover, the method was generalized [6] and applied to 
+    nested simulation [7] and parallel distributed simulation [8]. 
+    .
+    The libraries were tested on Linux, Windows and OS X.
+    .
+    A more full information about Aivika is available on the project website [9].
     .
     \[1] <http://hackage.haskell.org/package/aivika-experiment>
     .
@@ -86,8 +92,17 @@ description:
     .
     \[5] <https://github.com/dsorokin/aivika/wiki>
     .
+    \[6] <http://hackage.haskell.org/package/aivika-transformers>
+    .
+    \[7] <http://hackage.haskell.org/package/aivika-branches>
+    .
+    \[8] <http://hackage.haskell.org/package/aivika-distributed>
+    .
+    \[9] <http://www.aivikasoft.com/en/products/aivika.html>
+    .
     P.S. Aivika is actually a genuine female Mari name which is pronounced 
     with stress on the last syllable.
+    .
 category:        Simulation
 license:         BSD3
 license-file:    LICENSE
@@ -97,7 +112,7 @@ maintainer:      David Sorokin <david.sorokin@gmail.com>
 homepage:        http://www.aivikasoft.com/en/products/aivika.html
 cabal-version:   >= 1.10
 build-type:      Simple
-tested-with:     GHC == 7.10.1
+tested-with:     GHC == 8.0.1
 
 extra-source-files:  examples/BassDiffusion.hs
                      examples/BouncingBall.hs
