@@ -1,7 +1,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Queue
--- Copyright  : Copyright (c) 2009-2015, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
