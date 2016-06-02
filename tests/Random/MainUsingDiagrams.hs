@@ -10,4 +10,4 @@ import qualified Data.Map as M
 
 import Model
 
-main = runExperiment experiment generators (WebPageRenderer $ DiagramsRenderer SVG M.empty) model
+main = runExperiment experiment generators (WebPageRenderer $ DiagramsRenderer SVG loadCommonFonts) model
