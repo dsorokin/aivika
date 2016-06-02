@@ -1,11 +1,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Ref.Base
--- Copyright  : Copyright (c) 2009-2015, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- This module defines a light-weight and more fast version of an updatable reference
 -- that depends on the event queue but that doesn't supply with the signal notification.

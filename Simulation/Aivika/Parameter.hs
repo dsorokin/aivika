@@ -1,10 +1,10 @@
 -- |
 -- Module     : Simulation.Aivika.Parameter
--- Copyright  : Copyright (c) 2009-2015, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- The module defines the 'Parameter' monad that allows representing the model
 -- parameters. For example, they can be used when running the Monte-Carlo simulation.

@@ -1,11 +1,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Resource
--- Copyright  : Copyright (c) 2009-2015, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- This module defines the resource which can be acquired and 
 -- then released by the discontinuous process 'Process'.
