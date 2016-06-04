@@ -84,14 +84,14 @@ instance Arrow Transform where
        c' <- g b
        return $ liftM2 (,) c c'
 
-instance ArrowLoop Transform where
-
-  loop (Transform f) =
-    Transform $ \b ->
-    mdo let bd = liftM2 (,) b d
-        cd <- f bd
-        (c, d) <- unzip0Dynamics cd
-        return c
+-- instance ArrowLoop Transform where
+-- 
+--   loop (Transform f) =
+--     Transform $ \b ->
+--     mdo let bd = liftM2 (,) b d
+--         cd <- f bd
+--         (c, d) <- unzip0Dynamics cd
+--         return c
 
 -- | A transform that returns the current modeling time.
 timeTransform :: Transform a Double
