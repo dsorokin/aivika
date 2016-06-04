@@ -10,18 +10,16 @@ specs = Specs 0 10 1 RungeKutta4 SimpleGenerator
 model :: Simulation ()
 model =
   do let swap (x, y) = (y, x)
-         -- k = loop (arr swap)
-         k = loop (arr id)
 
-     s <-
-       runEventInStartTime
-       newSignalInIntegTimes
+         k :: Circuit a a
+         k = loop (arr swap)
+         -- k = loop (arr id)
+
+         m :: (Num a, Show a) => Circuit a a
+         m = arrCircuit $ \a -> traceEvent (show a) (return $ 1 + a)
 
      runEventInStartTime $
-       handleSignal_ (k s) $ \x ->
-       liftIO $
-       do putStr "Received signal: "
-          putStrLn (show x)
+       iterateCircuitInIntegTimes_ (k >>> m) 0
 
      runEventInStopTime $
        return ()
