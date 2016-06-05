@@ -4,7 +4,7 @@ Version 4.5
 
 * The Transform computation seems to be not ArrowLoop.
 
-* Added the enqueueEventWithStopTime function.
+* Added the enqueueEventWithStartTime and enqueueEventWithStopTime functions.
 
 Version 4.3.5
 -----
