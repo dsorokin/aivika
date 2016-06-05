@@ -33,10 +33,11 @@ module Simulation.Aivika.Internal.Event
         -- * Event Queue
         enqueueEvent,
         enqueueEventWithCancellation,
+        enqueueEventWithStartTime,
+        enqueueEventWithStopTime,
         enqueueEventWithTimes,
         enqueueEventWithPoints,
         enqueueEventWithIntegTimes,
-        enqueueEventWithStopTime,
         yieldEvent,
         eventQueueCount,
         -- * Cancelling Event
@@ -321,6 +322,13 @@ enqueueEventWithIntegTimes e =
   Event $ \p ->
   let points = integPointsStartingFrom p
   in invokeEvent p $ enqueueEventWithPoints points e
+
+-- | Actuate the event handler in the start time point.
+enqueueEventWithStartTime :: Event () -> Event ()
+enqueueEventWithStartTime e =
+  Event $ \p ->
+  let p0 = integStartPoint $ pointRun p
+  in invokeEvent p $ enqueueEventWithPoints [p0] e
 
 -- | Actuate the event handler in the final time point.
 enqueueEventWithStopTime :: Event () -> Event ()
