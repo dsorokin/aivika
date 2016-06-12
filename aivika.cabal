@@ -133,6 +133,7 @@ extra-source-files:  examples/BassDiffusion.hs
                      examples/TimeOut.hs
                      examples/TimeOutInt.hs
                      examples/TimeOutWait.hs
+                     examples/PERT.hs
                      examples/PingPong.hs
                      examples/PortOperations.hs
                      examples/SingleLaneTraffic.hs
