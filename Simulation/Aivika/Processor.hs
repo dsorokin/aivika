@@ -104,6 +104,9 @@ instance Arrow Processor where
     do (xs, ys) <- liftSimulation $ unzipStream xys
        runStream $ zipStreamParallel (f xs) (g ys)
 
+  Processor f &&& Processor g =
+    Processor $ \xs -> zipStreamParallel (f xs) (g xs)
+
 instance ArrowChoice Processor where
 
   left (Processor f) =
