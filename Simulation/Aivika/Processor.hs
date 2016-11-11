@@ -90,19 +90,19 @@ instance Arrow Processor where
     Processor $ \xys ->
     Cons $
     do (xs, ys) <- liftSimulation $ unzipStream xys
-       runStream $ zipStreamSeq (f xs) ys
+       runStream $ zipStreamParallel (f xs) ys
 
   second (Processor f) =
     Processor $ \xys ->
     Cons $
     do (xs, ys) <- liftSimulation $ unzipStream xys
-       runStream $ zipStreamSeq xs (f ys)
+       runStream $ zipStreamParallel xs (f ys)
 
   Processor f *** Processor g =
     Processor $ \xys ->
     Cons $
     do (xs, ys) <- liftSimulation $ unzipStream xys
-       runStream $ zipStreamSeq (f xs) (g ys)
+       runStream $ zipStreamParallel (f xs) (g ys)
 
 instance ArrowChoice Processor where
 
