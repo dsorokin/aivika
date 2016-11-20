@@ -24,6 +24,7 @@ module Simulation.Aivika.DoubleLinkedList
         listContainsBy,
         listFirst,
         listLast,
+        clearList,
         freezeList) where 
 
 import Data.IORef
@@ -226,6 +227,13 @@ listContainsBy x p = readIORef (listHead x) >>= loop
                  if not f
                    then readIORef (itemNext item) >>= loop
                    else return $ Just (itemVal item)
+
+-- | Clear the contents of the list.
+clearList :: DoubleLinkedList a -> IO ()
+clearList q =
+  do writeIORef (listHead q) Nothing
+     writeIORef (listTail q) Nothing
+     writeIORef (listSize q) 0
 
 -- | Freeze the list and return its contents.
 freezeList :: DoubleLinkedList a -> IO [a]
