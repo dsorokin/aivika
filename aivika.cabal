@@ -1,5 +1,5 @@
 name:            aivika
-version:         4.6
+version:         4.7
 synopsis:        A multi-method simulation library
 description:
     Aivika is a multi-method simulation library focused on 
@@ -149,6 +149,7 @@ library
                      Simulation.Aivika.Agent
                      Simulation.Aivika.Arrival
                      Simulation.Aivika.Circuit
+                     Simulation.Aivika.Composite
                      Simulation.Aivika.Cont
                      Simulation.Aivika.DoubleLinkedList
                      Simulation.Aivika.Dynamics
