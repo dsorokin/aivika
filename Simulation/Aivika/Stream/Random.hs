@@ -63,7 +63,8 @@ randomStream delay = Cons $ loop Nothing where
            "At least, they can be lost, for example, when trying to enqueue them, but " ++
            "the random stream itself must always work: randomStream."
        (delay, a) <- liftParameter delay
-       holdProcess delay
+       when (delay > 0) $
+         holdProcess delay
        t2 <- liftDynamics time
        let arrival = Arrival { arrivalValue = a,
                                arrivalTime  = t2,
