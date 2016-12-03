@@ -437,6 +437,9 @@ prefetchProcessor = Processor prefetchStream
 -- The point is that the 'Stream' used in the 'Processor' is requested outside, 
 -- while the 'Signal' used in the 'Channel' is triggered inside. They are different by nature. 
 -- The former is passive, while the latter is active.
+--
+-- The resulting processor may be a root of space leak as it uses an internal queue to store
+-- the values received from the input signal.
 channelProcessor :: Channel a b -> Processor a b
 channelProcessor f =
   Processor $ \xs ->
