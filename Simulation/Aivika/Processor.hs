@@ -44,23 +44,27 @@ module Simulation.Aivika.Processor
         joinProcessor,
         -- * Failover
         failoverProcessor,
-        -- * Integrating with Signals
-        signalProcessor,
-        processorSignaling,
+        -- * Integrating with Signals and Channels
+        channelProcessor,
+        processorChannel,
         -- * Debugging
         traceProcessor) where
 
 import qualified Control.Category as C
 import Control.Arrow
 
+import Data.Monoid
+
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Event
+import Simulation.Aivika.Composite
 import Simulation.Aivika.Cont
 import Simulation.Aivika.Process
 import Simulation.Aivika.Stream
 import Simulation.Aivika.QueueStrategy
 import Simulation.Aivika.Signal
+import Simulation.Aivika.Channel
 import Simulation.Aivika.Internal.Arrival
 
 -- | Represents a processor of simulation data.
@@ -424,38 +428,41 @@ queueProcessorLoopParallel enqueue dequeue =
 prefetchProcessor :: Processor a a
 prefetchProcessor = Processor prefetchStream
 
--- | Convert the specified signal transform to a processor.
+-- | Convert the specified signal transform, i.e. the channel, to a processor.
 --
 -- The processor may return data with delay as the values are requested by demand.
 -- Consider using the 'arrivalSignal' function to provide with the information
 -- about the time points at which the signal was actually triggered.
 --
 -- The point is that the 'Stream' used in the 'Processor' is requested outside, 
--- while the 'Signal' is triggered inside. They are different by nature. 
+-- while the 'Signal' used in the 'Channel' is triggered inside. They are different by nature. 
 -- The former is passive, while the latter is active.
---
--- Cancel the processor's process to unsubscribe from the signals provided.
-signalProcessor :: (Signal a -> Signal b) -> Processor a b
-signalProcessor f =
+channelProcessor :: Channel a b -> Processor a b
+channelProcessor f =
   Processor $ \xs ->
   Cons $
-  do sa <- streamSignal xs
-     sb <- signalStream (f sa)
-     runStream sb
+  do let composite =
+           do sa <- streamSignal xs
+              sb <- runChannel f sa
+              signalStream sb
+     (ys, h) <- liftEvent $
+                runComposite composite mempty
+     whenCancellingProcess $
+       disposeEvent h
+     runStream ys
 
--- | Convert the specified processor to a signal transform. 
+-- | Convert the specified processor to a signal transform, i.e. the channel. 
 --
 -- The processor may return data with delay as the values are requested by demand.
 -- Consider using the 'arrivalSignal' function to provide with the information
 -- about the time points at which the signal was actually triggered.
 --
 -- The point is that the 'Stream' used in the 'Processor' is requested outside, 
--- while the 'Signal' is triggered inside. They are different by nature.
+-- while the 'Signal' used in the 'Channel' is triggered inside. They are different by nature.
 -- The former is passive, while the latter is active.
---
--- Cancel the returned process to unsubscribe from the signal specified.
-processorSignaling :: Processor a b -> Signal a -> Process (Signal b)
-processorSignaling (Processor f) sa =
+processorChannel :: Processor a b -> Channel a b
+processorChannel (Processor f) =
+  Channel $ \sa ->
   do xs <- signalStream sa
      let ys = f xs
      streamSignal ys

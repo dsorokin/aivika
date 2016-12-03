@@ -6,6 +6,12 @@ Version 4.7
 
 * Added the Channel computation.
 
+* Breaking change: modified signatures of functions signalStream and streamSignal.
+
+* Breaking change: the signalProcessor function is replaced with channelProcessor.
+
+* Breaking change: the processorSignaling function is replaced with processorChannel.
+
 Version 4.6
 -----
 

@@ -91,6 +91,7 @@ import Control.Monad.Trans
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Event
+import Simulation.Aivika.Composite
 import Simulation.Aivika.Cont
 import Simulation.Aivika.Process
 import Simulation.Aivika.Signal
@@ -564,29 +565,29 @@ prefetchStream s = Cons z where
 -- The resulting stream may be a root of space leak as it uses an internal queue to store
 -- the values received from the signal. The oldest value is dequeued each time we request
 -- the stream and it is returned within the computation.
---
--- Cancel the stream's process to unsubscribe from the specified signal.
-signalStream :: Signal a -> Process (Stream a)
+signalStream :: Signal a -> Composite (Stream a)
 signalStream s =
   do q <- liftSimulation newFCFSQueue
      h <- liftEvent $
-          handleSignal s $ 
-          enqueue q
-     whenCancellingProcess $ disposeEvent h
+          handleSignal s $ enqueue q
+     disposableComposite h
      return $ repeatProcess $ dequeue q
 
--- | Return a computation of the signal that triggers values from the specified stream,
+-- | Return a computation of the disposable signal that triggers values from the specified stream,
 -- each time the next value of the stream is received within the underlying 'Process' 
 -- computation.
---
--- Cancel the returned process to stop reading from the specified stream. 
-streamSignal :: Stream a -> Process (Signal a)
+streamSignal :: Stream a -> Composite (Signal a)
 streamSignal z =
   do s <- liftSimulation newSignalSource
-     spawnProcess $
+     pid <- liftSimulation newProcessId
+     liftEvent $
+       runProcessUsingId pid $
        consumeStream (liftEvent . triggerSignal s) z
+     disposableComposite $
+       DisposableEvent $
+       cancelProcessWithId pid
      return $ publishSignal s
-
+  
 -- | Transform a stream so that the resulting stream returns a sequence of arrivals
 -- saving the information about the time points at which the original stream items 
 -- were received by demand.
