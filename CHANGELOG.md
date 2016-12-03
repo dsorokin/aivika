@@ -1,5 +1,5 @@
 
-Version 4.7
+Version 5.0
 -----
 
 * Added the Composite monad.
