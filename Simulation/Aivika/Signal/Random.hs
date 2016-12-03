@@ -41,7 +41,6 @@ import Simulation.Aivika.Composite
 import Simulation.Aivika.Process
 import Simulation.Aivika.Signal
 import Simulation.Aivika.Statistics
-import Simulation.Aivika.Ref
 import Simulation.Aivika.Arrival
 
 -- | Return a signal of random events that arrive with the specified delay.
