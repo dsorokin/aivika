@@ -51,6 +51,6 @@ delayChannel delay =
 --
 -- This is actually the 'delaySignalM' function wrapped in the 'Channel' type. 
 delayChannelM :: Event Double     -- ^ the delay
-                -> Channel a a    -- ^ the delay channel
+                 -> Channel a a    -- ^ the delay channel
 delayChannelM delay =
   Channel $ \a -> return $ delaySignalM delay a
