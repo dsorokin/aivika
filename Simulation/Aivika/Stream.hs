@@ -97,7 +97,7 @@ import Simulation.Aivika.Process
 import Simulation.Aivika.Signal
 import Simulation.Aivika.Resource.Base
 import Simulation.Aivika.QueueStrategy
-import Simulation.Aivika.Queue.Infinite.Base
+import qualified Simulation.Aivika.Queue.Infinite.Base as IQ
 import Simulation.Aivika.Internal.Arrival
 
 -- | Represents an infinite stream of data in time,
@@ -567,11 +567,11 @@ prefetchStream s = Cons z where
 -- the stream and it is returned within the computation.
 signalStream :: Signal a -> Composite (Stream a)
 signalStream s =
-  do q <- liftSimulation newFCFSQueue
+  do q <- liftSimulation IQ.newFCFSQueue
      h <- liftEvent $
-          handleSignal s $ enqueue q
+          handleSignal s $ IQ.enqueue q
      disposableComposite h
-     return $ repeatProcess $ dequeue q
+     return $ repeatProcess $ IQ.dequeue q
 
 -- | Return a computation of the disposable signal that triggers values from the specified stream,
 -- each time the next value of the stream is received within the underlying 'Process' 
@@ -717,16 +717,16 @@ dropStreamWhileM p s =
 -- | Create the specified number of equivalent clones of the input stream.
 cloneStream :: Int -> Stream a -> Simulation [Stream a]
 cloneStream n s =
-  do qs  <- forM [1..n] $ \i -> newFCFSQueue
+  do qs  <- forM [1..n] $ \i -> IQ.newFCFSQueue
      rs  <- newFCFSResource 1
      ref <- liftIO $ newIORef s
      let reader m q =
-           do a <- liftEvent $ tryDequeue q
+           do a <- liftEvent $ IQ.tryDequeue q
               case a of
                 Just a  -> return a
                 Nothing ->
                   usingResource rs $
-                  do a <- liftEvent $ tryDequeue q
+                  do a <- liftEvent $ IQ.tryDequeue q
                      case a of
                        Just a  -> return a
                        Nothing ->
@@ -735,7 +735,7 @@ cloneStream n s =
                             liftIO $ writeIORef ref xs
                             forM_ (zip [1..] qs) $ \(i, q) ->
                               unless (i == m) $
-                              liftEvent $ enqueue q a
+                              liftEvent $ IQ.enqueue q a
                             return a
      forM (zip [1..] qs) $ \(i, q) ->
        return $ repeatProcess $ reader i q
