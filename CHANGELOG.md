@@ -16,6 +16,8 @@ Version 5.0
 
 * Added functions arrivalTimerSignal and arrivalTimerChannel.
 
+* Added function queuedSignalStream.
+
 Version 4.6
 -----
 

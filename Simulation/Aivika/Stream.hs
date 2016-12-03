@@ -66,6 +66,7 @@ module Simulation.Aivika.Stream
         -- * Integrating with Signals
         signalStream,
         streamSignal,
+        queuedSignalStream,
         -- * Utilities
         leftStream,
         rightStream,
@@ -552,6 +553,21 @@ prefetchStream s = Cons z where
          spawnProcess $ writer s
          runStream $ repeatProcess reader
 
+-- | Like 'signalStream' but allows specifying an arbitrary queue instead of the unbounded queue.
+queuedSignalStream :: (a -> Event ())
+                      -- ^ enqueue
+                      -> Process a
+                      -- ^ dequeue
+                      -> Signal a
+                      -- ^ the input signal
+                      -> Composite (Stream a)
+                      -- ^ the output stream
+queuedSignalStream enqueue dequeue s =
+  do h <- liftEvent $
+          handleSignal s enqueue
+     disposableComposite h
+     return $ repeatProcess dequeue
+
 -- | Return a stream of values triggered by the specified signal.
 --
 -- Since the time at which the values of the stream are requested for may differ from
@@ -565,13 +581,12 @@ prefetchStream s = Cons z where
 -- The resulting stream may be a root of space leak as it uses an internal queue to store
 -- the values received from the signal. The oldest value is dequeued each time we request
 -- the stream and it is returned within the computation.
+--
+-- Consider using 'queuedSignalStream' that allows specifying the bounded queue in case of need.
 signalStream :: Signal a -> Composite (Stream a)
 signalStream s =
   do q <- liftSimulation IQ.newFCFSQueue
-     h <- liftEvent $
-          handleSignal s $ IQ.enqueue q
-     disposableComposite h
-     return $ repeatProcess $ IQ.dequeue q
+     queuedSignalStream (IQ.enqueue q) (IQ.dequeue q) s
 
 -- | Return a computation of the disposable signal that triggers values from the specified stream,
 -- each time the next value of the stream is received within the underlying 'Process' 
