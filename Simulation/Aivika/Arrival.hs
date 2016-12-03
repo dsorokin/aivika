@@ -18,6 +18,8 @@ module Simulation.Aivika.Arrival
         ArrivalTimer,
         newArrivalTimer,
         arrivalTimerProcessor,
+        arrivalTimerSignal,
+        arrivalTimerChannel,
         arrivalProcessingTime,
         arrivalProcessingTimeChanged,
         arrivalProcessingTimeChanged_) where
@@ -28,11 +30,13 @@ import Control.Monad.Trans
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Event
+import Simulation.Aivika.Composite
 import Simulation.Aivika.Processor
 import Simulation.Aivika.Stream
 import Simulation.Aivika.Statistics
 import Simulation.Aivika.Ref
 import Simulation.Aivika.Signal
+import Simulation.Aivika.Channel
 import Simulation.Aivika.Internal.Arrival
 
 -- | Accumulates the statistics about that how long the arrived events are processed.
@@ -75,3 +79,26 @@ arrivalTimerProcessor timer =
                 addSamplingStats (t - arrivalTime a)
               triggerSignal (arrivalProcessingTimeChangedSource timer) ()
          return (a, Cons $ loop xs)
+
+-- | Return a signal that actually measures how much time has passed from
+-- the time of arriving the events.
+--
+-- Note that the statistics is counted each time you subscribe to the output signal.
+-- For example, if you subscribe twice then the statistics counting is duplicated.
+-- Ideally, you should subscribe to the output signal only once.
+arrivalTimerSignal :: ArrivalTimer -> Signal (Arrival a) -> Signal (Arrival a)
+arrivalTimerSignal timer sa =
+  Signal { handleSignal = \h ->
+            handleSignal sa $ \a ->
+            do t <- liftDynamics time
+               modifyRef (arrivalProcessingTimeRef timer) $
+                 addSamplingStats (t - arrivalTime a)
+               h a
+         }
+
+-- | Like 'arrivalTimerSignal' but measures how much time has passed from
+-- the time of arriving the events in the channel.
+arrivalTimerChannel :: ArrivalTimer -> Channel (Arrival a) (Arrival a)
+arrivalTimerChannel timer =
+  Channel $ \sa ->
+  return $ arrivalTimerSignal timer sa
