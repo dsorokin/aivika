@@ -580,9 +580,8 @@ queuedSignalStream enqueue dequeue s =
 --
 -- The resulting stream may be a root of space leak as it uses an internal unbounded queue to store
 -- the values received from the signal. The oldest value is dequeued each time we request
--- the stream and it is returned within the computation.
---
--- Consider using 'queuedSignalStream' that allows specifying the bounded queue in case of need.
+-- the stream and it is returned within the computation. Consider using 'queuedSignalStream' that
+-- allows specifying the bounded queue in case of need.
 signalStream :: Signal a -> Composite (Stream a)
 signalStream s =
   do q <- liftSimulation IQ.newFCFSQueue
