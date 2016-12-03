@@ -192,6 +192,7 @@ library
                      Simulation.Aivika.Server
                      Simulation.Aivika.Server.Random
                      Simulation.Aivika.Signal
+                     Simulation.Aivika.Signal.Random
                      Simulation.Aivika.Simulation
                      Simulation.Aivika.Specs
                      Simulation.Aivika.Statistics

@@ -12,6 +12,8 @@ Version 4.7
 
 * Breaking change: the processorSignaling function is replaced with processorChannel.
 
+* Added module Signal.Random.
+
 Version 4.6
 -----
 

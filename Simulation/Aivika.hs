@@ -47,6 +47,7 @@ module Simulation.Aivika
         module Simulation.Aivika.Server,
         module Simulation.Aivika.Server.Random,
         module Simulation.Aivika.Signal,
+        module Simulation.Aivika.Signal.Random,
         module Simulation.Aivika.Simulation,
         module Simulation.Aivika.Specs,
         module Simulation.Aivika.Statistics,
@@ -94,6 +95,7 @@ import Simulation.Aivika.Results.IO
 import Simulation.Aivika.Server
 import Simulation.Aivika.Server.Random
 import Simulation.Aivika.Signal
+import Simulation.Aivika.Signal.Random
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Specs
 import Simulation.Aivika.Statistics
