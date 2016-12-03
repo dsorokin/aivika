@@ -578,7 +578,7 @@ queuedSignalStream enqueue dequeue s =
 -- The point is that the 'Stream' is requested outside, while the 'Signal' is triggered
 -- inside. They are different by nature. The former is passive, while the latter is active.
 --
--- The resulting stream may be a root of space leak as it uses an internal queue to store
+-- The resulting stream may be a root of space leak as it uses an internal unbounded queue to store
 -- the values received from the signal. The oldest value is dequeued each time we request
 -- the stream and it is returned within the computation.
 --
