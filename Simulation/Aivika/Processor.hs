@@ -47,6 +47,8 @@ module Simulation.Aivika.Processor
         -- * Integrating with Signals and Channels
         channelProcessor,
         processorChannel,
+        queuedChannelProcessor,
+        queuedProcessorChannel,
         -- * Debugging
         traceProcessor) where
 
@@ -440,6 +442,8 @@ prefetchProcessor = Processor prefetchStream
 --
 -- The resulting processor may be a root of space leak as it uses an internal queue to store
 -- the values received from the input signal.
+--
+-- Consider using 'queuedChannelProcessor' that allows specifying the bounded queue in case of need.
 channelProcessor :: Channel a b -> Processor a b
 channelProcessor f =
   Processor $ \xs ->
@@ -466,10 +470,51 @@ channelProcessor f =
 --
 -- The resulting channel may be a root of space leak as it uses an internal queue to store
 -- the values received from the input stream.
+--
+-- Consider using 'queuedProcessorChannel' that allows specifying the bounded queue in case of need.
 processorChannel :: Processor a b -> Channel a b
 processorChannel (Processor f) =
   Channel $ \sa ->
   do xs <- signalStream sa
+     let ys = f xs
+     streamSignal ys
+
+-- | Like 'channelProcessor' but allows specifying an arbitrary queue for storing the signal values,
+-- for example, the bounded queue.
+queuedChannelProcessor :: (b -> Event ())
+                          -- ^ enqueue
+                          -> Process b
+                          -- ^ dequeue
+                          -> Channel a b
+                          -- ^ the channel
+                          -> Processor a b
+                          -- ^ the processor
+queuedChannelProcessor enqueue dequeue f =
+  Processor $ \xs ->
+  Cons $
+  do let composite =
+           do sa <- streamSignal xs
+              sb <- runChannel f sa
+              queuedSignalStream enqueue dequeue sb
+     (ys, h) <- liftEvent $
+                runComposite composite mempty
+     whenCancellingProcess $
+       disposeEvent h
+     runStream ys
+
+-- | Like 'processorChannel' but allows specifying an arbitrary queue for storing the signal values,
+-- for example, the bounded queue.
+queuedProcessorChannel :: (a -> Event ())
+                          -- ^ enqueue
+                          -> (Process a)
+                          -- ^ dequeue
+                          -> Processor a b
+                          -- ^ the processor
+                          -> Channel a b
+                          -- ^ the channel
+queuedProcessorChannel enqueue dequeue (Processor f) =
+  Channel $ \sa ->
+  do xs <- queuedSignalStream enqueue dequeue sa
      let ys = f xs
      streamSignal ys
 
