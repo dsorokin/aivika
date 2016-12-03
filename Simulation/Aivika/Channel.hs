@@ -15,7 +15,9 @@ module Simulation.Aivika.Channel
         Channel(..),
         -- * Delay Channel
         delayChannel,
-        delayChannelM) where
+        delayChannelM,
+        -- * Debugging
+        traceChannel) where
 
 import qualified Control.Category as C
 import Control.Monad
@@ -54,3 +56,12 @@ delayChannelM :: Event Double     -- ^ the delay
                  -> Channel a a    -- ^ the delay channel
 delayChannelM delay =
   Channel $ \a -> return $ delaySignalM delay a
+                                 
+-- | Show the debug message with the current simulation time,
+-- when emitting the output signal.
+traceChannel :: String -> Channel a b -> Channel a b
+traceChannel message (Channel f) =
+  Channel $ \a ->
+  do b <- f a
+     return $
+       traceSignal message b
