@@ -441,9 +441,8 @@ prefetchProcessor = Processor prefetchStream
 -- The former is passive, while the latter is active.
 --
 -- The resulting processor may be a root of space leak as it uses an internal queue to store
--- the values received from the input signal.
---
--- Consider using 'queuedChannelProcessor' that allows specifying the bounded queue in case of need.
+-- the values received from the input signal. Consider using 'queuedChannelProcessor' that
+-- allows specifying the bounded queue in case of need.
 channelProcessor :: Channel a b -> Processor a b
 channelProcessor f =
   Processor $ \xs ->
@@ -469,9 +468,8 @@ channelProcessor f =
 -- The former is passive, while the latter is active.
 --
 -- The resulting channel may be a root of space leak as it uses an internal queue to store
--- the values received from the input stream.
---
--- Consider using 'queuedProcessorChannel' that allows specifying the bounded queue in case of need.
+-- the values received from the input stream. Consider using 'queuedProcessorChannel' that
+-- allows specifying the bounded queue in case of need.
 processorChannel :: Processor a b -> Channel a b
 processorChannel (Processor f) =
   Channel $ \sa ->
