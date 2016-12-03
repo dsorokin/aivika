@@ -4,6 +4,8 @@ Version 4.7
 
 * Added the Composite monad.
 
+* Added the Channel computation.
+
 Version 4.6
 -----
 

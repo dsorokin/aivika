@@ -148,6 +148,7 @@ library
                      Simulation.Aivika.Activity.Random
                      Simulation.Aivika.Agent
                      Simulation.Aivika.Arrival
+                     Simulation.Aivika.Channel
                      Simulation.Aivika.Circuit
                      Simulation.Aivika.Composite
                      Simulation.Aivika.Cont

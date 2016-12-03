@@ -16,6 +16,7 @@ module Simulation.Aivika
         module Simulation.Aivika.Activity.Random,
         module Simulation.Aivika.Agent,
         module Simulation.Aivika.Arrival,
+        module Simulation.Aivika.Channel,
         module Simulation.Aivika.Circuit,
         module Simulation.Aivika.Composite,
         module Simulation.Aivika.Cont,
@@ -62,6 +63,7 @@ import Simulation.Aivika.Activity
 import Simulation.Aivika.Activity.Random
 import Simulation.Aivika.Agent
 import Simulation.Aivika.Arrival
+import Simulation.Aivika.Channel
 import Simulation.Aivika.Circuit
 import Simulation.Aivika.Composite
 import Simulation.Aivika.Cont
