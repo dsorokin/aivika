@@ -23,7 +23,7 @@ model =
 
      return $
        results
-       [resultSource "timer" "the arrival timer (EX ~ 0.5)" timer]
+       [resultSource "timer" "the arrival timer" timer]
 
 main =
   printSimulationResultsInStopTime
