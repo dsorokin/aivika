@@ -14,6 +14,8 @@ Version 5.0
 
 * Added module Signal.Random.
 
+* Added functions arrivalTimerSignal and arrivalTimerChannel.
+
 Version 4.6
 -----
 
