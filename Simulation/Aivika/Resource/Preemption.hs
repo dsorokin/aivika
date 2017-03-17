@@ -286,6 +286,7 @@ requestResourceWithPriority r priority =
                            then do PQ.dequeue (resourceActingQueue r)
                                    PQ.enqueue (resourceActingQueue r) (- priority) $ ResourceActingItem priority pid
                                    PQ.enqueue (resourceWaitQueue r) p0 (Right $ ResourcePreemptedItem p0 t pid0)
+                                   invokeEvent p $ updateResourceWaitTime r 0
                                    invokeEvent p $ updateResourceQueueCount r 1
                                    invokeEvent p $ processPreemptionBegin pid0
                                    invokeEvent p $ resumeCont c ()
