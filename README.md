@@ -96,6 +96,6 @@ package [aivika-distributed](http://hackage.haskell.org/package/aivika-distribut
 The libraries were tested on Linux, Windows and OS X.
 
 The PDF documentation, installation instructions and a more full information about Aivika 
-are available on the the [AivikaSoft](http://www.aivikasoft.com/en/products/aivika.html) website.
+are available on the the [AivikaSoft](http://www.aivikasoft.com) website.
 
 P.S. Aivika is actually a genuine female Mari name which is pronounced with stress on the last syllable.

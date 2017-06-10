@@ -105,7 +105,7 @@ description:
     .
     \[7] <http://hackage.haskell.org/package/aivika-distributed>
     .
-    \[8] <http://www.aivikasoft.com/en/products/aivika.html>
+    \[8] <http://www.aivikasoft.com>
     .
     P.S. Aivika is actually a genuine female Mari name which is pronounced 
     with stress on the last syllable.
@@ -116,7 +116,7 @@ license-file:    LICENSE
 copyright:       (c) 2009-2017. David Sorokin <david.sorokin@gmail.com>
 author:          David Sorokin
 maintainer:      David Sorokin <david.sorokin@gmail.com>
-homepage:        http://www.aivikasoft.com/en/products/aivika.html
+homepage:        http://www.aivikasoft.com
 cabal-version:   >= 1.10
 build-type:      Simple
 tested-with:     GHC == 8.0.2
