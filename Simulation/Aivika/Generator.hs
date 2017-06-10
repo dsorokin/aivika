@@ -3,7 +3,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Generator
--- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -71,8 +71,10 @@ data Generator =
               generateWeibull :: Double -> Double -> IO Double,
               -- ^ Generate a random number from the Weibull distribution by
               -- the specified shape and scale.
-              generateDiscrete :: forall a. DiscretePDF a -> IO a
+              generateDiscrete :: forall a. DiscretePDF a -> IO a,
               -- ^ Generate a random value from the specified discrete distribution.
+              generateSequenceNo :: IO Int
+              -- ^ Generate a sequence number which can be considered quite unique.
             }
 
 -- | Generate the uniform random number with the specified minimum and maximum.
@@ -331,6 +333,8 @@ newRandomGenerator01 g =
      g2 <- newNormalGenerator01 g1
      let g3 mu nu = do { x <- g2; return $ mu + nu * x }
          g4 mu nu = do { x <- g2; return $ exp (mu + nu * x) }
+     seqNoRef <- newIORef 0
+     let seqNo = do { x <- readIORef seqNoRef; modifyIORef' seqNoRef (+1); return x }
      return Generator { generateUniform = generateUniform01 g1,
                         generateUniformInt = generateUniformInt01 g1,
                         generateTriangular = generateTriangular01 g1,
@@ -343,4 +347,5 @@ newRandomGenerator01 g =
                         generateGamma = generateGamma01 g2 g1,
                         generateBeta = generateBeta01 g2 g1,
                         generateWeibull = generateWeibull01 g1,
-                        generateDiscrete = generateDiscrete01 g1 }
+                        generateDiscrete = generateDiscrete01 g1,
+                        generateSequenceNo = seqNo }

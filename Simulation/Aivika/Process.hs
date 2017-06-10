@@ -1,7 +1,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Process
--- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -48,9 +48,12 @@ module Simulation.Aivika.Process
         holdProcess,
         interruptProcess,
         processInterrupted,
+        processInterruptionTime,
         passivateProcess,
+        passivateProcessBefore,
         processPassive,
         reactivateProcess,
+        reactivateProcessImmediately,
         cancelProcessWithId,
         cancelProcess,
         processCancelled,
@@ -85,6 +88,8 @@ module Simulation.Aivika.Process
         neverProcess,
         -- * Retrying Computation
         retryProcess,
+        -- * GoTo Statement
+        transferProcess,
         -- * Debugging
         traceProcess) where
 

@@ -1,7 +1,9 @@
 
+{-# LANGUAGE DeriveDataTypeable, DeriveGeneric #-}
+
 -- |
 -- Module     : Simulation.Aivika.Statistics
--- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -44,7 +46,13 @@ module Simulation.Aivika.Statistics
         setTimingCounter,
         returnTimingCounter) where
 
+import GHC.Generics (Generic)
+
+import Control.DeepSeq
+
 import Data.Monoid
+import Data.Typeable
+import Data.Binary
 
 -- | Defines data types that can be converted to 'Double'.
 class Ord a => ConvertableToDouble a where
@@ -72,8 +80,11 @@ data SamplingStats a =
                   samplingStatsMean2 :: !Double 
                   -- ^ The average square value.
                 }
-  deriving (Eq, Ord)
-           
+  deriving (Eq, Ord, Typeable, Generic)
+
+instance NFData a => NFData (SamplingStats a)
+instance Binary a => Binary (SamplingStats a)
+
 -- | Specifies data type from which values we can gather the statistics.           
 class Num a => SamplingData a where           
   
@@ -259,7 +270,10 @@ data TimingStats a =
                 -- ^ Return the sum of values.
                 timingStatsSum2      :: !Double 
                 -- ^ Return the sum of square values.
-                } deriving (Eq, Ord)
+                } deriving (Eq, Ord, Typeable, Generic)
+
+instance NFData a => NFData (TimingStats a)
+instance Binary a => Binary (TimingStats a)
                            
 -- | Defines the data type from which values we can gather the timing statistics.
 class Num a => TimingData a where                           
@@ -461,7 +475,10 @@ data SamplingCounter a =
                     -- ^ The counter value.
                     samplingCounterStats :: SamplingStats a
                     -- ^ The counter statistics.
-                  } deriving (Eq, Ord, Show)
+                  } deriving (Eq, Ord, Show, Typeable, Generic)
+
+instance NFData a => NFData (SamplingCounter a)
+instance Binary a => Binary (SamplingCounter a)
 
 -- | An empty counter.
 emptySamplingCounter :: SamplingData a => SamplingCounter a
@@ -501,7 +518,10 @@ data TimingCounter a =
                   -- ^ The counter value.
                   timingCounterStats :: TimingStats a
                   -- ^ The counter statistics.
-                } deriving (Eq, Ord, Show)
+                } deriving (Eq, Ord, Show, Typeable, Generic)
+
+instance NFData a => NFData (TimingCounter a)
+instance Binary a => Binary (TimingCounter a)
 
 -- | An empty counter.
 emptyTimingCounter :: TimingData a => TimingCounter a

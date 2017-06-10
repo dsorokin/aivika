@@ -1,7 +1,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Operation
--- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -22,6 +22,8 @@ module Simulation.Aivika.Operation
         operationPreemptionTime,
         operationUtilisationFactor,
         operationPreemptionFactor,
+        -- * Statistics Reset
+        resetOperation,
         -- * Summary
         operationSummary,
         -- * Derived Signals for Properties
@@ -70,7 +72,7 @@ data Operation a b =
               -- ^ Provide @b@ by specified @a@.
               operationProcessPreemptible :: Bool,
               -- ^ Whether the process is preemptible.
-              operationStartTime :: Double,
+              operationStartTimeRef :: IORef Double,
               -- ^ The start time of creating the operation.
               operationLastTimeRef :: IORef Double,
               -- ^ The last time of utilising the operation activity.
@@ -110,6 +112,7 @@ newPreemptibleOperation :: Bool
                            -> Event (Operation a b)
 newPreemptibleOperation preemptible provide =
   do t0 <- liftDynamics time
+     r' <- liftIO $ newIORef t0
      r0 <- liftIO $ newIORef t0
      r1 <- liftIO $ newIORef 0
      r2 <- liftIO $ newIORef 0
@@ -121,7 +124,7 @@ newPreemptibleOperation preemptible provide =
      s4 <- liftSimulation newSignalSource
      return Operation { operationInitProcess = provide,
                         operationProcessPreemptible = preemptible,
-                        operationStartTime = t0,
+                        operationStartTimeRef = r',
                         operationLastTimeRef = r0,
                         operationTotalUtilisationTimeRef = r1,
                         operationTotalPreemptionTimeRef = r2,
@@ -281,7 +284,7 @@ operationPreemptionTimeChanged_ op =
 operationUtilisationFactor :: Operation a b -> Event Double
 operationUtilisationFactor op =
   Event $ \p ->
-  do let t0 = operationStartTime op
+  do t0 <- readIORef (operationStartTimeRef op)
      t1 <- readIORef (operationLastTimeRef op)
      x  <- readIORef (operationTotalUtilisationTimeRef op)
      return (x / (t1 - t0))
@@ -308,7 +311,7 @@ operationUtilisationFactorChanged_ op =
 operationPreemptionFactor :: Operation a b -> Event Double
 operationPreemptionFactor op =
   Event $ \p ->
-  do let t0 = operationStartTime op
+  do t0 <- readIORef (operationStartTimeRef op)
      t1 <- readIORef (operationLastTimeRef op)
      x  <- readIORef (operationTotalPreemptionTimeRef op)
      return (x / (t1 - t0))
@@ -352,7 +355,7 @@ operationChanged_ op =
 operationSummary :: Operation a b -> Int -> Event ShowS
 operationSummary op indent =
   Event $ \p ->
-  do let t0 = operationStartTime op
+  do t0  <- readIORef (operationStartTimeRef op)
      t1  <- readIORef (operationLastTimeRef op)
      tx1 <- readIORef (operationTotalUtilisationTimeRef op)
      tx2 <- readIORef (operationTotalPreemptionTimeRef op)
@@ -381,3 +384,16 @@ operationSummary op indent =
        showString tab .
        showString "preemption time:\n\n" .
        samplingStatsSummary xs2 (2 + indent)
+
+-- | Reset the statistics.
+resetOperation :: Operation a b -> Event ()
+resetOperation op =
+  Event $ \p ->
+  do let t0 = pointTime p
+     writeIORef (operationStartTimeRef op) t0
+     writeIORef (operationLastTimeRef op) t0
+     writeIORef (operationTotalUtilisationTimeRef op) 0
+     writeIORef (operationTotalPreemptionTimeRef op) 0
+     writeIORef (operationUtilisationTimeRef op) emptySamplingStats
+     writeIORef (operationPreemptionTimeRef op) emptySamplingStats
+     

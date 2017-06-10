@@ -1,9 +1,9 @@
 
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 -- |
 -- Module     : Simulation.Aivika.Results.Transform
--- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -132,9 +132,6 @@ class ResultTransformer a where
 
   -- | Return the result transform.
   tr :: a -> ResultTransform
-
-instance ResultTransformer ResultTransform where
-  tr = id
 
 -- | Represents a statistics based upon observations.
 newtype SamplingStats = SamplingStats ResultTransform

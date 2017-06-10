@@ -1,7 +1,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Signal
--- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -16,6 +16,7 @@ module Simulation.Aivika.Signal
        (-- * Handling and Triggering Signal
         Signal(..),
         handleSignal_,
+        handleSignalComposite,
         SignalSource,
         newSignalSource,
         publishSignal,
@@ -68,8 +69,10 @@ import Control.Monad.Trans
 import Simulation.Aivika.Internal.Specs
 import Simulation.Aivika.Internal.Parameter
 import Simulation.Aivika.Internal.Simulation
+import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Internal.Arrival
+import Simulation.Aivika.Composite
 
 import qualified Simulation.Aivika.Vector as V
 import qualified Simulation.Aivika.Vector.Unboxed as UV
@@ -111,6 +114,12 @@ handleSignal_ :: Signal a -> (a -> Event ()) -> Event ()
 handleSignal_ signal h = 
   do x <- handleSignal signal h
      return ()
+
+-- | Like 'handleSignal' but within the 'Composite' computation.
+handleSignalComposite :: Signal a -> (a -> Event ()) -> Composite ()
+handleSignalComposite signal h =
+  do x <- liftEvent $ handleSignal signal h
+     disposableComposite x
      
 -- | Create a new signal source.
 newSignalSource :: Simulation (SignalSource a)
@@ -278,24 +287,24 @@ data SignalHistory a =
                   signalHistoryValues :: V.Vector a }
 
 -- | Create a history of the signal values.
-newSignalHistory :: Signal a -> Event (SignalHistory a)
+newSignalHistory :: Signal a -> Composite (SignalHistory a)
 newSignalHistory =
   newSignalHistoryStartingWith Nothing
 
 -- | Create a history of the signal values starting with
 -- the optional initial value.
-newSignalHistoryStartingWith :: Maybe a -> Signal a -> Event (SignalHistory a)
+newSignalHistoryStartingWith :: Maybe a -> Signal a -> Composite (SignalHistory a)
 newSignalHistoryStartingWith init signal =
-  Event $ \p ->
-  do ts <- UV.newVector
-     xs <- V.newVector
+  do ts <- liftIO UV.newVector
+     xs <- liftIO V.newVector
      case init of
        Nothing -> return ()
        Just a ->
-         do UV.appendVector ts (pointTime p)
-            V.appendVector xs a
-     invokeEvent p $
-       handleSignal_ signal $ \a ->
+         do t <- liftDynamics time
+            liftIO $
+              do UV.appendVector ts t
+                 V.appendVector xs a
+     handleSignalComposite signal $ \a ->
        Event $ \p ->
        do UV.appendVector ts (pointTime p)
           V.appendVector xs a

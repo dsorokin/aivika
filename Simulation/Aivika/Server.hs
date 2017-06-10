@@ -1,7 +1,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Server
--- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -32,6 +32,8 @@ module Simulation.Aivika.Server
         serverProcessingFactor,
         serverOutputWaitFactor,
         serverPreemptionFactor,
+        -- * Statistics Reset
+        resetServer,
         -- * Summary
         serverSummary,
         -- * Derived Signals for Properties
@@ -707,3 +709,16 @@ serverSummary server indent =
        showString tab .
        showString "preemption time (waiting for the proceeding after preemption):\n\n" .
        samplingStatsSummary xs4 (2 + indent)
+
+-- | Reset the statistics.
+resetServer :: Server s a b -> Event ()
+resetServer server =
+  Event $ \p ->
+  do writeIORef (serverTotalInputWaitTimeRef server) 0
+     writeIORef (serverTotalProcessingTimeRef server) 0
+     writeIORef (serverTotalOutputWaitTimeRef server) 0
+     writeIORef (serverTotalPreemptionTimeRef server) 0
+     writeIORef (serverInputWaitTimeRef server) mempty
+     writeIORef (serverProcessingTimeRef server) mempty
+     writeIORef (serverOutputWaitTimeRef server) mempty
+     writeIORef (serverPreemptionTimeRef server) mempty

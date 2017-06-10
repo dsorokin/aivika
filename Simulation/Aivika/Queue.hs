@@ -1,7 +1,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Queue
--- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -70,6 +70,8 @@ module Simulation.Aivika.Queue
         queueContains,
         queueContainsBy,
         clearQueue,
+        -- * Statistics Reset
+        resetQueue,
         -- * Awaiting
         waitWhileFullQueue,
         -- * Summary
@@ -1214,3 +1216,22 @@ queueSummary q indent =
        showString tab .
        showString "the dequeue wait time (when was requested for dequeueing -> when was dequeued) = \n\n" .
        samplingStatsSummary dequeueWaitTime (2 + indent)
+
+-- | Reset the statistics.
+resetQueue :: Queue si sm so a -> Event ()
+resetQueue q =
+  Event $ \p ->
+  do let t = pointTime p
+     queueCount <- readIORef (queueCountRef q)
+     writeIORef (queueCountStatsRef q) $
+       returnTimingStats t queueCount
+     writeIORef (enqueueCountRef q) 0
+     writeIORef (enqueueLostCountRef q) 0
+     writeIORef (enqueueStoreCountRef q) 0
+     writeIORef (dequeueCountRef q) 0
+     writeIORef (dequeueExtractCountRef q) 0
+     writeIORef (queueWaitTimeRef q) mempty
+     writeIORef (queueTotalWaitTimeRef q) mempty
+     writeIORef (enqueueWaitTimeRef q) mempty
+     writeIORef (dequeueWaitTimeRef q) mempty
+  

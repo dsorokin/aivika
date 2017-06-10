@@ -1,15 +1,21 @@
-**Aivika** is a multi-method simulation library focused on 
-discrete event simulation (DES) with partial support of 
-system dynamics and agent-based modeling.
+A multi-method simulation library
 
-It is licensed under BSD3.
+**Aivika** is a discrete event simulation (DES) framework with support of activity-oriented, 
+event-oriented and process-oriented paradigms. It supports resource preemption and other 
+improved simulation techniques. There is also a partial support of system dynamics and
+agent-based modelling. All the complexity is hidden under easy-to-use computations.
 
-[Aivika] [1] has the following features:
+The represented [aivika](http://hackage.haskell.org/package/aivika) package is a basic 
+simulation library optimized for sequential execution.
+There are also packages for nested and parallel distributed simulation.
+All they are licensed under BSD3.
+
+The library has the following features:
 
 * allows defining recursive stochastic differential equations of 
   System Dynamics (unordered as in maths via the recursive do-notation);
 
-* supports the event-driven paradigm of DES as a basic core
+* supports the event-driven paradigm of DES as a basis
   for implementing other paradigms;
 
 * supports extensively the process-oriented paradigm of DES
@@ -19,12 +25,13 @@ It is licensed under BSD3.
 * allows working with the resources based on specified queue strategies 
   (FCFS/FIFO, LCFS/LIFO, SIRO, static priorities and so on);
 
-* allows customizing the infinite and finite queues based on strategies too;
+* allows customizing the unbounded and bounded queues based on strategies too;
 
 * supports the resource preemption;
 
-* allows defining a queue network based on streams of data (transacts) 
-  and their processors;
+* allows defining a queue network based on streams of data (transacts);
+
+* allows using a GPSS-like DSL with help of the additional library;
 
 * allows simulating circuits with recursive links and delays;
 
@@ -50,9 +57,11 @@ It is licensed under BSD3.
 * hides technical details in high-level simulation computations
   (monads, streams and arrows).
 
-Aivika itself is a light-weight engine with minimal dependencies. 
-However, it has additional packages [aivika-experiment] [2] and 
-[aivika-experiment-chart] [3] that offer the following features:
+The simulation engine itself has minimal dependencies. 
+However, there are additional packages 
+[aivika-experiment](http://hackage.haskell.org/package/aivika-experiment) 
+and [aivika-experiment-chart](http://hackage.haskell.org/package/aivika-experiment-chart) 
+that offer the following features:
 
 * automating simulation experiments;
 
@@ -68,30 +77,25 @@ However, it has additional packages [aivika-experiment] [2] and
 * has an extensible architecture.
 
 The charting package has two interchangeable back-ends 
-[aivika-experiment-cairo] [4] and [aivika-experiment-diagrams] [5],
-where the former uses Cairo and it is more preferable.
+[aivika-experiment-cairo](http://hackage.haskell.org/package/aivika-experiment-cairo) 
+and [aivika-experiment-diagrams](http://hackage.haskell.org/package/aivika-experiment-diagrams),
+where the former uses Cairo and it creates small PNG images, while the latter
+creates more detailed SVG files and it can be used on Windows.
 
-The PDF documentation and installation instructions are 
-available on the [Aivika Wiki] [6] website. 
+There are also additional packages that allow saving the results of simulation 
+in SQL databases. Then the results can be accessed from other software applications.
+For example, it can be useful when creating flight simulators in other programming languages
+such as C\# or Java.
 
-Moreover, the method was generalized in package [aivika-transformers] [7] and applied to 
-nested simulation, package [aivika-branches] [8], and parallel distributed simulation,
-package [aivika-distributed] [9]. 
+Moreover, the method was generalized in package 
+[aivika-transformers](http://hackage.haskell.org/package/aivika-transformers) and applied to 
+nested simulation, package [aivika-branches](http://hackage.haskell.org/package/aivika-branches), 
+and parallel distributed simulation, 
+package [aivika-distributed](http://hackage.haskell.org/package/aivika-distributed). 
 
 The libraries were tested on Linux, Windows and OS X.
 
-A more full information about Aivika is available on the [AivikaSoft] [10] website.
+The PDF documentation, installation instructions and a more full information about Aivika 
+are available on the the [AivikaSoft](http://www.aivikasoft.com/en/products/aivika.html) website.
 
-[1]: http://hackage.haskell.org/package/aivika  "aivika"
-[2]: http://hackage.haskell.org/package/aivika-experiment  "aivika-experiment"
-[3]: http://hackage.haskell.org/package/aivika-experiment-chart  "aivika-experiment-chart"
-[4]: http://hackage.haskell.org/package/aivika-experiment-cairo  "aivika-experiment-cairo"
-[5]: http://hackage.haskell.org/package/aivika-experiment-diagrams  "aivika-experiment-diagrams"
-[6]: https://github.com/dsorokin/aivika/wiki  "Aivika Wiki"
-[7]: http://hackage.haskell.org/package/aivika-transformers "aivika-transformers"
-[8]: http://hackage.haskell.org/package/aivika-branches "aivika-branches"
-[9]: http://hackage.haskell.org/package/aivika-distributed "aivika-distributed"
-[10]: http://www.aivikasoft.com/en/products/aivika.html "AivikaSoft"
-
-P.S. Aivika is actually a genuine female Mari name which is pronounced 
-with stress on the last syllable.
+P.S. Aivika is actually a genuine female Mari name which is pronounced with stress on the last syllable.

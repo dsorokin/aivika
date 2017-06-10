@@ -1,7 +1,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Internal.Process
--- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -51,9 +51,12 @@ module Simulation.Aivika.Internal.Process
         holdProcess,
         interruptProcess,
         processInterrupted,
+        processInterruptionTime,
         passivateProcess,
+        passivateProcessBefore,
         processPassive,
         reactivateProcess,
+        reactivateProcessImmediately,
         cancelProcessWithId,
         cancelProcess,
         processCancelled,
@@ -90,6 +93,8 @@ module Simulation.Aivika.Internal.Process
         neverProcess,
         -- * Retrying Computation
         retryProcess,
+        -- * GoTo Statement
+        transferProcess,
         -- * Debugging
         traceProcess) where
 
@@ -180,6 +185,20 @@ processInterrupted pid =
   Event $ \p ->
   readIORef (processInterruptRef pid)
 
+-- | Return the expected interruption time after finishing the 'holdProcess' computation,
+-- which value may change if the corresponding process is preempted.
+processInterruptionTime :: ProcessId -> Event (Maybe Double)
+processInterruptionTime pid =
+  Event $ \p ->
+  do let x = processInterruptCont pid
+     a <- readIORef x
+     case a of
+       Just c  ->
+         do t <- readIORef (processInterruptTime pid)
+            return (Just t)
+       Nothing ->
+         return Nothing
+
 -- | Define a reaction when the process with the specified identifier is preempted.
 processPreempted :: ProcessId -> Event ()
 processPreempted pid =
@@ -223,6 +242,20 @@ passivateProcess =
        Nothing -> writeIORef x $ Just c
        Just _  -> error "Cannot passivate the process twice: passivateProcess"
 
+-- | Passivate the process before performing some action.
+passivateProcessBefore :: Event () -> Process ()
+passivateProcessBefore m =
+  Process $ \pid ->
+  Cont $ \c ->
+  Event $ \p ->
+  do let x = processReactCont pid
+     a <- readIORef x
+     case a of
+       Nothing ->
+         do writeIORef x $ Just c
+            invokeEvent p m
+       Just _  -> error "Cannot passivate the process twice: passivateProcessBefore"
+
 -- | Test whether the process with the specified identifier is passivated.
 processPassive :: ProcessId -> Event Bool
 processPassive pid =
@@ -243,6 +276,19 @@ reactivateProcess pid =
        Just c ->
          do writeIORef x Nothing
             invokeEvent p $ enqueueEvent (pointTime p) $ resumeCont c ()
+
+-- | Reactivate a process with the specified identifier immediately.
+reactivateProcessImmediately :: ProcessId -> Event ()
+reactivateProcessImmediately pid =
+  Event $ \p ->
+  do let x = processReactCont pid
+     a <- readIORef x
+     case a of
+       Nothing -> 
+         return ()
+       Just c ->
+         do writeIORef x Nothing
+            invokeEvent p $ resumeCont c ()
 
 -- | Prepare the processes identifier for running.
 processIdPrepare :: ProcessId -> Event ()
@@ -723,6 +769,12 @@ neverProcess =
 -- as a 'SimulationRetry' exception message in case of failure.
 retryProcess :: String -> Process a
 retryProcess = liftEvent . retryEvent
+
+-- | Like the GoTo statement it transfers the direction of computation,
+-- but raises an exception when used within 'catchProcess' or 'finallyProcess'.
+transferProcess :: Process () -> Process a
+transferProcess (Process m) =
+  Process $ \pid -> transferCont (m pid)
 
 -- | Show the debug message with the current simulation time.
 traceProcess :: String -> Process a -> Process a

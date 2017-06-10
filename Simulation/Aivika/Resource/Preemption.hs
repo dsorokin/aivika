@@ -1,7 +1,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Resource.Preemption
--- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -33,6 +33,8 @@ module Simulation.Aivika.Resource.Preemption
         incResourceCount,
         decResourceCount,
         alterResourceCount,
+        -- * Statistics Reset
+        resetResource,
         -- * Signals
         resourceCountChanged,
         resourceCountChanged_,
@@ -498,5 +500,24 @@ updateResourceWaitTime r delta =
      a' `seq` writeIORef (resourceTotalWaitTimeRef r) a'
      modifyIORef' (resourceWaitTimeRef r) $
        addSamplingStats delta
+     invokeEvent p $
+       triggerSignal (resourceWaitTimeSource r) ()
+
+-- | Reset the statistics.
+resetResource :: Resource -> Event ()
+resetResource r =
+  Event $ \p ->
+  do let t = pointTime p
+     count <- readIORef (resourceCountRef r)
+     writeIORef (resourceCountStatsRef r) $
+       returnTimingStats t count
+     utilCount <- readIORef (resourceUtilisationCountRef r)
+     writeIORef (resourceUtilisationCountStatsRef r) $
+       returnTimingStats t utilCount
+     queueCount <- readIORef (resourceQueueCountRef r)
+     writeIORef (resourceQueueCountStatsRef r) $
+       returnTimingStats t queueCount
+     writeIORef (resourceTotalWaitTimeRef r) 0
+     writeIORef (resourceWaitTimeRef r) emptySamplingStats
      invokeEvent p $
        triggerSignal (resourceWaitTimeSource r) ()

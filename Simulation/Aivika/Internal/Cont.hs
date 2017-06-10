@@ -1,7 +1,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Internal.Cont
--- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -51,6 +51,7 @@ module Simulation.Aivika.Internal.Cont
         substituteCont,
         contCanceled,
         contAwait,
+        transferCont,
         traceCont) where
 
 import Data.IORef
@@ -860,6 +861,26 @@ contAwait signal =
                                   Just c  ->
                                     invokeEvent p $ reenterCont c a
      writeIORef r $ Just h          
+
+-- | Like the GoTo statement it transfers the direction of computation,
+-- but raises an exception when used within 'catchCont' or 'finallyCont'.
+transferCont :: Cont () -> Cont a
+transferCont x =
+  Cont $ \c ->
+  Event $ \p ->
+  do let worker =
+           do let cid   = contId $ contAux c
+                  cont  = return
+                  econt = throwEvent
+                  ccont = return
+              when (contCatchFlag $ contAux c) $
+                error "Cannot be combined with the exception handling: unsafeTransferCont"
+              invokeEvent p $
+                runCont x cont econt ccont cid False
+     z <- contCanceled c
+     if z
+       then cancelCont p c
+       else worker
 
 -- | Show the debug message with the current simulation time.
 traceCont :: String -> Cont a -> Cont a

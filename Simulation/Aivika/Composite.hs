@@ -3,7 +3,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Composite
--- Copyright  : Copyright (c) 2009-2016, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2009-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -15,6 +15,7 @@
 module Simulation.Aivika.Composite
        (-- * Composite Monad
         Composite,
+        CompositeLift(..),
         runComposite,
         runComposite_,
         runCompositeInStartTime_,
@@ -125,3 +126,12 @@ instance EventLift Composite where
     Composite $ \h0 ->
     do a <- liftEvent m
        return (a, h0)
+
+-- | A type class to lift the 'Composite' computation to other computations.
+class CompositeLift m where
+  
+  -- | Lift the specified 'Composite' computation to another computation.
+  liftComposite :: Composite a -> m a
+
+instance CompositeLift Composite where
+  liftComposite = id

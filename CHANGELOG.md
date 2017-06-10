@@ -1,4 +1,13 @@
 
+Version 5.1
+-----
+
+* Includes changes destined for Aivika Exension Pack.
+
+* Minor changes in the resource preemption statistics.
+
+* Added the statistics reset.
+
 Version 5.0
 -----
 

@@ -1,17 +1,21 @@
 name:            aivika
-version:         5.0.1
+version:         5.1
 synopsis:        A multi-method simulation library
 description:
-    Aivika is a multi-method simulation library focused on 
-    discrete event simulation (DES) with partial support of 
-    system dynamics and agent-based modeling.
+    Aivika is a discrete event simulation (DES) framework with support of activity-oriented,
+    event-oriented and process-oriented paradigms. It supports resource preemption and other
+    improved simulation techniques. There is also a partial support of system dynamics and
+    agent-based modelling. All the complexity is hidden under easy-to-use computations.
+    . 
+    The represented package is a basic simulation library optimized for sequential execution. 
+    There are also packages for nested and parallel distributed simulation.
     .
     The library has the following features:
     .
     * allows defining recursive stochastic differential equations of 
       system dynamics (unordered as in maths via the recursive do-notation);
     .
-    * supports the event-driven paradigm of DES as a basic core for 
+    * supports the event-driven paradigm of DES as a basis for 
       implementing other paradigms;
     .
     * supports extensively the process-oriented paradigm of DES
@@ -21,12 +25,13 @@ description:
     * allows working with the resources based on specified queue strategies 
       (FCFS\/FIFO, LCFS\/LIFO, SIRO, static priorities and so on);
     .
-    * allows customizing the infinite and finite queues based on strategies too;
+    * allows customizing the unbounded and bounded queues based on strategies too;
     .
     * supports the resource preemption;
     .
-    * allows defining a queue network based on streams of data (transacts) 
-      and their processors;
+    * allows defining a queue network based on streams of data (transacts);
+    .
+    * allows using a GPSS-like DSL with help of the additional library;
     .
     * allows simulating circuits with recursive links and delays;
     .
@@ -52,8 +57,8 @@ description:
     * hides technical details in high-level simulation computations
       (monads, streams and arrows).
     .
-    Aivika itself is a light-weight engine with minimal dependencies. 
-    However, it has additional packages [1, 2] that offer the following 
+    The simulation engine itself has minimal dependencies. 
+    However, there are additional packages [1, 2] that offer the following 
     features:
     .
     * automating simulation experiments;
@@ -70,17 +75,21 @@ description:
     * has an extensible architecture.
     .
     The charting package has two interchangeable back-ends [3, 4],
-    where one of them uses Cairo and it is more preferable.
+    where one of them uses Cairo and it creates small PNG images, while another
+    creates more detailed SVG files and it can be used on Windows.
     .
-    The PDF documentation and installation instructions are 
-    available on the Aivika Wiki website [5]. 
+    There are also additional packages that allow saving the results of simulation 
+    in SQL databases. Then the results can be accessed from other software applications.
+    For example, it can be useful when creating flight simulators in other programming languages
+    such as C# or Java.
     .
-    Moreover, the method was generalized [6] and applied to 
-    nested simulation [7] and parallel distributed simulation [8]. 
+    Moreover, the method was generalized [5] and applied to 
+    nested simulation [6] and parallel distributed simulation [7]. 
     .
     The libraries were tested on Linux, Windows and OS X.
     .
-    A more full information about Aivika is available on the project website [9].
+    The PDF documentation, installation instructions and a more full information about Aivika 
+    are available on the the AivikaSoft website [8].
     .
     \[1] <http://hackage.haskell.org/package/aivika-experiment>
     .
@@ -90,15 +99,13 @@ description:
     .
     \[4] <http://hackage.haskell.org/package/aivika-experiment-diagrams>
     .
-    \[5] <https://github.com/dsorokin/aivika/wiki>
+    \[5] <http://hackage.haskell.org/package/aivika-transformers>
     .
-    \[6] <http://hackage.haskell.org/package/aivika-transformers>
+    \[6] <http://hackage.haskell.org/package/aivika-branches>
     .
-    \[7] <http://hackage.haskell.org/package/aivika-branches>
+    \[7] <http://hackage.haskell.org/package/aivika-distributed>
     .
-    \[8] <http://hackage.haskell.org/package/aivika-distributed>
-    .
-    \[9] <http://www.aivikasoft.com/en/products/aivika.html>
+    \[8] <http://www.aivikasoft.com/en/products/aivika.html>
     .
     P.S. Aivika is actually a genuine female Mari name which is pronounced 
     with stress on the last syllable.
@@ -106,13 +113,13 @@ description:
 category:        Simulation
 license:         BSD3
 license-file:    LICENSE
-copyright:       (c) 2009-2016. David Sorokin <david.sorokin@gmail.com>
+copyright:       (c) 2009-2017. David Sorokin <david.sorokin@gmail.com>
 author:          David Sorokin
 maintainer:      David Sorokin <david.sorokin@gmail.com>
 homepage:        http://www.aivikasoft.com/en/products/aivika.html
 cabal-version:   >= 1.10
 build-type:      Simple
-tested-with:     GHC == 8.0.1
+tested-with:     GHC == 8.0.2
 
 extra-source-files:  examples/BassDiffusion.hs
                      examples/BouncingBall.hs
@@ -161,6 +168,14 @@ library
                      Simulation.Aivika.Event
                      Simulation.Aivika.Gate
                      Simulation.Aivika.Generator
+                     Simulation.Aivika.Internal.Cont
+                     Simulation.Aivika.Internal.Dynamics
+                     Simulation.Aivika.Internal.Event
+                     Simulation.Aivika.Internal.Parameter
+                     Simulation.Aivika.Internal.Process
+                     Simulation.Aivika.Internal.Simulation
+                     Simulation.Aivika.Internal.Specs
+                     Simulation.Aivika.Internal.Arrival
                      Simulation.Aivika.Net
                      Simulation.Aivika.Net.Random
                      Simulation.Aivika.Operation
@@ -212,21 +227,14 @@ library
                      Simulation.Aivika.Vector
                      Simulation.Aivika.Vector.Unboxed
 
-    other-modules:   Simulation.Aivika.Internal.Cont
-                     Simulation.Aivika.Internal.Dynamics
-                     Simulation.Aivika.Internal.Event
-                     Simulation.Aivika.Internal.Parameter
-                     Simulation.Aivika.Internal.Process
-                     Simulation.Aivika.Internal.Simulation
-                     Simulation.Aivika.Internal.Specs
-                     Simulation.Aivika.Internal.Arrival
-                     
     build-depends:   base >= 4.6.0.0 && < 6,
                      mtl >= 2.1.1,
                      array >= 0.3.0.0,
                      containers >= 0.4.0.0,
                      random >= 1.0.0.3,
-                     vector >= 0.10.0.1
+                     vector >= 0.10.0.1,
+                     deepseq >= 1.1.0.0,
+                     binary >= 0.6.4.0
 
     other-extensions:   FlexibleContexts,
                         FlexibleInstances,
@@ -239,8 +247,10 @@ library
                         ExistentialQuantification,
                         TypeFamilies,
                         DeriveDataTypeable,
+                        DeriveGeneric,
                         TypeSynonymInstances,
-                        RankNTypes
+                        RankNTypes,
+                        OverlappingInstances
                      
     ghc-options:     -O2
 
