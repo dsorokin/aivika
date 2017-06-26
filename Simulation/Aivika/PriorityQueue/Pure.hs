@@ -43,7 +43,7 @@ emptyQueue = EmptyQueue
 
 -- | Enqueue a new element with the specified priority.
 enqueue :: PriorityQueue a -> Double -> a -> PriorityQueue a
-enqueue pq k v = mergeQueues (Queue 1 k v 1 EmptyQueue EmptyQueue) pq
+enqueue pq k v = mergeQueues pq (Queue 1 k v 1 EmptyQueue EmptyQueue)
 
 -- | Dequeue the element with the minimal priority.
 dequeue :: PriorityQueue a -> PriorityQueue a

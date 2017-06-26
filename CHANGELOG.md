@@ -1,4 +1,10 @@
 
+Version 5.1.1
+-----
+
+* Updated the pure-functional priority queue so that the events could be yielded
+  in the distributed simulation module too.
+
 Version 5.1
 -----
 
