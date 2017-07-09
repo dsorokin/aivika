@@ -1,5 +1,5 @@
 
-Version 5.2.0
+Version 5.2
 -----
 
 * Significantly improved in the examples the speed of simulation after using
