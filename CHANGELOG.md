@@ -1,4 +1,13 @@
 
+Version 5.2.0
+-----
+
+* Significantly improved in the examples the speed of simulation after using
+  the mwc-random package by Bryan O'Sullivan for generating random numbers.
+  It was possible to use custom random number generators before, but now
+  the mentioned generator is used by default. Also the type signature of
+  the SimpleGeneratorWithSeed data constructor has changed.
+
 Version 5.1.1
 -----
 

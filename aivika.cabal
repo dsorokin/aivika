@@ -1,5 +1,5 @@
 name:            aivika
-version:         5.1.1
+version:         5.2.0
 synopsis:        A multi-method simulation library
 description:
     Aivika is a discrete event simulation (DES) framework with support of activity-oriented,
@@ -232,6 +232,7 @@ library
                      array >= 0.3.0.0,
                      containers >= 0.4.0.0,
                      random >= 1.0.0.3,
+                     mwc-random >= 0.13.0.0,
                      vector >= 0.10.0.1,
                      deepseq >= 1.1.0.0,
                      binary >= 0.6.4.0

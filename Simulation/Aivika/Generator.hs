@@ -20,7 +20,10 @@ module Simulation.Aivika.Generator
         newRandomGenerator01) where
 
 import System.Random
+import qualified System.Random.MWC as MWC
 import Data.IORef
+import Data.Word
+import Data.Vector
 
 -- | A discrete probability density function.
 type DiscretePDF a = [(a, Double)]
@@ -295,7 +298,7 @@ generateDiscrete01 g dpdf =
 -- | Defines a type of the random number generator.
 data GeneratorType = SimpleGenerator
                      -- ^ The simple random number generator.
-                   | SimpleGeneratorWithSeed Int
+                   | SimpleGeneratorWithSeed Word32
                      -- ^ The simple random number generator with the specified seed.
                    | CustomGenerator (IO Generator)
                      -- ^ The custom random number generator.
@@ -308,9 +311,9 @@ newGenerator :: GeneratorType -> IO Generator
 newGenerator tp =
   case tp of
     SimpleGenerator ->
-      newStdGen >>= newRandomGenerator
+      MWC.uniform <$> MWC.withSystemRandom (return :: MWC.GenIO -> IO MWC.GenIO) >>= newRandomGenerator01
     SimpleGeneratorWithSeed x ->
-      newRandomGenerator $ mkStdGen x
+      MWC.uniform <$> MWC.initialize (singleton x) >>= newRandomGenerator01
     CustomGenerator g ->
       g
     CustomGenerator01 g ->
