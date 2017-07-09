@@ -102,9 +102,15 @@ generateUniformInt01 :: IO Double
                         -> IO Int
 generateUniformInt01 g min max =
   do x <- g
-     let min' = fromIntegral min
-         max' = fromIntegral max
-     return $ round (min' + x * (max' - min'))
+     let min' = fromIntegral min - 0.5
+         max' = fromIntegral max + 0.5
+         z    = round (min' + x * (max' - min'))
+         z'   = if z < min
+                then min
+                else if z > max
+                     then max
+                     else z
+     return z'
 
 -- | Generate the triangular random number by the specified minimum, median and maximum.
 generateTriangular01 :: IO Double
