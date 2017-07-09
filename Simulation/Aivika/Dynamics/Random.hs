@@ -34,8 +34,6 @@ module Simulation.Aivika.Dynamics.Random
         memoRandomWeibullDynamics,
         memoRandomDiscreteDynamics) where
 
-import System.Random
-
 import Control.Monad.Trans
 
 import Simulation.Aivika.Generator
