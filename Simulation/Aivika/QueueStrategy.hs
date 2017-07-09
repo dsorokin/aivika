@@ -13,10 +13,11 @@
 --
 module Simulation.Aivika.QueueStrategy where
 
-import System.Random
 import Control.Monad.Trans
 import Data.Maybe
 
+import Simulation.Aivika.Parameter
+import Simulation.Aivika.Parameter.Random
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Event
 import Simulation.Aivika.DoubleLinkedList
@@ -236,11 +237,10 @@ instance QueueStrategy SIRO where
 instance DequeueStrategy SIRO where
 
   strategyDequeue (SIROQueue q) =
-    liftIO $
-    do n <- V.vectorCount q
-       i <- getStdRandom (randomR (0, n - 1))
-       x <- V.readVector q i
-       V.vectorDeleteAt q i
+    do n <- liftIO $ V.vectorCount q
+       i <- liftParameter $ randomUniformInt 0 (n - 1)
+       x <- liftIO $ V.readVector q i
+       liftIO $ V.vectorDeleteAt q i
        return x
 
 -- | An implementation of the 'SIRO' queue strategy.
