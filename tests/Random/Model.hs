@@ -53,6 +53,10 @@ uniformTitle  = "Uniform Random"
 uniformDescr  = "Uniform " ++ show (m1, m2)
 uniformSeries = resultByName "rnd"
 
+uniformIntTitle  = "Integer Uniform Random"
+uniformIntDescr  = "Integer Uniform " ++ show (mInt1, mInt2)
+uniformIntSeries = resultByName "rndInt"
+
 triagTitle  = "Triangle Random"
 triagDescr  = "Triangle " ++ show (m1, m3, m2) ++
               ", EX = " ++ show (triagMean m1 m3 m2) ++
@@ -155,6 +159,7 @@ generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView] ++
   seriesGenerator uniformTitle uniformDescr uniformSeries ++
+  seriesGenerator uniformIntTitle uniformIntDescr uniformIntSeries ++
   seriesGenerator triagTitle triagDescr triagSeries ++
   seriesGenerator normalTitle normalDescr normalSeries ++
   seriesGenerator logNormalTitle logNormalDescr logNormalSeries ++
@@ -188,6 +193,9 @@ m1 = 2 :: Double
 m2 = 8 :: Double
 m3 = 6 :: Double
 
+mInt1 = 2 :: Int
+mInt2 = 8 :: Int
+
 mu = 5 :: Double
 nu = 3 :: Double
 
@@ -200,6 +208,7 @@ n = 5 :: Int
 model :: Simulation Results
 model =
   do rndX <- memoRandomUniformDynamics (return m1) (return m2)
+     rndIntX <- memoRandomUniformIntDynamics (return mInt1) (return mInt2)
      triagX <- memoRandomTriangularDynamics (return m1) (return m3) (return m2)
      normalX <- memoRandomNormalDynamics (return mu) (return nu)
      logNormalX <- memoRandomLogNormalDynamics (return logMu) (return logNu)
@@ -221,6 +230,7 @@ model =
      return $
        results $
        [resultSource "rnd" "rnd" rndX,
+        resultSource "rndInt" "rndInt" rndIntX,
         resultSource "triag" "triag" triagX,
         resultSource "normal" "normal" normalX,
         resultSource "lognormal" "lognormal" logNormalX,
