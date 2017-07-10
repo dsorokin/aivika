@@ -48,7 +48,6 @@
 -- 4) utilization of the soaking pit furnace.
 
 import Data.Maybe
-import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
