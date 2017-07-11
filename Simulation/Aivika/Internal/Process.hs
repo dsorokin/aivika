@@ -701,6 +701,10 @@ unzipProcess xy =
 --
 -- A cancellation of the child process doesn't lead to cancelling the parent process.
 -- Then 'Nothing' is returned within the computation.
+--
+-- This is a heavy-weight operation destined for working with arbitrary discontinuous
+-- processes. Please consider using a more light-weight function 'interruptProcess' or else
+-- 'cancelProcessWithId' whenever possible.
 timeoutProcess :: Double -> Process a -> Process (Maybe a)
 timeoutProcess timeout p =
   do pid <- liftSimulation newProcessId
@@ -716,6 +720,10 @@ timeoutProcess timeout p =
 --
 -- A cancellation of the child process doesn't lead to cancelling the parent process.
 -- Then 'Nothing' is returned within the computation.
+--
+-- This is a heavy-weight operation destined for working with arbitrary discontinuous
+-- processes. Please consider using a more light-weight function 'interruptProcess' or else
+-- 'cancelProcessWithId' whenever possible.
 timeoutProcessUsingId :: Double -> ProcessId -> Process a -> Process (Maybe a)
 timeoutProcessUsingId timeout pid p =
   do s <- liftSimulation newSignalSource
