@@ -12,6 +12,12 @@
 -- allows using the variable in differential and difference equations of
 -- System Dynamics within hybrid discrete-continuous simulation.
 --
+-- Because of using the arrays, it would usually be a logical mistake to
+-- use this variable for collecting statistics. In most cases,
+-- the statistics can actually be collected with a very small footprint
+-- by updating immutable 'SamplingStats' and 'TimingStats' values in
+-- a mutable 'Ref' reference.
+--
 module Simulation.Aivika.Var
        (Var,
         varChanged,
@@ -32,19 +38,25 @@ import Simulation.Aivika.Internal.Dynamics
 import Simulation.Aivika.Internal.Event
 import Simulation.Aivika.Ref
 import Simulation.Aivika.Signal
+import Simulation.Aivika.Statistics
 
 import qualified Simulation.Aivika.Vector as V
 import qualified Simulation.Aivika.Vector.Unboxed as UV
 
 -- | Like the 'Ref' reference but keeps the history of changes in 
 -- different time points. The 'Var' variable is safe to be used in
--- the hybrid discrete-continuous simulation.
+-- the hybrid discrete-continuous simulation. Only this variable is
+-- much slower than the reference.
 --
--- For example, the memoised values of a variable can be used in
--- the differential or difference equations of System Dynamics, while
--- the variable iself can be updated wihin the discrete event simulation.
+-- For example, the memoised values of the variable can be used in
+-- the differential and difference equations of System Dynamics, while
+-- the variable iself can be updated within the discrete event simulation.
 --
--- Only this variable is much slower than the reference.
+-- Because of using arrays under the hood, it would usually be a logical
+-- mistake to use the variable for collecting statistics. In most cases,
+-- the statistics can actually be collected with a very small footprint
+-- by updating immutable 'SamplingStats' and 'TimingStats' values in
+-- a mutable @Ref@ reference.
 data Var a = 
   Var { varXS    :: UV.Vector Double,
         varMS    :: V.Vector a,
@@ -98,7 +110,7 @@ varMemo v =
 
 -- | Read the recent actual value of a variable for the requested time.
 --
--- This computation is destined for using within discrete event simulation.
+-- This computation is destined to be used within discrete event simulation.
 readVar :: Var a -> Event a
 readVar v = 
   Event $ \p ->
@@ -162,7 +174,7 @@ modifyVar v f =
                     V.appendVector ys $! b
                     invokeEvent p $ triggerSignal s b
 
--- | Freeze the variable and return in arrays the time points and corresponded 
+-- | Freeze the variable and return in arrays the time points and the corresponding 
 -- first and last values when the variable had changed or had been memoised in
 -- different time points: (1) the time points are sorted in ascending order;
 -- (2) the first and last actual values per each time point are provided.
