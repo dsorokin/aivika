@@ -41,7 +41,7 @@ module Simulation.Aivika.Signal
         newSignalInIntegTimes,
         newSignalInStartTime,
         newSignalInStopTime,
-        newSignalInGridTimes,
+        newSignalInTimeGrid,
         -- * Delaying Signal
         delaySignal,
         delaySignalM,
@@ -358,15 +358,15 @@ newSignalInStopTime =
      return $ publishSignal s
 
 -- | Return a signal that is trigged in the grid by specified size.
-newSignalInGridTimes :: Int -> Event (Signal Int)
-newSignalInGridTimes n =
+newSignalInTimeGrid :: Int -> Event (Signal Int)
+newSignalInTimeGrid n =
   do sc <- liftParameter simulationSpecs
      s  <- liftSimulation newSignalSource
      let loop []            = return ()
          loop ((i, t) : xs) = enqueueEvent t $
                               do triggerSignal s i
                                  loop xs
-     loop $ gridTimes sc n
+     loop $ timeGrid sc n
      return $ publishSignal s
 
 -- | Describes a computation that also signals when changing its value.
