@@ -360,19 +360,13 @@ newSignalInStopTime =
 -- | Return a signal that is trigged in the grid by specified size.
 newSignalInGridTimes :: Int -> Event (Signal Int)
 newSignalInGridTimes n =
-  do t0 <- liftParameter starttime
-     t2 <- liftParameter stoptime
+  do sc <- liftParameter simulationSpecs
      s  <- liftSimulation newSignalSource
-     let n' = max (n - 1) 1
-         dt = (t2 - t0) / (fromIntegral n')
-         f i | i == 0    = t0
-             | i == n'   = t2
-             | otherwise = t0 + (fromIntegral i) * dt
-         loop i | i > n'    = return ()
-         loop i | otherwise = enqueueEvent (f i) $
+     let loop []            = return ()
+         loop ((i, t) : xs) = enqueueEvent t $
                               do triggerSignal s i
-                                 loop (i + 1)
-     loop 0
+                                 loop xs
+     loop $ gridTimes sc n
      return $ publishSignal s
 
 -- | Describes a computation that also signals when changing its value.

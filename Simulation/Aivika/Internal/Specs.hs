@@ -27,6 +27,7 @@ module Simulation.Aivika.Internal.Specs
         integPointsStartingFrom,
         integStartPoint,
         integStopPoint,
+        gridTimes,
         pointAt) where
 
 import Data.IORef
@@ -238,3 +239,15 @@ integPointsStartingFrom p = points
                            pointTime = basicTime sc n 0,
                            pointIteration = n,
                            pointPhase = 0 }
+
+-- | Return the indexed time values in the grid by specified size.
+gridTimes :: Specs -> Int -> [(Int, Double)]
+gridTimes sc n =
+  let t0 = spcStartTime sc
+      t2 = spcStopTime sc
+      n' = max (n - 1) 1
+      dt = (t2 - t0) / (fromIntegral n')
+      f i | i == 0    = (i, t0)
+          | i == n'   = (i, t2)
+          | otherwise = (i, t0 + (fromIntegral i) * dt)
+  in map f [0 .. n']
