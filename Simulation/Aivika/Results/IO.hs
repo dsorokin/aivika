@@ -112,7 +112,7 @@ hPrintResultSourceIndentedLabelled h indent label loc (ResultItemSource (ResultI
      liftIO $
        do hPutStr h tab
           hPutStr h "-- "
-          hPutStr h (loc $ resultItemId x)
+          hPutStr h (localiseResultDescription loc $ resultItemId x)
           hPutStrLn h ""
           hPutStr h tab
           hPutStr h label
@@ -124,7 +124,7 @@ hPrintResultSourceIndentedLabelled h indent label loc (ResultVectorSource x) =
      liftIO $
        do hPutStr h tab
           hPutStr h "-- "
-          hPutStr h (loc $ resultVectorId x)
+          hPutStr h (localiseResultDescription loc $ resultVectorId x)
           hPutStrLn h ""
           hPutStr h tab
           hPutStr h label
@@ -139,7 +139,7 @@ hPrintResultSourceIndentedLabelled h indent label loc (ResultObjectSource x) =
      liftIO $
        do hPutStr h tab
           hPutStr h "-- "
-          hPutStr h (loc $ resultObjectId x)
+          hPutStr h (localiseResultDescription loc $ resultObjectId x)
           hPutStrLn h ""
           hPutStr h tab
           hPutStr h label
@@ -228,7 +228,7 @@ showResultSourceIndentedLabelled indent label loc (ResultItemSource (ResultItem 
      return $
        showString tab .
        showString "-- " .
-       showString (loc $ resultItemId x) .
+       showString (localiseResultDescription loc $ resultItemId x) .
        showString "\n" .
        showString tab .
        showString label .
@@ -246,7 +246,7 @@ showResultSourceIndentedLabelled indent label loc (ResultVectorSource x) =
      return $
        showString tab .
        showString "-- " .
-       showString (loc $ resultVectorId x) .
+       showString (localiseResultDescription loc $ resultVectorId x) .
        showString "\n" .
        showString tab .
        showString label .
@@ -265,7 +265,7 @@ showResultSourceIndentedLabelled indent label loc (ResultObjectSource x) =
      return $
        showString tab .
        showString "-- " .
-       showString (loc $ resultObjectId x) .
+       showString (localiseResultDescription loc $ resultObjectId x) .
        showString "\n" .
        showString tab .
        showString label .

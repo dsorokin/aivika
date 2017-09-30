@@ -1,5 +1,5 @@
 name:            aivika
-version:         5.2
+version:         5.3
 synopsis:        A multi-method simulation library
 description:
     Aivika is a discrete event simulation (DES) framework with support of activity-oriented,
@@ -201,6 +201,9 @@ library
                      Simulation.Aivika.Resource.Preemption
                      Simulation.Aivika.Resource.Preemption.Base
                      Simulation.Aivika.Results.Locale
+                     Simulation.Aivika.Results.Locale.Russian
+                     Simulation.Aivika.Results.Locale.English
+                     Simulation.Aivika.Results.Locale.Types
                      Simulation.Aivika.Results.Transform
                      Simulation.Aivika.Results
                      Simulation.Aivika.Results.IO

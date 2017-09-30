@@ -130,10 +130,7 @@ import Simulation.Aivika.Activity
 import Simulation.Aivika.Resource
 import qualified Simulation.Aivika.Resource.Preemption as PR
 import Simulation.Aivika.Operation
-import Simulation.Aivika.Results.Locale
-
--- | A name used for indentifying the results when generating output.
-type ResultName = String
+import Simulation.Aivika.Results.Locale.Types
 
 -- | Represents a provider of the simulation results. It is usually something, or
 -- an array of something, or a list of such values which can be simulated to get data.
@@ -141,10 +138,18 @@ class ResultProvider p where
   
   -- | Return the source of simulation results by the specified name, description and provider. 
   resultSource :: ResultName -> ResultDescription -> p -> ResultSource
-  resultSource name descr = resultSource' name (UserDefinedResultId descr)
+  resultSource name descr = resultSource' name [name] i [i]
+    where i = (UserDefinedResultId $ UserDefinedResult name descr title)
+          title = resultNameToTitle name
+  
+  -- | Return the source of simulation results by the specified name, description, title and provider. 
+  resultSource3 :: ResultName -> ResultDescription -> ResultDescription -> p -> ResultSource
+  resultSource3 name descr title = resultSource' name [name] i [i]
+    where i = (UserDefinedResultId $ UserDefinedResult name descr title)
 
-  -- | Return the source of simulation results by the specified name, identifier and provider. 
-  resultSource' :: ResultName -> ResultId -> p -> ResultSource
+  -- | Return the source of simulation results by the specified name, its name path,
+  -- identifier, the corresponding indentifier path and provider. 
+  resultSource' :: ResultName -> [ResultName] -> ResultId -> [ResultId] -> p -> ResultSource
 
 -- | It associates the result sources with their names.
 type ResultSourceMap = M.Map ResultName ResultSource
@@ -167,9 +172,15 @@ class ResultItemable a where
 
   -- | The item name.
   resultItemName :: a -> ResultName
+
+  -- | The item name path.
+  resultItemNamePath :: a -> [ResultName]
   
   -- | The item identifier.
   resultItemId :: a -> ResultId
+
+  -- | The item identifier path.
+  resultItemIdPath :: a -> [ResultId]
 
   -- | Whether the item emits a signal.
   resultItemSignal :: a -> ResultSignal
@@ -419,8 +430,12 @@ data ResultSeparator =
 data ResultValue e =
   ResultValue { resultValueName :: ResultName,
                 -- ^ The value name.
+                resultValueNamePath :: [ResultName],
+                -- ^ The value name path.
                 resultValueId :: ResultId,
                 -- ^ The value identifier.
+                resultValueIdPath :: [ResultId],
+                -- ^ The value identifier path.
                 resultValueData :: ResultData e,
                 -- ^ Simulation data supplied by the value.
                 resultValueSignal :: ResultSignal
@@ -438,8 +453,12 @@ apResultValue f x = x { resultValueData = ap f (resultValueData x) }
 data ResultContainer e =
   ResultContainer { resultContainerName :: ResultName,
                     -- ^ The container name.
+                    resultContainerNamePath :: [ResultName],
+                    -- ^ The container name path.
                     resultContainerId :: ResultId,
                     -- ^ The container identifier.
+                    resultContainerIdPath :: [ResultId],
+                    -- ^ The container identifier path.
                     resultContainerData :: e,
                     -- ^ The container data.
                     resultContainerSignal :: ResultSignal
@@ -467,7 +486,9 @@ resultContainerPropertySource cont name i f g =
   ResultItem $
   ResultValue {
     resultValueName   = (resultContainerName cont) ++ "." ++ name,
+    resultValueNamePath = (resultContainerNamePath cont) ++ [name],
     resultValueId     = i,
+    resultValueIdPath = (resultContainerIdPath cont) ++ [i],
     resultValueData   = f (resultContainerData cont),
     resultValueSignal = g (resultContainerData cont) }
 
@@ -550,7 +571,9 @@ resultValueToContainer :: ResultValue a -> ResultContainer (ResultData a)
 resultValueToContainer x =
   ResultContainer {
     resultContainerName   = resultValueName x,
+    resultContainerNamePath = resultValueNamePath x,
     resultContainerId     = resultValueId x,
+    resultContainerIdPath = resultValueIdPath x,
     resultContainerData   = resultValueData x,
     resultContainerSignal = resultValueSignal x }
 
@@ -559,7 +582,9 @@ resultContainerToValue :: ResultContainer (ResultData a) -> ResultValue a
 resultContainerToValue x =
   ResultValue {
     resultValueName   = resultContainerName x,
+    resultValueNamePath = resultContainerNamePath x,
     resultValueId     = resultContainerId x,
+    resultValueIdPath = resultContainerIdPath x,
     resultValueData   = resultContainerData x,
     resultValueSignal = resultContainerSignal x }
 
@@ -611,7 +636,9 @@ maybeResultSignal Nothing  = EmptyResultSignal
 instance ResultItemable (ResultValue Int) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = Just
@@ -632,7 +659,9 @@ instance ResultItemable (ResultValue Int) where
 instance ResultItemable (ResultValue Double) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -653,7 +682,9 @@ instance ResultItemable (ResultValue Double) where
 instance ResultItemable (ResultValue [Int]) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -674,7 +705,9 @@ instance ResultItemable (ResultValue [Int]) where
 instance ResultItemable (ResultValue [Double]) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -695,7 +728,9 @@ instance ResultItemable (ResultValue [Double]) where
 instance ResultItemable (ResultValue (SamplingStats Int)) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -716,7 +751,9 @@ instance ResultItemable (ResultValue (SamplingStats Int)) where
 instance ResultItemable (ResultValue (SamplingStats Double)) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -737,7 +774,9 @@ instance ResultItemable (ResultValue (SamplingStats Double)) where
 instance ResultItemable (ResultValue (TimingStats Int)) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -758,7 +797,9 @@ instance ResultItemable (ResultValue (TimingStats Int)) where
 instance ResultItemable (ResultValue (TimingStats Double)) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -779,7 +820,9 @@ instance ResultItemable (ResultValue (TimingStats Double)) where
 instance ResultItemable (ResultValue Bool) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -800,7 +843,9 @@ instance ResultItemable (ResultValue Bool) where
 instance ResultItemable (ResultValue String) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -821,7 +866,9 @@ instance ResultItemable (ResultValue String) where
 instance ResultItemable (ResultValue ()) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -842,7 +889,9 @@ instance ResultItemable (ResultValue ()) where
 instance ResultItemable (ResultValue FCFS) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -863,7 +912,9 @@ instance ResultItemable (ResultValue FCFS) where
 instance ResultItemable (ResultValue LCFS) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -884,7 +935,9 @@ instance ResultItemable (ResultValue LCFS) where
 instance ResultItemable (ResultValue SIRO) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -905,7 +958,9 @@ instance ResultItemable (ResultValue SIRO) where
 instance ResultItemable (ResultValue StaticPriorities) where
 
   resultItemName = resultValueName
+  resultItemNamePath = resultValueNamePath
   resultItemId = resultValueId
+  resultItemIdPath = resultValueIdPath
   resultItemSignal = resultValueSignal
   
   resultItemAsIntValue = const Nothing
@@ -1277,15 +1332,21 @@ class ResultComputing m where
 computeResultValue :: ResultComputing m
                       => ResultName
                       -- ^ the result name
+                      -> [ResultName]
+                      -- ^ the result name path
                       -> ResultId
                       -- ^ the result identifier
+                      -> [ResultId]
+                      -- ^ the result identifier path
                       -> m a
                       -- ^ the result computation
                       -> ResultValue a
-computeResultValue name i m =
+computeResultValue name names i is m =
   ResultValue {
     resultValueName   = name,
+    resultValueNamePath = names,
     resultValueId     = i,
+    resultValueIdPath = is,
     resultValueData   = computeResultData m,
     resultValueSignal = computeResultSignal m }
 
@@ -1864,7 +1925,7 @@ textResultSource text =
 
 -- | Return the source of the modeling time.
 timeResultSource :: ResultSource
-timeResultSource = resultSource' "t" TimeId time
+timeResultSource = resultSource' "t" ["t"] TimeId [TimeId] time
                          
 -- | Make an integer subscript
 intSubscript :: Int -> ResultName
@@ -1872,173 +1933,173 @@ intSubscript i = "[" ++ show i ++ "]"
 
 instance {-# OVERLAPPABLE #-} ResultItemable (ResultValue a) => ResultProvider (Parameter a) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ computeResultValue name names i is m
 
 instance {-# OVERLAPPABLE #-} ResultItemable (ResultValue a) => ResultProvider (Simulation a) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ computeResultValue name names i is m
 
 instance {-# OVERLAPPABLE #-} ResultItemable (ResultValue a) => ResultProvider (Dynamics a) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ computeResultValue name names i is m
 
 instance {-# OVERLAPPABLE #-} ResultItemable (ResultValue a) => ResultProvider (Event a) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ computeResultValue name names i is m
 
 instance {-# OVERLAPPABLE #-} ResultItemable (ResultValue a) => ResultProvider (Ref a) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ computeResultValue name names i is m
 
 instance {-# OVERLAPPABLE #-} ResultItemable (ResultValue a) => ResultProvider (BR.Ref a) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ computeResultValue name names i is m
 
 instance {-# OVERLAPPABLE #-} ResultItemable (ResultValue a) => ResultProvider (Var a) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ computeResultValue name names i is m
 
 instance {-# OVERLAPPABLE #-} ResultItemable (ResultValue a) => ResultProvider (Signalable a) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (SamplingStats a)))
                              => ResultProvider (Parameter (SamplingCounter a)) where
 
-  resultSource' name i m =
-    samplingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    samplingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (SamplingStats a)))
                              => ResultProvider (Simulation (SamplingCounter a)) where
 
-  resultSource' name i m =
-    samplingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    samplingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (SamplingStats a)))
                              => ResultProvider (Dynamics (SamplingCounter a)) where
 
-  resultSource' name i m =
-    samplingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    samplingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (SamplingStats a)))
                              => ResultProvider (Event (SamplingCounter a)) where
 
-  resultSource' name i m =
-    samplingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    samplingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (SamplingStats a)))
                              => ResultProvider (Ref (SamplingCounter a)) where
 
-  resultSource' name i m =
-    samplingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    samplingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (SamplingStats a)))
                              => ResultProvider (BR.Ref (SamplingCounter a)) where
 
-  resultSource' name i m =
-    samplingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    samplingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (SamplingStats a)))
                              => ResultProvider (Var (SamplingCounter a)) where
 
-  resultSource' name i m =
-    samplingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    samplingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (SamplingStats a)))
                              => ResultProvider (Signalable (SamplingCounter a)) where
 
-  resultSource' name i m =
-    samplingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    samplingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (TimingStats a)))
                              => ResultProvider (Parameter (TimingCounter a)) where
 
-  resultSource' name i m =
-    timingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    timingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (TimingStats a)))
                              => ResultProvider (Simulation (TimingCounter a)) where
 
-  resultSource' name i m =
-    timingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    timingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (TimingStats a)))
                              => ResultProvider (Dynamics (TimingCounter a)) where
 
-  resultSource' name i m =
-    timingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    timingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (TimingStats a)))
                              => ResultProvider (Event (TimingCounter a)) where
 
-  resultSource' name i m =
-    timingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    timingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (TimingStats a)))
                              => ResultProvider (Ref (TimingCounter a)) where
 
-  resultSource' name i m =
-    timingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    timingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (TimingStats a)))
                              => ResultProvider (BR.Ref (TimingCounter a)) where
 
-  resultSource' name i m =
-    timingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    timingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (TimingStats a)))
                              => ResultProvider (Var (TimingCounter a)) where
 
-  resultSource' name i m =
-    timingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    timingCounterResultSource $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (ResultItemable (ResultValue a),
                               ResultItemable (ResultValue (TimingStats a)))
                              => ResultProvider (Signalable (TimingCounter a)) where
 
-  resultSource' name i m =
-    timingCounterResultSource $ computeResultValue name i m
+  resultSource' name names i is m =
+    timingCounterResultSource $ computeResultValue name names i is m
 
 instance ResultProvider p => ResultProvider [p] where
 
-  resultSource' name i m =
-    resultSource' name i $ ResultListWithSubscript m subscript where
+  resultSource' name names i is m =
+    resultSource' name names i is $ ResultListWithSubscript m subscript where
       subscript = map snd $ zip m $ map intSubscript [0..]
 
 instance (Show i, Ix i, ResultProvider p) => ResultProvider (A.Array i p) where
 
-  resultSource' name i m =
-    resultSource' name i $ ResultListWithSubscript items subscript where
+  resultSource' name names i is m =
+    resultSource' name names i is $ ResultListWithSubscript items subscript where
       items = A.elems m
       subscript = map (\i -> "[" ++ show i ++ "]") (A.indices m)
 
 instance ResultProvider p => ResultProvider (V.Vector p) where
   
-  resultSource' name i m =
-    resultSource' name i $ ResultVectorWithSubscript m subscript where
+  resultSource' name names i is m =
+    resultSource' name names i is $ ResultVectorWithSubscript m subscript where
       subscript = V.imap (\i x -> intSubscript i) m
 
 -- | Represents a list with the specified subscript.
@@ -2055,7 +2116,7 @@ data ResultVectorWithSubscript p =
 
 instance ResultProvider p => ResultProvider (ResultListWithSubscript p) where
 
-  resultSource' name i (ResultListWithSubscript xs ys) =
+  resultSource' name names i is (ResultListWithSubscript xs ys) =
     ResultVectorSource $
     memoResultVectorSignal $
     memoResultVectorSummary $
@@ -2071,20 +2132,23 @@ instance ResultProvider p => ResultProvider (ResultListWithSubscript p) where
       ays    = A.listArray bnds ys
       items  =
         flip map (zip ys xs) $ \(y, x) ->
-        let name' = name ++ y
-        in resultSource' name' (VectorItemId y) x
+        let name'  = name ++ y
+            names' = names ++ [y]
+            i'  = VectorItemId y
+            is' = is ++ [i']
+        in resultSource' name' names' i' is' x
       items' = map resultSourceSummary items
     
 instance (Show i, Ix i, ResultProvider p) => ResultProvider (ResultArrayWithSubscript i p) where
 
-  resultSource' name i (ResultArrayWithSubscript xs ys) =
-    resultSource' name i $ ResultListWithSubscript items subscript where
+  resultSource' name names i is (ResultArrayWithSubscript xs ys) =
+    resultSource' name names i is $ ResultListWithSubscript items subscript where
       items = A.elems xs
       subscript = A.elems ys
 
 instance ResultProvider p => ResultProvider (ResultVectorWithSubscript p) where
 
-  resultSource' name i (ResultVectorWithSubscript xs ys) =
+  resultSource' name names i is (ResultVectorWithSubscript xs ys) =
     ResultVectorSource $
     memoResultVectorSignal $
     memoResultVectorSummary $
@@ -2102,89 +2166,92 @@ instance ResultProvider p => ResultProvider (ResultVectorWithSubscript p) where
         V.generate (V.length xs) $ \i ->
         let x = xs V.! i
             y = ys V.! i
-            name' = name ++ y
-        in resultSource' name' (VectorItemId y) x
+            name'  = name ++ y
+            names' = names ++ [y]
+            i'  = VectorItemId y
+            is' = is ++ [i']
+        in resultSource' name' names' i' is' x
       items' = V.map resultSourceSummary items
 
 instance {-# OVERLAPPING #-} (Ix i, Show i, ResultItemable (ResultValue [e])) => ResultProvider (Parameter (A.Array i e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (Ix i, Show i, ResultItemable (ResultValue [e])) => ResultProvider (Simulation (A.Array i e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (Ix i, Show i, ResultItemable (ResultValue [e])) => ResultProvider (Dynamics (A.Array i e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (Ix i, Show i, ResultItemable (ResultValue [e])) => ResultProvider (Event (A.Array i e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (Ix i, Show i, ResultItemable (ResultValue [e])) => ResultProvider (Ref (A.Array i e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (Ix i, Show i, ResultItemable (ResultValue [e])) => ResultProvider (BR.Ref (A.Array i e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (Ix i, Show i, ResultItemable (ResultValue [e])) => ResultProvider (Var (A.Array i e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} (Ix i, Show i, ResultItemable (ResultValue [e])) => ResultProvider (Signalable (A.Array i e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap A.elems $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} ResultItemable (ResultValue [e]) => ResultProvider (Parameter (V.Vector e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} ResultItemable (ResultValue [e]) => ResultProvider (Simulation (V.Vector e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} ResultItemable (ResultValue [e]) => ResultProvider (Dynamics (V.Vector e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} ResultItemable (ResultValue [e]) => ResultProvider (Event (V.Vector e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} ResultItemable (ResultValue [e]) => ResultProvider (Ref (V.Vector e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} ResultItemable (ResultValue [e]) => ResultProvider (BR.Ref (V.Vector e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} ResultItemable (ResultValue [e]) => ResultProvider (Var (V.Vector e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name names i is m
 
 instance {-# OVERLAPPING #-} ResultItemable (ResultValue [e]) => ResultProvider (Signalable (V.Vector e)) where
 
-  resultSource' name i m =
-    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name i m
+  resultSource' name names i is m =
+    ResultItemSource $ ResultItem $ fmap V.toList $ computeResultValue name names i is m
 
 instance (Show si, Show sm, Show so,
           ResultItemable (ResultValue si),
@@ -2192,43 +2259,43 @@ instance (Show si, Show sm, Show so,
           ResultItemable (ResultValue so))
          => ResultProvider (Q.Queue si sm so a) where
 
-  resultSource' name i m =
-    queueResultSource $ ResultContainer name i m (ResultSignal $ Q.queueChanged_ m)
+  resultSource' name names i is m =
+    queueResultSource $ ResultContainer name names i is m (ResultSignal $ Q.queueChanged_ m)
 
 instance (Show sm, Show so,
           ResultItemable (ResultValue sm),
           ResultItemable (ResultValue so))
          => ResultProvider (IQ.Queue sm so a) where
 
-  resultSource' name i m =
-    infiniteQueueResultSource $ ResultContainer name i m (ResultSignal $ IQ.queueChanged_ m)
+  resultSource' name names i is m =
+    infiniteQueueResultSource $ ResultContainer name names i is m (ResultSignal $ IQ.queueChanged_ m)
 
 instance ResultProvider ArrivalTimer where
 
-  resultSource' name i m =
-    arrivalTimerResultSource $ ResultContainer name i m (ResultSignal $ arrivalProcessingTimeChanged_ m)
+  resultSource' name names i is m =
+    arrivalTimerResultSource $ ResultContainer name names i is m (ResultSignal $ arrivalProcessingTimeChanged_ m)
 
 instance (Show s, ResultItemable (ResultValue s)) => ResultProvider (Server s a b) where
 
-  resultSource' name i m =
-    serverResultSource $ ResultContainer name i m (ResultSignal $ serverChanged_ m)
+  resultSource' name names i is m =
+    serverResultSource $ ResultContainer name names i is m (ResultSignal $ serverChanged_ m)
 
 instance (Show s, ResultItemable (ResultValue s)) => ResultProvider (Activity s a b) where
 
-  resultSource' name i m =
-    activityResultSource $ ResultContainer name i m (ResultSignal $ activityChanged_ m)
+  resultSource' name names i is m =
+    activityResultSource $ ResultContainer name names i is m (ResultSignal $ activityChanged_ m)
 
 instance (Show s, ResultItemable (ResultValue s)) => ResultProvider (Resource s) where
 
-  resultSource' name i m =
-    resourceResultSource $ ResultContainer name i m (ResultSignal $ resourceChanged_ m)
+  resultSource' name names i is m =
+    resourceResultSource $ ResultContainer name names i is m (ResultSignal $ resourceChanged_ m)
 
 instance ResultProvider PR.Resource where
 
-  resultSource' name i m =
-    preemptibleResourceResultSource $ ResultContainer name i m (ResultSignal $ PR.resourceChanged_ m)
+  resultSource' name names i is m =
+    preemptibleResourceResultSource $ ResultContainer name names i is m (ResultSignal $ PR.resourceChanged_ m)
 
 instance ResultProvider (Operation a b) where
 
-  resultSource' name i m =
-    operationResultSource $ ResultContainer name i m (ResultSignal $ operationChanged_ m)
+  resultSource' name names i is m =
+    operationResultSource $ ResultContainer name names i is m (ResultSignal $ operationChanged_ m)
