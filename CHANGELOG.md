@@ -4,7 +4,7 @@ Version 5.3
 
 * Introduced the result source titles, which can be useful when plotting the charts.
 
-* Added a newSignalInGridTimes function.
+* Added functions newSignalInGridTimes and gridTimes.
 
 Version 5.2
 -----
