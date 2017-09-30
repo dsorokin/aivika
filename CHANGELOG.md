@@ -1,4 +1,11 @@
 
+Version 5.3
+-----
+
+* Introduced the result source titles, which can be useful when plotting the charts.
+
+* Added a newSignalInGridTimes function.
+
 Version 5.2
 -----
 
