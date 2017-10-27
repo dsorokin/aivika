@@ -1,4 +1,9 @@
 
+Version 5.3.1
+-----
+
+* Increased the speed of simulation.
+
 Version 5.3
 -----
 

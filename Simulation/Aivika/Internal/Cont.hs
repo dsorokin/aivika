@@ -255,7 +255,7 @@ data ContParamsAux =
   ContParamsAux { contECont :: SomeException -> Event (),
                   contCCont :: () -> Event (),
                   contId :: ContId,
-                  contCancelFlag :: IO Bool,
+                  contCancelRef :: IORef Bool,
                   contCatchFlag  :: Bool }
 
 instance Monad Cont where
@@ -405,7 +405,7 @@ runCont (Cont m) cont econt ccont cid catchFlag =
                    ContParamsAux { contECont = econt,
                                    contCCont = ccont,
                                    contId = cid,
-                                   contCancelFlag = contCancellationActivated cid, 
+                                   contCancelRef = contCancellationActivatedRef cid, 
                                    contCatchFlag  = catchFlag } }
 
 -- | Lift the 'Parameter' computation.
@@ -505,7 +505,7 @@ resumeECont c e =
 -- | Test whether the computation is canceled.
 contCanceled :: ContParams a -> IO Bool
 {-# INLINE contCanceled #-}
-contCanceled c = contCancelFlag $ contAux c
+contCanceled c = readIORef $ contCancelRef $ contAux c
 
 -- | Execute the specified computations in parallel within
 -- the current computation and return their results. The cancellation
