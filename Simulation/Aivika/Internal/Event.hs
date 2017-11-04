@@ -334,7 +334,7 @@ enqueueEventWithStartTime e =
 enqueueEventWithStopTime :: Event () -> Event ()
 enqueueEventWithStopTime e =
   Event $ \p ->
-  let p0 = integStopPoint $ pointRun p
+  let p0 = simulationStopPoint $ pointRun p
   in invokeEvent p $ enqueueEventWithPoints [p0] e
 
 -- | It allows cancelling the event.

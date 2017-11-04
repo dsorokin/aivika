@@ -1,4 +1,11 @@
 
+Version 5.4
+-----
+
+* A more correct treating of the stop time. Earlier, the final
+  integration time point was used instead of the stop time in
+  some functions.
+
 Version 5.3.1
 -----
 

@@ -74,7 +74,7 @@ runDynamicsInStartTime (Dynamics m) =
 -- | Run the 'Dynamics' computation in the final time point.
 runDynamicsInStopTime :: Dynamics a -> Simulation a
 runDynamicsInStopTime (Dynamics m) =
-  Simulation $ m . integStopPoint
+  Simulation $ m . simulationStopPoint
 
 -- | Run the 'Dynamics' computation in all integration time points.
 runDynamicsInIntegTimes :: Dynamics a -> Simulation [IO a]

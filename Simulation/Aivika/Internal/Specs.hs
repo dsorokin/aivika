@@ -27,6 +27,7 @@ module Simulation.Aivika.Internal.Specs
         integPointsStartingFrom,
         integStartPoint,
         integStopPoint,
+        simulationStopPoint,
         timeGrid,
         pointAt) where
 
@@ -200,7 +201,7 @@ integStartPoint r = point nl
                            pointIteration = n,
                            pointPhase = 0 }
 
--- | Return the stop time point.
+-- | Return the integration stop time point.
 integStopPoint :: Run -> Point
 integStopPoint r = point nu
   where sc = runSpecs r
@@ -210,6 +211,10 @@ integStopPoint r = point nu
                            pointTime = basicTime sc n 0,
                            pointIteration = n,
                            pointPhase = 0 }
+
+-- | Return the simulation stop time point.
+simulationStopPoint :: Run -> Point
+simulationStopPoint r = pointAt r (spcStopTime $ runSpecs r)
 
 -- | Return the point at the specified time.
 pointAt :: Run -> Double -> Point
