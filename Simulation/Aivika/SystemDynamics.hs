@@ -237,6 +237,79 @@ integRK4 (Dynamics f) (Dynamics i) (Dynamics y) p =
     _ -> 
       error "Incorrect phase: integRK4"
 
+integRK4b :: Dynamics Double
+             -> Dynamics Double
+             -> Dynamics Double
+             -> Point -> IO Double
+integRK4b (Dynamics f) (Dynamics i) (Dynamics y) p =
+  case pointPhase p of
+    0 -> case pointIteration p of
+      0 -> 
+        i p
+      n -> do
+        let sc = pointSpecs p
+            ty = basicTime sc (n - 1) 0
+            t1 = ty
+            t2 = basicTime sc (n - 1) 1
+            t3 = basicTime sc (n - 1) 2
+            t4 = basicTime sc (n - 1) 3
+            py = p { pointTime = ty, pointIteration = n - 1, pointPhase = 0 }
+            p1 = py
+            p2 = p { pointTime = t2, pointIteration = n - 1, pointPhase = 1 }
+            p3 = p { pointTime = t3, pointIteration = n - 1, pointPhase = 2 }
+            p4 = p { pointTime = t4, pointIteration = n - 1, pointPhase = 3 }
+        vy <- y py
+        k1 <- f p1
+        k2 <- f p2
+        k3 <- f p3
+        k4 <- f p4
+        let !v = vy + spcDT sc / 8.0 * (k1 + 3.0 * (k2 + k3) + k4)
+        return v
+    1 -> do
+      let sc = pointSpecs p
+          n  = pointIteration p
+          ty = basicTime sc n 0
+          t1 = ty
+          py = p { pointTime = ty, pointIteration = n, pointPhase = 0 }
+          p1 = py
+      vy <- y py
+      k1 <- f p1
+      let !v = vy + spcDT sc / 3.0 * k1
+      return v
+    2 -> do
+      let sc = pointSpecs p
+          n  = pointIteration p
+          ty = basicTime sc n 0
+          t1 = ty
+          t2 = basicTime sc n 1
+          py = p { pointTime = ty, pointIteration = n, pointPhase = 0 }
+          p1 = py
+          p2 = p { pointTime = t2, pointIteration = n, pointPhase = 1 }
+      vy <- y py
+      k1 <- f p1
+      k2 <- f p2
+      let !v = vy + spcDT sc * (- k1 / 3.0 + k2)
+      return v
+    3 -> do
+      let sc = pointSpecs p
+          n  = pointIteration p
+          ty = basicTime sc n 0
+          t1 = ty
+          t2 = basicTime sc n 1
+          t3 = basicTime sc n 2
+          py = p { pointTime = ty, pointIteration = n, pointPhase = 0 }
+          p1 = py
+          p2 = p { pointTime = t2, pointIteration = n, pointPhase = 1 }
+          p3 = p { pointTime = t3, pointIteration = n, pointPhase = 2 }
+      vy <- y py
+      k1 <- f p1
+      k2 <- f p2
+      k3 <- f p3
+      let !v = vy + spcDT sc * (k1 - k2 + k3)
+      return v
+    _ -> 
+      error "Incorrect phase: integRK4b"
+
 -- | Return an integral with the specified derivative and initial value.
 --
 -- To create a loopback, you should use the recursive do-notation.
@@ -263,6 +336,7 @@ integ diff i =
           Euler -> return $ Dynamics $ integEuler diff i y
           RungeKutta2 -> return $ Dynamics $ integRK2 diff i y
           RungeKutta4 -> return $ Dynamics $ integRK4 diff i y
+          RungeKutta4b -> return $ Dynamics $ integRK4b diff i y
       return y
 
 integEulerEither :: Dynamics (Either Double Double)

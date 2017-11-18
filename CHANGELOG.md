@@ -1,4 +1,9 @@
 
+Version 5.5
+-----
+
+* Added the 4th order Runge-Kutta 3/8-method.
+
 Version 5.4
 -----
 
