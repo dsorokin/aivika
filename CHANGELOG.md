@@ -4,6 +4,8 @@ Version 5.5
 
 * Added the 4th order Runge-Kutta 3/8-method.
 
+* Added experimental functions delayByDT and delayIByDT.
+
 Version 5.4
 -----
 

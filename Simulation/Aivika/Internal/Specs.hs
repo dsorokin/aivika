@@ -29,7 +29,8 @@ module Simulation.Aivika.Internal.Specs
         integStopPoint,
         simulationStopPoint,
         timeGrid,
-        pointAt) where
+        pointAt,
+        delayPoint) where
 
 import Data.IORef
 
@@ -264,3 +265,23 @@ timeGrid sc n =
           | i == n'   = (i, t2)
           | otherwise = (i, t0 + (fromIntegral i) * dt)
   in map f [0 .. n']
+
+-- | Delay the point by the specified positive number of iterations.
+delayPoint :: Point -> Int -> Point
+delayPoint p dn
+  | dn <= 0   = error "Expected the positive number of iterations: delayPoint"
+  | otherwise =
+    let sc = pointSpecs p
+        n  = pointIteration p
+        ph = pointPhase p
+    in if ph < 0
+       then let t' = pointTime p - fromIntegral dn * spcDT sc
+                n' = fromIntegral $ floor $ (t' - spcStartTime sc) / spcDT sc
+            in p { pointTime = t',
+                   pointIteration = n',
+                   pointPhase = -1 }
+       else let n' = n - dn
+                t' = basicTime sc n' ph
+            in p { pointTime = t',
+                   pointIteration = n',
+                   pointPhase = ph }
