@@ -660,6 +660,7 @@ lookupStepwiseDynamics (Dynamics m) tbl =
 --
 
 -- | Return the delayed value using the specified lag time.
+-- This function is less accurate than 'delayByDT'.
 delay :: Dynamics a          -- ^ the value to delay
          -> Dynamics Double  -- ^ the lag time
          -> Dynamics a       -- ^ the delayed value
@@ -688,6 +689,7 @@ delay (Dynamics x) (Dynamics d) = discreteDynamics $ Dynamics r
 
 -- | Return the delayed value using the specified lag time and initial value.
 -- Because of the latter, it allows creating a loop back.
+-- This function is less accurate than 'delayIByDT'.
 delayI :: Dynamics a          -- ^ the value to delay
           -> Dynamics Double  -- ^ the lag time
           -> Dynamics a       -- ^ the initial value
