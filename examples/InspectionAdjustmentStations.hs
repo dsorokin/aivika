@@ -19,9 +19,10 @@
 -- The time between arrivals of television sets to the final inspection station is uniformly 
 -- distributed between 3.5 and 7.5 minutes. Two inspectors work side-by-side at the final 
 -- inspection station. The time required to inspect a set is uniformly distributed between 
--- 6 and 12 minutes. On the average, 85 percent of the sets are routed to the adjustment 
--- station which is manned by a single worker. Adjustment of the vertical control setting 
--- requires between 20 and 40 minutes, uniformly distributed.
+-- 6 and 12 minutes. On the average, 85 percent of the sets pass inspection and continue on
+-- the packing department. The other 15 percent are routed to the adjustment station which is
+-- manned by a single worker. Adjustment of the vertical control setting requires between 20
+-- and 40 minutes, uniformly distributed.
 -- 
 -- The inspection station and adjustor are to be simulated for 480 minutes to estimate 
 -- the time to process television sets through the final production stage and to determine 
