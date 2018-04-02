@@ -50,7 +50,8 @@ import GHC.Generics (Generic)
 
 import Control.DeepSeq
 
-import Data.Monoid
+import Data.Monoid hiding ((<>))
+import Data.Semigroup (Semigroup(..))
 import Data.Typeable
 import Data.Binary
 
@@ -97,11 +98,14 @@ class Num a => SamplingData a where
   -- | Combine two statistics.
   combineSamplingStats :: SamplingStats a -> SamplingStats a -> SamplingStats a
 
+instance SamplingData a => Semigroup (SamplingStats a) where
+  (<>) = combineSamplingStats
+
 instance SamplingData a => Monoid (SamplingStats a) where 
   
   mempty = emptySamplingStats
   
-  mappend = combineSamplingStats
+  mappend = (<>)
 
 instance SamplingData Double where
 

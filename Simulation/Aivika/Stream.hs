@@ -83,7 +83,8 @@ module Simulation.Aivika.Stream
 
 import Data.IORef
 import Data.Maybe
-import Data.Monoid
+import Data.Monoid hiding ((<>))
+import Data.Semigroup (Semigroup(..))
 
 import Control.Applicative
 import Control.Monad
@@ -123,11 +124,15 @@ instance Alternative Stream where
 
   (<|>) = mergeStreams
 
+instance Semigroup (Stream a) where
+
+  (<>) = mergeStreams
+
 instance Monoid (Stream a) where
 
   mempty  = emptyStream
 
-  mappend = mergeStreams
+  mappend = (<>)
 
   mconcat = concatStreams
 

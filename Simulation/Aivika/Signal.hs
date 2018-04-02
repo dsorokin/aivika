@@ -60,7 +60,8 @@ module Simulation.Aivika.Signal
         traceSignal) where
 
 import Data.IORef
-import Data.Monoid
+import Data.Monoid hiding ((<>))
+import Data.Semigroup (Semigroup(..))
 import Data.List
 import Data.Array
 
@@ -167,12 +168,15 @@ dequeueSignalHandler q h =
 
 instance Functor Signal where
   fmap = mapSignal
+
+instance Semigroup (Signal a) where
+  (<>) = merge2Signals
   
 instance Monoid (Signal a) where 
   
   mempty = emptySignal
   
-  mappend = merge2Signals
+  mappend = (<>)
   
   mconcat [] = emptySignal
   mconcat [x1] = x1
@@ -385,10 +389,13 @@ signalableChanged x = mapSignalM (const $ readSignalable x) $ signalableChanged_
 instance Functor Signalable where
   fmap f x = x { readSignalable = fmap f (readSignalable x) }
 
-instance Monoid a => Monoid (Signalable a) where
+instance Semigroup a => Semigroup (Signalable a) where
+  (<>) = appendSignalable
+
+instance (Monoid a, Semigroup a) => Monoid (Signalable a) where
 
   mempty = emptySignalable
-  mappend = appendSignalable
+  mappend = (<>)
 
 -- | Return an identity.
 emptySignalable :: Monoid a => Signalable a
@@ -397,7 +404,7 @@ emptySignalable =
                signalableChanged_ = mempty }
 
 -- | An associative operation.
-appendSignalable :: Monoid a => Signalable a -> Signalable a -> Signalable a
+appendSignalable :: Semigroup a => Signalable a -> Signalable a -> Signalable a
 appendSignalable m1 m2 =
   Signalable { readSignalable = liftM2 (<>) (readSignalable m1) (readSignalable m2),
                signalableChanged_ = (signalableChanged_ m1) <> (signalableChanged_ m2) }
