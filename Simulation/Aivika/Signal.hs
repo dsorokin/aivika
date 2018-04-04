@@ -62,6 +62,7 @@ module Simulation.Aivika.Signal
 import Data.IORef
 import Data.Monoid hiding ((<>))
 import Data.Semigroup (Semigroup(..))
+import Data.List.NonEmpty (NonEmpty((:|)))
 import Data.List
 import Data.Array
 
@@ -171,7 +172,15 @@ instance Functor Signal where
 
 instance Semigroup (Signal a) where
   (<>) = merge2Signals
-  
+
+  sconcat (x1 :| []) = x1
+  sconcat (x1 :| [x2]) = merge2Signals x1 x2
+  sconcat (x1 :| [x2, x3]) = merge3Signals x1 x2 x3
+  sconcat (x1 :| [x2, x3, x4]) = merge4Signals x1 x2 x3 x4
+  sconcat (x1 :| [x2, x3, x4, x5]) = merge5Signals x1 x2 x3 x4 x5
+  sconcat (x1 :| x2 : x3 : x4 : x5 : xs) =
+    sconcat $ merge5Signals x1 x2 x3 x4 x5 :| xs
+
 instance Monoid (Signal a) where 
   
   mempty = emptySignal
@@ -179,13 +188,7 @@ instance Monoid (Signal a) where
   mappend = (<>)
   
   mconcat [] = emptySignal
-  mconcat [x1] = x1
-  mconcat [x1, x2] = merge2Signals x1 x2
-  mconcat [x1, x2, x3] = merge3Signals x1 x2 x3
-  mconcat [x1, x2, x3, x4] = merge4Signals x1 x2 x3 x4
-  mconcat [x1, x2, x3, x4, x5] = merge5Signals x1 x2 x3 x4 x5
-  mconcat (x1 : x2 : x3 : x4 : x5 : xs) = 
-    mconcat $ merge5Signals x1 x2 x3 x4 x5 : xs
+  mconcat (h : t) = sconcat (h :| t)
   
 -- | Map the signal according the specified function.
 mapSignal :: (a -> b) -> Signal a -> Signal b
