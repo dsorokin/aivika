@@ -60,7 +60,8 @@ module Simulation.Aivika.Internal.Event
         traceEvent) where
 
 import Data.IORef
-import Data.Monoid
+import Data.Monoid hiding ((<>))
+import Data.Semigroup (Semigroup(..))
 
 import Control.Exception
 import Control.Monad
@@ -423,10 +424,13 @@ newtype DisposableEvent =
                     -- ^ Dispose something within the 'Event' computation.
                   }
 
+instance Semigroup DisposableEvent where
+  DisposableEvent x <> DisposableEvent y = DisposableEvent $ x >> y
+
 instance Monoid DisposableEvent where
 
   mempty = DisposableEvent $ return ()
-  mappend (DisposableEvent x) (DisposableEvent y) = DisposableEvent $ x >> y
+  mappend = (<>)
 
 -- | Retry the current computation as possible, using the specified argument
 -- as a 'SimulationRetry' exception message in case of failure.
