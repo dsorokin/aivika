@@ -60,7 +60,9 @@ module Simulation.Aivika.Signal
         traceSignal) where
 
 import Data.IORef
-import Data.Monoid
+import Data.Monoid hiding ((<>))
+import Data.Semigroup (Semigroup(..))
+import Data.List.NonEmpty (NonEmpty((:|)))
 import Data.List
 import Data.Array
 
@@ -167,21 +169,26 @@ dequeueSignalHandler q h =
 
 instance Functor Signal where
   fmap = mapSignal
-  
+
+instance Semigroup (Signal a) where
+  (<>) = merge2Signals
+
+  sconcat (x1 :| []) = x1
+  sconcat (x1 :| [x2]) = merge2Signals x1 x2
+  sconcat (x1 :| [x2, x3]) = merge3Signals x1 x2 x3
+  sconcat (x1 :| [x2, x3, x4]) = merge4Signals x1 x2 x3 x4
+  sconcat (x1 :| [x2, x3, x4, x5]) = merge5Signals x1 x2 x3 x4 x5
+  sconcat (x1 :| x2 : x3 : x4 : x5 : xs) =
+    sconcat $ merge5Signals x1 x2 x3 x4 x5 :| xs
+
 instance Monoid (Signal a) where 
   
   mempty = emptySignal
   
-  mappend = merge2Signals
+  mappend = (<>)
   
   mconcat [] = emptySignal
-  mconcat [x1] = x1
-  mconcat [x1, x2] = merge2Signals x1 x2
-  mconcat [x1, x2, x3] = merge3Signals x1 x2 x3
-  mconcat [x1, x2, x3, x4] = merge4Signals x1 x2 x3 x4
-  mconcat [x1, x2, x3, x4, x5] = merge5Signals x1 x2 x3 x4 x5
-  mconcat (x1 : x2 : x3 : x4 : x5 : xs) = 
-    mconcat $ merge5Signals x1 x2 x3 x4 x5 : xs
+  mconcat (h : t) = sconcat (h :| t)
   
 -- | Map the signal according the specified function.
 mapSignal :: (a -> b) -> Signal a -> Signal b
@@ -385,10 +392,13 @@ signalableChanged x = mapSignalM (const $ readSignalable x) $ signalableChanged_
 instance Functor Signalable where
   fmap f x = x { readSignalable = fmap f (readSignalable x) }
 
-instance Monoid a => Monoid (Signalable a) where
+instance Semigroup a => Semigroup (Signalable a) where
+  (<>) = appendSignalable
+
+instance (Monoid a, Semigroup a) => Monoid (Signalable a) where
 
   mempty = emptySignalable
-  mappend = appendSignalable
+  mappend = (<>)
 
 -- | Return an identity.
 emptySignalable :: Monoid a => Signalable a
@@ -397,7 +407,7 @@ emptySignalable =
                signalableChanged_ = mempty }
 
 -- | An associative operation.
-appendSignalable :: Monoid a => Signalable a -> Signalable a -> Signalable a
+appendSignalable :: Semigroup a => Signalable a -> Signalable a -> Signalable a
 appendSignalable m1 m2 =
   Signalable { readSignalable = liftM2 (<>) (readSignalable m1) (readSignalable m2),
                signalableChanged_ = (signalableChanged_ m1) <> (signalableChanged_ m2) }

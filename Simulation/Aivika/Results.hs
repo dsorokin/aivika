@@ -109,7 +109,8 @@ import qualified Data.Vector as V
 
 import Data.Ix
 import Data.Maybe
-import Data.Monoid
+import Data.Monoid hiding ((<>))
+import Data.Semigroup (Semigroup(..))
 
 import Simulation.Aivika.Parameter
 import Simulation.Aivika.Simulation
@@ -607,26 +608,28 @@ data ResultSignal = EmptyResultSignal
                   | ResultSignalMix (Signal ())
                     -- ^ When the specified signal was combined with unknown signal.
 
+instance Semigroup ResultSignal where
+  (<>) EmptyResultSignal z = z
+
+  (<>) UnknownResultSignal EmptyResultSignal = UnknownResultSignal
+  (<>) UnknownResultSignal UnknownResultSignal = UnknownResultSignal
+  (<>) UnknownResultSignal (ResultSignal x) = ResultSignalMix x
+  (<>) UnknownResultSignal z@(ResultSignalMix x) = z
+
+  (<>) z@(ResultSignal x) EmptyResultSignal = z
+  (<>) (ResultSignal x) UnknownResultSignal = ResultSignalMix x
+  (<>) (ResultSignal x) (ResultSignal y) = ResultSignal (x <> y)
+  (<>) (ResultSignal x) (ResultSignalMix y) = ResultSignalMix (x <> y)
+
+  (<>) z@(ResultSignalMix x) EmptyResultSignal = z
+  (<>) z@(ResultSignalMix x) UnknownResultSignal = z
+  (<>) (ResultSignalMix x) (ResultSignal y) = ResultSignalMix (x <> y)
+  (<>) (ResultSignalMix x) (ResultSignalMix y) = ResultSignalMix (x <> y)
+
 instance Monoid ResultSignal where
 
   mempty = EmptyResultSignal
-
-  mappend EmptyResultSignal z = z
-
-  mappend UnknownResultSignal EmptyResultSignal = UnknownResultSignal
-  mappend UnknownResultSignal UnknownResultSignal = UnknownResultSignal
-  mappend UnknownResultSignal (ResultSignal x) = ResultSignalMix x
-  mappend UnknownResultSignal z@(ResultSignalMix x) = z
-  
-  mappend z@(ResultSignal x) EmptyResultSignal = z
-  mappend (ResultSignal x) UnknownResultSignal = ResultSignalMix x
-  mappend (ResultSignal x) (ResultSignal y) = ResultSignal (x <> y)
-  mappend (ResultSignal x) (ResultSignalMix y) = ResultSignalMix (x <> y)
-  
-  mappend z@(ResultSignalMix x) EmptyResultSignal = z
-  mappend z@(ResultSignalMix x) UnknownResultSignal = z
-  mappend (ResultSignalMix x) (ResultSignal y) = ResultSignalMix (x <> y)
-  mappend (ResultSignalMix x) (ResultSignalMix y) = ResultSignalMix (x <> y)
+  mappend = (<>)
 
 -- | Construct a new result signal by the specified optional pure signal.
 maybeResultSignal :: Maybe (Signal ()) -> ResultSignal
@@ -1099,11 +1102,13 @@ newResultPredefinedSignals = runDynamicsInStartTime $ runEventWith EarlierEvents
          return ResultPredefinedSignals { resultSignalInIntegTimes = signalInIntegTimes,
                                           resultSignalInStartTime  = signalInStartTime,
                                           resultSignalInStopTime   = signalInStopTime }
+instance Semigroup Results where
+  x <> y = results $ resultSourceList x <> resultSourceList y
 
 instance Monoid Results where
 
-  mempty      = results mempty
-  mappend x y = results $ resultSourceList x <> resultSourceList y
+  mempty  = results mempty
+  mappend = (<>)
 
 -- | Prepare the simulation results.
 results :: [ResultSource] -> Results

@@ -238,7 +238,8 @@ library
                      mwc-random >= 0.13.0.0,
                      vector >= 0.10.0.1,
                      deepseq >= 1.1.0.0,
-                     binary >= 0.6.4.0
+                     binary >= 0.6.4.0,
+                     semigroups >= 0.18
 
     other-extensions:   FlexibleContexts,
                         FlexibleInstances,
