@@ -239,7 +239,7 @@ library
                      vector >= 0.10.0.1,
                      deepseq >= 1.1.0.0,
                      binary >= 0.6.4.0,
-                     semigroups >= 0.18
+                     semigroups >= 0.10
 
     other-extensions:   FlexibleContexts,
                         FlexibleInstances,
