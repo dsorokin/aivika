@@ -24,6 +24,7 @@ import qualified System.Random.MWC as MWC
 import Data.IORef
 import Data.Word
 import Data.Vector
+import Data.Functor
 
 -- | A discrete probability density function.
 type DiscretePDF a = [(a, Double)]
