@@ -1,4 +1,9 @@
 
+Version 5.6
+-----
+
+* Lars Kuhtz added the support of GHC 8.4.
+
 Version 5.5
 -----
 
