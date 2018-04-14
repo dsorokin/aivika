@@ -2,7 +2,7 @@
 Version 5.7
 -----
 
-* Implemented MonadMask for basic simulation computations.
+* Implemented MonadMask and MonadCatch for basic simulation computations.
 
 Version 5.6
 -----
