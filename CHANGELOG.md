@@ -1,4 +1,9 @@
 
+Version 5.7
+-----
+
+* Implemented MonadMask for basic simulation computations.
+
 Version 5.6
 -----
 
