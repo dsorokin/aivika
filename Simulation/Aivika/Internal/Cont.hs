@@ -62,6 +62,7 @@ import Data.Monoid
 import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
+import qualified Control.Monad.Catch as MC
 import Control.Applicative
 
 import Debug.Trace
@@ -284,6 +285,12 @@ instance Applicative Cont where
 instance MonadIO Cont where
   liftIO = liftIOC 
 
+instance MC.MonadThrow Cont where
+  throwM = throwCont
+
+instance MC.MonadCatch Cont where
+  catch = catchCont
+
 -- | Invoke the computation.
 invokeCont :: ContParams a -> Cont a -> Event ()
 {-# INLINE invokeCont #-}
@@ -381,7 +388,7 @@ finallyCont (Cont m) (Cont m') =
 -- if it will be wrapped in the 'IO' monad. Therefore, you should use specialised
 -- functions like the stated one that use the 'throw' function but within the 'IO' computation,
 -- which allows already handling the exception.
-throwCont :: IOException -> Cont a
+throwCont :: Exception e => e -> Cont a
 throwCont = liftIO . throw
 
 -- | Run the 'Cont' computation with the specified cancelation source 

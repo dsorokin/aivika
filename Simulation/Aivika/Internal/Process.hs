@@ -104,6 +104,7 @@ import Data.IORef
 import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
+import qualified Control.Monad.Catch as MC
 import Control.Applicative
 
 import Simulation.Aivika.Internal.Specs
@@ -470,6 +471,12 @@ instance EventLift Process where
 instance MonadIO Process where
   liftIO = liftIOP
   
+instance MC.MonadThrow Process where
+  throwM = throwProcess
+
+instance MC.MonadCatch Process where
+  catch = catchProcess
+
 returnP :: a -> Process a
 {-# INLINE returnP #-}
 returnP a = Process $ \pid -> return a
