@@ -1,5 +1,5 @@
 
-{-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE RecursiveDo, RankNTypes #-}
 
 -- |
 -- Module     : Simulation.Aivika.Internal.Event
@@ -67,6 +67,7 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+import qualified Control.Monad.Catch as MC
 import Control.Applicative
 
 import Debug.Trace (trace)
@@ -163,6 +164,22 @@ finallyEvent (Event m) (Event m') =
 throwEvent :: Exception e => e -> Event a
 throwEvent = throw
 
+-- | Runs an action with asynchronous exceptions disabled.
+maskEvent :: ((forall a. Event a -> Event a) -> Event b) -> Event b
+maskEvent a =
+  Event $ \p ->
+  MC.mask $ \u ->
+  invokeEvent p (a $ q u)
+  where q u (Event b) = Event (u . b)
+
+-- | Like 'maskEvent', but the masked computation is not interruptible.
+uninterruptibleMaskEvent :: ((forall a. Event a -> Event a) -> Event b) -> Event b
+uninterruptibleMaskEvent a =
+  Event $ \p ->
+  MC.uninterruptibleMask $ \u ->
+  invokeEvent p (a $ q u)
+  where q u (Event b) = Event (u . b)
+
 -- | Invoke the 'Event' computation.
 invokeEvent :: Point -> Event a -> IO a
 {-# INLINE invokeEvent #-}
@@ -172,6 +189,16 @@ instance MonadFix Event where
   mfix f = 
     Event $ \p ->
     do { rec { a <- invokeEvent p (f a) }; return a }
+
+instance MC.MonadThrow Event where
+  throwM = throwEvent
+
+instance MC.MonadCatch Event where
+  catch = catchEvent
+
+instance MC.MonadMask Event where
+  mask = maskEvent
+  uninterruptibleMask = uninterruptibleMaskEvent
 
 -- | Defines how the events are processed.
 data EventProcessing = CurrentEvents

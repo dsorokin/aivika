@@ -1,5 +1,5 @@
 
-{-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE RecursiveDo, RankNTypes #-}
 
 -- |
 -- Module     : Simulation.Aivika.Internal.Parameter
@@ -47,6 +47,7 @@ import Control.Concurrent.MVar
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+import qualified Control.Monad.Catch as MC
 import Control.Applicative
 
 import Data.IORef
@@ -203,6 +204,22 @@ finallyParameter (Parameter m) (Parameter m') =
 throwParameter :: Exception e => e -> Parameter a
 throwParameter = throw
 
+-- | Runs an action with asynchronous exceptions disabled.
+maskParameter :: ((forall a. Parameter a -> Parameter a) -> Parameter b) -> Parameter b
+maskParameter a =
+  Parameter $ \r ->
+  MC.mask $ \u ->
+  invokeParameter r (a $ q u)
+  where q u (Parameter b) = Parameter (u . b)
+
+-- | Like 'maskParameter', but the masked computation is not interruptible.
+uninterruptibleMaskParameter :: ((forall a. Parameter a -> Parameter a) -> Parameter b) -> Parameter b
+uninterruptibleMaskParameter a =
+  Parameter $ \r ->
+  MC.uninterruptibleMask $ \u ->
+  invokeParameter r (a $ q u)
+  where q u (Parameter b) = Parameter (u . b)
+
 -- | Invoke the 'Parameter' computation.
 invokeParameter :: Run -> Parameter a -> IO a
 {-# INLINE invokeParameter #-}
@@ -213,6 +230,16 @@ instance MonadFix Parameter where
     Parameter $ \r ->
     do { rec { a <- invokeParameter r (f a) }; return a }  
 
+instance MC.MonadThrow Parameter where
+  throwM = throwParameter
+
+instance MC.MonadCatch Parameter where
+  catch = catchParameter
+
+instance MC.MonadMask Parameter where
+  mask = maskParameter
+  uninterruptibleMask = uninterruptibleMaskParameter
+  
 -- | Memoize the 'Parameter' computation, always returning the same value
 -- within a simulation run. However, the value will be recalculated for other
 -- simulation runs. Also it is thread-safe when different simulation runs

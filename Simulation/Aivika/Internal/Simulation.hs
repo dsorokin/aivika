@@ -1,5 +1,5 @@
 
-{-# LANGUAGE RecursiveDo, ExistentialQuantification, DeriveDataTypeable #-}
+{-# LANGUAGE RecursiveDo, ExistentialQuantification, DeriveDataTypeable, RankNTypes #-}
 
 -- |
 -- Module     : Simulation.Aivika.Internal.Simulation
@@ -39,6 +39,7 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+import qualified Control.Monad.Catch as MC
 import Control.Applicative
 
 import Data.IORef
@@ -163,6 +164,22 @@ finallySimulation (Simulation m) (Simulation m') =
 throwSimulation :: Exception e => e -> Simulation a
 throwSimulation = throw
 
+-- | Runs an action with asynchronous exceptions disabled.
+maskSimulation :: ((forall a. Simulation a -> Simulation a) -> Simulation b) -> Simulation b
+maskSimulation a =
+  Simulation $ \r ->
+  MC.mask $ \u ->
+  invokeSimulation r (a $ q u)
+  where q u (Simulation b) = Simulation (u . b)
+
+-- | Like 'maskSimulation', but the masked computation is not interruptible.
+uninterruptibleMaskSimulation :: ((forall a. Simulation a -> Simulation a) -> Simulation b) -> Simulation b
+uninterruptibleMaskSimulation a =
+  Simulation $ \r ->
+  MC.uninterruptibleMask $ \u ->
+  invokeSimulation r (a $ q u)
+  where q u (Simulation b) = Simulation (u . b)
+
 -- | Invoke the 'Simulation' computation.
 invokeSimulation :: Run -> Simulation a -> IO a
 {-# INLINE invokeSimulation #-}
@@ -172,6 +189,16 @@ instance MonadFix Simulation where
   mfix f = 
     Simulation $ \r ->
     do { rec { a <- invokeSimulation r (f a) }; return a }  
+
+instance MC.MonadThrow Simulation where
+  throwM = throwSimulation
+
+instance MC.MonadCatch Simulation where
+  catch = catchSimulation
+
+instance MC.MonadMask Simulation where
+  mask = maskSimulation
+  uninterruptibleMask = uninterruptibleMaskSimulation
 
 -- | Memoize the 'Simulation' computation, always returning the same value
 -- within a simulation run.
