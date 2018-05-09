@@ -175,7 +175,7 @@ vectorDeleteAt vector index =
      forM_ [index, index + 1 .. count - 2] $ \i ->
        do x <- readArray array (i + 1)
           writeArray array i x
-     writeArray array (count - 1) undefined
+     -- writeArray array (count - 1) undefined
      writeIORef (vectorCountRef vector) (count - 1)
 
 -- | Delete the specified range of elements.
@@ -203,8 +203,8 @@ vectorDeleteRange vector index len =
      forM_ [index, index + 1 .. (count - len) - 1] $ \i ->
        do x <- readArray array (i + len)
           writeArray array i x
-     forM_ [(count - len) .. count - 1] $ \i ->
-       writeArray array i undefined
+     -- forM_ [(count - len) .. count - 1] $ \i ->
+     --   writeArray array i undefined
      writeIORef (vectorCountRef vector) (count - len)
      
 -- | Return the index of the item or -1.     
