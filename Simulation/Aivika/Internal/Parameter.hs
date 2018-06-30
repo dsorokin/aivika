@@ -220,6 +220,18 @@ uninterruptibleMaskParameter a =
   invokeParameter r (a $ q u)
   where q u (Parameter b) = Parameter (u . b)
 
+-- | An implementation of 'generalBracket'.
+generalBracketParameter :: Parameter a
+                           -> (a -> MC.ExitCase b -> Parameter c)
+                           -> (a -> Parameter b)
+                           -> Parameter (b, c)
+generalBracketParameter acquire release use =
+  Parameter $ \r -> do
+    MC.generalBracket
+      (invokeParameter r acquire)
+      (\resource e -> invokeParameter r $ release resource e)
+      (\resource -> invokeParameter r $ use resource)
+
 -- | Invoke the 'Parameter' computation.
 invokeParameter :: Run -> Parameter a -> IO a
 {-# INLINE invokeParameter #-}
@@ -239,6 +251,7 @@ instance MC.MonadCatch Parameter where
 instance MC.MonadMask Parameter where
   mask = maskParameter
   uninterruptibleMask = uninterruptibleMaskParameter
+  generalBracket = generalBracketParameter
   
 -- | Memoize the 'Parameter' computation, always returning the same value
 -- within a simulation run. However, the value will be recalculated for other

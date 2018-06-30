@@ -180,6 +180,18 @@ uninterruptibleMaskSimulation a =
   invokeSimulation r (a $ q u)
   where q u (Simulation b) = Simulation (u . b)
 
+-- | An implementation of 'generalBracket'.
+generalBracketSimulation :: Simulation a
+                            -> (a -> MC.ExitCase b -> Simulation c)
+                            -> (a -> Simulation b)
+                            -> Simulation (b, c)
+generalBracketSimulation acquire release use =
+  Simulation $ \r -> do
+    MC.generalBracket
+      (invokeSimulation r acquire)
+      (\resource e -> invokeSimulation r $ release resource e)
+      (\resource -> invokeSimulation r $ use resource)
+
 -- | Invoke the 'Simulation' computation.
 invokeSimulation :: Run -> Simulation a -> IO a
 {-# INLINE invokeSimulation #-}
@@ -199,6 +211,7 @@ instance MC.MonadCatch Simulation where
 instance MC.MonadMask Simulation where
   mask = maskSimulation
   uninterruptibleMask = uninterruptibleMaskSimulation
+  generalBracket = generalBracketSimulation
 
 -- | Memoize the 'Simulation' computation, always returning the same value
 -- within a simulation run.

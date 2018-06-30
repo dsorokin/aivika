@@ -180,6 +180,18 @@ uninterruptibleMaskEvent a =
   invokeEvent p (a $ q u)
   where q u (Event b) = Event (u . b)
 
+-- | An implementation of 'generalBracket'.
+generalBracketEvent :: Event a
+                       -> (a -> MC.ExitCase b -> Event c)
+                       -> (a -> Event b)
+                       -> Event (b, c)
+generalBracketEvent acquire release use =
+  Event $ \p -> do
+    MC.generalBracket
+      (invokeEvent p acquire)
+      (\resource e -> invokeEvent p $ release resource e)
+      (\resource -> invokeEvent p $ use resource)
+
 -- | Invoke the 'Event' computation.
 invokeEvent :: Point -> Event a -> IO a
 {-# INLINE invokeEvent #-}
@@ -199,6 +211,7 @@ instance MC.MonadCatch Event where
 instance MC.MonadMask Event where
   mask = maskEvent
   uninterruptibleMask = uninterruptibleMaskEvent
+  generalBracket = generalBracketEvent
 
 -- | Defines how the events are processed.
 data EventProcessing = CurrentEvents

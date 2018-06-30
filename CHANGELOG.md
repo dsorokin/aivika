@@ -1,4 +1,9 @@
 
+Version 5.8
+-----
+
+* Satisfying a new requirement of the MonadMask class type.
+
 Version 5.7
 -----
 
