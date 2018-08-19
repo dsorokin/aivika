@@ -44,7 +44,7 @@ import Simulation.Aivika.Statistics
 import Simulation.Aivika.Ref
 import Simulation.Aivika.Arrival
 
--- | Return a sream of random events that arrive with the specified delay.
+-- | Return a stream of random events that arrive with the specified delay.
 randomStream :: Parameter (Double, a)
                 -- ^ compute a pair of the delay and event of type @a@
                 -> Stream (Arrival a)
