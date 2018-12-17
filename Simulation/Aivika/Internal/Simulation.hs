@@ -39,6 +39,7 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+import Control.Monad.Fail
 import qualified Control.Monad.Catch as MC
 import Control.Applicative
 
@@ -121,6 +122,9 @@ instance Functor Simulation where
 instance Applicative Simulation where
   pure = return
   (<*>) = ap
+
+instance MonadFail Simulation where
+  fail = error
 
 liftMS :: (a -> b) -> Simulation a -> Simulation b
 {-# INLINE liftMS #-}

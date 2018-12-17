@@ -28,6 +28,7 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+import Control.Monad.Fail
 import Control.Applicative
 
 import Simulation.Aivika.Parameter
@@ -84,6 +85,9 @@ instance Monad Composite where
        let Composite m' = k a
        (b, h') <- m' h
        return (b, h')
+
+instance MonadFail Composite where
+  fail = error
 
 instance MonadIO Composite where
 

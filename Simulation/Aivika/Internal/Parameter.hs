@@ -47,6 +47,7 @@ import Control.Concurrent.MVar
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+import Control.Monad.Fail
 import qualified Control.Monad.Catch as MC
 import Control.Applicative
 
@@ -125,6 +126,9 @@ instance Functor Parameter where
 instance Applicative Parameter where
   pure = return
   (<*>) = ap
+
+instance MonadFail Parameter where
+  fail = error
 
 instance Eq (Parameter a) where
   x == y = error "Can't compare parameters." 

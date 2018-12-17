@@ -67,6 +67,7 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+import Control.Monad.Fail
 import qualified Control.Monad.Catch as MC
 import Control.Applicative
 
@@ -105,6 +106,9 @@ instance Functor Event where
 instance Applicative Event where
   pure = return
   (<*>) = ap
+
+instance MonadFail Event where
+  fail = error
 
 liftME :: (a -> b) -> Event a -> Event b
 {-# INLINE liftME #-}

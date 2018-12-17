@@ -1,4 +1,10 @@
 
+Version 5.9
+-----
+
+* Added the support of GHC 8.6 and dropped the support of old versions
+  that do not have Monad.Fail.
+
 Version 5.8
 -----
 

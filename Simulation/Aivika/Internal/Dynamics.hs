@@ -39,6 +39,7 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Fix
+import Control.Monad.Fail
 import qualified Control.Monad.Catch as MC
 import Control.Applicative
 
@@ -98,6 +99,9 @@ instance Functor Dynamics where
 instance Applicative Dynamics where
   pure = return
   (<*>) = ap
+
+instance MonadFail Dynamics where
+  fail = error
 
 instance Eq (Dynamics a) where
   x == y = error "Can't compare dynamics." 

@@ -104,6 +104,7 @@ import Data.IORef
 import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.Fail
 import qualified Control.Monad.Catch as MC
 import Control.Applicative
 
@@ -455,6 +456,9 @@ instance Functor Process where
 instance Applicative Process where
   pure = return
   (<*>) = ap
+
+instance MonadFail Process where
+  fail = error
 
 instance ParameterLift Process where
   liftParameter = liftPP
