@@ -211,7 +211,7 @@ selectState st =
          "Use the setStateTransition function to define " ++
          "the transition state: activateState."
        ProcessingMode ->
-         do x0 @ (Just st0) <- readIORef (agentStateRef agent)
+         do x0@(Just st0) <- readIORef (agentStateRef agent)
             invokeEvent p $ traversePath x0 st
 
 -- | Set the activation computation for the specified state.
