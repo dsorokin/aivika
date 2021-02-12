@@ -1,5 +1,5 @@
 name:            aivika
-version:         5.9
+version:         5.9.1
 synopsis:        A multi-method simulation library
 description:
     Aivika is a discrete event simulation (DES) framework with support of activity-oriented,
