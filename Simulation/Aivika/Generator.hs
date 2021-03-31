@@ -318,7 +318,7 @@ newGenerator :: GeneratorType -> IO Generator
 newGenerator tp =
   case tp of
     SimpleGenerator ->
-      MWC.uniform <$> MWC.withSystemRandom (return :: MWC.GenIO -> IO MWC.GenIO) >>= newRandomGenerator01
+      MWC.uniform <$> MWC.createSystemRandom >>= newRandomGenerator01
     SimpleGeneratorWithSeed x ->
       MWC.uniform <$> MWC.initialize (singleton x) >>= newRandomGenerator01
     CustomGenerator g ->

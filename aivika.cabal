@@ -235,7 +235,7 @@ library
                      array >= 0.3.0.0,
                      containers >= 0.4.0.0,
                      random >= 1.0.0.3,
-                     mwc-random >= 0.13.0.0,
+                     mwc-random >= 0.13.1.0,
                      vector >= 0.10.0.1,
                      deepseq >= 1.1.0.0,
                      binary >= 0.6.4.0,
