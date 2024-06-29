@@ -1,4 +1,4 @@
-**The project has been moved to https://gitflic.ru/project/dsorokin/aivika **
+The project **has been moved** to https://gitflic.ru/project/dsorokin/aivika
 
 **The old web site URL has another owner now**
 
