@@ -1,3 +1,7 @@
+**The project has been moved to https://gitflic.ru/project/dsorokin/aivika **
+
+**The old web site URL has another owner now**
+
 A multi-method simulation library
 
 **Aivika** is a discrete event simulation (DES) framework with support of activity-oriented, 
@@ -94,8 +98,5 @@ and parallel distributed simulation,
 package [aivika-distributed](http://hackage.haskell.org/package/aivika-distributed). 
 
 The libraries were tested on Linux, Windows and OS X.
-
-The PDF documentation, installation instructions and a more full information about Aivika 
-are available on the the [AivikaSoft](http://www.aivikasoft.com) website.
 
 P.S. Aivika is actually a genuine female Mari name which is pronounced with stress on the last syllable.
